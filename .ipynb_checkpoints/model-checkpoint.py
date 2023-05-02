@@ -21,6 +21,9 @@ class ModelLoader:
         
         if MODEL_NAME is None:
             self.MODEL_NAME = MODEL_NAME_OR_PATH
+        elif MODEL_NAME is "":
+            ## grab from model_type dict
+            pass
         else:
             self.MODEL_NAME = MODEL_NAME
             
@@ -52,15 +55,17 @@ class ModelLoader:
                 MODEL_NAME_OR_PATH, low_cpu_mem_usage=True, torch_dtype=dtype,
                 trust_remote_code=trust_remote_code
             )
-            self.extract_relevant_fields_from_config()
+            # self.extract_relevant_fields_from_config()
+            print("after load")
             self.model.eval().cuda()
         
-        
+        print("after eval")
         nethook.set_requires_grad(False, self.model)
 
 
         for n, p in self.model.named_parameters():
             print(n, p.shape, p.device)
+        print("after named")
 
         if(self.model_type in ["gpt2", "gpt_neox", "llama"]):
             self.tokenizer.pad_token = self.tokenizer.eos_token            
@@ -74,28 +79,29 @@ class ModelLoader:
     def extract_relevant_fields_from_config(self):
         """
         extracts a bunch of highly used fields from different model configurations
+        model_type, no_split_module_classes, layer_name_format, mlp_module_name_format, attn_module_name_format
         """
         config = self.model.config
         self.vocab_size = config.vocab_size
 
         model_type = None
-        if(hasattr(self.model, "transformer")):
-            model_type = "gpt2"
-            no_split_module_classes = ["GPT2Block"]
-        elif(hasattr(self.model, "gpt_neox")):
-            model_type = "gpt-neox"
-            no_split_module_classes = ["GPTNeoXLayer"]
-        elif("llama" in config._name_or_path):
-            model_type = "llama"
-            no_split_module_classes = ["LlamaDecoderLayer"]
-        elif("galactica" in config._name_or_path):
-            model_type = "galactica"
-            no_split_module_classes  = ["OPTDecoderLayer"]
-        elif("codegen" in config._name_or_path):
-            model_type = "codegen"
-            no_split_module_classes  = ["CodeGenBlock"]
-        else:
-            warnings.warn("unknown model type >> unable to extract relavent fields from config")
+        # if(hasattr(self.model, "transformer")):
+        #     model_type = "gpt2"
+        #     no_split_module_classes = ["GPT2Block"]
+        # elif(hasattr(self.model, "gpt_neox")):
+        #     model_type = "gpt-neox"
+        #     no_split_module_classes = ["GPTNeoXLayer"]
+        # elif("llama" in config._name_or_path):
+        #     model_type = "llama"
+        #     no_split_module_classes = ["LlamaDecoderLayer"]
+        # elif("galactica" in config._name_or_path):
+        #     model_type = "galactica"
+        #     no_split_module_classes  = ["OPTDecoderLayer"]
+        # elif("codegen" in config._name_or_path):
+        #     model_type = "codegen"
+        #     no_split_module_classes  = ["CodeGenBlock"]
+        # else:
+        #     warnings.warn("unknown model type >> unable to extract relavent fields from config")
 
         self.n_layer = None
         self.n_embd = None
@@ -113,40 +119,40 @@ class ModelLoader:
         self.model_type = model_type
         self.no_split_module_classes = no_split_module_classes
 
-        if(model_type in ["llama", "galactica"]):
-            self.n_layer = config.num_hidden_layers
-            self.n_embd = config.hidden_size
-            self.n_attn_head = config.num_attention_heads
-            self.max_seq_length = config.max_sequence_length
+#         if(model_type in ["llama", "galactica"]):
+#             self.n_layer = config.num_hidden_layers
+#             self.n_embd = config.hidden_size
+#             self.n_attn_head = config.num_attention_heads
+#             self.max_seq_length = config.max_sequence_length
 
-            layer_name_prefix = "model"
-            if(model_type == "galactica"):
-                layer_name_prefix = "model.decoder"
+#             layer_name_prefix = "model"
+#             if(model_type == "galactica"):
+#                 layer_name_prefix = "model.decoder"
             
-            self.layer_name_format = layer_name_prefix + ".layers.{}"
+#             self.layer_name_format = layer_name_prefix + ".layers.{}"
 
-            self.embedder_name = "model.embed_tokens"
-            self.ln_f_name = "model.norm" if model_type=="llama" else "model.decoder.final_layer_norm"
-            self.unembedder_name = "lm_head"
+#             self.embedder_name = "model.embed_tokens"
+#             self.ln_f_name = "model.norm" if model_type=="llama" else "model.decoder.final_layer_norm"
+#             self.unembedder_name = "lm_head"
 
-            if(model_type == "llama"):
-                self.mlp_module_name_format = "model.layers.{}.mlp"
-            else:
-                self.mlp_module_name_format = "model.layers.{}.fc2" # this is the output of mlp in galactica. the input is on model.layers.{}.fc1
-            self.attn_module_name_format = "model.layers.{}.self_attn"
+#             if(model_type == "llama"):
+#                 self.mlp_module_name_format = "model.layers.{}.mlp"
+#             else:
+#                 self.mlp_module_name_format = "model.layers.{}.fc2" # this is the output of mlp in galactica. the input is on model.layers.{}.fc1
+#             self.attn_module_name_format = "model.layers.{}.self_attn"
 
-        elif(model_type in ["gpt2", "gpt-neox"]):
-            self.n_layer = config.n_layer
-            self.n_embd = config.n_embd
-            self.n_attn_head = config.n_head
-            self.max_seq_length = config.n_ctx
+#         elif(model_type in ["gpt2", "gpt-neox"]):
+#             self.n_layer = config.n_layer
+#             self.n_embd = config.n_embd
+#             self.n_attn_head = config.n_head
+#             self.max_seq_length = config.n_ctx
 
-            self.layer_name_format = "transformer.h.{}"
-            self.embedder_name = "transformer.wte"
-            self.ln_f_name = "transformer.ln_f"
-            self.unembedder_name = "lm_head"
-            self.mlp_module_name_format = "transformer.h.{}.mlp"
-            self.attn_module_name_format = "transformer.h.{}.attn"
+#             self.layer_name_format = "transformer.h.{}"
+#             self.embedder_name = "transformer.wte"
+#             self.ln_f_name = "transformer.ln_f"
+#             self.unembedder_name = "lm_head"
+#             self.mlp_module_name_format = "transformer.h.{}.mlp"
+#             self.attn_module_name_format = "transformer.h.{}.attn"
     
         # print("num_layers >> ", self.num_layers)
         if(model_type is not None):

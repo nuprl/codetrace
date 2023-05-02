@@ -5,56 +5,40 @@ from accelerate import init_empty_weights, load_checkpoint_and_dispatch, infer_a
 import warnings
 import time
 from typing import Union, List
-from model_utils import untuple
+from model_utils import untuple, extract_layer_formats
 import numpy as np
+import json
 '''
 
 '''
+
 
 class ModelLoader:
     def __init__(self, 
                  MODEL_NAME_OR_PATH, 
                  MODEL_NAME = None,
                  dtype = torch.float16,
-                 trust_remote_code=True,
-                 is_llm = False) -> None:
+                 trust_remote_code=True) -> None:
         
         if MODEL_NAME is None:
             self.MODEL_NAME = MODEL_NAME_OR_PATH
         else:
+            ## for downloaded converted weights
             self.MODEL_NAME = MODEL_NAME
             
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME_OR_PATH) 
         
-        if is_llm:
-            ## ACCELERATE LOAD
-
-            config = AutoConfig.from_pretrained(MODEL_NAME_OR_PATH)
-
-            with init_empty_weights():
-                model = AutoModelForCausalLM.from_config(config, torch_dtype=dtype)
+        start_time = time.process_time_ns()
+        self.model = AutoModelForCausalLM.from_pretrained(
+            MODEL_NAME_OR_PATH, 
+            low_cpu_mem_usage=True, ## load with accelerate
+            torch_dtype=dtype,
+            trust_remote_code=trust_remote_code
+        )
+        print(f"Load time: {time.process_time_ns()-start_time} ns") 
+        self.model.eval().cuda()
         
-            # must tie weights before loading
-            model.tie_weights()
-            
-            self.model = model
-            self.extract_relevant_fields_from_config()
-
-            start_time = time.process_time_ns()
-            self.model = load_checkpoint_and_dispatch(
-                model, MODEL_NAME_OR_PATH, device_map='auto',
-                no_split_module_classes = self.no_split_module_classes
-            )
-            print(f"Load time: {time.process_time_ns()-start_time} ns") 
-        else:
-            ## from_pretrained cuda load
-            self.model = AutoModelForCausalLM.from_pretrained(
-                MODEL_NAME_OR_PATH, low_cpu_mem_usage=True, torch_dtype=dtype,
-                trust_remote_code=trust_remote_code
-            )
-            self.extract_relevant_fields_from_config()
-            self.model.eval().cuda()
-        
+        self.extract_fields()
         
         nethook.set_requires_grad(False, self.model)
 
@@ -62,6 +46,7 @@ class ModelLoader:
         for n, p in self.model.named_parameters():
             print(n, p.shape, p.device)
 
+        ## set pad tokens
         if(self.model_type in ["gpt2", "gpt_neox", "llama"]):
             self.tokenizer.pad_token = self.tokenizer.eos_token            
         elif(self.model_type in [ "galactica"]):
@@ -70,90 +55,27 @@ class ModelLoader:
 
         
         
-    # tested for GPT-j, galactica and LLaMa
-    def extract_relevant_fields_from_config(self):
+    def extract_fields(self):
         """
-        extracts a bunch of highly used fields from different model configurations
-        model_type, no_split_module_classes, layer_name_format, mlp_module_name_format, attn_module_name_format
+        model_type
+        no_split_module_classes
+        layer_name_format
+        mlp_module_name_format
+        attn_module_name_format
         """
-        config = self.model.config
-        self.vocab_size = config.vocab_size
+        self.model_type = self.model.config.model_type
+        self.no_split_module_classes = self.model._no_split_modules
+       
+        formats = extract_layer__formats(self.model.named_parameters)
+        self.layer_name_format = formats["layer"]
+        self.mlp_module_name_format = formats["mlp"]
+        self.attn_module_name_format = formats["attn"]
 
-        model_type = None
-        # if(hasattr(self.model, "transformer")):
-        #     model_type = "gpt2"
-        #     no_split_module_classes = ["GPT2Block"]
-        # elif(hasattr(self.model, "gpt_neox")):
-        #     model_type = "gpt-neox"
-        #     no_split_module_classes = ["GPTNeoXLayer"]
-        # elif("llama" in config._name_or_path):
-        #     model_type = "llama"
-        #     no_split_module_classes = ["LlamaDecoderLayer"]
-        # elif("galactica" in config._name_or_path):
-        #     model_type = "galactica"
-        #     no_split_module_classes  = ["OPTDecoderLayer"]
-        # elif("codegen" in config._name_or_path):
-        #     model_type = "codegen"
-        #     no_split_module_classes  = ["CodeGenBlock"]
-        # else:
-        #     warnings.warn("unknown model type >> unable to extract relavent fields from config")
 
-        self.n_layer = None
-        self.n_embd = None
-        self.n_attn_head = None
-        self.max_seq_length = None
-
-        self.layer_name_format = None
-        self.layer_names = None
-        self.mlp_module_name_format = None
-        self.attn_module_name_format = None
-        self.ln_f_name = None
-        self.unembedder_name = None
-        self.embedder_name = None
-        
-        self.model_type = model_type
-        self.no_split_module_classes = no_split_module_classes
-
-#         if(model_type in ["llama", "galactica"]):
-#             self.n_layer = config.num_hidden_layers
-#             self.n_embd = config.hidden_size
-#             self.n_attn_head = config.num_attention_heads
-#             self.max_seq_length = config.max_sequence_length
-
-#             layer_name_prefix = "model"
-#             if(model_type == "galactica"):
-#                 layer_name_prefix = "model.decoder"
-            
-#             self.layer_name_format = layer_name_prefix + ".layers.{}"
-
-#             self.embedder_name = "model.embed_tokens"
-#             self.ln_f_name = "model.norm" if model_type=="llama" else "model.decoder.final_layer_norm"
-#             self.unembedder_name = "lm_head"
-
-#             if(model_type == "llama"):
-#                 self.mlp_module_name_format = "model.layers.{}.mlp"
-#             else:
-#                 self.mlp_module_name_format = "model.layers.{}.fc2" # this is the output of mlp in galactica. the input is on model.layers.{}.fc1
-#             self.attn_module_name_format = "model.layers.{}.self_attn"
-
-#         elif(model_type in ["gpt2", "gpt-neox"]):
-#             self.n_layer = config.n_layer
-#             self.n_embd = config.n_embd
-#             self.n_attn_head = config.n_head
-#             self.max_seq_length = config.n_ctx
-
-#             self.layer_name_format = "transformer.h.{}"
-#             self.embedder_name = "transformer.wte"
-#             self.ln_f_name = "transformer.ln_f"
-#             self.unembedder_name = "lm_head"
-#             self.mlp_module_name_format = "transformer.h.{}.mlp"
-#             self.attn_module_name_format = "transformer.h.{}.attn"
-    
-        # print("num_layers >> ", self.num_layers)
         if(model_type is not None):
-            self.layer_names = [self.layer_name_format.format(i) for i in range(self.n_layer)]
-            self.mlp_module_names = [self.mlp_module_name_format.format(i) for i in range(self.n_layer)]
-            self.attn_module_names = [self.attn_module_name_format.format(i) for i in range(self.n_layer)]
+            self.layer_names = [self.layer_name_format.format(i) for i in range(self.config.n_layer)]
+            self.mlp_module_names = [self.mlp_module_name_format.format(i) for i in range(self.config.n_layer)]
+            self.attn_module_names = [self.attn_module_name_format.format(i) for i in range(self.config.n_layer)]
             self.tracable_modules =  self.mlp_module_names + self.attn_module_names + self.layer_names
             
             
