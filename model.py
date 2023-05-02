@@ -38,8 +38,8 @@ class ModelLoader:
         print(f"Load time: {time.process_time_ns()-start_time} ns") 
         self.model.eval().cuda()
         
-        self.extract_fields()
-        
+        # self.extract_fields()
+        self.model_type = self.model.config.model_type
         nethook.set_requires_grad(False, self.model)
 
 
@@ -66,16 +66,16 @@ class ModelLoader:
         self.model_type = self.model.config.model_type
         self.no_split_module_classes = self.model._no_split_modules
        
-        formats = extract_layer__formats(self.model.named_parameters)
+        formats = extract_layer_formats(self.model.named_parameters)
         self.layer_name_format = formats["layer"]
         self.mlp_module_name_format = formats["mlp"]
         self.attn_module_name_format = formats["attn"]
 
 
-        if(model_type is not None):
-            self.layer_names = [self.layer_name_format.format(i) for i in range(self.config.n_layer)]
-            self.mlp_module_names = [self.mlp_module_name_format.format(i) for i in range(self.config.n_layer)]
-            self.attn_module_names = [self.attn_module_name_format.format(i) for i in range(self.config.n_layer)]
+        if(self.model_type is not None):
+            self.layer_names = [self.layer_name_format.format(i) for i in range(self.model.config.n_layer)]
+            self.mlp_module_names = [self.mlp_module_name_format.format(i) for i in range(self.model.config.n_layer)]
+            self.attn_module_names = [self.attn_module_name_format.format(i) for i in range(self.model.config.n_layer)]
             self.tracable_modules =  self.mlp_module_names + self.attn_module_names + self.layer_names
             
             
@@ -103,9 +103,16 @@ class ModelLoader:
             if(type(prompts) == str):
                 prompts = [prompts]
 
-            tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
-
+            self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_NAME) 
+            self.tokenizer.pad_token = self.tokenizer.eos_token        
+            tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt")
+            tokenized = tokenized.to(self.model.device)
+            
             input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
+            print("MASK: ", attention_mask)
+            # attention_mask = torch.ones(attention_mask.shape[1]+input_ids.shape[1], 1)
+            print("MASK: ", attention_mask)
+            print("INPUT: ", input_ids)
             batch_size = input_ids.size(0)
 
             report_input_tokenized = []
@@ -117,7 +124,8 @@ class ModelLoader:
                     curr_inp_tok.append((self.tokenizer.decode(t), t.item()))
                 report_input_tokenized.append((curr_inp_tok))
             ret_dict = {"input_tokenized": report_input_tokenized}
-
+            print("ret", ret_dict)
+            
             # Setup storage of fast generation with attention caches.
             # `cur_context` is used to define the range of inputs that are not yet
             # stored in `past_key_values`. At each step, we are generating the
@@ -131,9 +139,10 @@ class ModelLoader:
             generated_tokens = [[] for _ in range(input_ids.size(0))]
             with torch.no_grad():
                 while input_ids.size(1) < max_out_len:  # while not exceeding max output length
-                    # print(cur_context)
-                    # print(attention_mask[:, cur_context])
-                    # print(input_ids[:, cur_context])
+                    print("context:", cur_context)
+                    print("attn:", attention_mask[:, cur_context])
+                    print("in:",input_ids[:, cur_context])
+                    
                     with nethook.TraceDict(
                         self.model, layers = request_activations,
                     ) as traces:
