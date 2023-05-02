@@ -3,7 +3,24 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import re
 from baukit import nethook
 import warnings
+import gc
 
+def check_dev(n):
+    t = torch.cuda.get_device_properties(n).total_memory
+    r = torch.cuda.memory_reserved(n)
+    a = torch.cuda.memory_allocated(n)
+    f = r-a  # free
+    print(f"{a} / {t} used for device {n}, reserved {r}")
+    
+def check_devs():
+    for i in range(torch.cuda.device_count()):
+        check_dev(i)
+        
+# may not work
+def clear_devs():
+    gc.collect()
+    torch.cuda.empty_cache()
+    
 def untuple(x):
     if isinstance(x, tuple):
         return x[0]
