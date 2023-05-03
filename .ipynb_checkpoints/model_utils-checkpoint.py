@@ -21,7 +21,7 @@ def check_devs():
     for i in range(torch.cuda.device_count()):
         check_dev(i)
         
-# may not work
+# may not work with jupyter
 def clear_devs():
     gc.collect()
     torch.cuda.empty_cache()
@@ -32,20 +32,6 @@ def untuple(x):
     return x
 
 
-def print_formatted_results(prompts, txt, ret_dict):
-    for i in range(len(prompts)):
-        print(prompts[i])
-        print(txt[i])
-        if('answer' in ret_dict):
-            answer = ret_dict['answer'][i]['candidates']
-            print("p(answer): ", ", ".join([f"p(\'{t['token']}\'[{t['token_id']}])={t['p']}" for t in answer]))
-        if('p_interesting_words' in ret_dict):
-            p_interesting = ret_dict['p_interesting_words'][i]
-            print("p(interesting): ", ", ".join([f"p(\'{t['token']}\'[{t['token_id']}])={t['p']}" for t in p_interesting]))
-
-        print()
-
-        
 def extract_layer_formats(named_params_iterator):
     mlp = None
     attn = None

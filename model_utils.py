@@ -21,7 +21,7 @@ def check_devs():
     for i in range(torch.cuda.device_count()):
         check_dev(i)
         
-# may not work
+# may not work with jupyter
 def clear_devs():
     gc.collect()
     torch.cuda.empty_cache()
@@ -30,6 +30,7 @@ def untuple(x):
     if isinstance(x, tuple):
         return x[0]
     return x
+
 
 def extract_layer_formats(named_params_iterator):
     mlp = None
