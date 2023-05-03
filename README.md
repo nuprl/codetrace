@@ -17,3 +17,7 @@ Note: no CPU load for now
 - galactica
 - gpt-neox
 - CodeGeeX
+
+## Err log:
+
+from GPT2 docs: the `attention_mask` always has to have the length `len(past_key_values) + len(input_ids)`

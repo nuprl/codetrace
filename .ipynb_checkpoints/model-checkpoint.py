@@ -8,6 +8,7 @@ from typing import Union, List
 from model_utils import untuple, extract_layer_formats
 import numpy as np
 import json
+import unicodedata
 '''
 
 '''
@@ -38,8 +39,8 @@ class ModelLoader:
         print(f"Load time: {time.process_time_ns()-start_time} ns") 
         self.model.eval().cuda()
         
-        # self.extract_fields()
-        self.model_type = self.model.config.model_type
+        self.extract_fields()
+        # self.model_type = self.model.config.model_type
         nethook.set_requires_grad(False, self.model)
 
 
@@ -70,7 +71,8 @@ class ModelLoader:
         self.layer_name_format = formats["layer"]
         self.mlp_module_name_format = formats["mlp"]
         self.attn_module_name_format = formats["attn"]
-
+        
+        self.fast_generation = (self.model_type not in ["galactica", "llama", "gpt2"])
 
         if(self.model_type is not None):
             self.layer_names = [self.layer_name_format.format(i) for i in range(self.model.config.n_layer)]
@@ -103,18 +105,13 @@ class ModelLoader:
             if(type(prompts) == str):
                 prompts = [prompts]
 
-            self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_NAME) 
-            self.tokenizer.pad_token = self.tokenizer.eos_token        
-            tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt")
-            tokenized = tokenized.to(self.model.device)
-            
+            tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
+          
             input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
-            print("MASK: ", attention_mask)
-            # attention_mask = torch.ones(attention_mask.shape[1]+input_ids.shape[1], 1)
-            print("MASK: ", attention_mask)
-            print("INPUT: ", input_ids)
+
             batch_size = input_ids.size(0)
 
+            ## curr tok dict
             report_input_tokenized = []
             for b in range(batch_size):
                 curr_inp_tok = []
@@ -124,27 +121,27 @@ class ModelLoader:
                     curr_inp_tok.append((self.tokenizer.decode(t), t.item()))
                 report_input_tokenized.append((curr_inp_tok))
             ret_dict = {"input_tokenized": report_input_tokenized}
-            print("ret", ret_dict)
+            
             
             # Setup storage of fast generation with attention caches.
             # `cur_context` is used to define the range of inputs that are not yet
             # stored in `past_key_values`. At each step, we are generating the
             # next token for the index at `cur_context.stop + 1`.
-            past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item())
+            past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item())  # init size of context
 
-            if(self.model_type in ["galactica", "llama"]):
+            if not self.fast_generation:
                 use_cache = False
-                warnings.warn(f"The model `{type(self.model)}` can't utilize `use_cache` for fast generation. Setting `use_cache = False`.")
+                warnings.warn(f"The model `{self.MODEL_NAME}` of type `{self.model_type}` already implements or can't utilize `use_cache` for fast generation. Setting `use_cache = False`.")
 
             generated_tokens = [[] for _ in range(input_ids.size(0))]
             with torch.no_grad():
                 while input_ids.size(1) < max_out_len:  # while not exceeding max output length
-                    print("context:", cur_context)
-                    print("attn:", attention_mask[:, cur_context])
-                    print("in:",input_ids[:, cur_context])
                     
+       
+                    ## traces curr inputs to prediction of next tok
                     with nethook.TraceDict(
-                        self.model, layers = request_activations,
+                        self.model, 
+                        layers = request_activations,
                     ) as traces:
                         model_out = self.model(
                             input_ids=input_ids[:, cur_context],
@@ -152,10 +149,12 @@ class ModelLoader:
                             past_key_values=past_key_values,
                             use_cache = use_cache,
                         )
+                    
+                    
                     if(len(request_activations) > 0):
                         if(use_cache == True):
                             for module in request_activations:
-                                # print(untuple(traces[module].output).shape)
+                                # print("traces shape:", untuple(traces[module].output).shape)
                                 if(activation_track[module] is None):
                                     activation_track[module] = untuple(traces[module].output).cpu().numpy()
                                 else:
@@ -167,9 +166,10 @@ class ModelLoader:
                             for module in request_activations:
                                 if(activation_track[module] is None):
                                     activation_track[module] = untuple(traces[module].output).cpu().numpy()
+                    
 
                     logits, past_key_values = model_out.logits, model_out.past_key_values
-
+                    
                     softmax_out = torch.nn.functional.softmax(logits[:, -1, :], dim=1)
 
                     # Top-k sampling
@@ -200,6 +200,11 @@ class ModelLoader:
                         if(input_ids.size(0) > 1):
                             print()
 
+                            
+                    ## TODO: update error here
+                    
+                    ## Auto-regression: insert new tok into inputs
+                    
                     # If we're currently generating the continuation for the last token in `input_ids`,
                     # create a new index so we can insert the new token
                     if cur_context.stop == input_ids.size(1):
@@ -213,18 +218,27 @@ class ModelLoader:
                             ],
                             dim=1,
                         )
-
-                    last_non_masked = attention_mask.sum(1) - 1
+                    
+                    ## check if new generation idx is out of bounds of max_len
+                    last_non_masked = attention_mask.sum(1) - 1   ## idx of last 1 in attn_mask
+                    
                     for i in range(batch_size):
-                        new_idx = last_non_masked[i] + 1
+                        new_idx = last_non_masked[i] + 1 ## idx of new tok
+                        
+                        ## if new_idx not context end (no generation output)
                         if last_non_masked[i].item() + 1 != cur_context.stop:
                             continue
 
+                   
                     # Stop generating if we've already maxed out for this prompt
                     if new_idx < max_out_len:
                         input_ids[i][new_idx] = new_toks[i]
                         attention_mask[i][new_idx] = 1
-
+                        cur_context = slice(0, new_idx.item()+1)
+                        
+                    
+                # end gen loop
+                
                 if(use_cache == False):
                     cur_context = slice(0, cur_context.stop + 1)
                 else:
@@ -236,14 +250,18 @@ class ModelLoader:
                 torch.cuda.empty_cache()                
 
                 txt = [self.tokenizer.decode(x) for x in input_ids.detach().cpu().numpy().tolist()]
+                
                 txt = [
                     unicodedata.normalize("NFKD", x)
                     # .replace("\n\n", " ")
                     # .replace("<|endoftext|>", "")
                     for x in txt
                 ]
-
+                
+                
                 ret_dict["generated_tokens"] = generated_tokens
                 if(request_activations is not None and len(request_activations) > 0):
                     ret_dict["activations"] = activation_track
+                
+                return txt, ret_dict
 
