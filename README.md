@@ -5,7 +5,21 @@
 - santacoder
 - starcoder
 
-## Issues
+## Model Notes
 
-- fix padding error for batch traces
-- sensitive to var names (eg. String x = 0, String hello = "
+- no trail whitespaces
+- full precision (no half)
+
+
+## Eval performance on tasks
+
+- complete var init with correct value according to type
+    - vary context size
+    - composite types
+- complete operation with correct type
+- control flow / nesting
+
+## Experiment RQs
+
+- Quantify how robust is it under trivial refactoring changes (eg. var names, formatting)
+- QUantiyf how robust under nesting/control flow changes

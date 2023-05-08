@@ -1,14 +1,6 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 import re
-from baukit import nethook
-import warnings
 import gc
-import unicodedata
-from typing import Optional, List
-import collections
-import numpy as np
-
 
 def check_dev(n):
     t = torch.cuda.get_device_properties(n).total_memory
@@ -47,3 +39,11 @@ def extract_layer_formats(named_params_iterator):
             attn = re.sub('\d+', '{}', ".".join(n[:n.index("attn")+1]))
         
     return {"mlp":mlp, "attn":attn, "layer":layer}
+
+def print_formatted(prompts, generations, only_gen=True):
+    for i,txt in enumerate(generations):
+        if only_gen:
+            out = f"## Gen {i}:\n{generations[i]}\n"
+        else:
+            out = f"## Prompt {i}:\n{prompts[i]}\n## Gen {i}:\n{generations[i]}\n"
+        print(out)

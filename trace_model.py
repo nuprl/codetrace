@@ -18,8 +18,9 @@ class ModelLoader:
     def __init__(self, 
                  MODEL_NAME_OR_PATH, 
                  MODEL_NAME = None,
-                 dtype = torch.float16,
-                 trust_remote_code=True) -> None:
+                 dtype = torch.float32,
+                 trust_remote_code=True,
+                 preloaded_model=None) -> None:
         
         if MODEL_NAME is None:
             self.MODEL_NAME = MODEL_NAME_OR_PATH
@@ -29,17 +30,20 @@ class ModelLoader:
             
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME_OR_PATH) 
         
-        start_time = time.process_time_ns()
-        self.model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME_OR_PATH, 
-            output_attentions=True,
-            low_cpu_mem_usage=True, ## load with accelerate
-            torch_dtype=dtype,
-            trust_remote_code=trust_remote_code
-        )
-        print(f"Load time: {time.process_time_ns()-start_time} ns") 
-        self.model.eval().cuda()
-        
+        if preloaded_model is None:
+            start_time = time.process_time_ns()
+            self.model = AutoModelForCausalLM.from_pretrained(
+                MODEL_NAME_OR_PATH, 
+                output_attentions=True,
+                low_cpu_mem_usage=True, ## load with accelerate
+                torch_dtype=dtype,
+                trust_remote_code=trust_remote_code
+            )
+            print(f"Load time: {time.process_time_ns()-start_time} ns") 
+            self.model.eval().cuda()
+        else:
+            self.model = preloaded_model
+
         self.extract_fields()
         
         nethook.set_requires_grad(False, self.model)

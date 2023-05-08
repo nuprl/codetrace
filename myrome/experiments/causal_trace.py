@@ -47,6 +47,7 @@ def main():
             "gpt2-large",
             "gpt2-medium",
             "gpt2",
+            "gpt-bigcode"
         ],
     )
     aa("--fact_file", default=None)
@@ -457,17 +458,21 @@ class ModelAndTokenizer:
         low_cpu_mem_usage=False,
         torch_dtype=None,
         trust_remote_code=True,
+        device = None,
     ):
         if tokenizer is None:
             assert model_name is not None
             tokenizer = AutoTokenizer.from_pretrained(model_name)
         if model is None:
             assert model_name is not None
+            
             model = AutoModelForCausalLM.from_pretrained(
-                model_name, low_cpu_mem_usage=low_cpu_mem_usage, torch_dtype=torch_dtype, trust_remote_code=trust_remote_code,
+                model_name, low_cpu_mem_usage=low_cpu_mem_usage, torch_dtype=torch_dtype, 
+                trust_remote_code=trust_remote_code
             )
             nethook.set_requires_grad(False, model)
-            model.eval().cuda()
+            if not low_cpu_mem_usage:
+                model.eval().cuda(device)
         self.tokenizer = tokenizer
         self.model = model
         self.layer_names = [
