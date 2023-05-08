@@ -1,5 +1,7 @@
 # Locating type knowledge in Code LLMs
 
+Main notebook is `codetrace`. Subdir `myrome` is modified ROME code to support bigcode models.
+
 ## Models
 
 - santacoder
