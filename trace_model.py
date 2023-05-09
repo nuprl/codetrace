@@ -20,7 +20,8 @@ class ModelLoader:
                  MODEL_NAME = None,
                  dtype = torch.float32,
                  trust_remote_code=True,
-                 preloaded_model=None) -> None:
+                 preloaded_model=None,
+                 quiet=True) -> None:
         
         if MODEL_NAME is None:
             self.MODEL_NAME = MODEL_NAME_OR_PATH
@@ -48,9 +49,9 @@ class ModelLoader:
         
         nethook.set_requires_grad(False, self.model)
 
-
-        for n, p in self.model.named_parameters():
-            print(n, p.shape, p.device)
+        if not quiet:
+            for n, p in self.model.named_parameters():
+                print(n, p.shape, p.device)
 
         ## set pad tokens
         if(self.model_type in ["gpt2", "gpt_neox", "llama"]):
@@ -87,7 +88,7 @@ class ModelLoader:
             
             
             
-    def generate(
+    def sample_generate(
             self,
             prompts: Union[str, List[str]], # TODO: technically it will accept a list of prompts, but due to some unresolved bugs generate doesn't work well with prompts of different sizes.
             top_k: int = 5,                 
@@ -95,7 +96,7 @@ class ModelLoader:
             argmax_greedy = False,          # if top_k=1 it is by defaults generate greedy. Otherwise, it will report `top_k` predictions but pick the top one
             debug = False,
             use_cache = True,
-
+            quiet=False,
             request_activations = None
         ):
         '''

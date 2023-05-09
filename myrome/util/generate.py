@@ -63,7 +63,7 @@ def generate_interactive(
             with llens_gen:
                 model(**inp_prompt)
             print("\n--- Argument Model Logit Lens ---")
-            llens_gen.pprint()
+            llens_gen.pprint(k=top_k)
 
             if compare_against:
                 with llens_vanilla:

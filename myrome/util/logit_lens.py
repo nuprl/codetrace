@@ -79,6 +79,7 @@ class LogitLens:
 
         for layer, pred in self.output.items():
             rets = torch.topk(pred[0], k)
+
             for i in range(k):
                 to_print[layer].append(
                     (

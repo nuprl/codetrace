@@ -46,8 +46,7 @@ def main():
             "EleutherAI/gpt-neox-20b",
             "gpt2-large",
             "gpt2-medium",
-            "gpt2",
-            "gpt-bigcode"
+            "gpt2"
         ],
     )
     aa("--fact_file", default=None)
@@ -473,6 +472,8 @@ class ModelAndTokenizer:
             nethook.set_requires_grad(False, model)
             if not low_cpu_mem_usage:
                 model.eval().cuda(device)
+            else:
+                model.eval().cuda()
         self.tokenizer = tokenizer
         self.model = model
         self.layer_names = [
