@@ -1,16 +1,16 @@
 # Locating type knowledge in Code LLMs
 
-Main notebook is `codetrace`. Subdir `myrome` is modified ROME code to support bigcode models.
+Main notebook is `trace-demo`. Subdir `myrome` is modified ROME code to support bigcode models.
 
 ## Models
 
-- santacoder
 - starcoder
 
 ## Model Notes
 
 - no trail whitespaces
-- full precision (no half)
+- full precision (no half), or float.b16
+
 
 
 ## Eval performance on tasks
@@ -24,4 +24,4 @@ Main notebook is `codetrace`. Subdir `myrome` is modified ROME code to support b
 ## Experiment RQs
 
 - Quantify how robust is it under trivial refactoring changes (eg. var names, formatting)
-- QUantiyf how robust under nesting/control flow changes
+- Quantify how robust under nesting/control flow changes
