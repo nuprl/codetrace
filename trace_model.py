@@ -288,12 +288,6 @@ class ModelLoader:
             self,
             prompts: Union[str, List[str]],
             top_k: int = 5,                 
-            max_out_len: int = 20,          
-            argmax_greedy = False, 
-            debug = False,
-            use_cache = True,
-            quiet=False,
-            request_activations = None
         ):
             if(type(prompts) == str):
                 prompts = [prompts]
@@ -310,10 +304,10 @@ class ModelLoader:
                 layer_module_tmp,
                 ln_f_module,
                 lm_head_module,
-                disabled=True,
+                disabled=False,
             )
             inp_prompt = self.tokenizer(prompts, padding=True, return_tensors="pt").to(
-                next(self.model.parameters()).device
+                self.model.device
             )
             with llens_gen:
                 self.model(**inp_prompt)
