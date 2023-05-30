@@ -26,9 +26,11 @@ class ModelLoader:
         
         if is_remote:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
+            config = AutoConfig.from_pretrained(self.model_name, trust_remote_code=True)
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name, 
-                output_attentions=True,
+                config=config,
+                # output_attentions=True,
                 low_cpu_mem_usage=True, ## load with accelerate
                 torch_dtype=dtype,
                 trust_remote_code=trust_remote_code
