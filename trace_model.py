@@ -50,6 +50,7 @@ class ModelLoader:
             self.model.eval().cuda()
         
         # post process
+        self.tokenizer.clean_up_tokenization_spaces = False
         self.extract_fields()
         
         nethook.set_requires_grad(False, self.model)
@@ -92,7 +93,7 @@ class ModelLoader:
             
             
             
-    def sample_generate(
+    def trace_generate(
             self,
             prompts: Union[str, List[str]],
             top_k: int = 5,                 
@@ -101,8 +102,7 @@ class ModelLoader:
             debug = False,
             use_cache = True,
             quiet=False,
-            request_activations = None,
-            use_logit_lens=True,
+            request_activations = None
         ):
         '''
         Trace with cache implementation if possible
@@ -123,30 +123,8 @@ class ModelLoader:
         self.tokenizer.clean_up_tokenization_spaces = False
         tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
         
-        
-        layer_module_tmp = "transformer.h.{}"
-        ln_f_module = "transformer.ln_f"
-        lm_head_module = "lm_head"
-                
-        if use_logit_lens:
-            llens_gen = LogitLens(
-                self.model,
-                self.tokenizer,
-                layer_module_tmp,
-                ln_f_module,
-                lm_head_module,
-                disabled=not use_logit_lens,
-            )
-            inp_prompt = self.tokenizer(prompts, padding=True, return_tensors="pt").to(
-                next(self.model.parameters()).device
-            )
-            with llens_gen:
-                self.model(**inp_prompt)
-            print("\n--- Argument Model Logit Lens ---")
-            llens_gen.pprint(k=top_k)
-                        
         input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
-        print(input_ids)
+        # print(input_ids)
         batch_size = input_ids.size(0)
 
         ## curr tok dict
@@ -187,7 +165,7 @@ class ModelLoader:
                         past_key_values=past_key_values,
                         use_cache = use_cache,
                     )
-                    # print("Out:", model_out)
+
 
 
                 if(len(request_activations) > 0):
@@ -305,3 +283,39 @@ class ModelLoader:
 
             return txt, ret_dict
 
+
+    def get_logits(
+            self,
+            prompts: Union[str, List[str]],
+            top_k: int = 5,                 
+            max_out_len: int = 20,          
+            argmax_greedy = False, 
+            debug = False,
+            use_cache = True,
+            quiet=False,
+            request_activations = None
+        ):
+            if(type(prompts) == str):
+                prompts = [prompts]
+                
+            layer_module_tmp = "transformer.h.{}"
+            ln_f_module = "transformer.ln_f"
+            lm_head_module = "lm_head"
+
+                    
+            
+            llens_gen = LogitLens(
+                self.model,
+                self.tokenizer,
+                layer_module_tmp,
+                ln_f_module,
+                lm_head_module,
+                disabled=True,
+            )
+            inp_prompt = self.tokenizer(prompts, padding=True, return_tensors="pt").to(
+                next(self.model.parameters()).device
+            )
+            with llens_gen:
+                self.model(**inp_prompt)
+            print("\n--- Argument Model Logit Lens ---")
+            llens_gen.pprint(k=top_k)

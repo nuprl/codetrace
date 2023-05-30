@@ -54,7 +54,7 @@ class Trace(contextlib.AbstractContextManager):
         retain_output=True,
         retain_input=False,
         clone=False,
-        detach=False,
+        detach=True,
         retain_grad=False,
         edit_output=None,
         stop=False,
