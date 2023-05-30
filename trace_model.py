@@ -17,49 +17,27 @@ from logit_lens import LogitLens
 class ModelLoader:
     def __init__(self, 
                  model_name_or_path, 
-                 is_remote = True,
                  dtype = torch.float32, ## required by trace dict
-                 trust_remote_code=True,
-                 quiet=True) -> None:
+                 trust_remote_code=True) -> None:
         
         self.model_name = model_name_or_path
         
-        if is_remote:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
-            config = AutoConfig.from_pretrained(self.model_name, trust_remote_code=True)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name, 
-                config=config,
-                # output_attentions=True,
-                low_cpu_mem_usage=True, ## load with accelerate
-                torch_dtype=dtype,
-                trust_remote_code=trust_remote_code
-            )
-            self.model.eval().cuda()
-            
-        elif not is_remote:
-            model_path = Path(self.model_name)
-            config = AutoConfig.from_pretrained(model_path, trust_remote_code=True, output_attentions=True)
-            self.tokenizer = AutoTokenizer.from_pretrained(model_path, config=config, 
-                                                           vocab_file=os.path.join(self.model_name, "vocab.json"))
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_path, 
-                config=config,
-                low_cpu_mem_usage=True, ## load with accelerate
-                torch_dtype=dtype,
-                trust_remote_code=trust_remote_code
-            )
-            self.model.eval().cuda()
-        
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
+        config = AutoConfig.from_pretrained(self.model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.model_name, 
+            config=config,
+            output_attentions=True,
+            low_cpu_mem_usage=True, ## load with accelerate
+            torch_dtype=dtype,
+            trust_remote_code=trust_remote_code
+        )
+        self.model.eval().cuda()
+         
         # post process
-        self.tokenizer.clean_up_tokenization_spaces = False
         self.extract_fields()
         
         nethook.set_requires_grad(False, self.model)
-
-        if not quiet:
-            for n, p in self.model.named_parameters():
-                print(n, p.shape, p.device)
 
         ## set pad tokens
         self.tokenizer.clean_up_tokenization_spaces=False
