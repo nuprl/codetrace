@@ -11,8 +11,15 @@ def extract_java_type_prompts(javads, types = ["int"]):  # ["int", "String"]
       for typ in types:
          typ_tok = typ + " "
          if typ_tok in code:
-            entry = {"prompt": code[:code.index(typ_tok)+len(typ)], # rindex?
-                     "solution": code[code.index(typ_tok)+len(typ):],
+            idx_typ = code.index(typ_tok)
+            try:
+               idx_split = code[idx_typ:].index("=") + len(code[:idx_typ]) + 2
+            except:
+               continue
+            idx_end = code[idx_split:].index(";") + len(code[:idx_split]) +1
+
+            entry = {"prompt": code[:idx_split], # rindex?
+                     "solution": code[idx_split : idx_end],
                     }
             type_prompts[typ].append(entry)
    
@@ -23,10 +30,10 @@ def main():
    java = extract_java(dataset)
    int_dataset_java = extract_java_type_prompts(java)
    pandas_df = pd.DataFrame(int_dataset_java["int"])
-   pandas_df.to_csv("data/int_dataset_java.csv")
-   Dataset.from_pandas(pandas_df).save_to_disk("data/int_dataset_java")
+   pandas_df.to_csv("data/int_dataset_java2.csv")
+   Dataset.from_pandas(pandas_df).save_to_disk("data/int_dataset_java2")
    
-   dataset = load_from_disk("data/int_dataset_java")
+   dataset = load_from_disk("data/int_dataset_java2")
    print(dataset)
    
 if __name__=="__main__":

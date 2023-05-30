@@ -8,7 +8,6 @@ from tqdm import tqdm
 import transformers
 from typing import List, Tuple, Optional
 from transformers import StoppingCriteriaList, StoppingCriteria, AutoConfig
-from transformer_lens import HookedTransformerConfig
 
 
 """

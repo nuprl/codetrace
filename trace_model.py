@@ -1,14 +1,14 @@
 import torch
-from baukit import nethook
+import nethook
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
-from accelerate import init_empty_weights, load_checkpoint_and_dispatch, infer_auto_device_map
 import warnings
-import time
 from typing import Union, List
 from model_utils import untuple, extract_layer_formats
 import numpy as np
-import json
 import unicodedata
+from pathlib import Path
+import os
+from logit_lens import LogitLens
 '''
 
 '''
@@ -16,35 +16,40 @@ import unicodedata
 
 class ModelLoader:
     def __init__(self, 
-                 MODEL_NAME_OR_PATH, 
-                 MODEL_NAME = None,
-                 dtype = torch.float32,
+                 model_name_or_path, 
+                 is_remote = True,
+                 dtype = torch.float32, ## required by trace dict
                  trust_remote_code=True,
-                 preloaded_model=None,
                  quiet=True) -> None:
         
-        if MODEL_NAME is None:
-            self.MODEL_NAME = MODEL_NAME_OR_PATH
-        else:
-            ## for downloaded converted weights
-            self.MODEL_NAME = MODEL_NAME
-            
-        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME_OR_PATH) 
+        self.model_name = model_name_or_path
         
-        if preloaded_model is None:
-            start_time = time.process_time_ns()
+        if is_remote:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
             self.model = AutoModelForCausalLM.from_pretrained(
-                MODEL_NAME_OR_PATH, 
+                self.model_name, 
                 output_attentions=True,
                 low_cpu_mem_usage=True, ## load with accelerate
                 torch_dtype=dtype,
                 trust_remote_code=trust_remote_code
             )
-            print(f"Load time: {time.process_time_ns()-start_time} ns") 
             self.model.eval().cuda()
-        else:
-            self.model = preloaded_model
-
+            
+        elif not is_remote:
+            model_path = Path(self.model_name)
+            config = AutoConfig.from_pretrained(model_path, trust_remote_code=True, output_attentions=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path, config=config, 
+                                                           vocab_file=os.path.join(self.model_name, "vocab.json"))
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_path, 
+                config=config,
+                low_cpu_mem_usage=True, ## load with accelerate
+                torch_dtype=dtype,
+                trust_remote_code=trust_remote_code
+            )
+            self.model.eval().cuda()
+        
+        # post process
         self.extract_fields()
         
         nethook.set_requires_grad(False, self.model)
@@ -54,10 +59,9 @@ class ModelLoader:
                 print(n, p.shape, p.device)
 
         ## set pad tokens
-        if(self.model_type in ["gpt2", "gpt_neox", "llama"]):
-            self.tokenizer.pad_token = self.tokenizer.eos_token            
-        elif(self.model_type in [ "galactica"]):
-            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'}) 
+        self.tokenizer.clean_up_tokenization_spaces=False
+        self.tokenizer.padding_side="left"
+        self.tokenizer.pad_token = self.tokenizer.eos_token  
             
 
         
@@ -78,7 +82,7 @@ class ModelLoader:
         self.mlp_module_name_format = formats["mlp"]
         self.attn_module_name_format = formats["attn"]
         
-        self.fast_generation = (self.model_type not in ["galactica", "llama", "gpt2"])
+        self.fast_generation = (self.model_type not in ["galactica", "llama", "gpt2", "gpt_bigcode"])
 
         if(self.model_type is not None):
             self.layer_names = [self.layer_name_format.format(i) for i in range(self.model.config.n_layer)]
@@ -90,20 +94,22 @@ class ModelLoader:
             
     def sample_generate(
             self,
-            prompts: Union[str, List[str]], # TODO: technically it will accept a list of prompts, but due to some unresolved bugs generate doesn't work well with prompts of different sizes.
+            prompts: Union[str, List[str]],
             top_k: int = 5,                 
             max_out_len: int = 20,          
-            argmax_greedy = False,          # if top_k=1 it is by defaults generate greedy. Otherwise, it will report `top_k` predictions but pick the top one
+            argmax_greedy = False, 
             debug = False,
             use_cache = True,
             quiet=False,
-            request_activations = None
+            request_activations = None,
+            use_logit_lens=True,
         ):
         '''
         Trace with cache implementation if possible
         '''
 
         request_activations = [] if request_activations is None else request_activations
+        # print(self.tracable_modules)
         if(len(request_activations) > 0):
             invalid_module = list(set(request_activations) - set(self.tracable_modules))
             assert(
@@ -114,10 +120,33 @@ class ModelLoader:
         if(type(prompts) == str):
             prompts = [prompts]
 
+        self.tokenizer.clean_up_tokenization_spaces = False
         tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
-
+        
+        
+        layer_module_tmp = "transformer.h.{}"
+        ln_f_module = "transformer.ln_f"
+        lm_head_module = "lm_head"
+                
+        if use_logit_lens:
+            llens_gen = LogitLens(
+                self.model,
+                self.tokenizer,
+                layer_module_tmp,
+                ln_f_module,
+                lm_head_module,
+                disabled=not use_logit_lens,
+            )
+            inp_prompt = self.tokenizer(prompts, padding=True, return_tensors="pt").to(
+                next(self.model.parameters()).device
+            )
+            with llens_gen:
+                self.model(**inp_prompt)
+            print("\n--- Argument Model Logit Lens ---")
+            llens_gen.pprint(k=top_k)
+                        
         input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
-
+        print(input_ids)
         batch_size = input_ids.size(0)
 
         ## curr tok dict
@@ -140,7 +169,7 @@ class ModelLoader:
 
         if not self.fast_generation:
             use_cache = False
-            warnings.warn(f"The model `{self.MODEL_NAME}` of type `{self.model_type}` already implements or can't utilize `use_cache` for fast generation. Setting `use_cache = False`.")
+            warnings.warn(f"The model `{self.model_name}` of type `{self.model_type}` already implements or can't utilize `use_cache` for fast generation. Setting `use_cache = False`.")
 
         generated_tokens = [[] for _ in range(input_ids.size(0))]
         with torch.no_grad():
@@ -158,6 +187,7 @@ class ModelLoader:
                         past_key_values=past_key_values,
                         use_cache = use_cache,
                     )
+                    # print("Out:", model_out)
 
 
                 if(len(request_activations) > 0):
@@ -210,6 +240,9 @@ class ModelLoader:
                         print()
 
 
+                
+
+
                 ## Auto-regression: insert new tok into inputs
 
                 # If we're currently generating the continuation for the last token in `input_ids`,
@@ -252,8 +285,8 @@ class ModelLoader:
                 cur_context = slice(cur_context.stop, cur_context.stop + 1)
 
             # clear up the precious GPU memory as soon as the inference is done
-            del(traces)
-            del(model_out)
+            # del(traces)
+            # del(model_out)
             torch.cuda.empty_cache()                
 
             txt = [self.tokenizer.decode(x) for x in input_ids.detach().cpu().numpy().tolist()]
