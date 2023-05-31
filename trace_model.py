@@ -23,14 +23,13 @@ class ModelLoader:
         self.model_name = model_name_or_path
         
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
-        config = AutoConfig.from_pretrained(self.model_name)
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name, 
-            config=config,
             output_attentions=True,
             low_cpu_mem_usage=True, ## load with accelerate
             torch_dtype=dtype,
-            trust_remote_code=trust_remote_code
+            trust_remote_code=trust_remote_code,
+            
         )
         self.model.eval().cuda()
          
@@ -196,10 +195,6 @@ class ModelLoader:
                         print(f"prompt <{i}> ==> {formatted}")
                     if(input_ids.size(0) > 1):
                         print()
-
-
-                
-
 
                 ## Auto-regression: insert new tok into inputs
 
