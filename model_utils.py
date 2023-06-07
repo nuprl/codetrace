@@ -2,7 +2,7 @@ import torch
 import re
 import warnings
 import gc
-from text_generation import Client
+# from text_generation import Client
 from concurrent.futures.thread import ThreadPoolExecutor
 from tqdm import tqdm
 import transformers
@@ -94,7 +94,7 @@ class StoppingCriteriaSub(StoppingCriteria):
 
 def untuple(x):
     if isinstance(x, tuple):
-        return x[0]
+        return x[-1]
     return x
 
 

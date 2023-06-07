@@ -17,15 +17,18 @@ from logit_lens import LogitLens
 class ModelLoader:
     def __init__(self, 
                  model_name_or_path, 
+                 AUTH=True,
                  dtype = torch.float32, ## required by trace dict
                  trust_remote_code=True) -> None:
         
         self.model_name = model_name_or_path
         
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, 
+                                                       use_auth_token=AUTH) 
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name, 
             output_attentions=True,
+            use_auth_token=AUTH,
             low_cpu_mem_usage=True, ## load with accelerate
             torch_dtype=dtype,
             trust_remote_code=trust_remote_code,
@@ -79,14 +82,14 @@ class ModelLoader:
             max_out_len: int = 20,          
             argmax_greedy = False, 
             debug = False,
-            use_cache = True,
+            use_cache = False,
             quiet=False,
             request_activations = None
         ):
         '''
         Trace with cache implementation if possible
         '''
-
+        assert(max_out_len > len(max(prompts, key=len))), "Prompt length exceeds max_out_len"
         request_activations = [] if request_activations is None else request_activations
         # print(self.tracable_modules)
         if(len(request_activations) > 0):
@@ -160,6 +163,7 @@ class ModelLoader:
                                 )
                     elif(input_ids.size(1) == max_out_len - 1):
                         for module in request_activations:
+                            # print("traces shape:", untuple(traces[module].output).shape)
                             if(activation_track[module] is None):
                                 activation_track[module] = untuple(traces[module].output).cpu().numpy()
 
