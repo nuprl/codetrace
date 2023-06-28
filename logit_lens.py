@@ -1,10 +1,13 @@
 from collections import defaultdict
 from typing import Dict, Optional
-
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
 import nethook
+"""
+Modified and simplified from baukit
+TODO
+- possibly replace with tuned lens
+"""
 
 
 class LogitLens:

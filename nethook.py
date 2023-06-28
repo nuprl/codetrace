@@ -1,4 +1,5 @@
 """
+Modified from baukit
 Utilities for instrumenting a torch model.
 
 Trace will hook one layer at a time.
