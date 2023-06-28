@@ -9,6 +9,8 @@ import unicodedata
 from pathlib import Path
 import os
 from logit_lens import LogitLens
+import numpy
+from collections import defaultdict
 '''
 
 '''
@@ -280,3 +282,128 @@ class ModelLoader:
                 self.model(**inp_prompt)
             print("\n--- Argument Model Logit Lens ---")
             llens_gen.pprint(k=top_k)
+        
+    # def make_inputs(self, prompts, device="cuda"):
+    #     tokenizer = self.tokenizer
+    #     token_lists = [tokenizer.encode(p) for p in prompts]
+    #     maxlen = max(len(t) for t in token_lists)
+    #     if "[PAD]" in tokenizer.all_special_tokens:
+    #         pad_id = tokenizer.all_special_ids[tokenizer.all_special_tokens.index("[PAD]")]
+    #     else:
+    #         pad_id = 0
+    #     input_ids = [[pad_id] * (maxlen - len(t)) + t for t in token_lists]
+    #     # position_ids = [[0] * (maxlen - len(t)) + list(range(len(t))) for t in token_lists]
+    #     attention_mask = [[0] * (maxlen - len(t)) + [1] * len(t) for t in token_lists]
+    #     return dict(
+    #         input_ids=torch.tensor(input_ids).to(device),
+    #         #    position_ids=torch.tensor(position_ids).to(device),
+    #         attention_mask=torch.tensor(attention_mask).to(device),
+    # )
+            
+    def trace_with_patch(
+        self,  # The model
+        prompts,  # A set of input prompts
+        heads_to_patch,  # A list of (head_index, layername) triples to restore
+        answers_t=None,  # Answer probabilities to collect
+        noise=0.1,  # Level of noise to add
+        uniform_noise=False,
+        replace=False,  # True to replace with instead of add noise
+        trace_layers=None,  # List of traced outputs to return
+    ):
+       
+        toks = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
+        # inp = self.make_inputs(prompts, device=self.model.device)["input_ids"]
+        inp = toks["input_ids"]
+        print(inp)
+        # with torch.no_grad():
+        #     answers_t, base_score = [d[0] for d in predict_from_input(self.model, inp)]
+        # attn_mask = toks["attention_mask"]
+        # if answers_t is None:
+        #     # all probs 
+        #     answers_t = torch.ones(inp["input_ids"].shape[0], dtype=torch.long).to(self.model.device)
+            
+        rs = numpy.random.RandomState(1)  # For reproducibility, use pseudorandom noise
+        if uniform_noise:
+            prng = lambda *shape: rs.uniform(-1, 1, shape)
+        else:
+            prng = lambda *shape: rs.randn(*shape)
+
+        patch_spec = defaultdict(list)
+        for h, l in heads_to_patch:
+            patch_spec[l].append(h)
+
+        embed_layername = self.layername( 0, "embed")
+        
+        def untuple(x):
+            return x[0] if isinstance(x, tuple) else x
+
+        # Define the model-patching rule.
+        if isinstance(noise, float):
+            noise_fn = lambda x: noise * x
+        else:
+            noise_fn = noise
+
+        def patch_rep(x, layer): # x is the output of the layer
+            if layer in patch_spec:
+                # erase head activations
+                for h in patch_spec[layer]:
+                    pass
+            print("OUTPUT", untuple(x), untuple(x).shape, layer)      
+            # if layer == embed_layername:
+            #     # If requested, we corrupt a range of token embeddings on batch items x[1:]
+            #     if tokens_to_mix is not None:
+            #         b, e = tokens_to_mix
+            #         noise_data = noise_fn(
+            #             torch.from_numpy(prng(x.shape[0] - 1, e - b, x.shape[2]))
+            #         ).to(x.device)
+            #         if replace:
+            #             x[1:, b:e] = noise_data
+            #         else:
+            #             x[1:, b:e] += noise_data
+            #     return x
+            # if layer not in patch_spec:
+            #     return x
+            # # If this layer is in the patch_spec, restore the uncorrupted hidden state
+            # # for selected tokens.
+            # h = untuple(x)
+            # for t in patch_spec[layer]:
+            #     h[1:, t] = h[0, t]
+            return x
+
+        # With the patching rules defined, run the patched model in inference.
+        additional_layers = [] if trace_layers is None else trace_layers
+        with torch.no_grad(), nethook.TraceDict(
+            self.model,
+            [embed_layername] + list(patch_spec.keys()) + additional_layers,
+            edit_output=patch_rep,
+        ) as td:
+            outputs_exp = self.model(inp)
+
+        # We report softmax probabilities for the answers_t token predictions of interest.
+        probs = torch.softmax(outputs_exp.logits, dim=-1).mean(dim=0)[-1] # last token
+        
+
+        # If tracing all layers, collect all activations together to return.
+        if trace_layers is not None:
+            all_traced = torch.stack(
+                [untuple(td[layer].output).detach().cpu() for layer in trace_layers], dim=2
+            )
+            return probs, all_traced
+
+        return probs
+    
+
+    def layername(self, num, kind=None):
+        model = self.model
+        if hasattr(model, "transformer"):
+            if kind == "embed":
+                return "transformer.wte"
+            return f'transformer.h.{num}{"" if kind is None else "." + kind}'
+        if hasattr(model, "gpt_neox"):
+            if kind == "embed":
+                return "gpt_neox.embed_in"
+            if kind == "attn":
+                kind = "attention"
+            return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
+        assert False, "unknown transformer structure"    
+      
