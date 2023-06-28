@@ -11,6 +11,7 @@ import os
 from logit_lens import LogitLens
 import numpy
 from collections import defaultdict
+
 '''
 
 '''
@@ -343,12 +344,27 @@ class ModelLoader:
         else:
             noise_fn = noise
 
+        h_dim = int(self.model.config.n_embd / self.model.config.n_head)
+        
         def patch_rep(x, layer): # x is the output of the layer
-            if layer in patch_spec:
+            if layer not in patch_spec:
+                return x
+            elif layer in patch_spec:
+                
                 # erase head activations
                 for h in patch_spec[layer]:
-                    pass
-            print("OUTPUT", untuple(x), untuple(x).shape, layer)      
+                    # print(f"BEFORE {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
+                    noise_data = noise_fn(
+                        torch.from_numpy(prng(x[0].shape[0], x[0].shape[1], h_dim))
+                    ).to(x[0].device)
+                    if replace:
+                        x[0][:,:,h*h_dim:(h+1)*h_dim] = noise_data
+                    else:
+                        x[0][:,:,h*h_dim:(h+1)*h_dim] += noise_data
+                    # print(f"AFTER {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
+                        
+            # print("OUTPUT", untuple(x), untuple(x).shape, layer)      
+            # assert(not torch.equal(old, untuple(x)))
             # if layer == embed_layername:
             #     # If requested, we corrupt a range of token embeddings on batch items x[1:]
             #     if tokens_to_mix is not None:
