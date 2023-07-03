@@ -305,7 +305,6 @@ class ModelLoader:
         self,  # The model
         prompts,  # A set of input prompts
         heads_to_patch,  # A list of (head_index, layername) tuples to restore
-        states_to_patch,  # A list of (hidden_state_index, layername) tuples to restore
         answers_t=None,  # Answer probabilities to collect
         noise=0.1,  # Level of noise to add
         uniform_noise=False,
@@ -369,29 +368,46 @@ class ModelLoader:
             #     h[1:, t] = h[0, t]
             # return x
             
-            if layer not in patch_spec:
-                return x
-            elif layer in patch_spec:
-                
-                # erase head activations
-                for h in patch_spec[layer]:
-                    # print(f"BEFORE {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
+            # if layer not in patch_spec:
+                # print(layer)
+            # x = untuple(x)
+            
+            for h in range(48):
+                if h not in patch_spec[layer]:
                     noise_data = noise_fn(
                         torch.from_numpy(prng(x[0].shape[0], x[0].shape[1], h_dim))
                     ).to(x[0].device)
+                    # print(noise_data.shape)
                     if replace:
-                        x[0][:,:,h*h_dim:(h+1)*h_dim] = noise_data
+                        x[0][:,:,h*h_dim:(h+1)*h_dim] = noise_data # 0 is batch
                     else:
                         x[0][:,:,h*h_dim:(h+1)*h_dim] += noise_data
-                    # print(f"AFTER {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
                         
             return x
+            
+            # if layer not in patch_spec:
+            #     return x
+            # elif layer in patch_spec:
+                
+            #     # erase head activations
+            #     for h in patch_spec[layer]:
+            #         # print(f"BEFORE {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
+            #         noise_data = noise_fn(
+            #             torch.from_numpy(prng(x[0].shape[0], x[0].shape[1], h_dim))
+            #         ).to(x[0].device)
+            #         if replace:
+            #             x[0][:,:,h*h_dim:(h+1)*h_dim] = noise_data
+            #         else:
+            #             x[0][:,:,h*h_dim:(h+1)*h_dim] += noise_data
+            #         # print(f"AFTER {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
+                        
+            # return x
 
         # With the patching rules defined, run the patched model in inference.
         additional_layers = [] if trace_layers is None else trace_layers
         with torch.no_grad(), nethook.TraceDict(
             self.model,
-            [embed_layername] + list(patch_spec.keys()) + additional_layers,
+            [self.layername(i) for i in range(0, 40)],
             edit_output=patch_rep,
         ) as td:
             outputs_exp = self.model(inp)
