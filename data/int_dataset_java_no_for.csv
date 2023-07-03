@@ -1,0 +1,467 @@
+prompt,completion
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // You are given an array array list of two strings, both strings consist of open
+    // parentheses '(' or close parentheses ')' only.
+    // Your job is to check if it is possible to concatenate the two strings in
+    // some order, that the resulting string will be good.
+    // A string S is considered to be good if and only if all parentheses in S
+    // are balanced. For example: the string '(())()' is good, while the string
+    // '())' is not.
+    // Return 'Yes' if there's a way to make a good string, and return 'No' otherwise.
+    // Examples:
+    // >>> matchParens((new ArrayList<String>(Arrays.asList((String)""()("", (String)"")""))))
+    // (""Yes"")
+    // >>> matchParens((new ArrayList<String>(Arrays.asList((String)"")"", (String)"")""))))
+    // (""No"")
+    public static String matchParens(ArrayList<String> lst) {
+        String s1 = lst.get(0);
+        String s2 = lst.get(1);
+        String s3 = s1+s2;
+        String s4 = s2+s1;
+        int c1 = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Given an array array list of numbers, return whether or not they are sorted
+    // in ascending order. If array list has more than 1 duplicate of the same
+    // number, return false. Assume no negative numbers and only integers.
+    // Examples
+    // >>> isSorted((new ArrayList<Long>(Arrays.asList((long)5l))))
+    // (true)
+    // >>> isSorted((new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)3l, (long)4l, (long)5l))))
+    // (true)
+    // >>> isSorted((new ArrayList<Long>(Arrays.asList((long)1l, (long)3l, (long)2l, (long)4l, (long)5l))))
+    // (false)
+    // >>> isSorted((new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)3l, (long)4l, (long)5l, (long)6l))))
+    // (true)
+    // >>> isSorted((new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)3l, (long)4l, (long)5l, (long)6l, (long)7l))))
+    // (true)
+    // >>> isSorted((new ArrayList<Long>(Arrays.asList((long)1l, (long)3l, (long)2l, (long)4l, (long)5l, (long)6l, (long)7l))))
+    // (false)
+    // >>> isSorted((new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)2l, (long)3l, (long)3l, (long)4l))))
+    // (true)
+    // >>> isSorted((new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)2l, (long)2l, (long)3l, (long)4l))))
+    // (false)
+    public static boolean isSorted(ArrayList<Long> lst) {
+        if (lst.size() == 0) {
+            return true;
+        }
+        else {
+            int running_max = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Create a function that returns true if the last character
+    // of a given string is an alphabetical character and is not
+    // a part of a word, and false otherwise.
+    // Note: ""word"" is a group of characters separated by space.
+    // Examples:
+    // >>> checkIfLastCharIsALetter((""apple pie""))
+    // (false)
+    // >>> checkIfLastCharIsALetter((""apple pi e""))
+    // (true)
+    // >>> checkIfLastCharIsALetter((""apple pi e ""))
+    // (false)
+    // >>> checkIfLastCharIsALetter((""""))
+    // (false)
+    public static boolean checkIfLastCharIsALetter(String txt) {
+        if (txt.length() == 0) {
+            return false;
+        }
+        int len = ",txt.length()
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Given a string text, replace all spaces in it with underscores, 
+    // and if a string has more than 2 consecutive spaces, 
+    // then replace all consecutive spaces with - 
+    // >>> fixSpaces(("" Example""))
+    // (""Example"")
+    // >>> fixSpaces(("" Example 1""))
+    // (""Example_1"")
+    // >>> fixSpaces(("" Example 2""))
+    // (""_Example_2"")
+    // >>> fixSpaces(("" Example 3""))
+    // (""_Example-3"")
+    public static String fixSpaces(String text) {
+        String result = text.replace("" "", ""_"");
+        int i = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // ""
+    // This function will take an array array list of integers. For all entries in the array list, the function shall square the integer entry if its index is a 
+    // multiple of 3 and will cube the integer entry if its index is a multiple of 4 and not a multiple of 3. The function will not 
+    // change the entries in the array list whose indexes are not a multiple of 3 or 4. The function shall then return the sum of all entries. 
+    // Examples:
+    // >>> lst
+    // (long)new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)3l))
+    // >>> lst
+    // (long)new ArrayList<Long>(Arrays.asList())
+    // >>> lst
+    // (long)new ArrayList<Long>(Arrays.asList((long)-1l, (long)-5l, (long)2l, (long)-1l, (long)-5l))
+    public static long sumSquares(ArrayList<Long> lst) {
+        int sz = ",lst.size()
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // You are given a positive integer n. You have to create an integer array array list a of length n.
+    // For each i (1 ≤ i ≤ n), the value of a[i] = i * i - i + 1.
+    // Return the number of triples (a[i], a[j], a[k]) of a where i < j < k, 
+    // and a[i] + a[j] + a[k] is a multiple of 3.
+    // Example :
+    // >>> getMaxTriples((5l))
+    // (1l)
+    // Explanation: 
+    // a = [1, 3, 7, 13, 21]
+    // The only valid triple is (1, 7, 13).
+    public static long getMaxTriples(long n) {
+        // Write your code here
+        // To print results to the standard output you can use System.out.println()
+        // Example: System.out.println(""Hello world!"");
+        int count = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // There are eight planets in our solar system: the closerst to the Sun 
+    // is Mercury, the next one is Venus, then Earth, Mars, Jupiter, Saturn, 
+    // Uranus, Neptune.
+    // Write a function that takes two planet names as strings planet1 and planet2. 
+    // The function should return a pair containing all planets whose orbits are 
+    // located between the orbit of planet1 and the orbit of planet2, sorted by 
+    // the proximity to the sun. 
+    // The function should return an empty pair if planet1 or planet2
+    // are not correct planet names. 
+    // Examples
+    // >>> bf((""Jupiter""), (""Neptune""))
+    // (new ArrayList<String>(Arrays.asList((String)""Saturn"", (String)""Uranus"")))
+    // >>> bf((""Earth""), (""Mercury""))
+    // (ArrayList<String>(""Venus""))
+    // >>> bf((""Mercury""), (""Uranus""))
+    // (new ArrayList<String>(Arrays.asList((String)""Venus"", (String)""Earth"", (String)""Mars"", (String)""Jupiter"", (String)""Saturn"")))
+    public static ArrayList<String> bf(String planet1, String planet2) {
+        ArrayList<String> planets = new ArrayList<String>(Arrays.asList((String)""Mercury"", (String)""Venus"", (String)""Earth"", (String)""Mars"", (String)""Jupiter"", (String)""Saturn"", (String)""Uranus"", (String)""Neptune""));
+        int indexPlanet1 = ",planets.indexOf(planet1)
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // You are given 2 words. You need to return true if the second word or any of its rotations is a substring in the first word
+    // >>> cycpatternCheck((""abcd""), (""abd""))
+    // (false)
+    // >>> cycpatternCheck((""hello""), (""ell""))
+    // (true)
+    // >>> cycpatternCheck((""whassup""), (""psus""))
+    // (false)
+    // >>> cycpatternCheck((""abab""), (""baa""))
+    // (true)
+    // >>> cycpatternCheck((""efef""), (""eeff""))
+    // (false)
+    // >>> cycpatternCheck((""himenss""), (""simen""))
+    // (true)
+    public static boolean cycpatternCheck(String a, String b) {
+        int len = ",b.length()
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Given a positive integer, obtain its roman numeral equivalent as a string,
+    // and return it in lowercase.
+    // Restrictions: 1 <= num <= 1000
+    // Examples:
+    // >>> intToMiniRoman((19l))
+    // (""xix"")
+    // >>> intToMiniRoman((152l))
+    // (""clii"")
+    // >>> intToMiniRoman((426l))
+    // (""cdxxvi"")
+    public static String intToMiniRoman(long number) {
+        int num = ",(int) number
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Find how many times a given substring can be found in the original string. Count overlaping cases.
+    // >>> howManyTimes((""""), (""a""))
+    // (0l)
+    // >>> howManyTimes((""aaa""), (""a""))
+    // (3l)
+    // >>> howManyTimes((""aaaa""), (""aa""))
+    // (3l)
+    public static long howManyTimes(String string, String substring) {
+        long count = 0;
+        int index = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Input to this function is a string containing multiple groups of nested parentheses. Your goal is to
+    // separate those group into separate strings and return the array list of those.
+    // Separate groups are balanced (each open brace is properly closed) and not nested within each other
+    // Ignore any spaces in the input string.
+    // >>> separateParenGroups((""( ) (( )) (( )( ))""))
+    // (new ArrayList<String>(Arrays.asList((String)""()"", (String)""(())"", (String)""(()())"")))
+    public static ArrayList<String> separateParenGroups(String paren_string) {
+		ArrayList<String> output = new ArrayList<String>();
+		StringBuffer temp = new StringBuffer();
+		int open_paren = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // This function takes an array array list l and returns an array array list l' such that
+    // l' is identical to l in the odd indicies, while its values at the even indicies are equal
+    // to the values of the even indicies of l, but sorted.
+    // >>> sortEven((new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)3l))))
+    // (new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)3l)))
+    // >>> sortEven((new ArrayList<Long>(Arrays.asList((long)5l, (long)6l, (long)3l, (long)4l))))
+    // (new ArrayList<Long>(Arrays.asList((long)3l, (long)6l, (long)5l, (long)4l)))
+    public static ArrayList<Long> sortEven(ArrayList<Long> l) {
+        // Input: A sequence of real numbers l
+        // Output: A sequence of real numbers l' such that
+        // l' is identical to l in the odd indicies, while its values at the even indicies are equal
+        // to the values of the even indicies of l, but sorted.
+        ArrayList<Long> res = new ArrayList<Long>();
+        ArrayList<Long> evenIndexed = new ArrayList<Long>();
+        int index = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Return median of elements in the array list l.
+    // >>> median((new ArrayList<Long>(Arrays.asList((long)3l, (long)1l, (long)2l, (long)4l, (long)5l))))
+    // (float)3l
+    // >>> median((new ArrayList<Long>(Arrays.asList((long)-10l, (long)4l, (long)6l, (long)1000l, (long)10l, (long)20l))))
+    // (15.0f)
+    public static float median(ArrayList<Long> l) {
+        float ret = 0;
+        Collections.sort(l);
+        int size = ",l.size()
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Checks if given string is a palindrome
+    // >>> isPalindrome((""""))
+    // (true)
+    // >>> isPalindrome((""aba""))
+    // (true)
+    // >>> isPalindrome((""aaaaa""))
+    // (true)
+    // >>> isPalindrome((""zbcd""))
+    // (false)
+    public static boolean isPalindrome(String text) {
+        boolean isPalindrome = true;
+        int left = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // brackets is a string of ""<"" and "">"".
+    // return true if every opening bracket has a corresponding closing bracket.
+    // >>> correctBracketing((""<""))
+    // (false)
+    // >>> correctBracketing((""<>""))
+    // (true)
+    // >>> correctBracketing((""<<><>>""))
+    // (true)
+    // >>> correctBracketing((""><<>""))
+    // (false)
+    public static boolean correctBracketing(String brackets) {
+        int open = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // brackets is a string of ""("" and "")"".
+    // return true if every opening bracket has a corresponding closing bracket.
+    // >>> correctBracketing((""(""))
+    // (false)
+    // >>> correctBracketing((""()""))
+    // (true)
+    // >>> correctBracketing((""(()())""))
+    // (true)
+    // >>> correctBracketing(("")(()""))
+    // (false)
+    public static boolean correctBracketing(String brackets) {
+        int balance = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Write a function vowels_count which takes a string representing
+    // a word as input and returns the number of vowels in the string.
+    // Vowels in this case are 'a', 'e', 'i', 'o', 'u'. Here, 'y' is also a
+    // vowel, but only when it is at the end of the given word.
+    // Example:
+    // >>> vowelsCount((""abcde""))
+    // (2l)
+    // >>> vowelsCount((""ACEDY""))
+    // (3l)
+    public static long vowelsCount(String s) {
+        long sum = 0;
+        String sUpper = s.toUpperCase();
+        int lastIndex = ",sUpper.length() - 1
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // ""Given an array array list representing a branch of a tree that has non-negative integer nodes
+    // your task is to pluck one of the nodes and return it.
+    // The plucked node should be the node with the smallest even value.
+    // If multiple nodes with the same smallest even value are found return the node that has smallest index.
+    // The plucked node should be returned in an array array list, [ smalest_value, its index ],
+    // If there are no even values or the given array array list is empty, return [].
+    // Example 1:
+    // >>> pluck((new ArrayList<Long>(Arrays.asList((long)4l, (long)2l, (long)3l))))
+    // (new ArrayList<Long>(Arrays.asList((long)2l, (long)1l)))
+    // Explanation: 2 has the smallest even value, and 2 has the smallest index.
+    // Example 2:
+    // >>> pluck((new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)3l))))
+    // (new ArrayList<Long>(Arrays.asList((long)2l, (long)1l)))
+    // Explanation: 2 has the smallest even value, and 2 has the smallest index.
+    // Example 3:
+    // >>> pluck((new ArrayList<Long>(Arrays.asList())))
+    // (new ArrayList<Long>(Arrays.asList()))
+    // Example 4:
+    // >>> pluck((new ArrayList<Long>(Arrays.asList((long)5l, (long)0l, (long)3l, (long)0l, (long)4l, (long)2l))))
+    // (new ArrayList<Long>(Arrays.asList((long)0l, (long)1l)))
+    // Explanation: 0 is the smallest value, but  there are two zeros,
+    // so we will choose the first zero, which has the smallest index.
+    // Constraints:
+    // * 1 <= nodes.length <= 10000
+    // * 0 <= node.value
+    public static ArrayList<Long> pluck(ArrayList<Long> arr) {
+        int minIndex = ",-1
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Given array list of integers, return array list in strange order.
+    // Strange sorting, is when you start with the minimum value,
+    // then maximum of the remaining integers, then minimum and so on.
+    // Examples:
+    // >>> strangeSortList((new ArrayList<Long>(Arrays.asList((long)1l, (long)2l, (long)3l, (long)4l))))
+    // (new ArrayList<Long>(Arrays.asList((long)1l, (long)4l, (long)2l, (long)3l)))
+    // >>> strangeSortList((new ArrayList<Long>(Arrays.asList((long)5l, (long)5l, (long)5l, (long)5l))))
+    // (new ArrayList<Long>(Arrays.asList((long)5l, (long)5l, (long)5l, (long)5l)))
+    // >>> strangeSortList((new ArrayList<Long>(Arrays.asList())))
+    // (new ArrayList<Long>(Arrays.asList()))
+    public static ArrayList<Long> strangeSortList(ArrayList<Long> lst) {
+        // BEGIN SOLUTION
+        if (lst.size() <= 1) {
+            return lst;
+        }
+        ArrayList<Long> result = new ArrayList<Long>();
+        ArrayList<Long> sorted = new ArrayList<Long>(lst);
+        Collections.sort(sorted);
+        int min = ",0
+"import java.util.*;
+import java.lang.reflect.*;
+import org.javatuples.*;
+import java.security.*;
+import java.math.*;
+import java.io.*;
+import java.util.stream.*;
+class Problem {
+    // Write a function that accepts two array lists of strings and returns the array list that has 
+    // total number of chars in the all strings of the array list less than the other array list.
+    // if the two array lists have the same number of chars, return the first array list.
+    // Examples
+    // >>> totalMatch((new ArrayList<String>(Arrays.asList())), (new ArrayList<String>(Arrays.asList())))
+    // (new ArrayList<String>(Arrays.asList()))
+    // >>> totalMatch((new ArrayList<String>(Arrays.asList((String)""hi"", (String)""admin""))), (new ArrayList<String>(Arrays.asList((String)""hI"", (String)""Hi""))))
+    // (new ArrayList<String>(Arrays.asList((String)""hI"", (String)""Hi"")))
+    // >>> totalMatch((new ArrayList<String>(Arrays.asList((String)""hi"", (String)""admin""))), (new ArrayList<String>(Arrays.asList((String)""hi"", (String)""hi"", (String)""admin"", (String)""project""))))
+    // (new ArrayList<String>(Arrays.asList((String)""hi"", (String)""admin"")))
+    // >>> totalMatch((new ArrayList<String>(Arrays.asList((String)""hi"", (String)""admin""))), (new ArrayList<String>(Arrays.asList((String)""hI"", (String)""hi"", (String)""hi""))))
+    // (new ArrayList<String>(Arrays.asList((String)""hI"", (String)""hi"", (String)""hi"")))
+    // >>> totalMatch((new ArrayList<String>(Arrays.asList((String)""4""))), (new ArrayList<String>(Arrays.asList((String)""1"", (String)""2"", (String)""3"", (String)""4"", (String)""5""))))
+    // (new ArrayList<String>(Arrays.asList((String)""4"")))
+    public static ArrayList<String> totalMatch(ArrayList<String> lst1, ArrayList<String> lst2) {
+        int sum1 = ",0

@@ -304,7 +304,8 @@ class ModelLoader:
     def trace_with_patch(
         self,  # The model
         prompts,  # A set of input prompts
-        heads_to_patch,  # A list of (head_index, layername) triples to restore
+        heads_to_patch,  # A list of (head_index, layername) tuples to restore
+        states_to_patch,  # A list of (hidden_state_index, layername) tuples to restore
         answers_t=None,  # Answer probabilities to collect
         noise=0.1,  # Level of noise to add
         uniform_noise=False,
@@ -315,7 +316,7 @@ class ModelLoader:
         toks = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
         # inp = self.make_inputs(prompts, device=self.model.device)["input_ids"]
         inp = toks["input_ids"]
-        print(inp)
+        
         # with torch.no_grad():
         #     answers_t, base_score = [d[0] for d in predict_from_input(self.model, inp)]
         # attn_mask = toks["attention_mask"]
@@ -347,26 +348,8 @@ class ModelLoader:
         h_dim = int(self.model.config.n_embd / self.model.config.n_head)
         
         def patch_rep(x, layer): # x is the output of the layer
-            if layer not in patch_spec:
-                return x
-            elif layer in patch_spec:
-                
-                # erase head activations
-                for h in patch_spec[layer]:
-                    # print(f"BEFORE {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
-                    noise_data = noise_fn(
-                        torch.from_numpy(prng(x[0].shape[0], x[0].shape[1], h_dim))
-                    ).to(x[0].device)
-                    if replace:
-                        x[0][:,:,h*h_dim:(h+1)*h_dim] = noise_data
-                    else:
-                        x[0][:,:,h*h_dim:(h+1)*h_dim] += noise_data
-                    # print(f"AFTER {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
-                        
-            # print("OUTPUT", untuple(x), untuple(x).shape, layer)      
-            # assert(not torch.equal(old, untuple(x)))
             # if layer == embed_layername:
-            #     # If requested, we corrupt a range of token embeddings on batch items x[1:]
+            # # If requested, we corrupt a range of token embeddings on batch items x[1:]
             #     if tokens_to_mix is not None:
             #         b, e = tokens_to_mix
             #         noise_data = noise_fn(
@@ -384,6 +367,24 @@ class ModelLoader:
             # h = untuple(x)
             # for t in patch_spec[layer]:
             #     h[1:, t] = h[0, t]
+            # return x
+            
+            if layer not in patch_spec:
+                return x
+            elif layer in patch_spec:
+                
+                # erase head activations
+                for h in patch_spec[layer]:
+                    # print(f"BEFORE {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
+                    noise_data = noise_fn(
+                        torch.from_numpy(prng(x[0].shape[0], x[0].shape[1], h_dim))
+                    ).to(x[0].device)
+                    if replace:
+                        x[0][:,:,h*h_dim:(h+1)*h_dim] = noise_data
+                    else:
+                        x[0][:,:,h*h_dim:(h+1)*h_dim] += noise_data
+                    # print(f"AFTER {h}-{layer}", x[0][:,:,h*h_dim:(h+1)*h_dim].shape, x[0][:,:,h*h_dim:(h+1)*h_dim] )
+                        
             return x
 
         # With the patching rules defined, run the patched model in inference.
@@ -423,3 +424,23 @@ class ModelLoader:
             return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
         assert False, "unknown transformer structure"    
       
+    def search_causal_heads(self, prompt, layers = range(20,31), split=8, replace=True, noise=0.9):
+        all_heads = []
+        heads_to_delete = []
+        for l in layers:
+            layer_heads = []
+            layername = self.layername(l)
+            for hds in range(0, 48, split):
+                heads_to_patch = [(i, layername) for i in range(hds, hds+split)]
+                probs = self.trace_with_patch(prompt, heads_to_patch=heads_to_delete +heads_to_patch, 
+                                        replace=replace, noise = noise)
+                top_completion = self.tokenizer.decode(probs.argmax(dim=0))
+                print(top_completion, heads_to_patch)
+                try:
+                    tc = int(top_completion)
+                    heads_to_delete += heads_to_patch
+                except:
+                    layer_heads += heads_to_patch
+            all_heads += layer_heads
+            
+        return all_heads
