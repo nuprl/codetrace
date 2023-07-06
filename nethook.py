@@ -69,32 +69,84 @@ class Trace(contextlib.AbstractContextManager):
         if layer is not None:
             module = get_module(module, layer)
 
-        def retain_hook(m, inputs, output):
+        def retain_hook_block(m, inputs, output):
             if edit_output:
                 output = invoke_with_optional_args(
                     edit_output, output=output, layer=self.layer, inputs=inputs
                 )
             if retain_input:
-                retainer.input = recursive_copy(
+                retainer.block_input = recursive_copy(
                     inputs[0] if len(inputs) == 1 else inputs,
                     clone=clone,
                     detach=detach,
                     retain_grad=False,
                 )  # retain_grad applies to output only.
             if retain_output:
-                retainer.output = recursive_copy(
+                retainer.block_output = recursive_copy(
                     output, clone=clone, detach=detach, retain_grad=retain_grad
                 )
                 # When retain_grad is set, also insert a trivial
                 # copy operation.  That allows in-place operations
                 # to follow without error.
                 if retain_grad:
-                    output = recursive_copy(retainer.output, clone=True, detach=False)
+                    output = recursive_copy(retainer.block_output, clone=True, detach=False)
+            if stop:
+                raise StopForward()
+            return output
+        
+        def retain_hook_attn(m, inputs, output):
+            if edit_output:
+                output = invoke_with_optional_args(
+                    edit_output, output=output, layer=self.layer, inputs=inputs
+                )
+            if retain_input:
+                retainer.attn_input = recursive_copy(
+                    inputs[0] if len(inputs) == 1 else inputs,
+                    clone=clone,
+                    detach=detach,
+                    retain_grad=False,
+                )  # retain_grad applies to output only.
+            if retain_output:
+                retainer.attn_output = recursive_copy(
+                    output, clone=clone, detach=detach, retain_grad=retain_grad
+                )
+                # When retain_grad is set, also insert a trivial
+                # copy operation.  That allows in-place operations
+                # to follow without error.
+                if retain_grad:
+                    output = recursive_copy(retainer.attn_output, clone=True, detach=False)
+            if stop:
+                raise StopForward()
+            return output
+        
+        def retain_hook_mlp(m, inputs, output):
+            if edit_output:
+                output = invoke_with_optional_args(
+                    edit_output, output=output, layer=self.layer, inputs=inputs
+                )
+            if retain_input:
+                retainer.mlp_input = recursive_copy(
+                    inputs[0] if len(inputs) == 1 else inputs,
+                    clone=clone,
+                    detach=detach,
+                    retain_grad=False,
+                )  # retain_grad applies to output only.
+            if retain_output:
+                retainer.mlp_output = recursive_copy(
+                    output, clone=clone, detach=detach, retain_grad=retain_grad
+                )
+                # When retain_grad is set, also insert a trivial
+                # copy operation.  That allows in-place operations
+                # to follow without error.
+                if retain_grad:
+                    output = recursive_copy(retainer.mlp_output, clone=True, detach=False)
             if stop:
                 raise StopForward()
             return output
 
-        self.registered_hook = module.register_forward_hook(retain_hook)
+        self.registered_hook = module.register_forward_hook(retain_hook_block)
+        self.registered_attn_hook = module.attn.register_forward_hook(retain_hook_attn)
+        self.registered_mlp_hook = module.mlp.register_forward_hook(retain_hook_mlp)
         self.stop = stop
 
     def __enter__(self):

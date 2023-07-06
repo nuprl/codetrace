@@ -43,7 +43,7 @@ class ModelLoader:
         self.extract_fields()
         
         nethook.set_requires_grad(False, self.model)
-
+        
         ## set pad tokens
         self.tokenizer.clean_up_tokenization_spaces=False
         self.tokenizer.padding_side="left"
@@ -85,15 +85,17 @@ class ModelLoader:
             max_out_len: int = 20,          
             argmax_greedy = False, 
             debug = False,
-            use_cache = False,
             quiet=False,
             request_activations = None
         ):
         '''
         Trace with cache implementation if possible
         '''
-        assert(max_out_len > len(max(prompts, key=len))), "Prompt length exceeds max_out_len"
+        if max_out_len < len(max(prompts, key=len)):
+            raise ValueError("Prompt length exceeds max_out_len")
+        
         request_activations = [] if request_activations is None else request_activations
+        
         # print(self.tracable_modules)
         if(len(request_activations) > 0):
             invalid_module = list(set(request_activations) - set(self.tracable_modules))
@@ -101,18 +103,20 @@ class ModelLoader:
                 len(invalid_module) == 0
             ), f"modules {invalid_module} are not in the list of tracable modules"
             activation_track = {k: None for k in request_activations}
+            attn_track = {k: None for k in request_activations}
+            mlp_track = {k: None for k in request_activations}
 
         if(type(prompts) == str):
             prompts = [prompts]
 
-        self.tokenizer.clean_up_tokenization_spaces = False
+        
         tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
         
         input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
         # print(input_ids)
         batch_size = input_ids.size(0)
 
-        ## curr tok dict
+        ## add prompt to ret dict
         report_input_tokenized = []
         for b in range(batch_size):
             curr_inp_tok = []
@@ -124,33 +128,32 @@ class ModelLoader:
         ret_dict = {"input_tokenized": report_input_tokenized}
 
 
-        # Setup storage of fast generation with attention caches.
-        # `cur_context` is used to define the range of inputs that are not yet
-        # stored in `past_key_values`. At each step, we are generating the
-        # next token for the index at `cur_context.stop + 1`.
-        past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item())  # init size of context
+        # init size of context
+        past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item()) 
 
+        # fast gen not supported bigcode
         if not self.fast_generation:
             use_cache = False
             warnings.warn(f"The model `{self.model_name}` of type `{self.model_type}` already implements or can't utilize `use_cache` for fast generation. Setting `use_cache = False`.")
 
         generated_tokens = [[] for _ in range(input_ids.size(0))]
         with torch.no_grad():
-            while input_ids.size(1) < max_out_len:  # while not exceeding max output length
-
+            # while not exceeding max output length
+            while input_ids.size(1) < max_out_len: 
 
                 ## traces curr inputs to prediction of next tok
                 with nethook.TraceDict(
                     self.model, 
                     layers = request_activations,
+                    retain_input=True,
                 ) as traces:
                     model_out = self.model(
                         input_ids=input_ids[:, cur_context],
                         attention_mask=attention_mask[:, cur_context],
                         past_key_values=past_key_values,
                         use_cache = use_cache,
+                        
                     )
-
 
 
                 if(len(request_activations) > 0):
@@ -158,8 +161,28 @@ class ModelLoader:
                         for module in request_activations:
                             # print("traces shape:", untuple(traces[module].output).shape)
                             if(activation_track[module] is None):
-                                activation_track[module] = untuple(traces[module].output).cpu().numpy()
-
+                                activation_track[module] = untuple(traces[module].block_output).cpu().numpy()
+                            if(attn_track[module] is None):
+                                attn_track[module] = untuple(traces[module].attn_output).cpu().numpy()
+                            if(mlp_track[module] is None):
+                                mlp_track[module] = untuple(traces[module].mlp_output).cpu().numpy()
+                        
+                        # print("1")
+                        # print(traces[request_activations[2]].input.shape)
+                        # print(traces[request_activations[2]].output[0].shape, traces[request_activations[2]].output[1].shape)
+                        # print("2")
+                        # print(traces[request_activations[2]].input2.shape)
+                        # print(traces[request_activations[2]].output2[0].shape)
+                        # print("3")
+                        # print(traces[request_activations[2]].input3.shape)
+                        # print(traces[request_activations[2]].output3.shape)
+                        # mlp_output = traces[request_activations[2]].output3.cpu().numpy()
+                        # block_output = traces[request_activations[2]].output[0].cpu().numpy()
+                        # # assert(np.all(mlp_output == block_output)), (mlp_output , block_output)
+                        # attn_output = traces[request_activations[2]].output2[0].cpu().numpy()
+                        # mlp_input = traces[request_activations[2]].input3.cpu().numpy()
+                        # assert(np.all(mlp_input == attn_output)), (mlp_input, attn_output)
+                        # assert(not np.all(attn_output == block_output))
 
                 logits, past_key_values = model_out.logits, model_out.past_key_values
 
@@ -173,7 +196,6 @@ class ModelLoader:
                 if(argmax_greedy == False):
                     new_tok_indices = torch.multinomial(softmax_out_top_k, 1)
                     new_toks = torch.gather(tk, 1, new_tok_indices)
-
                 else:
                     new_tok_indices = torch.topk(softmax_out_top_k, dim=1, k=1)
                     new_toks = torch.gather(tk, 1, new_tok_indices.indices)
@@ -226,15 +248,13 @@ class ModelLoader:
                     attention_mask[i][new_idx] = 1
                     cur_context = slice(0, new_idx.item()+1)
 
-
             ## End gen loop:
 
-            
             cur_context = slice(0, cur_context.stop + 1)
 
-            # clear up the precious GPU memory as soon as the inference is done
-            # del(traces)
-            # del(model_out)
+            # clear up GPU
+            del(traces)
+            del(model_out)
             torch.cuda.empty_cache()                
 
             txt = [self.tokenizer.decode(x) for x in input_ids.detach().cpu().numpy().tolist()]
@@ -246,11 +266,13 @@ class ModelLoader:
                 for x in txt
             ]
 
-
             ret_dict["generated_tokens"] = generated_tokens
             if(request_activations is not None and len(request_activations) > 0):
-                ret_dict["activations"] = activation_track
-
+                ret_dict["activations"] = {
+                    "block" : activation_track,
+                    "attn" : attn_track,
+                    "mlp" : mlp_track,
+                }
             return txt, ret_dict
 
 
@@ -266,8 +288,6 @@ class ModelLoader:
             ln_f_module = "transformer.ln_f"
             lm_head_module = "lm_head"
 
-                    
-            
             llens_gen = LogitLens(
                 self.model,
                 self.tokenizer,
@@ -284,27 +304,10 @@ class ModelLoader:
             print("\n--- Argument Model Logit Lens ---")
             llens_gen.pprint(k=top_k)
         
-    # def make_inputs(self, prompts, device="cuda"):
-    #     tokenizer = self.tokenizer
-    #     token_lists = [tokenizer.encode(p) for p in prompts]
-    #     maxlen = max(len(t) for t in token_lists)
-    #     if "[PAD]" in tokenizer.all_special_tokens:
-    #         pad_id = tokenizer.all_special_ids[tokenizer.all_special_tokens.index("[PAD]")]
-    #     else:
-    #         pad_id = 0
-    #     input_ids = [[pad_id] * (maxlen - len(t)) + t for t in token_lists]
-    #     # position_ids = [[0] * (maxlen - len(t)) + list(range(len(t))) for t in token_lists]
-    #     attention_mask = [[0] * (maxlen - len(t)) + [1] * len(t) for t in token_lists]
-    #     return dict(
-    #         input_ids=torch.tensor(input_ids).to(device),
-    #         #    position_ids=torch.tensor(position_ids).to(device),
-    #         attention_mask=torch.tensor(attention_mask).to(device),
-    # )
-            
-    def trace_with_patch(
-        self,  # The model
-        prompts,  # A set of input prompts
-        heads_to_patch,  # A list of (head_index, layername) tuples to restore
+    def patch_hidden_states(
+        self,
+        prompts,
+        state_to_state, # (layer_from, layer_to, start_tok, end_tok)
         answers_t=None,  # Answer probabilities to collect
         noise=0.1,  # Level of noise to add
         uniform_noise=False,
@@ -313,7 +316,6 @@ class ModelLoader:
     ):
        
         toks = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
-        # inp = self.make_inputs(prompts, device=self.model.device)["input_ids"]
         inp = toks["input_ids"]
         
         # with torch.no_grad():
@@ -394,6 +396,14 @@ class ModelLoader:
             return probs, all_traced
 
         return probs
+    
+    def patch_heads(
+        self,
+        prompts,
+        heads_to_patch # (head_index, layername)
+    ):
+        pass
+    
     
 
     def layername(self, num, kind=None):

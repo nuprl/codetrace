@@ -2,6 +2,7 @@ int_data = [
 
 "num = list(range(1,10))\nten = num[",
 "x = 2 + ",
+"x + 2 = ",
 "for i in range(",
 "import random as r\n\n\nr.sample(range(10, 30),",
 "if len([\"a\",\"b\"]) == ",
