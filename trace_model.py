@@ -11,7 +11,8 @@ import os
 from logit_lens import LogitLens
 import numpy
 from collections import defaultdict
-from nethook import get_module, set_requires_grad
+from baukit.nethook import get_module, set_requires_grad
+from model_utils import *
 '''
 
 '''
@@ -96,6 +97,7 @@ class ModelLoader:
             raise ValueError("Prompt length exceeds max_out_len")
         
         request_activations = [] if request_activations is None else request_activations
+        request_logits = [] if request_logits is None else request_logits
         
         # print(self.tracable_modules)
         if(len(request_activations) > 0):
@@ -107,8 +109,11 @@ class ModelLoader:
             attn_track = {k: None for k in request_activations}
             mlp_track = {k: None for k in request_activations}
         if(len(request_logits) > 0):
-            layer_logits = {k: None for k in request_logits}
-            
+            invalid_module = list(set(request_activations) - set(self.tracable_modules))
+            assert(
+                len(invalid_module) == 0
+            ), f"modules {invalid_module} are not in the list of tracable modules"
+            layer_logits_track = {k: None for k in request_logits}
         if(type(prompts) == str):
             prompts = [prompts]
 
@@ -147,20 +152,19 @@ class ModelLoader:
                 ## traces curr inputs to prediction of next tok
                 with TraceDict(
                     self.model, 
-                    layers = request_activations,
+                    layers = request_activations+request_logits,
                     retain_input=True,
-                    get_logits=True,
                 ) as traces:
                     model_out = self.model(
                         input_ids=input_ids[:, cur_context],
                         attention_mask=attention_mask[:, cur_context],
                         past_key_values=past_key_values,
-                        use_cache = use_cache,
-                        
+                        use_cache = use_cache,  
                     )
-
+                # print(traces[request_activations[0]].__dir__())
 
                 if(len(request_activations) > 0):
+                    assert self.layername(0, "embed") not in request_activations, "Embedding layer is not supported"
                     if(input_ids.size(1) == max_out_len - 1):
                         for module in request_activations:
                             # print("traces shape:", untuple(traces[module].output).shape)
@@ -170,12 +174,17 @@ class ModelLoader:
                                 attn_track[module] = untuple(traces[module].attn_output).cpu().numpy()
                             if(mlp_track[module] is None):
                                 mlp_track[module] = untuple(traces[module].mlp_output).cpu().numpy()
-                            if(logits and layer_logits.track[module] is None):
-                                layer_logits.track[module] = untuple(traces[module].logits).cpu().numpy()
+                if(len(request_logits) > 0):
+                    assert self.layername(0, "embed") not in request_logits, "Embedding layer is not supported"
+                    if(input_ids.size(1) == max_out_len - 1):
+                        for module in request_logits:
+                            # print("traces shape:", untuple(traces[module].output).shape)
+                            if(layer_logits_track[module] is None):
+                                layer_logits_track[module] = untuple(traces[module].block_output).cpu().numpy()
+                                
+                final_logits, past_key_values = model_out.logits, model_out.past_key_values
 
-                logits, past_key_values = model_out.logits, model_out.past_key_values
-
-                softmax_out = torch.nn.functional.softmax(logits[:, -1, :], dim=1)
+                softmax_out = torch.nn.functional.softmax(final_logits[:, -1, :], dim=1)
 
                 # Top-k sampling
                 tk = torch.topk(softmax_out, top_k, dim=1).indices
@@ -242,7 +251,7 @@ class ModelLoader:
             cur_context = slice(0, cur_context.stop + 1)
 
             # clear up GPU
-            del(traces)
+            # del(traces)
             del(model_out)
             torch.cuda.empty_cache()                
 
@@ -262,38 +271,52 @@ class ModelLoader:
                     "attn" : attn_track,
                     "mlp" : mlp_track,
                 }
-            if logits:
-                ret_dict["logits"] = logits
+            if request_logits is not None and len(request_logits) > 0:
+                ret_dict["logits"] = self.get_logits(layer_logits_track, top_k=top_k)
             return txt, ret_dict
-
 
     def get_logits(
             self,
-            prompts: Union[str, List[str]],
-            top_k: int = 5,                 
-        ):
-            if(type(prompts) == str):
-                prompts = [prompts]
-                
-            layer_module_tmp = "transformer.h.{}"
-            ln_f_module = "transformer.ln_f"
-            lm_head_module = "lm_head"
+            activations,
+            top_k: int = 5,
+    ):
 
-            llens_gen = LogitLens(
-                self.model,
-                self.tokenizer,
-                layer_module_tmp,
-                ln_f_module,
-                lm_head_module,
-                disabled=False,
-            )
-            inp_prompt = self.tokenizer(prompts, padding=True, return_tensors="pt").to(
-                self.model.device
-            )
-            with llens_gen:
-                self.model(**inp_prompt)
-            print("\n--- Argument Model Logit Lens ---")
-            llens_gen.pprint(k=top_k)
+        llens_gen = LogitLens(
+            self.model,
+            self.tokenizer,
+            activations = activations,
+            top_k=top_k,
+        )
+        return llens_gen()
+        
+            
+    # def get_logits(
+    #         self,
+    #         prompts: Union[str, List[str]],
+    #         top_k: int = 5,                 
+    #     ):
+    #         if(type(prompts) == str):
+    #             prompts = [prompts]
+                
+    #         layer_module_tmp = "transformer.h.{}"
+    #         ln_f_module = "transformer.ln_f"
+    #         lm_head_module = "lm_head"
+
+    #         llens_gen = LogitLens(
+    #             self.model,
+    #             self.tokenizer,
+    #             layer_module_tmp,
+    #             ln_f_module,
+    #             lm_head_module,
+    #             disabled=False,
+    #         )
+    #         inp_prompt = self.tokenizer(prompts, padding=True, return_tensors="pt").to(
+    #             self.model.device
+    #         )
+    #         with llens_gen:
+    #             self.model(**inp_prompt)
+    #         print("\n--- Argument Model Logit Lens ---")
+    #         llens_gen.pprint(k=top_k)
         
         
     def patch_hidden_states(

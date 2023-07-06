@@ -73,7 +73,19 @@ def generate_by_client(prompt: str,
 """
 Model generation utils
 """
-
+def layername(model, num, kind=None):
+        if hasattr(model, "transformer"):
+            if kind == "embed":
+                return "transformer.wte"
+            return f'transformer.h.{num}{"" if kind is None else "." + kind}'
+        if hasattr(model, "gpt_neox"):
+            if kind == "embed":
+                return "gpt_neox.embed_in"
+            if kind == "attn":
+                kind = "attention"
+            return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
+        assert False, "unknown transformer structure"    
+        
 class StoppingCriteriaSub(StoppingCriteria):
 
     def __init__(self, tokenizer, stops = [], device="cuda", encounters=1):

@@ -51,8 +51,6 @@ class Trace(contextlib.AbstractContextManager):
     def __init__(
         self,
         module,
-        lm_head_module,
-        ln_f_module,
         layer=None,
         retain_output=True,
         retain_input=False,
@@ -61,7 +59,6 @@ class Trace(contextlib.AbstractContextManager):
         retain_grad=False,
         edit_output=None,
         stop=False,
-        get_logits = True,
     ):
         """
         Method to replace a forward method with a closure that
@@ -72,28 +69,6 @@ class Trace(contextlib.AbstractContextManager):
         if layer is not None:
             module = get_module(module, layer)
 
-        def retain_hook_logits(m, inputs, output):
-            softmax_output = torch.softmax(
-                    lm_head_module(ln_f_module(output[:, -1, :])), dim=1
-                )
-            if edit_output:
-                output = invoke_with_optional_args(
-                    softmax_output, output=output, layer=self.layer, inputs=inputs
-                )
-            
-            if retain_output:
-                retainer.layer_logits = recursive_copy(
-                    output, clone=clone, detach=detach, retain_grad=retain_grad
-                )
-                # When retain_grad is set, also insert a trivial
-                # copy operation.  That allows in-place operations
-                # to follow without error.
-                if retain_grad:
-                    output = recursive_copy(retainer.layer_logits, clone=True, detach=False)
-            if stop:
-                raise StopForward()
-            return output
-        
         def retain_hook_block(m, inputs, output):
             if edit_output:
                 output = invoke_with_optional_args(
@@ -241,8 +216,6 @@ class TraceDict(OrderedDict, contextlib.AbstractContextManager):
 
             self[layer] = Trace(
                 module=module,
-                lm_head_module=get_module(module, "lm_head"),
-                ln_f_module=get_module(module, "transformer.ln_f"),
                 layer=layer,
                 retain_output=optional_dict(retain_output),
                 retain_input=optional_dict(retain_input),
