@@ -1,5 +1,5 @@
 import torch
-import nethook
+from trace_utils import *
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 import warnings
 from typing import Union, List
@@ -11,7 +11,7 @@ import os
 from logit_lens import LogitLens
 import numpy
 from collections import defaultdict
-
+from nethook import get_module, set_requires_grad
 '''
 
 '''
@@ -32,7 +32,7 @@ class ModelLoader:
             self.model_name, 
             output_attentions=True,
             use_auth_token=AUTH,
-            low_cpu_mem_usage=True, ## load with accelerate
+            low_cpu_mem_usage=True, ## loads with accelerate
             torch_dtype=dtype,
             trust_remote_code=trust_remote_code,
             
@@ -42,7 +42,7 @@ class ModelLoader:
         # post process
         self.extract_fields()
         
-        nethook.set_requires_grad(False, self.model)
+        set_requires_grad(False, self.model)
         
         ## set pad tokens
         self.tokenizer.clean_up_tokenization_spaces=False
@@ -86,7 +86,8 @@ class ModelLoader:
             argmax_greedy = False, 
             debug = False,
             quiet=False,
-            request_activations = None
+            request_activations = None,
+            request_logits = None,
         ):
         '''
         Trace with cache implementation if possible
@@ -105,7 +106,9 @@ class ModelLoader:
             activation_track = {k: None for k in request_activations}
             attn_track = {k: None for k in request_activations}
             mlp_track = {k: None for k in request_activations}
-
+        if(len(request_logits) > 0):
+            layer_logits = {k: None for k in request_logits}
+            
         if(type(prompts) == str):
             prompts = [prompts]
 
@@ -142,10 +145,11 @@ class ModelLoader:
             while input_ids.size(1) < max_out_len: 
 
                 ## traces curr inputs to prediction of next tok
-                with nethook.TraceDict(
+                with TraceDict(
                     self.model, 
                     layers = request_activations,
                     retain_input=True,
+                    get_logits=True,
                 ) as traces:
                     model_out = self.model(
                         input_ids=input_ids[:, cur_context],
@@ -166,23 +170,8 @@ class ModelLoader:
                                 attn_track[module] = untuple(traces[module].attn_output).cpu().numpy()
                             if(mlp_track[module] is None):
                                 mlp_track[module] = untuple(traces[module].mlp_output).cpu().numpy()
-                        
-                        # print("1")
-                        # print(traces[request_activations[2]].input.shape)
-                        # print(traces[request_activations[2]].output[0].shape, traces[request_activations[2]].output[1].shape)
-                        # print("2")
-                        # print(traces[request_activations[2]].input2.shape)
-                        # print(traces[request_activations[2]].output2[0].shape)
-                        # print("3")
-                        # print(traces[request_activations[2]].input3.shape)
-                        # print(traces[request_activations[2]].output3.shape)
-                        # mlp_output = traces[request_activations[2]].output3.cpu().numpy()
-                        # block_output = traces[request_activations[2]].output[0].cpu().numpy()
-                        # # assert(np.all(mlp_output == block_output)), (mlp_output , block_output)
-                        # attn_output = traces[request_activations[2]].output2[0].cpu().numpy()
-                        # mlp_input = traces[request_activations[2]].input3.cpu().numpy()
-                        # assert(np.all(mlp_input == attn_output)), (mlp_input, attn_output)
-                        # assert(not np.all(attn_output == block_output))
+                            if(logits and layer_logits.track[module] is None):
+                                layer_logits.track[module] = untuple(traces[module].logits).cpu().numpy()
 
                 logits, past_key_values = model_out.logits, model_out.past_key_values
 
@@ -273,6 +262,8 @@ class ModelLoader:
                     "attn" : attn_track,
                     "mlp" : mlp_track,
                 }
+            if logits:
+                ret_dict["logits"] = logits
             return txt, ret_dict
 
 
@@ -303,6 +294,7 @@ class ModelLoader:
                 self.model(**inp_prompt)
             print("\n--- Argument Model Logit Lens ---")
             llens_gen.pprint(k=top_k)
+        
         
     def patch_hidden_states(
         self,
@@ -377,7 +369,7 @@ class ModelLoader:
 
         # With the patching rules defined, run the patched model in inference.
         additional_layers = [] if trace_layers is None else trace_layers
-        with torch.no_grad(), nethook.TraceDict(
+        with torch.no_grad(), TraceDict(
             self.model,
             [embed_layername] + [self.layername(i) for i in range(1, 40)],
             edit_output=patch_rep,
@@ -405,7 +397,6 @@ class ModelLoader:
         pass
     
     
-
     def layername(self, num, kind=None):
         model = self.model
         if hasattr(model, "transformer"):
