@@ -7,7 +7,6 @@ import numpy as np
 import unicodedata
 from pathlib import Path
 import os
-from logit_lens import LogitLens
 import numpy
 # from collections import defaultdict
 # from baukit.nethook import get_module, set_requires_grad
@@ -76,6 +75,8 @@ class ModelLoader:
             pick_greedily = False, 
             request_activations = None,
             request_logits = None,
+            top_k = 10,
+            stop=False,
         ):
         '''
         Trace with cache implementation if possible
@@ -137,6 +138,7 @@ class ModelLoader:
                     layers = request_activations+request_logits,
                     retain_input=True,
                     retain_output=True,
+                    stop=stop,
                 ) as traces:
                     model_out = self.model(
                         input_ids=input_ids[:, cur_context],
