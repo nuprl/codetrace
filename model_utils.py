@@ -38,16 +38,7 @@ def layername(model, num, kind=None):
                 kind = "attention"
             return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
         assert False, "unknown transformer structure"    
-<<<<<<< HEAD
-        
-=======
  
-def untuple(x):
-    if isinstance(x, tuple):
-        return x[-1]
-    return x
-
->>>>>>> tmp
 
 def extract_layer_formats(named_params_iterator):
     mlp = None
@@ -65,10 +56,7 @@ def extract_layer_formats(named_params_iterator):
         
     return {"mlp":mlp, "attn":attn, "layer":layer}
 
-<<<<<<< HEAD
-=======
 
 
 
     
->>>>>>> tmp
