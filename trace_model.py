@@ -1,9 +1,8 @@
 import torch
 from trace_utils import *
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import warnings
 from typing import Union, List
-from model_utils import extract_layer_formats
+from model_utils import extract_layer_formats, layername
 import numpy as np
 import unicodedata
 from pathlib import Path
@@ -21,11 +20,9 @@ from model_utils import *
 class ModelLoader:
     def __init__(self, 
                  model_name_or_path, 
-                 dtype = torch.float32, ## required by trace dict
-        ) -> None:
+                 dtype = torch.float32) -> None:
         
         self.model_name = model_name_or_path
-        
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name, 
             output_attentions=True,
@@ -41,14 +38,14 @@ class ModelLoader:
         # post process
         self.extract_fields()
         
-        ## tokenizer
+        set_requires_grad(False, self.model)
+        
+        ## set pad tokens
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
         self.tokenizer.clean_up_tokenization_spaces=False
         self.tokenizer.padding_side="left"
         self.tokenizer.pad_token = self.tokenizer.eos_token  
             
-        
-        
     def extract_fields(self):
         """
         model_type
@@ -72,14 +69,11 @@ class ModelLoader:
             self.attn_module_names = [self.attn_module_name_format.format(i) for i in range(self.model.config.n_layer)]
             self.tracable_modules =  self.mlp_module_names + self.attn_module_names + self.layer_names
             
-            
-            
     def trace_generate(
             self,
             prompts: Union[str, List[str]],                 
             max_out_len: int = 20,          
-            pick_greedy = False, 
-            top_k: int = 5,
+            pick_greedily = False, 
             request_activations = None,
             request_logits = None,
         ):
@@ -132,6 +126,7 @@ class ModelLoader:
         # init size of context
         past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item()) 
 
+        
         generated_tokens = [[] for _ in range(input_ids.size(0))]
         with torch.no_grad():
             while input_ids.size(1) < max_out_len: 
@@ -147,29 +142,34 @@ class ModelLoader:
                         input_ids=input_ids[:, cur_context],
                         attention_mask=attention_mask[:, cur_context],
                         past_key_values=past_key_values,
+                        use_cache = False,  
                     )
 
                 if(len(request_activations) > 0):
                     assert layername(self.model, 0, "embed") not in request_activations, "Embedding layer is not supported"
                     if(input_ids.size(1) == max_out_len - 1):
                         for module in request_activations:
-                            print("traces shape block:", traces[module].block_output[0].shape, traces[module].block_output[-1].shape)
-                            print("traces shape attn:", traces[module].attn_output[0].shape, traces[module].attn_output[-1].shape)
-                            print("traces shape mlp:", traces[module].mlp_output[0].shape, traces[module].mlp_output[-1].shape)
-                            
-                            # if(activation_track[module] is None):
-                            #     activation_track[module] = traces[module].block_output.cpu().numpy()
-                            # if(attn_track[module] is None):
-                            #     attn_track[module] = untuple(traces[module].attn_output).cpu().numpy()
-                            # if(mlp_track[module] is None):
-                            #     mlp_track[module] = untuple(traces[module].mlp_output).cpu().numpy()
+                            if(activation_track[module] is None):
+                                activation_track[module] = traces[module].block_output[0].cpu().numpy()
+                            if(attn_track[module] is None):
+                                attn_track[module] = traces[module].attn_output[0].cpu().numpy()
+                            if(mlp_track[module] is None):
+                                mlp_track[module] = traces[module].mlp_output[0].cpu().numpy()
                 if(len(request_logits) > 0):
                     assert layername(self.model, 0, "embed") not in request_logits, "Embedding layer is not supported"
                     if(input_ids.size(1) == max_out_len - 1):
                         for module in request_logits:
-                            # print("traces shape:", untuple(traces[module].output).shape)
                             if(layer_logits_track[module] is None):
-                                layer_logits_track[module] = traces[module].block_output[0].cpu().numpy()
+                                probs = traces[module].block_output[0]
+                                lm_head = get_module(self.model, "lm_head")
+                                ln_f = get_module(self.model, "transformer.ln_f")
+                                apply_head = torch.softmax(
+                                        lm_head(ln_f(probs[:, -1, :])), dim=1
+                                    )
+                                rets = torch.topk(apply_head[-1], top_k)
+                                tokenized = [self.tokenizer.decode(i) for i in rets.indices]
+                                assert(len(tokenized) == top_k)
+                                layer_logits_track[module] = list(zip(tokenized, rets.values.cpu().numpy()))
                                 
                 final_logits, past_key_values = model_out.logits, model_out.past_key_values
 
@@ -180,7 +180,7 @@ class ModelLoader:
                 softmax_out_top_k = torch.gather(softmax_out, 1, tk)
                 softmax_out_top_k = softmax_out_top_k / softmax_out_top_k.sum(1)[:, None]
 
-                if not pick_greedy:
+                if(pick_greedily == False):
                     new_tok_indices = torch.multinomial(softmax_out_top_k, 1)
                     new_toks = torch.gather(tk, 1, new_tok_indices)
                 else:
@@ -253,51 +253,18 @@ class ModelLoader:
                 ret_dict["attn"] = attn_track
                 ret_dict["mlp"] = mlp_track
             if request_logits is not None and len(request_logits) > 0:
-                ret_dict["logits"] = self.get_logits(layer_logits_track, top_k=top_k)
+                ret_dict["logits"] = layer_logits_track
             return txt, ret_dict
 
-    def get_logits(
-            self,
-            activations,
-            top_k: int = 5,
+    
+        
+    def trace_with_patch(
+        self,
+        prompts,
+        heads_to_patch, # (head_index, layername)
+        states_to_patch, # (layer_from, layer_to, start_tok, end_tok)
     ):
-        llens_gen = LogitLens(
-            self.model,
-            self.tokenizer,
-            activations = activations,
-            top_k=top_k,
-        )
-        return llens_gen()
-        
-            
-    # def get_logits(
-    #         self,
-    #         prompts: Union[str, List[str]],
-    #         top_k: int = 5,                 
-    #     ):
-    #         if(type(prompts) == str):
-    #             prompts = [prompts]
-                
-    #         layer_module_tmp = "transformer.h.{}"
-    #         ln_f_module = "transformer.ln_f"
-    #         lm_head_module = "lm_head"
-
-    #         llens_gen = LogitLens(
-    #             self.model,
-    #             self.tokenizer,
-    #             layer_module_tmp,
-    #             ln_f_module,
-    #             lm_head_module,
-    #             disabled=False,
-    #         )
-    #         inp_prompt = self.tokenizer(prompts, padding=True, return_tensors="pt").to(
-    #             self.model.device
-    #         )
-    #         with llens_gen:
-    #             self.model(**inp_prompt)
-    #         print("\n--- Argument Model Logit Lens ---")
-    #         llens_gen.pprint(k=top_k)
-        
+        pass
         
     def patch_hidden_states(
         self,
@@ -309,7 +276,8 @@ class ModelLoader:
         replace=False,  # True to replace with instead of add noise
         trace_layers=None,  # List of traced outputs to return
     ):
-       pass
+        pass
+       
         # toks = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
         # inp = toks["input_ids"]
         
@@ -392,28 +360,22 @@ class ModelLoader:
 
         # return probs
     
-    def patch_heads(
-        self,
-        prompts,
-        heads_to_patch # (head_index, layername)
-    ):
-        pass
-    
+
+     
       
-    def search_causal_heads(self, prompt, layers = range(20,31), replace=False, noise=0.9):
-        pass
-        # heads_to_patch = []
-        # for l in layers:
-        #     layername = self.layername(l)
-        #     heads_to_patch += [(i, layername) for i in range(48)]
+    # def search_causal_heads(self, prompt, layers = range(20,31), replace=False, noise=0.9):
+    #     heads_to_patch = []
+    #     for l in layers:
+    #         layername = self.layername(l)
+    #         heads_to_patch += [(i, layername) for i in range(48)]
             
-        # probs = self.trace_with_patch(prompt, heads_to_patch=heads_to_patch, 
-        #                         replace=replace, noise = noise)
-        # top_completion = self.tokenizer.decode(probs.argmax(dim=0))
-        # # print(top_completion, heads_to_patch)
-        # try:
-        #     tc = int(top_completion)
-        # except:
-        #     return []
+    #     probs = self.trace_with_patch(prompt, heads_to_patch=heads_to_patch, 
+    #                             replace=replace, noise = noise)
+    #     top_completion = self.tokenizer.decode(probs.argmax(dim=0))
+    #     # print(top_completion, heads_to_patch)
+    #     try:
+    #         tc = int(top_completion)
+    #     except:
+    #         return []
             
         # return heads_to_patch

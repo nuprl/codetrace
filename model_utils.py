@@ -1,13 +1,6 @@
 import torch
 import re
-import warnings
 import gc
-# from text_generation import Client
-from concurrent.futures.thread import ThreadPoolExecutor
-from tqdm import tqdm
-import transformers
-from typing import List, Tuple, Optional
-from transformers import StoppingCriteriaList, StoppingCriteria, AutoConfig
 
 
 """
@@ -45,7 +38,16 @@ def layername(model, num, kind=None):
                 kind = "attention"
             return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
         assert False, "unknown transformer structure"    
+<<<<<<< HEAD
         
+=======
+ 
+def untuple(x):
+    if isinstance(x, tuple):
+        return x[-1]
+    return x
+
+>>>>>>> tmp
 
 def extract_layer_formats(named_params_iterator):
     mlp = None
@@ -63,3 +65,10 @@ def extract_layer_formats(named_params_iterator):
         
     return {"mlp":mlp, "attn":attn, "layer":layer}
 
+<<<<<<< HEAD
+=======
+
+
+
+    
+>>>>>>> tmp
