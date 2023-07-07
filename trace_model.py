@@ -258,49 +258,15 @@ class ModelLoader:
                 ret_dict["logits"] = layer_logits_track
             return txt, ret_dict
 
-    def get_logits(
-            self,
-            activations,
-            top_k: int = 5,
+    
+        
+    def trace_with_patch(
+        self,
+        prompts,
+        heads_to_patch, # (head_index, layername)
+        states_to_patch, # (layer_from, layer_to, start_tok, end_tok)
     ):
-
-        llens_gen = LogitLens(
-            self.model,
-            self.tokenizer,
-            activations = activations,
-            top_k=top_k,
-        )
-        return llens_gen()
-        
-            
-    # def get_logits(
-    #         self,
-    #         prompts: Union[str, List[str]],
-    #         top_k: int = 5,                 
-    #     ):
-    #         if(type(prompts) == str):
-    #             prompts = [prompts]
-                
-    #         layer_module_tmp = "transformer.h.{}"
-    #         ln_f_module = "transformer.ln_f"
-    #         lm_head_module = "lm_head"
-
-    #         llens_gen = LogitLens(
-    #             self.model,
-    #             self.tokenizer,
-    #             layer_module_tmp,
-    #             ln_f_module,
-    #             lm_head_module,
-    #             disabled=False,
-    #         )
-    #         inp_prompt = self.tokenizer(prompts, padding=True, return_tensors="pt").to(
-    #             self.model.device
-    #         )
-    #         with llens_gen:
-    #             self.model(**inp_prompt)
-    #         print("\n--- Argument Model Logit Lens ---")
-    #         llens_gen.pprint(k=top_k)
-        
+        pass
         
     def patch_hidden_states(
         self,
@@ -396,12 +362,7 @@ class ModelLoader:
 
         # return probs
     
-    def patch_heads(
-        self,
-        prompts,
-        heads_to_patch # (head_index, layername)
-    ):
-        pass
+
      
       
     # def search_causal_heads(self, prompt, layers = range(20,31), replace=False, noise=0.9):

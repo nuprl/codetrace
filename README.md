@@ -1,19 +1,14 @@
 # Locating type knowledge in Code LLMs
 
-Main notebook is `trace-demo`. 
+Main notebook is `codetrace`. 
 
 ## Models
 
 - starcoder
 
-## Experiments
-
-1. head attribution for type detection task
-
 ### TODO
 
-- crawl through `java` type examples from `MultiPLE`
-- set up trace for head attribution using `baukit`
+- more data (python + java)
 
 ## Starcoder Notes
 
