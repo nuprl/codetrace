@@ -1,0 +1,1431 @@
+diff --git a/model_utils.py b/model_utils.py
+index e8d874d..4f5df9c 100644
+--- a/model_utils.py
++++ b/model_utils.py
+@@ -30,46 +30,6 @@ def clear_devs():
+     torch.cuda.empty_cache()
+     
+ 
+-"""
+-Client generation utils
+-"""
+-
+-def print_by_line(previous_text: str, new_text: str):
+-    """
+-    A little hack to print line-by-line in a Notebook. We receive results
+-    a few tokens at a time. This buffers output until a newline, so that
+-    we do not print partial lines.
+-    """
+-    if "\n" not in new_text:
+-        return
+-    last_newline = previous_text.rfind("\n")
+-    if last_newline != -1:
+-        print(previous_text[last_newline+1:] + new_text, end="")
+-    else:
+-        print(previous_text + new_text, end="")
+-
+-
+-def generate_by_client(prompt: str,
+-    client,
+-    max_new_tokens=512,
+-    stop_sequences=[ "\ndef", "\nclass", "\nif"  ],
+-    do_sample=False,
+-    echo=True):
+-    text = ""
+-    for response in client.generate_stream(prompt,
+-        max_new_tokens=max_new_tokens,
+-        temperature=0.2,
+-        do_sample=do_sample,
+-        top_p=0.95,
+-        stop_sequences=stop_sequences):
+-        if not response.token.special:
+-            if echo:
+-                print_by_line(text, response.token.text)
+-            text += response.token.text
+-    if echo:
+-        print_by_line(text, "\n") # flush any remaining text
+-    return text
+-
+ """
+ Model generation utils
+ """
+@@ -86,29 +46,6 @@ def layername(model, num, kind=None):
+             return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
+         assert False, "unknown transformer structure"    
+         
+-class StoppingCriteriaSub(StoppingCriteria):
+-
+-    def __init__(self, tokenizer, stops = [], device="cuda", encounters=1):
+-        super().__init__()
+-        self.encounters=encounters
+-        self.tokenizer = tokenizer
+-        self.stops = [stop.to(device) for stop in stops]
+-
+-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
+-        stop_count = []
+-        for stop in self.stops:
+-            stop_count.append(self.tokenizer.decode(input_ids[0]).count(self.tokenizer.decode(stop)))
+-            
+-        if any([stop_count[i] >= self.encounters[i] for i in range(len(stop_count))]):
+-            return True
+-        return False
+-    
+-
+-def untuple(x):
+-    if isinstance(x, tuple):
+-        return x[-1]
+-    return x
+-
+ 
+ def extract_layer_formats(named_params_iterator):
+     mlp = None
+@@ -126,15 +63,3 @@ def extract_layer_formats(named_params_iterator):
+         
+     return {"mlp":mlp, "attn":attn, "layer":layer}
+ 
+-
+-
+-def code_print(generated_list, line_numbers=True):
+-    txt = "".join(generated_list)
+-    if line_numbers:
+-        for n, i in enumerate(txt.rstrip().split('\n')):
+-            print(n, i)
+-    else:
+-        print(txt)
+-
+-
+-    
+\ No newline at end of file
+diff --git a/notebooks/causal_trace.ipynb b/notebooks/causal_trace.ipynb
+index 8c12506..5b0fef7 100644
+--- a/notebooks/causal_trace.ipynb
++++ b/notebooks/causal_trace.ipynb
+@@ -97,7 +97,7 @@
+      "name": "stderr",
+      "output_type": "stream",
+      "text": [
+-      "Loading checkpoint shards: 100%|██████████| 7/7 [00:25<00:00,  3.63s/it]\n"
++      "Loading checkpoint shards: 100%|██████████| 7/7 [00:27<00:00,  3.96s/it]\n"
+      ]
+     },
+     {
+@@ -115,722 +115,151 @@
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": 14,
++   "execution_count": 5,
+    "metadata": {},
+    "outputs": [
+-    {
+-     "name": "stderr",
+-     "output_type": "stream",
+-     "text": [
+-      "/home/franlucc/codetrace/notebooks/../trace_model.py:145: UserWarning: The model `bigcode/starcoder` of type `gpt_bigcode` already implements or can't utilize `use_cache` for fast generation. Setting `use_cache = False`.\n",
+-      "  warnings.warn(f\"The model `{self.model_name}` of type `{self.model_type}` already implements or can't utilize `use_cache` for fast generation. Setting `use_cache = False`.\")\n"
+-     ]
+-    },
+     {
+      "data": {
++      "text/html": [
++       "<pre style=\"white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace\"><span style=\"color: #800000; text-decoration-color: #800000\">╭─────────────────────────────── </span><span style=\"color: #800000; text-decoration-color: #800000; font-weight: bold\">Traceback </span><span style=\"color: #bf7f7f; text-decoration-color: #bf7f7f; font-weight: bold\">(most recent call last)</span><span style=\"color: #800000; text-decoration-color: #800000\"> ────────────────────────────────╮</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> in <span style=\"color: #00ff00; text-decoration-color: #00ff00\">&lt;module&gt;</span>:<span style=\"color: #0000ff; text-decoration-color: #0000ff\">4</span>                                                                                    <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 1 </span>prompts = [<span style=\"color: #808000; text-decoration-color: #808000\">\"\"\"for i &lt;\"\"\"</span>]                                                                   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 2 </span>                                                                                            <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 3 </span>                                                                                            <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #800000; text-decoration-color: #800000\">❱ </span> 4 txt, ret_dict = lm.trace_generate(                                                          <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 5 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   </span>prompts,                                                                                <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 6 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   </span>max_out_len=<span style=\"color: #00ffff; text-decoration-color: #00ffff\">len</span>(prompts[<span style=\"color: #0000ff; text-decoration-color: #0000ff\">0</span>]) + <span style=\"color: #0000ff; text-decoration-color: #0000ff\">10</span>,                                                       <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 7 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   </span>pick_greedy= <span style=\"color: #0000ff; text-decoration-color: #0000ff\">False</span>,                                                                     <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #bfbf7f; text-decoration-color: #bfbf7f\">/home/franlucc/codetrace/notebooks/../</span><span style=\"color: #808000; text-decoration-color: #808000; font-weight: bold\">trace_model.py</span>:<span style=\"color: #0000ff; text-decoration-color: #0000ff\">145</span> in <span style=\"color: #00ff00; text-decoration-color: #00ff00\">trace_generate</span>                       <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">142 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   │   </span>layers = request_activations+request_logits,                           <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">143 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   │   </span>retain_input=<span style=\"color: #0000ff; text-decoration-color: #0000ff\">True</span>,                                                     <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">144 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   </span>) <span style=\"color: #0000ff; text-decoration-color: #0000ff\">as</span> traces:                                                               <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #800000; text-decoration-color: #800000\">❱ </span>145 <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   │   </span>model_out = <span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>.model(                                                <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">146 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   │   │   </span>input_ids=input_ids[:, cur_context],                               <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">147 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   │   │   </span>attention_mask=attention_mask[:, cur_context],                     <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">148 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   │   │   </span>past_key_values=past_key_values,                                   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #bfbf7f; text-decoration-color: #bfbf7f\">/home/franlucc/mechinterp/lib/python3.10/site-packages/torch/nn/modules/</span><span style=\"color: #808000; text-decoration-color: #808000; font-weight: bold\">module.py</span>:<span style=\"color: #0000ff; text-decoration-color: #0000ff\">1501</span> in        <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #00ff00; text-decoration-color: #00ff00\">_call_impl</span>                                                                                       <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1498 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span><span style=\"color: #0000ff; text-decoration-color: #0000ff\">if</span> <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">not</span> (<span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>._backward_hooks <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> <span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>._backward_pre_hooks <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> <span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>._forward_hooks   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1499 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   </span><span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> _global_backward_pre_hooks <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> _global_backward_hooks                   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1500 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   </span><span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> _global_forward_hooks <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> _global_forward_pre_hooks):                   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #800000; text-decoration-color: #800000\">❱ </span>1501 <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   </span><span style=\"color: #0000ff; text-decoration-color: #0000ff\">return</span> forward_call(*args, **kwargs)                                          <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1502 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"># Do not call functions when jit is used</span>                                          <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1503 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>full_backward_hooks, non_full_backward_hooks = [], []                             <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1504 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>backward_pre_hooks = []                                                           <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #bfbf7f; text-decoration-color: #bfbf7f\">/home/franlucc/mechinterp/lib/python3.10/site-packages/transformers/models/gpt_bigcode/</span><span style=\"color: #808000; text-decoration-color: #808000; font-weight: bold\">modeling_</span> <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #808000; text-decoration-color: #808000; font-weight: bold\">gpt_bigcode.py</span>:<span style=\"color: #0000ff; text-decoration-color: #0000ff\">808</span> in <span style=\"color: #00ff00; text-decoration-color: #00ff00\">forward</span>                                                                    <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 805 </span><span style=\"color: #bfbf7f; text-decoration-color: #bfbf7f\">│   │   </span><span style=\"color: #808000; text-decoration-color: #808000\">\"\"\"</span>                                                                               <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 806 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>return_dict = return_dict <span style=\"color: #0000ff; text-decoration-color: #0000ff\">if</span> return_dict <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">is</span> <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">not</span> <span style=\"color: #0000ff; text-decoration-color: #0000ff\">None</span> <span style=\"color: #0000ff; text-decoration-color: #0000ff\">else</span> <span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>.config.use_return  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 807 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #800000; text-decoration-color: #800000\">❱ </span> 808 <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>transformer_outputs = <span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>.transformer(                                           <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 809 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   </span>input_ids,                                                                    <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 810 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   </span>past_key_values=past_key_values,                                              <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 811 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   </span>attention_mask=attention_mask,                                                <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #bfbf7f; text-decoration-color: #bfbf7f\">/home/franlucc/mechinterp/lib/python3.10/site-packages/torch/nn/modules/</span><span style=\"color: #808000; text-decoration-color: #808000; font-weight: bold\">module.py</span>:<span style=\"color: #0000ff; text-decoration-color: #0000ff\">1501</span> in        <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #00ff00; text-decoration-color: #00ff00\">_call_impl</span>                                                                                       <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1498 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span><span style=\"color: #0000ff; text-decoration-color: #0000ff\">if</span> <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">not</span> (<span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>._backward_hooks <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> <span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>._backward_pre_hooks <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> <span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>._forward_hooks   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1499 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   </span><span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> _global_backward_pre_hooks <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> _global_backward_hooks                   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1500 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   </span><span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> _global_forward_hooks <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">or</span> _global_forward_pre_hooks):                   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #800000; text-decoration-color: #800000\">❱ </span>1501 <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   </span><span style=\"color: #0000ff; text-decoration-color: #0000ff\">return</span> forward_call(*args, **kwargs)                                          <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1502 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"># Do not call functions when jit is used</span>                                          <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1503 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>full_backward_hooks, non_full_backward_hooks = [], []                             <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">1504 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>backward_pre_hooks = []                                                           <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #bfbf7f; text-decoration-color: #bfbf7f\">/home/franlucc/mechinterp/lib/python3.10/site-packages/transformers/models/gpt_bigcode/</span><span style=\"color: #808000; text-decoration-color: #808000; font-weight: bold\">modeling_</span> <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #808000; text-decoration-color: #808000; font-weight: bold\">gpt_bigcode.py</span>:<span style=\"color: #0000ff; text-decoration-color: #0000ff\">605</span> in <span style=\"color: #00ff00; text-decoration-color: #00ff00\">forward</span>                                                                    <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>                                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 602 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>self_attention_mask = <span style=\"color: #00ffff; text-decoration-color: #00ffff\">self</span>.bias[<span style=\"color: #0000ff; text-decoration-color: #0000ff\">None</span>, key_length - query_length : key_length, :k  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 603 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span>                                                                                  <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 604 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   </span><span style=\"color: #0000ff; text-decoration-color: #0000ff\">if</span> attention_mask <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">is</span> <span style=\"color: #ff00ff; text-decoration-color: #ff00ff\">not</span> <span style=\"color: #0000ff; text-decoration-color: #0000ff\">None</span>:                                                    <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span> <span style=\"color: #800000; text-decoration-color: #800000\">❱ </span> 605 <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   </span>self_attention_mask = self_attention_mask * attention_mask.view(batch_size,   <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 606 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   │   </span>dtype=torch.bool, device=self_attention_mask.device                       <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 607 </span><span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\">│   │   │   </span>)                                                                             <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">│</span>   <span style=\"color: #7f7f7f; text-decoration-color: #7f7f7f\"> 608 </span>                                                                                          <span style=\"color: #800000; text-decoration-color: #800000\">│</span>\n",
++       "<span style=\"color: #800000; text-decoration-color: #800000\">╰──────────────────────────────────────────────────────────────────────────────────────────────────╯</span>\n",
++       "<span style=\"color: #ff0000; text-decoration-color: #ff0000; font-weight: bold\">RuntimeError: </span>The size of tensor a <span style=\"font-weight: bold\">(</span><span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">7</span><span style=\"font-weight: bold\">)</span> must match the size of tensor b <span style=\"font-weight: bold\">(</span><span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">4</span><span style=\"font-weight: bold\">)</span> at non-singleton dimension <span style=\"color: #008080; text-decoration-color: #008080; font-weight: bold\">2</span>\n",
++       "</pre>\n"
++      ],
+       "text/plain": [
+-       "(['for i < 300 :\\n\\t\\ti+=1\\n\\t\\t# print'],\n",
+-       " {'input_tokenized': [[('for', 979), (' i', 595), (' <', 333)]],\n",
+-       "  'generated_tokens': [[[{'token': ' ', 'id': 225, 'p': 0.37924709916114807},\n",
+-       "     {'token': ' len', 'id': 2069, 'p': 0.16429004073143005},\n",
+-       "     {'token': ' n', 'id': 310, 'p': 0.05054834485054016},\n",
+-       "     {'token': ' num', 'id': 1929, 'p': 0.034654635936021805},\n",
+-       "     {'token': ' range', 'id': 2155, 'p': 0.0195729061961174},\n",
+-       "     {'token': ' j', 'id': 594, 'p': 0.019077571108937263},\n",
+-       "     {'token': ' N', 'id': 489, 'p': 0.016142329201102257},\n",
+-       "     {'token': ' length', 'id': 3104, 'p': 0.013210250064730644},\n",
+-       "     {'token': ' number', 'id': 1451, 'p': 0.009734025225043297},\n",
+-       "     {'token': ' (', 'id': 308, 'p': 0.009161753579974174}],\n",
+-       "    [{'token': '1', 'id': 35, 'p': 0.399319589138031},\n",
+-       "     {'token': '0', 'id': 34, 'p': 0.11112756282091141},\n",
+-       "     {'token': '2', 'id': 36, 'p': 0.11069473624229431},\n",
+-       "     {'token': '3', 'id': 37, 'p': 0.11059556156396866},\n",
+-       "     {'token': '5', 'id': 39, 'p': 0.09657269716262817},\n",
+-       "     {'token': '4', 'id': 38, 'p': 0.06298084557056427},\n",
+-       "     {'token': '6', 'id': 40, 'p': 0.035124994814395905},\n",
+-       "     {'token': '8', 'id': 42, 'p': 0.02589438483119011},\n",
+-       "     {'token': '9', 'id': 43, 'p': 0.022585980594158173},\n",
+-       "     {'token': '7', 'id': 41, 'p': 0.020536154508590698}],\n",
+-       "    [{'token': ':', 'id': 44, 'p': 0.26435449719429016},\n",
+-       "     {'token': '0', 'id': 34, 'p': 0.2035234123468399},\n",
+-       "     {'token': ' {', 'id': 301, 'p': 0.10100942850112915},\n",
+-       "     {'token': '2', 'id': 36, 'p': 0.052037257701158524},\n",
+-       "     {'token': '\\n', 'id': 203, 'p': 0.030804280191659927},\n",
+-       "     {'token': ' :', 'id': 499, 'p': 0.030436808243393898},\n",
+-       "     {'token': ';', 'id': 45, 'p': 0.028426149860024452},\n",
+-       "     {'token': ' do', 'id': 745, 'p': 0.02299513854086399},\n",
+-       "     {'token': '1', 'id': 35, 'p': 0.02189176343381405},\n",
+-       "     {'token': '5', 'id': 39, 'p': 0.01647990383207798}],\n",
+-       "    [{'token': ':', 'id': 44, 'p': 0.4023849070072174},\n",
+-       "     {'token': '0', 'id': 34, 'p': 0.292045533657074},\n",
+-       "     {'token': ' {', 'id': 301, 'p': 0.05172080546617508},\n",
+-       "     {'token': ';', 'id': 45, 'p': 0.03128477558493614},\n",
+-       "     {'token': ' :', 'id': 499, 'p': 0.029217099770903587},\n",
+-       "     {'token': '\\n', 'id': 203, 'p': 0.02222319319844246},\n",
+-       "     {'token': ' and', 'id': 461, 'p': 0.021533828228712082},\n",
+-       "     {'token': '7', 'id': 41, 'p': 0.009068229235708714},\n",
+-       "     {'token': ' do', 'id': 745, 'p': 0.008627478033304214},\n",
+-       "     {'token': '1', 'id': 35, 'p': 0.007104198448359966}],\n",
+-       "    [{'token': ':', 'id': 44, 'p': 0.37848547101020813},\n",
+-       "     {'token': '0', 'id': 34, 'p': 0.36837056279182434},\n",
+-       "     {'token': ' and', 'id': 461, 'p': 0.027829058468341827},\n",
+-       "     {'token': ' {', 'id': 301, 'p': 0.025679590180516243},\n",
+-       "     {'token': '\\n', 'id': 203, 'p': 0.024211140349507332},\n",
+-       "     {'token': ';', 'id': 45, 'p': 0.020543141290545464},\n",
+-       "     {'token': ' :', 'id': 499, 'p': 0.019507573917508125},\n",
+-       "     {'token': ' do', 'id': 745, 'p': 0.008511831983923912},\n",
+-       "     {'token': '):', 'id': 711, 'p': 0.0072578927502036095},\n",
+-       "     {'token': '\\n   ', 'id': 284, 'p': 0.006828987039625645}],\n",
+-       "    [{'token': '\\n', 'id': 203, 'p': 0.23396219313144684},\n",
+-       "     {'token': '\\n   ', 'id': 284, 'p': 0.2190629094839096},\n",
+-       "     {'token': '\\r\\n   ', 'id': 737, 'p': 0.04430586099624634},\n",
+-       "     {'token': '\\r\\n', 'id': 437, 'p': 0.04372713342308998},\n",
+-       "     {'token': '\\n       ', 'id': 291, 'p': 0.0430242121219635},\n",
+-       "     {'token': '\\n\\t', 'id': 357, 'p': 0.03969162702560425},\n",
+-       "     {'token': '\\n ', 'id': 334, 'p': 0.03849191218614578},\n",
+-       "     {'token': '\\n           ', 'id': 324, 'p': 0.01821429468691349},\n",
+-       "     {'token': '\\n\\t\\t', 'id': 355, 'p': 0.01576254330575466},\n",
+-       "     {'token': ' \\n   ', 'id': 3701, 'p': 0.015307113528251648}],\n",
+-       "    [{'token': '\\t', 'id': 202, 'p': 0.9859776496887207},\n",
+-       "     {'token': '\\n', 'id': 203, 'p': 0.00227974820882082},\n",
+-       "     {'token': '\\n\\n', 'id': 478, 'p': 0.0014087995514273643},\n",
+-       "     {'token': ' i', 'id': 595, 'p': 0.0005805050022900105},\n",
+-       "     {'token': '<|endoftext|>', 'id': 0, 'p': 0.0005506073939613998},\n",
+-       "     {'token': ' print', 'id': 1459, 'p': 0.0005412037717178464},\n",
+-       "     {'token': '\\n\\t\\t', 'id': 355, 'p': 0.00044278468703851104},\n",
+-       "     {'token': ' if', 'id': 415, 'p': 0.0003754307690542191},\n",
+-       "     {'token': '\\n       ', 'id': 291, 'p': 0.00035315306740812957},\n",
+-       "     {'token': ' \\n', 'id': 1659, 'p': 0.0003170096897520125}],\n",
+-       "    [{'token': 'i', 'id': 91, 'p': 0.0908983126282692},\n",
+-       "     {'token': 'if', 'id': 325, 'p': 0.08607195317745209},\n",
+-       "     {'token': 'print', 'id': 1216, 'p': 0.0780801773071289},\n",
+-       "     {'token': '#', 'id': 21, 'p': 0.06375392526388168},\n",
+-       "     {'token': 'for', 'id': 979, 'p': 0.043266408145427704},\n",
+-       "     {'token': 'x', 'id': 106, 'p': 0.029446404427289963},\n",
+-       "     {'token': 'time', 'id': 1003, 'p': 0.01902412436902523},\n",
+-       "     {'token': 'try', 'id': 1270, 'p': 0.012581328861415386},\n",
+-       "     {'token': 'a', 'id': 83, 'p': 0.00948715303093195},\n",
+-       "     {'token': 'j', 'id': 92, 'p': 0.009397303685545921}],\n",
+-       "    [{'token': ' =', 'id': 280, 'p': 0.48377862572669983},\n",
+-       "     {'token': ' +=', 'id': 1454, 'p': 0.3071824610233307},\n",
+-       "     {'token': '+=', 'id': 9372, 'p': 0.10301950573921204},\n",
+-       "     {'token': '=', 'id': 47, 'p': 0.07657118141651154},\n",
+-       "     {'token': '2', 'id': 36, 'p': 0.0034054892603307962},\n",
+-       "     {'token': '++', 'id': 1046, 'p': 0.0033796129282563925},\n",
+-       "     {'token': ' ', 'id': 225, 'p': 0.0019431135151535273},\n",
+-       "     {'token': '.', 'id': 32, 'p': 0.0016859053866937757},\n",
+-       "     {'token': '_', 'id': 81, 'p': 0.0016848992090672255},\n",
+-       "     {'token': '1', 'id': 35, 'p': 0.001424684771336615}],\n",
+-       "    [{'token': '1', 'id': 35, 'p': 0.905095100402832},\n",
+-       "     {'token': ' ', 'id': 225, 'p': 0.058274686336517334},\n",
+-       "     {'token': '2', 'id': 36, 'p': 0.009515967220067978},\n",
+-       "     {'token': '0', 'id': 34, 'p': 0.0053918384946882725},\n",
+-       "     {'token': '3', 'id': 37, 'p': 0.0039870827458798885},\n",
+-       "     {'token': '5', 'id': 39, 'p': 0.0038025209214538336},\n",
+-       "     {'token': '4', 'id': 38, 'p': 0.0020896270871162415},\n",
+-       "     {'token': '6', 'id': 40, 'p': 0.0007396098226308823},\n",
+-       "     {'token': 'i', 'id': 91, 'p': 0.0005006464198231697},\n",
+-       "     {'token': 'random', 'id': 3855, 'p': 0.0004683789156842977}],\n",
+-       "    [{'token': '\\n\\t', 'id': 357, 'p': 0.7692736983299255},\n",
+-       "     {'token': '\\n', 'id': 203, 'p': 0.07606126368045807},\n",
+-       "     {'token': '\\n\\n\\t', 'id': 1314, 'p': 0.03595862165093422},\n",
+-       "     {'token': '\\n\\t\\t\\n\\t', 'id': 4086, 'p': 0.020009368658065796},\n",
+-       "     {'token': ';', 'id': 45, 'p': 0.017945008352398872},\n",
+-       "     {'token': '\\n\\n', 'id': 478, 'p': 0.01001984253525734},\n",
+-       "     {'token': ' \\n\\t', 'id': 4512, 'p': 0.008189039304852486},\n",
+-       "     {'token': '\\t\\n\\t', 'id': 22019, 'p': 0.006306779570877552},\n",
+-       "     {'token': '0', 'id': 34, 'p': 0.004613303113728762},\n",
+-       "     {'token': '\\n\\t\\t', 'id': 355, 'p': 0.0036262620706111193}],\n",
+-       "    [{'token': '\\t', 'id': 202, 'p': 0.9972805976867676},\n",
+-       "     {'token': '\\n', 'id': 203, 'p': 0.000631859409622848},\n",
+-       "     {'token': '\\n\\n', 'id': 478, 'p': 0.00041037140181288123},\n",
+-       "     {'token': '<|endoftext|>', 'id': 0, 'p': 0.0003110315592493862},\n",
+-       "     {'token': '\\n\\n\\t', 'id': 1314, 'p': 0.0003064779448322952},\n",
+-       "     {'token': '\\n\\n\\n', 'id': 2831, 'p': 0.00012351713667158037},\n",
+-       "     {'token': '\\n\\t\\t\\n\\t', 'id': 4086, 'p': 6.783890421502292e-05},\n",
+-       "     {'token': '\\n\\t\\t\\n', 'id': 15672, 'p': 6.195143942022696e-05},\n",
+-       "     {'token': '\\n\\n\\n\\n', 'id': 3148, 'p': 5.333066656021401e-05},\n",
+-       "     {'token': '\\n\\t\\t', 'id': 355, 'p': 5.328658517100848e-05}],\n",
+-       "    [{'token': 'if', 'id': 325, 'p': 0.10917811840772629},\n",
+-       "     {'token': 'print', 'id': 1216, 'p': 0.10852164030075073},\n",
+-       "     {'token': '#', 'id': 21, 'p': 0.05212315917015076},\n",
+-       "     {'token': 'x', 'id': 106, 'p': 0.03226926550269127},\n",
+-       "     {'token': 'time', 'id': 1003, 'p': 0.026470638811588287},\n",
+-       "     {'token': 'for', 'id': 979, 'p': 0.017242934554815292},\n",
+-       "     {'token': 'try', 'id': 1270, 'p': 0.01666564866900444},\n",
+-       "     {'token': 'j', 'id': 92, 'p': 0.01242921780794859},\n",
+-       "     {'token': 't', 'id': 102, 'p': 0.010955249890685081},\n",
+-       "     {'token': 'a', 'id': 83, 'p': 0.01050106342881918}],\n",
+-       "    [{'token': 'print', 'id': 1216, 'p': 0.20567364990711212},\n",
+-       "     {'token': ' print', 'id': 1459, 'p': 0.04489118233323097},\n",
+-       "     {'token': 'if', 'id': 325, 'p': 0.025359705090522766},\n",
+-       "     {'token': 'time', 'id': 1003, 'p': 0.01951642334461212},\n",
+-       "     {'token': ' if', 'id': 415, 'p': 0.014499979093670845},\n",
+-       "     {'token': ' ', 'id': 225, 'p': 0.013560913503170013},\n",
+-       "     {'token': 'get', 'id': 371, 'p': 0.00833500362932682},\n",
+-       "     {'token': ' get', 'id': 622, 'p': 0.005919990129768848},\n",
+-       "     {'token': 'for', 'id': 979, 'p': 0.004879203625023365},\n",
+-       "     {'token': ' Get', 'id': 1390, 'p': 0.004869167692959309}]]],\n",
+-       "  'activations': {'block': {'transformer.h.27': array([[[[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.86809766e-01, 6.13190234e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.77830040e-01, 2.44298339e-01, 7.78716505e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.07563317e-01, 3.39519054e-01, 3.09274462e-03, ...,\n",
+-       "              6.74944138e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.25544536e-01, 2.13698775e-01, 3.43846008e-02, ...,\n",
+-       "              2.32318658e-02, 4.82077077e-02, 0.00000000e+00],\n",
+-       "             [6.65230870e-01, 2.80808955e-01, 2.52443901e-03, ...,\n",
+-       "              2.33517541e-03, 3.03416280e-03, 3.30433086e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.94372821e-01, 6.05627179e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.22223163e-01, 2.64088660e-01, 1.36881759e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.62759006e-01, 2.96446145e-01, 3.84718674e-04, ...,\n",
+-       "              4.55304934e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.87700760e-01, 2.37994775e-01, 9.90710221e-03, ...,\n",
+-       "              7.77075859e-03, 2.97774412e-02, 0.00000000e+00],\n",
+-       "             [5.25595248e-01, 2.44694248e-01, 6.07157871e-03, ...,\n",
+-       "              7.34191854e-03, 3.00526544e-02, 1.74833164e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.06022280e-01, 5.93977690e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.05453533e-01, 2.63720393e-01, 3.30826044e-01, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [4.02350068e-01, 2.23138586e-01, 8.08282476e-03, ...,\n",
+-       "              2.08899658e-02, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [5.89987487e-02, 3.29423323e-02, 1.39709078e-02, ...,\n",
+-       "              6.77551106e-02, 1.43282667e-01, 0.00000000e+00],\n",
+-       "             [6.96505234e-02, 3.88972759e-02, 1.15836447e-03, ...,\n",
+-       "              4.46643867e-02, 3.84607404e-01, 6.51573613e-02]],\n",
+-       "    \n",
+-       "            ...,\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.92007560e-01, 6.07992470e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.95134401e-01, 2.90831119e-01, 1.40344752e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.49062455e-01, 3.44726145e-01, 1.21888949e-03, ...,\n",
+-       "              9.14549018e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.72064960e-01, 2.78200269e-01, 1.15651432e-02, ...,\n",
+-       "              4.44630976e-04, 2.05340353e-03, 0.00000000e+00],\n",
+-       "             [5.84036052e-01, 2.85513550e-01, 5.24157472e-02, ...,\n",
+-       "              3.76699725e-04, 1.75268459e-03, 4.46420833e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.42023844e-01, 5.57976186e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.30206156e-01, 1.67642206e-01, 2.15169298e-03, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [8.48425627e-01, 1.40219033e-01, 6.24702661e-04, ...,\n",
+-       "              1.16494986e-04, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.92541206e-01, 2.00046971e-01, 2.46126961e-04, ...,\n",
+-       "              2.92105658e-04, 8.78342486e-04, 0.00000000e+00],\n",
+-       "             [7.97441006e-01, 1.92205817e-01, 3.93684953e-04, ...,\n",
+-       "              2.72600097e-04, 7.81819399e-04, 1.12425885e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.04031277e-01, 5.95968723e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.11504960e-01, 1.82511628e-01, 5.98338805e-03, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [7.75731802e-01, 2.22875282e-01, 7.64586875e-05, ...,\n",
+-       "              8.12229118e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.22427964e-01, 2.31542900e-01, 2.11139279e-03, ...,\n",
+-       "              2.20751646e-03, 4.42380365e-03, 0.00000000e+00],\n",
+-       "             [7.09721148e-01, 2.13791043e-01, 2.26785988e-03, ...,\n",
+-       "              4.82257642e-03, 4.93931444e-03, 9.76365525e-03]]]],\n",
+-       "          dtype=float32),\n",
+-       "    'transformer.h.28': array([[[[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.88854921e-01, 6.11145079e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [5.64583659e-01, 4.03506100e-01, 3.19102705e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.16737425e-01, 3.68670017e-01, 1.05987443e-03, ...,\n",
+-       "              2.02140975e-04, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.09993237e-01, 2.89638460e-01, 3.64402346e-02, ...,\n",
+-       "              6.33700890e-03, 3.84628586e-02, 0.00000000e+00],\n",
+-       "             [3.31992835e-01, 2.70704746e-01, 2.28485838e-02, ...,\n",
+-       "              8.19508359e-03, 3.26142982e-02, 5.86906299e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.89101654e-01, 6.10898316e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.14151025e-01, 2.75057375e-01, 1.07916351e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [7.79262364e-01, 2.14913815e-01, 2.80461507e-04, ...,\n",
+-       "              1.84616350e-04, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.82482147e-01, 2.05542043e-01, 2.11463193e-03, ...,\n",
+-       "              4.85039171e-04, 9.08170012e-04, 0.00000000e+00],\n",
+-       "             [7.75792897e-01, 2.07455128e-01, 2.31123762e-03, ...,\n",
+-       "              1.12999161e-03, 1.27459178e-03, 1.36697304e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.89267951e-01, 6.10732019e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.43972003e-01, 2.50979960e-01, 5.04808594e-03, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [8.57090533e-01, 1.39591470e-01, 1.18910649e-03, ...,\n",
+-       "              1.88800477e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.08525503e-01, 1.80064380e-01, 2.03478453e-03, ...,\n",
+-       "              2.84054026e-04, 8.32669961e-04, 0.00000000e+00],\n",
+-       "             [8.10945392e-01, 1.78250074e-01, 1.01090665e-03, ...,\n",
+-       "              6.17030892e-04, 5.88515890e-04, 3.76964046e-04]],\n",
+-       "    \n",
+-       "            ...,\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.77419978e-01, 6.22579992e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.55772507e-01, 3.24558198e-01, 1.96692217e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [5.96090436e-01, 3.64273995e-01, 9.15960316e-03, ...,\n",
+-       "              1.59576291e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.00058913e-01, 3.33696216e-01, 1.66421235e-02, ...,\n",
+-       "              1.93399226e-03, 8.90070479e-03, 0.00000000e+00],\n",
+-       "             [5.80236256e-01, 3.07744682e-01, 1.35575021e-02, ...,\n",
+-       "              3.34152789e-03, 1.14803156e-02, 3.36408094e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.84328812e-01, 6.15671217e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.29757130e-01, 2.59725839e-01, 1.05170142e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [8.63987744e-01, 1.34886041e-01, 2.63202121e-04, ...,\n",
+-       "              1.35075788e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.38956416e-01, 1.57441318e-01, 7.13811023e-04, ...,\n",
+-       "              1.14320785e-04, 3.29593517e-04, 0.00000000e+00],\n",
+-       "             [7.91781485e-01, 1.98865950e-01, 1.09091797e-03, ...,\n",
+-       "              2.69676530e-04, 8.75014055e-04, 1.34439068e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.74433339e-01, 6.25566661e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.53416717e-01, 2.36424804e-01, 1.01584224e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [7.72869468e-01, 2.24414587e-01, 3.06635658e-04, ...,\n",
+-       "              7.70855404e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.31639564e-01, 2.52427608e-01, 1.31598744e-03, ...,\n",
+-       "              3.35192191e-04, 2.44944822e-03, 0.00000000e+00],\n",
+-       "             [7.71095335e-01, 2.15631336e-01, 4.07687679e-04, ...,\n",
+-       "              3.95324052e-04, 1.95206574e-03, 3.26595549e-03]]]],\n",
+-       "          dtype=float32),\n",
+-       "    'transformer.h.29': array([[[[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.45034689e-01, 6.54965281e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.56106162e-01, 3.10878724e-01, 3.33015084e-01, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [5.21566749e-01, 2.76192099e-01, 1.16102081e-02, ...,\n",
+-       "              5.21781901e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [2.61503786e-01, 1.51946574e-01, 3.54448333e-02, ...,\n",
+-       "              1.34849958e-02, 3.34794596e-02, 0.00000000e+00],\n",
+-       "             [3.72170359e-01, 1.87184662e-01, 2.16007289e-02, ...,\n",
+-       "              7.67636858e-03, 2.78285928e-02, 1.64297987e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.04304832e-01, 5.95695198e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.34812140e-01, 2.62686998e-01, 2.50085443e-03, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [7.84171641e-01, 2.09672138e-01, 7.58097507e-04, ...,\n",
+-       "              1.73209221e-04, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.20890546e-01, 1.74992815e-01, 3.94490839e-04, ...,\n",
+-       "              1.16528936e-04, 4.16541792e-04, 0.00000000e+00],\n",
+-       "             [7.97033727e-01, 1.92384347e-01, 9.54561867e-04, ...,\n",
+-       "              2.57169333e-04, 6.53275929e-04, 1.28314248e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.80015820e-01, 6.19984210e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.39471650e-01, 3.33359689e-01, 2.71687116e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [5.81127524e-01, 3.37321609e-01, 7.81460945e-03, ...,\n",
+-       "              4.65178303e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [5.91210663e-01, 3.32591414e-01, 1.72587447e-02, ...,\n",
+-       "              1.01655722e-03, 1.02282865e-02, 0.00000000e+00],\n",
+-       "             [6.07480049e-01, 3.21781427e-01, 1.19892815e-02, ...,\n",
+-       "              7.10469089e-04, 5.52544277e-03, 1.96933839e-02]],\n",
+-       "    \n",
+-       "            ...,\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.92888457e-01, 6.07111514e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.58283412e-01, 3.30674320e-01, 1.10422177e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.45866692e-01, 3.03902745e-01, 4.77488711e-03, ...,\n",
+-       "              1.17981283e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.33292615e-01, 2.57052451e-01, 1.26217762e-02, ...,\n",
+-       "              1.04105449e-03, 8.84752069e-03, 0.00000000e+00],\n",
+-       "             [4.25126493e-01, 2.22692698e-01, 2.43505035e-02, ...,\n",
+-       "              4.53117630e-03, 3.79969366e-02, 4.55222875e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.75649959e-01, 6.24350071e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [5.60279071e-01, 3.64347249e-01, 7.53736496e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.58309460e-01, 2.94320434e-01, 1.68614741e-02, ...,\n",
+-       "              2.00377079e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.14259958e-01, 3.09744209e-01, 2.34729666e-02, ...,\n",
+-       "              8.16287939e-04, 7.74699170e-03, 0.00000000e+00],\n",
+-       "             [6.56753957e-01, 3.05831224e-01, 7.91374128e-03, ...,\n",
+-       "              5.94218145e-04, 2.50693713e-03, 7.11348513e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.82634073e-01, 6.17365956e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.64638877e-01, 3.19138497e-01, 1.62226781e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.30208194e-01, 3.39748949e-01, 1.63338496e-03, ...,\n",
+-       "              1.49070215e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.15561426e-01, 3.36144924e-01, 2.54869275e-03, ...,\n",
+-       "              1.36626419e-03, 8.39856733e-03, 0.00000000e+00],\n",
+-       "             [5.77604592e-01, 3.59290391e-01, 2.86902743e-03, ...,\n",
+-       "              1.21166627e-03, 6.55306829e-03, 1.82718318e-02]]]],\n",
+-       "          dtype=float32)},\n",
+-       "   'attn': {'transformer.h.27': array([[[[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.86809766e-01, 6.13190234e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.77830040e-01, 2.44298339e-01, 7.78716505e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.07563317e-01, 3.39519054e-01, 3.09274462e-03, ...,\n",
+-       "              6.74944138e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.25544536e-01, 2.13698775e-01, 3.43846008e-02, ...,\n",
+-       "              2.32318658e-02, 4.82077077e-02, 0.00000000e+00],\n",
+-       "             [6.65230870e-01, 2.80808955e-01, 2.52443901e-03, ...,\n",
+-       "              2.33517541e-03, 3.03416280e-03, 3.30433086e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.94372821e-01, 6.05627179e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.22223163e-01, 2.64088660e-01, 1.36881759e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.62759006e-01, 2.96446145e-01, 3.84718674e-04, ...,\n",
+-       "              4.55304934e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.87700760e-01, 2.37994775e-01, 9.90710221e-03, ...,\n",
+-       "              7.77075859e-03, 2.97774412e-02, 0.00000000e+00],\n",
+-       "             [5.25595248e-01, 2.44694248e-01, 6.07157871e-03, ...,\n",
+-       "              7.34191854e-03, 3.00526544e-02, 1.74833164e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.06022280e-01, 5.93977690e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.05453533e-01, 2.63720393e-01, 3.30826044e-01, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [4.02350068e-01, 2.23138586e-01, 8.08282476e-03, ...,\n",
+-       "              2.08899658e-02, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [5.89987487e-02, 3.29423323e-02, 1.39709078e-02, ...,\n",
+-       "              6.77551106e-02, 1.43282667e-01, 0.00000000e+00],\n",
+-       "             [6.96505234e-02, 3.88972759e-02, 1.15836447e-03, ...,\n",
+-       "              4.46643867e-02, 3.84607404e-01, 6.51573613e-02]],\n",
+-       "    \n",
+-       "            ...,\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.92007560e-01, 6.07992470e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.95134401e-01, 2.90831119e-01, 1.40344752e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.49062455e-01, 3.44726145e-01, 1.21888949e-03, ...,\n",
+-       "              9.14549018e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.72064960e-01, 2.78200269e-01, 1.15651432e-02, ...,\n",
+-       "              4.44630976e-04, 2.05340353e-03, 0.00000000e+00],\n",
+-       "             [5.84036052e-01, 2.85513550e-01, 5.24157472e-02, ...,\n",
+-       "              3.76699725e-04, 1.75268459e-03, 4.46420833e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.42023844e-01, 5.57976186e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.30206156e-01, 1.67642206e-01, 2.15169298e-03, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [8.48425627e-01, 1.40219033e-01, 6.24702661e-04, ...,\n",
+-       "              1.16494986e-04, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.92541206e-01, 2.00046971e-01, 2.46126961e-04, ...,\n",
+-       "              2.92105658e-04, 8.78342486e-04, 0.00000000e+00],\n",
+-       "             [7.97441006e-01, 1.92205817e-01, 3.93684953e-04, ...,\n",
+-       "              2.72600097e-04, 7.81819399e-04, 1.12425885e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.04031277e-01, 5.95968723e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.11504960e-01, 1.82511628e-01, 5.98338805e-03, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [7.75731802e-01, 2.22875282e-01, 7.64586875e-05, ...,\n",
+-       "              8.12229118e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.22427964e-01, 2.31542900e-01, 2.11139279e-03, ...,\n",
+-       "              2.20751646e-03, 4.42380365e-03, 0.00000000e+00],\n",
+-       "             [7.09721148e-01, 2.13791043e-01, 2.26785988e-03, ...,\n",
+-       "              4.82257642e-03, 4.93931444e-03, 9.76365525e-03]]]],\n",
+-       "          dtype=float32),\n",
+-       "    'transformer.h.28': array([[[[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.88854921e-01, 6.11145079e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [5.64583659e-01, 4.03506100e-01, 3.19102705e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.16737425e-01, 3.68670017e-01, 1.05987443e-03, ...,\n",
+-       "              2.02140975e-04, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.09993237e-01, 2.89638460e-01, 3.64402346e-02, ...,\n",
+-       "              6.33700890e-03, 3.84628586e-02, 0.00000000e+00],\n",
+-       "             [3.31992835e-01, 2.70704746e-01, 2.28485838e-02, ...,\n",
+-       "              8.19508359e-03, 3.26142982e-02, 5.86906299e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.89101654e-01, 6.10898316e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.14151025e-01, 2.75057375e-01, 1.07916351e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [7.79262364e-01, 2.14913815e-01, 2.80461507e-04, ...,\n",
+-       "              1.84616350e-04, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.82482147e-01, 2.05542043e-01, 2.11463193e-03, ...,\n",
+-       "              4.85039171e-04, 9.08170012e-04, 0.00000000e+00],\n",
+-       "             [7.75792897e-01, 2.07455128e-01, 2.31123762e-03, ...,\n",
+-       "              1.12999161e-03, 1.27459178e-03, 1.36697304e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.89267951e-01, 6.10732019e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.43972003e-01, 2.50979960e-01, 5.04808594e-03, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [8.57090533e-01, 1.39591470e-01, 1.18910649e-03, ...,\n",
+-       "              1.88800477e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.08525503e-01, 1.80064380e-01, 2.03478453e-03, ...,\n",
+-       "              2.84054026e-04, 8.32669961e-04, 0.00000000e+00],\n",
+-       "             [8.10945392e-01, 1.78250074e-01, 1.01090665e-03, ...,\n",
+-       "              6.17030892e-04, 5.88515890e-04, 3.76964046e-04]],\n",
+-       "    \n",
+-       "            ...,\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.77419978e-01, 6.22579992e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.55772507e-01, 3.24558198e-01, 1.96692217e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [5.96090436e-01, 3.64273995e-01, 9.15960316e-03, ...,\n",
+-       "              1.59576291e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.00058913e-01, 3.33696216e-01, 1.66421235e-02, ...,\n",
+-       "              1.93399226e-03, 8.90070479e-03, 0.00000000e+00],\n",
+-       "             [5.80236256e-01, 3.07744682e-01, 1.35575021e-02, ...,\n",
+-       "              3.34152789e-03, 1.14803156e-02, 3.36408094e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.84328812e-01, 6.15671217e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.29757130e-01, 2.59725839e-01, 1.05170142e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [8.63987744e-01, 1.34886041e-01, 2.63202121e-04, ...,\n",
+-       "              1.35075788e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.38956416e-01, 1.57441318e-01, 7.13811023e-04, ...,\n",
+-       "              1.14320785e-04, 3.29593517e-04, 0.00000000e+00],\n",
+-       "             [7.91781485e-01, 1.98865950e-01, 1.09091797e-03, ...,\n",
+-       "              2.69676530e-04, 8.75014055e-04, 1.34439068e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.74433339e-01, 6.25566661e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.53416717e-01, 2.36424804e-01, 1.01584224e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [7.72869468e-01, 2.24414587e-01, 3.06635658e-04, ...,\n",
+-       "              7.70855404e-05, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.31639564e-01, 2.52427608e-01, 1.31598744e-03, ...,\n",
+-       "              3.35192191e-04, 2.44944822e-03, 0.00000000e+00],\n",
+-       "             [7.71095335e-01, 2.15631336e-01, 4.07687679e-04, ...,\n",
+-       "              3.95324052e-04, 1.95206574e-03, 3.26595549e-03]]]],\n",
+-       "          dtype=float32),\n",
+-       "    'transformer.h.29': array([[[[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.45034689e-01, 6.54965281e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.56106162e-01, 3.10878724e-01, 3.33015084e-01, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [5.21566749e-01, 2.76192099e-01, 1.16102081e-02, ...,\n",
+-       "              5.21781901e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [2.61503786e-01, 1.51946574e-01, 3.54448333e-02, ...,\n",
+-       "              1.34849958e-02, 3.34794596e-02, 0.00000000e+00],\n",
+-       "             [3.72170359e-01, 1.87184662e-01, 2.16007289e-02, ...,\n",
+-       "              7.67636858e-03, 2.78285928e-02, 1.64297987e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [4.04304832e-01, 5.95695198e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [7.34812140e-01, 2.62686998e-01, 2.50085443e-03, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [7.84171641e-01, 2.09672138e-01, 7.58097507e-04, ...,\n",
+-       "              1.73209221e-04, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [8.20890546e-01, 1.74992815e-01, 3.94490839e-04, ...,\n",
+-       "              1.16528936e-04, 4.16541792e-04, 0.00000000e+00],\n",
+-       "             [7.97033727e-01, 1.92384347e-01, 9.54561867e-04, ...,\n",
+-       "              2.57169333e-04, 6.53275929e-04, 1.28314248e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.80015820e-01, 6.19984210e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.39471650e-01, 3.33359689e-01, 2.71687116e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [5.81127524e-01, 3.37321609e-01, 7.81460945e-03, ...,\n",
+-       "              4.65178303e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [5.91210663e-01, 3.32591414e-01, 1.72587447e-02, ...,\n",
+-       "              1.01655722e-03, 1.02282865e-02, 0.00000000e+00],\n",
+-       "             [6.07480049e-01, 3.21781427e-01, 1.19892815e-02, ...,\n",
+-       "              7.10469089e-04, 5.52544277e-03, 1.96933839e-02]],\n",
+-       "    \n",
+-       "            ...,\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.92888457e-01, 6.07111514e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.58283412e-01, 3.30674320e-01, 1.10422177e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.45866692e-01, 3.03902745e-01, 4.77488711e-03, ...,\n",
+-       "              1.17981283e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.33292615e-01, 2.57052451e-01, 1.26217762e-02, ...,\n",
+-       "              1.04105449e-03, 8.84752069e-03, 0.00000000e+00],\n",
+-       "             [4.25126493e-01, 2.22692698e-01, 2.43505035e-02, ...,\n",
+-       "              4.53117630e-03, 3.79969366e-02, 4.55222875e-02]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.75649959e-01, 6.24350071e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [5.60279071e-01, 3.64347249e-01, 7.53736496e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.58309460e-01, 2.94320434e-01, 1.68614741e-02, ...,\n",
+-       "              2.00377079e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.14259958e-01, 3.09744209e-01, 2.34729666e-02, ...,\n",
+-       "              8.16287939e-04, 7.74699170e-03, 0.00000000e+00],\n",
+-       "             [6.56753957e-01, 3.05831224e-01, 7.91374128e-03, ...,\n",
+-       "              5.94218145e-04, 2.50693713e-03, 7.11348513e-03]],\n",
+-       "    \n",
+-       "            [[1.00000000e+00, 0.00000000e+00, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [3.82634073e-01, 6.17365956e-01, 0.00000000e+00, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.64638877e-01, 3.19138497e-01, 1.62226781e-02, ...,\n",
+-       "              0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             ...,\n",
+-       "             [6.30208194e-01, 3.39748949e-01, 1.63338496e-03, ...,\n",
+-       "              1.49070215e-03, 0.00000000e+00, 0.00000000e+00],\n",
+-       "             [6.15561426e-01, 3.36144924e-01, 2.54869275e-03, ...,\n",
+-       "              1.36626419e-03, 8.39856733e-03, 0.00000000e+00],\n",
+-       "             [5.77604592e-01, 3.59290391e-01, 2.86902743e-03, ...,\n",
+-       "              1.21166627e-03, 6.55306829e-03, 1.82718318e-02]]]],\n",
+-       "          dtype=float32)},\n",
+-       "   'mlp': {'transformer.h.27': array([[[-0.29210842,  0.09769718,  0.15262876, ...,  0.03308762,\n",
+-       "             -0.174078  , -0.01585237],\n",
+-       "            [-0.1610969 ,  0.12273332,  0.20070465, ...,  0.10881899,\n",
+-       "             -0.20833683,  0.05157161],\n",
+-       "            [ 0.29277045,  0.3498334 , -0.16846995, ...,  0.85110927,\n",
+-       "             -0.50948966, -0.81232184],\n",
+-       "            ...,\n",
+-       "            [ 1.2592285 , -0.89460146,  0.56560934, ...,  0.55465794,\n",
+-       "              0.48061472, -0.18764627],\n",
+-       "            [ 1.0964729 ,  0.32075   , -0.44906548, ...,  0.69313014,\n",
+-       "             -0.33092037,  0.5483679 ],\n",
+-       "            [ 0.9736226 ,  0.14905915, -0.15934318, ..., -0.04351373,\n",
+-       "             -1.01636   ,  0.30056703]]], dtype=float32),\n",
+-       "    'transformer.h.28': array([[[-0.20823666, -0.03184681, -0.0696274 , ..., -0.02322284,\n",
+-       "             -0.22928582,  0.10601158],\n",
+-       "            [-0.13689469,  0.05421218, -0.04188824, ..., -0.00237902,\n",
+-       "             -0.19067581,  0.11318424],\n",
+-       "            [-0.17184308,  0.49205837, -0.83368284, ...,  0.54905367,\n",
+-       "              0.38192347, -0.06979047],\n",
+-       "            ...,\n",
+-       "            [-0.14466752,  0.15327904, -1.022937  , ...,  0.20257312,\n",
+-       "             -0.5521865 , -0.2615231 ],\n",
+-       "            [ 0.29416907, -0.20321974, -0.16062587, ..., -1.0305693 ,\n",
+-       "              0.00946747, -0.15725617],\n",
+-       "            [ 0.13950402, -0.1458086 ,  0.8180073 , ..., -1.0524657 ,\n",
+-       "              0.07571021,  0.01103855]]], dtype=float32),\n",
+-       "    'transformer.h.29': array([[[-0.30600926, -0.17656758,  0.13658689, ..., -0.00714067,\n",
+-       "             -0.14132684,  0.15158556],\n",
+-       "            [-0.24842542, -0.09472682,  0.04314336, ...,  0.01907516,\n",
+-       "              0.01024865,  0.25125167],\n",
+-       "            [-0.10845314, -0.15305668, -0.47808057, ...,  0.19521013,\n",
+-       "              0.5699742 ,  0.606019  ],\n",
+-       "            ...,\n",
+-       "            [ 1.4224037 , -0.474783  , -0.05813886, ...,  0.31846824,\n",
+-       "              0.30627027,  0.10692367],\n",
+-       "            [ 0.03797419, -0.3488207 , -0.19864464, ..., -0.00345751,\n",
+-       "             -0.18896641,  0.6900221 ],\n",
+-       "            [ 0.5631609 ,  0.13505262, -1.1731799 , ..., -0.09924351,\n",
+-       "             -0.36885664, -0.10511757]]], dtype=float32)}}})"
++       "\u001b[31m╭─\u001b[0m\u001b[31m──────────────────────────────\u001b[0m\u001b[31m \u001b[0m\u001b[1;31mTraceback \u001b[0m\u001b[1;2;31m(most recent call last)\u001b[0m\u001b[31m \u001b[0m\u001b[31m───────────────────────────────\u001b[0m\u001b[31m─╮\u001b[0m\n",
++       "\u001b[31m│\u001b[0m in \u001b[92m<module>\u001b[0m:\u001b[94m4\u001b[0m                                                                                    \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 1 \u001b[0mprompts = [\u001b[33m\"\"\"\u001b[0m\u001b[33mfor i <\u001b[0m\u001b[33m\"\"\"\u001b[0m]                                                                   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 2 \u001b[0m                                                                                            \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 3 \u001b[0m                                                                                            \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[31m❱ \u001b[0m 4 txt, ret_dict = lm.trace_generate(                                                          \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 5 \u001b[0m\u001b[2m│   \u001b[0mprompts,                                                                                \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 6 \u001b[0m\u001b[2m│   \u001b[0mmax_out_len=\u001b[96mlen\u001b[0m(prompts[\u001b[94m0\u001b[0m]) + \u001b[94m10\u001b[0m,                                                       \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 7 \u001b[0m\u001b[2m│   \u001b[0mpick_greedy= \u001b[94mFalse\u001b[0m,                                                                     \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[2;33m/home/franlucc/codetrace/notebooks/../\u001b[0m\u001b[1;33mtrace_model.py\u001b[0m:\u001b[94m145\u001b[0m in \u001b[92mtrace_generate\u001b[0m                       \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m142 \u001b[0m\u001b[2m│   │   │   │   │   \u001b[0mlayers = request_activations+request_logits,                           \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m143 \u001b[0m\u001b[2m│   │   │   │   │   \u001b[0mretain_input=\u001b[94mTrue\u001b[0m,                                                     \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m144 \u001b[0m\u001b[2m│   │   │   │   \u001b[0m) \u001b[94mas\u001b[0m traces:                                                               \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[31m❱ \u001b[0m145 \u001b[2m│   │   │   │   │   \u001b[0mmodel_out = \u001b[96mself\u001b[0m.model(                                                \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m146 \u001b[0m\u001b[2m│   │   │   │   │   │   \u001b[0minput_ids=input_ids[:, cur_context],                               \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m147 \u001b[0m\u001b[2m│   │   │   │   │   │   \u001b[0mattention_mask=attention_mask[:, cur_context],                     \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m148 \u001b[0m\u001b[2m│   │   │   │   │   │   \u001b[0mpast_key_values=past_key_values,                                   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[2;33m/home/franlucc/mechinterp/lib/python3.10/site-packages/torch/nn/modules/\u001b[0m\u001b[1;33mmodule.py\u001b[0m:\u001b[94m1501\u001b[0m in        \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[92m_call_impl\u001b[0m                                                                                       \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1498 \u001b[0m\u001b[2m│   │   \u001b[0m\u001b[94mif\u001b[0m \u001b[95mnot\u001b[0m (\u001b[96mself\u001b[0m._backward_hooks \u001b[95mor\u001b[0m \u001b[96mself\u001b[0m._backward_pre_hooks \u001b[95mor\u001b[0m \u001b[96mself\u001b[0m._forward_hooks   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1499 \u001b[0m\u001b[2m│   │   │   │   \u001b[0m\u001b[95mor\u001b[0m _global_backward_pre_hooks \u001b[95mor\u001b[0m _global_backward_hooks                   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1500 \u001b[0m\u001b[2m│   │   │   │   \u001b[0m\u001b[95mor\u001b[0m _global_forward_hooks \u001b[95mor\u001b[0m _global_forward_pre_hooks):                   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[31m❱ \u001b[0m1501 \u001b[2m│   │   │   \u001b[0m\u001b[94mreturn\u001b[0m forward_call(*args, **kwargs)                                          \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1502 \u001b[0m\u001b[2m│   │   \u001b[0m\u001b[2m# Do not call functions when jit is used\u001b[0m                                          \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1503 \u001b[0m\u001b[2m│   │   \u001b[0mfull_backward_hooks, non_full_backward_hooks = [], []                             \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1504 \u001b[0m\u001b[2m│   │   \u001b[0mbackward_pre_hooks = []                                                           \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[2;33m/home/franlucc/mechinterp/lib/python3.10/site-packages/transformers/models/gpt_bigcode/\u001b[0m\u001b[1;33mmodeling_\u001b[0m \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[1;33mgpt_bigcode.py\u001b[0m:\u001b[94m808\u001b[0m in \u001b[92mforward\u001b[0m                                                                    \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 805 \u001b[0m\u001b[2;33m│   │   \u001b[0m\u001b[33m\"\"\"\u001b[0m                                                                               \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 806 \u001b[0m\u001b[2m│   │   \u001b[0mreturn_dict = return_dict \u001b[94mif\u001b[0m return_dict \u001b[95mis\u001b[0m \u001b[95mnot\u001b[0m \u001b[94mNone\u001b[0m \u001b[94melse\u001b[0m \u001b[96mself\u001b[0m.config.use_return  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 807 \u001b[0m\u001b[2m│   │   \u001b[0m                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[31m❱ \u001b[0m 808 \u001b[2m│   │   \u001b[0mtransformer_outputs = \u001b[96mself\u001b[0m.transformer(                                           \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 809 \u001b[0m\u001b[2m│   │   │   \u001b[0minput_ids,                                                                    \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 810 \u001b[0m\u001b[2m│   │   │   \u001b[0mpast_key_values=past_key_values,                                              \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 811 \u001b[0m\u001b[2m│   │   │   \u001b[0mattention_mask=attention_mask,                                                \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[2;33m/home/franlucc/mechinterp/lib/python3.10/site-packages/torch/nn/modules/\u001b[0m\u001b[1;33mmodule.py\u001b[0m:\u001b[94m1501\u001b[0m in        \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[92m_call_impl\u001b[0m                                                                                       \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1498 \u001b[0m\u001b[2m│   │   \u001b[0m\u001b[94mif\u001b[0m \u001b[95mnot\u001b[0m (\u001b[96mself\u001b[0m._backward_hooks \u001b[95mor\u001b[0m \u001b[96mself\u001b[0m._backward_pre_hooks \u001b[95mor\u001b[0m \u001b[96mself\u001b[0m._forward_hooks   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1499 \u001b[0m\u001b[2m│   │   │   │   \u001b[0m\u001b[95mor\u001b[0m _global_backward_pre_hooks \u001b[95mor\u001b[0m _global_backward_hooks                   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1500 \u001b[0m\u001b[2m│   │   │   │   \u001b[0m\u001b[95mor\u001b[0m _global_forward_hooks \u001b[95mor\u001b[0m _global_forward_pre_hooks):                   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[31m❱ \u001b[0m1501 \u001b[2m│   │   │   \u001b[0m\u001b[94mreturn\u001b[0m forward_call(*args, **kwargs)                                          \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1502 \u001b[0m\u001b[2m│   │   \u001b[0m\u001b[2m# Do not call functions when jit is used\u001b[0m                                          \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1503 \u001b[0m\u001b[2m│   │   \u001b[0mfull_backward_hooks, non_full_backward_hooks = [], []                             \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m1504 \u001b[0m\u001b[2m│   │   \u001b[0mbackward_pre_hooks = []                                                           \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[2;33m/home/franlucc/mechinterp/lib/python3.10/site-packages/transformers/models/gpt_bigcode/\u001b[0m\u001b[1;33mmodeling_\u001b[0m \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[1;33mgpt_bigcode.py\u001b[0m:\u001b[94m605\u001b[0m in \u001b[92mforward\u001b[0m                                                                    \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m                                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 602 \u001b[0m\u001b[2m│   │   \u001b[0mself_attention_mask = \u001b[96mself\u001b[0m.bias[\u001b[94mNone\u001b[0m, key_length - query_length : key_length, :k  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 603 \u001b[0m\u001b[2m│   │   \u001b[0m                                                                                  \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 604 \u001b[0m\u001b[2m│   │   \u001b[0m\u001b[94mif\u001b[0m attention_mask \u001b[95mis\u001b[0m \u001b[95mnot\u001b[0m \u001b[94mNone\u001b[0m:                                                    \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m \u001b[31m❱ \u001b[0m 605 \u001b[2m│   │   │   \u001b[0mself_attention_mask = self_attention_mask * attention_mask.view(batch_size,   \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 606 \u001b[0m\u001b[2m│   │   │   │   \u001b[0mdtype=torch.bool, device=self_attention_mask.device                       \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 607 \u001b[0m\u001b[2m│   │   │   \u001b[0m)                                                                             \u001b[31m│\u001b[0m\n",
++       "\u001b[31m│\u001b[0m   \u001b[2m 608 \u001b[0m                                                                                          \u001b[31m│\u001b[0m\n",
++       "\u001b[31m╰──────────────────────────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n",
++       "\u001b[1;91mRuntimeError: \u001b[0mThe size of tensor a \u001b[1m(\u001b[0m\u001b[1;36m7\u001b[0m\u001b[1m)\u001b[0m must match the size of tensor b \u001b[1m(\u001b[0m\u001b[1;36m4\u001b[0m\u001b[1m)\u001b[0m at non-singleton dimension \u001b[1;36m2\u001b[0m\n"
+       ]
+      },
+-     "execution_count": 14,
+      "metadata": {},
+-     "output_type": "execute_result"
++     "output_type": "display_data"
+     }
+    ],
+    "source": [
+@@ -840,9 +269,8 @@
+     "txt, ret_dict = lm.trace_generate(\n",
+     "    prompts,\n",
+     "    max_out_len=len(prompts[0]) + 10,\n",
+-    "    argmax_greedy= False,\n",
+-    "    debug = False,\n",
+-    "    request_activations= [lm.layername(i) for i in range(27,30)], #lm.model.config.n_layer\n",
++    "    pick_greedy= False,\n",
++    "    request_activations= [layername(lm.model, i) for i in range(27,30)], #lm.model.config.n_layer\n",
+     "    request_logits= [], #lm.model.config.n_layer\n",
+     "    top_k = 10,\n",
+     ")\n",
+diff --git a/trace_model.py b/trace_model.py
+index 7e972e4..2a8566a 100644
+--- a/trace_model.py
++++ b/trace_model.py
+@@ -1,17 +1,17 @@
+ import torch
+ from trace_utils import *
+-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
++from transformers import AutoModelForCausalLM, AutoTokenizer
+ import warnings
+ from typing import Union, List
+-from model_utils import untuple, extract_layer_formats
++from model_utils import extract_layer_formats
+ import numpy as np
+ import unicodedata
+ from pathlib import Path
+ import os
+ from logit_lens import LogitLens
+ import numpy
+-from collections import defaultdict
+-from baukit.nethook import get_module, set_requires_grad
++# from collections import defaultdict
++# from baukit.nethook import get_module, set_requires_grad
+ from model_utils import *
+ '''
+ 
+@@ -21,36 +21,32 @@ from model_utils import *
+ class ModelLoader:
+     def __init__(self, 
+                  model_name_or_path, 
+-                 AUTH=True,
+                  dtype = torch.float32, ## required by trace dict
+-                 trust_remote_code=True) -> None:
++        ) -> None:
+         
+         self.model_name = model_name_or_path
+         
+-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, 
+-                                                       use_auth_token=AUTH) 
+         self.model = AutoModelForCausalLM.from_pretrained(
+             self.model_name, 
+             output_attentions=True,
+-            use_auth_token=AUTH,
++            use_auth_token=True,
+             low_cpu_mem_usage=True, ## loads with accelerate
+             torch_dtype=dtype,
+-            trust_remote_code=trust_remote_code,
++            trust_remote_code=True,
+             
+         )
++        torch.set_grad_enabled(False)
+         self.model.eval().cuda()
+          
+         # post process
+         self.extract_fields()
+         
+-        set_requires_grad(False, self.model)
+-        
+-        ## set pad tokens
++        ## tokenizer
++        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
+         self.tokenizer.clean_up_tokenization_spaces=False
+         self.tokenizer.padding_side="left"
+         self.tokenizer.pad_token = self.tokenizer.eos_token  
+             
+-
+         
+         
+     def extract_fields(self):
+@@ -69,7 +65,6 @@ class ModelLoader:
+         self.mlp_module_name_format = formats["mlp"]
+         self.attn_module_name_format = formats["attn"]
+         
+-        self.fast_generation = (self.model_type not in ["galactica", "llama", "gpt2", "gpt_bigcode"])
+ 
+         if(self.model_type is not None):
+             self.layer_names = [self.layer_name_format.format(i) for i in range(self.model.config.n_layer)]
+@@ -81,12 +76,10 @@ class ModelLoader:
+             
+     def trace_generate(
+             self,
+-            prompts: Union[str, List[str]],
+-            top_k: int = 5,                 
++            prompts: Union[str, List[str]],                 
+             max_out_len: int = 20,          
+-            argmax_greedy = False, 
+-            debug = False,
+-            quiet=False,
++            pick_greedy = False, 
++            top_k: int = 5,
+             request_activations = None,
+             request_logits = None,
+         ):
+@@ -95,7 +88,9 @@ class ModelLoader:
+         '''
+         if max_out_len < len(max(prompts, key=len)):
+             raise ValueError("Prompt length exceeds max_out_len")
+-        
++        if(type(prompts) == str):
++            prompts = [prompts]
++            
+         request_activations = [] if request_activations is None else request_activations
+         request_logits = [] if request_logits is None else request_logits
+         
+@@ -109,20 +104,18 @@ class ModelLoader:
+             attn_track = {k: None for k in request_activations}
+             mlp_track = {k: None for k in request_activations}
+         if(len(request_logits) > 0):
+-            invalid_module = list(set(request_activations) - set(self.tracable_modules))
++            invalid_module = list(set(request_logits) - set(self.tracable_modules))
+             assert(
+                 len(invalid_module) == 0
+             ), f"modules {invalid_module} are not in the list of tracable modules"
+             layer_logits_track = {k: None for k in request_logits}
+-        if(type(prompts) == str):
+-            prompts = [prompts]
++        
+ 
+         
+         tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
+-        
+         input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
+-        # print(input_ids)
+         batch_size = input_ids.size(0)
++        assert batch_size == 1, "batch size must be 1"
+ 
+         ## add prompt to ret dict
+         report_input_tokenized = []
+@@ -139,17 +132,11 @@ class ModelLoader:
+         # init size of context
+         past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item()) 
+ 
+-        # fast gen not supported bigcode
+-        if not self.fast_generation:
+-            use_cache = False
+-            warnings.warn(f"The model `{self.model_name}` of type `{self.model_type}` already implements or can't utilize `use_cache` for fast generation. Setting `use_cache = False`.")
+-
+         generated_tokens = [[] for _ in range(input_ids.size(0))]
+         with torch.no_grad():
+-            # while not exceeding max output length
+             while input_ids.size(1) < max_out_len: 
+ 
+-                ## traces curr inputs to prediction of next tok
++                ## traces curr_inputs -> prediction of next tok
+                 with TraceDict(
+                     self.model, 
+                     layers = request_activations+request_logits,
+@@ -159,28 +146,29 @@ class ModelLoader:
+                         input_ids=input_ids[:, cur_context],
+                         attention_mask=attention_mask[:, cur_context],
+                         past_key_values=past_key_values,
+-                        use_cache = use_cache,  
+                     )
+-                # print(traces[request_activations[0]].__dir__())
+ 
+                 if(len(request_activations) > 0):
+-                    assert self.layername(0, "embed") not in request_activations, "Embedding layer is not supported"
++                    assert layername(self.model, 0, "embed") not in request_activations, "Embedding layer is not supported"
+                     if(input_ids.size(1) == max_out_len - 1):
+                         for module in request_activations:
+-                            # print("traces shape:", untuple(traces[module].output).shape)
+-                            if(activation_track[module] is None):
+-                                activation_track[module] = untuple(traces[module].block_output).cpu().numpy()
+-                            if(attn_track[module] is None):
+-                                attn_track[module] = untuple(traces[module].attn_output).cpu().numpy()
+-                            if(mlp_track[module] is None):
+-                                mlp_track[module] = untuple(traces[module].mlp_output).cpu().numpy()
++                            print("traces shape block:", traces[module].block_output[0].shape, traces[module].block_output[-1].shape)
++                            print("traces shape attn:", traces[module].attn_output[0].shape, traces[module].attn_output[-1].shape)
++                            print("traces shape mlp:", traces[module].mlp_output[0].shape, traces[module].mlp_output[-1].shape)
++                            
++                            # if(activation_track[module] is None):
++                            #     activation_track[module] = traces[module].block_output.cpu().numpy()
++                            # if(attn_track[module] is None):
++                            #     attn_track[module] = untuple(traces[module].attn_output).cpu().numpy()
++                            # if(mlp_track[module] is None):
++                            #     mlp_track[module] = untuple(traces[module].mlp_output).cpu().numpy()
+                 if(len(request_logits) > 0):
+-                    assert self.layername(0, "embed") not in request_logits, "Embedding layer is not supported"
++                    assert layername(self.model, 0, "embed") not in request_logits, "Embedding layer is not supported"
+                     if(input_ids.size(1) == max_out_len - 1):
+                         for module in request_logits:
+                             # print("traces shape:", untuple(traces[module].output).shape)
+                             if(layer_logits_track[module] is None):
+-                                layer_logits_track[module] = untuple(traces[module].block_output).cpu().numpy()
++                                layer_logits_track[module] = traces[module].block_output[0].cpu().numpy()
+                                 
+                 final_logits, past_key_values = model_out.logits, model_out.past_key_values
+ 
+@@ -191,7 +179,7 @@ class ModelLoader:
+                 softmax_out_top_k = torch.gather(softmax_out, 1, tk)
+                 softmax_out_top_k = softmax_out_top_k / softmax_out_top_k.sum(1)[:, None]
+ 
+-                if(argmax_greedy == False):
++                if not pick_greedy:
+                     new_tok_indices = torch.multinomial(softmax_out_top_k, 1)
+                     new_toks = torch.gather(tk, 1, new_tok_indices)
+                 else:
+@@ -206,12 +194,6 @@ class ModelLoader:
+                         ]
+                     )
+ 
+-                if(debug == True):
+-                    for i in range(input_ids.size(0)):
+-                        formatted = [(g["token"], np.round(g["p"], 4)) for g in generated_tokens[i][-1]]
+-                        print(f"prompt <{i}> ==> {formatted}")
+-                    if(input_ids.size(0) > 1):
+-                        print()
+ 
+                 ## Auto-regression: insert new tok into inputs
+ 
+@@ -251,7 +233,7 @@ class ModelLoader:
+             cur_context = slice(0, cur_context.stop + 1)
+ 
+             # clear up GPU
+-            # del(traces)
++            del(traces)
+             del(model_out)
+             torch.cuda.empty_cache()                
+ 
+@@ -266,11 +248,9 @@ class ModelLoader:
+ 
+             ret_dict["generated_tokens"] = generated_tokens
+             if(request_activations is not None and len(request_activations) > 0):
+-                ret_dict["activations"] = {
+-                    "block" : activation_track,
+-                    "attn" : attn_track,
+-                    "mlp" : mlp_track,
+-                }
++                ret_dict["block"] = activation_track
++                ret_dict["attn"] = attn_track
++                ret_dict["mlp"] = mlp_track
+             if request_logits is not None and len(request_logits) > 0:
+                 ret_dict["logits"] = self.get_logits(layer_logits_track, top_k=top_k)
+             return txt, ret_dict
+@@ -280,7 +260,6 @@ class ModelLoader:
+             activations,
+             top_k: int = 5,
+     ):
+-
+         llens_gen = LogitLens(
+             self.model,
+             self.tokenizer,
+@@ -329,88 +308,88 @@ class ModelLoader:
+         replace=False,  # True to replace with instead of add noise
+         trace_layers=None,  # List of traced outputs to return
+     ):
+-       
+-        toks = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
+-        inp = toks["input_ids"]
++       pass
++        # toks = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
++        # inp = toks["input_ids"]
+         
+-        # with torch.no_grad():
+-        #     answers_t, base_score = [d[0] for d in predict_from_input(self.model, inp)]
+-        # attn_mask = toks["attention_mask"]
+-        # if answers_t is None:
+-        #     # all probs 
+-        #     answers_t = torch.ones(inp["input_ids"].shape[0], dtype=torch.long).to(self.model.device)
++        # # with torch.no_grad():
++        # #     answers_t, base_score = [d[0] for d in predict_from_input(self.model, inp)]
++        # # attn_mask = toks["attention_mask"]
++        # # if answers_t is None:
++        # #     # all probs 
++        # #     answers_t = torch.ones(inp["input_ids"].shape[0], dtype=torch.long).to(self.model.device)
+             
+-        rs = numpy.random.RandomState(1)  # For reproducibility, use pseudorandom noise
+-        if uniform_noise:
+-            prng = lambda *shape: rs.uniform(-1, 1, shape)
+-        else:
+-            prng = lambda *shape: rs.randn(*shape)
++        # rs = numpy.random.RandomState(1)  # For reproducibility, use pseudorandom noise
++        # if uniform_noise:
++        #     prng = lambda *shape: rs.uniform(-1, 1, shape)
++        # else:
++        #     prng = lambda *shape: rs.randn(*shape)
+ 
+-        patch_spec = defaultdict(list)
+-        for h, l in heads_to_patch:
+-            patch_spec[l].append(h)
++        # patch_spec = defaultdict(list)
++        # for h, l in heads_to_patch:
++        #     patch_spec[l].append(h)
+ 
+-        embed_layername = self.layername( 0, "embed")
++        # embed_layername = self.layername( 0, "embed")
+         
+-        # keep embed layer uncorrupted
+-        assert patch_spec[embed_layername] != []
++        # # keep embed layer uncorrupted
++        # assert patch_spec[embed_layername] != []
+         
+-        def untuple(x):
+-            return x[0] if isinstance(x, tuple) else x
++        # def untuple(x):
++        #     return x[0] if isinstance(x, tuple) else x
+ 
+-        # Define the model-patching rule.
+-        if isinstance(noise, float):
+-            noise_fn = lambda x: noise * x
+-        else:
+-            noise_fn = noise
++        # # Define the model-patching rule.
++        # if isinstance(noise, float):
++        #     noise_fn = lambda x: noise * x
++        # else:
++        #     noise_fn = noise
+ 
+-        h_dim = int(self.model.config.n_embd / self.model.config.n_head)
++        # h_dim = int(self.model.config.n_embd / self.model.config.n_head)
+         
+-        layer_to_copy = self.layername(6)
+-        saved_x = []
++        # layer_to_copy = self.layername(6)
++        # saved_x = []
+         
+-        def patch_rep(x, layer): # x is the output of the layer
+-            if layer == self.layername(6):
+-                saved_x.append(x)
+-                return x
+-            elif layer == self.layername(39):
+-                return saved_x[0]
++        # def patch_rep(x, layer): # x is the output of the layer
++        #     if layer == self.layername(6):
++        #         saved_x.append(x)
++        #         return x
++        #     elif layer == self.layername(39):
++        #         return saved_x[0]
+             
+-            for h in range(48):
+-                if h not in patch_spec[layer]: 
+-                    noise_data = noise_fn(
+-                        torch.from_numpy(prng(x[0].shape[0], x[0].shape[1], h_dim))
+-                    ).to(x[0].device)
+-                    # print(noise_data.shape)
+-                    if replace:
+-                        x[0][:,:,h*h_dim:(h+1)*h_dim] = noise_data # 0 is tuple
+-                    else:
+-                        x[0][:,:,h*h_dim:(h+1)*h_dim] += noise_data
++        #     for h in range(48):
++        #         if h not in patch_spec[layer]: 
++        #             noise_data = noise_fn(
++        #                 torch.from_numpy(prng(x[0].shape[0], x[0].shape[1], h_dim))
++        #             ).to(x[0].device)
++        #             # print(noise_data.shape)
++        #             if replace:
++        #                 x[0][:,:,h*h_dim:(h+1)*h_dim] = noise_data # 0 is tuple
++        #             else:
++        #                 x[0][:,:,h*h_dim:(h+1)*h_dim] += noise_data
+                         
+-            return x
++        #     return x
+             
+ 
+-        # With the patching rules defined, run the patched model in inference.
+-        additional_layers = [] if trace_layers is None else trace_layers
+-        with torch.no_grad(), TraceDict(
+-            self.model,
+-            [embed_layername] + [self.layername(i) for i in range(1, 40)],
+-            edit_output=patch_rep,
+-        ) as td:
+-            outputs_exp = self.model(inp)
+-
+-        # We report softmax probabilities for the answers_t token predictions of interest.
+-        probs = torch.softmax(outputs_exp.logits, dim=-1).mean(dim=0)[-1] # last token for each batch
++        # # With the patching rules defined, run the patched model in inference.
++        # additional_layers = [] if trace_layers is None else trace_layers
++        # with torch.no_grad(), TraceDict(
++        #     self.model,
++        #     [embed_layername] + [self.layername(i) for i in range(1, 40)],
++        #     edit_output=patch_rep,
++        # ) as td:
++        #     outputs_exp = self.model(inp)
++
++        # # We report softmax probabilities for the answers_t token predictions of interest.
++        # probs = torch.softmax(outputs_exp.logits, dim=-1).mean(dim=0)[-1] # last token for each batch
+         
+ 
+-        # If tracing all layers, collect all activations together to return.
+-        if trace_layers is not None:
+-            all_traced = torch.stack(
+-                [untuple(td[layer].output).detach().cpu() for layer in trace_layers], dim=2
+-            )
+-            return probs, all_traced
++        # # If tracing all layers, collect all activations together to return.
++        # if trace_layers is not None:
++        #     all_traced = torch.stack(
++        #         [untuple(td[layer].output).detach().cpu() for layer in trace_layers], dim=2
++        #     )
++        #     return probs, all_traced
+ 
+-        return probs
++        # return probs
+     
+     def patch_heads(
+         self,
+@@ -419,34 +398,21 @@ class ModelLoader:
+     ):
+         pass
+     
+-    
+-    def layername(self, num, kind=None):
+-        model = self.model
+-        if hasattr(model, "transformer"):
+-            if kind == "embed":
+-                return "transformer.wte"
+-            return f'transformer.h.{num}{"" if kind is None else "." + kind}'
+-        if hasattr(model, "gpt_neox"):
+-            if kind == "embed":
+-                return "gpt_neox.embed_in"
+-            if kind == "attn":
+-                kind = "attention"
+-            return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
+-        assert False, "unknown transformer structure"    
+       
+     def search_causal_heads(self, prompt, layers = range(20,31), replace=False, noise=0.9):
+-        heads_to_patch = []
+-        for l in layers:
+-            layername = self.layername(l)
+-            heads_to_patch += [(i, layername) for i in range(48)]
++        pass
++        # heads_to_patch = []
++        # for l in layers:
++        #     layername = self.layername(l)
++        #     heads_to_patch += [(i, layername) for i in range(48)]
+             
+-        probs = self.trace_with_patch(prompt, heads_to_patch=heads_to_patch, 
+-                                replace=replace, noise = noise)
+-        top_completion = self.tokenizer.decode(probs.argmax(dim=0))
+-        # print(top_completion, heads_to_patch)
+-        try:
+-            tc = int(top_completion)
+-        except:
+-            return []
++        # probs = self.trace_with_patch(prompt, heads_to_patch=heads_to_patch, 
++        #                         replace=replace, noise = noise)
++        # top_completion = self.tokenizer.decode(probs.argmax(dim=0))
++        # # print(top_completion, heads_to_patch)
++        # try:
++        #     tc = int(top_completion)
++        # except:
++        #     return []
+             
+-        return heads_to_patch
+\ No newline at end of file
++        # return heads_to_patch
+\ No newline at end of file
