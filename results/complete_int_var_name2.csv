@@ -1,0 +1,240 @@
+,found,var_name,logits_28,prompt prefix
+1,False,"metric: float, holding_periods","['metric', ' metric', 'Metric', 'metrics', ' Metric', '\n   ', ' metrics', 'df', 'Metrics', 'value', 'data', 'self', '\n       ', 'x', 'METRIC', 's', 'f', '\n', ' Metrics', 'raw', 'a', 'in', 'name', 'base', 'values', 'd', 'n', 'input', 'm', 't', '\n ', ' ', 'old', 'func', 'y', 'time', 'val', 'r', 'X', 'p']",def annualize_metric(
+3,True,i,"['i', 'bin', ' i', '(', ' bin', 'Bin', 'binary', 'int', ""'"", 'Binary', '[', 'I', ' binary', 'abs', '1', '_', 'n', '-', 'b', '2', 'bit', '0', ' ', ' (', ' Binary', 'self', 'str', '""', 's', 'o', 'N', ':', 'S', '<', 'in', 'BIN', 'm', '~', 'x', 'r']","def A070939(i: int = 0) -> int:
+    """"""Length of binary representation of n.""""""
+    return len(f""{"
+4,True,n,"['n', ' n', 'int', ' ', '2', '1', ' (', 'len', '\n       ', ' int', 'abs', 'N', '<fim_middle>', 'math', '8', '0', 'bit', 'log', 'max', '3', 'bits', '4', 'i', 'get', '-', 'nb', 'b', '  ', 'k', 'round', 'l', 'np', 'min', '(', 'bin', 's', ' -', '6', '5', '<fim_suffix>']","def reverse_int_bits(n: int, n_bits: int = 10) -> int:
+    """"""Reverses the bits of *n*, considering it is padded by *n_bits* first""""""
+    return int(format(n, '0' + str("
+6,False,edge_num,"['edge', ' edge', 'Edge', ' Edge', 'EDGE', '0', '1', 'vertex', 'edges', ' ', 'len', ' edges', 'int', ' vertex', '2', '边', 'Vertex', '4', 'event', '3', 'n', 'max', ' len', 'N', 'graph', ' (', '\n       ', '5', '6', 'Edges', 'node', 'ad', 'num', 'A', 'a', 's', '9', 'ed', 'M', ' int']","def create_graph(edge_num: int, edge_list: list) -> dict:
+    """"""
+    Create a graph expressed with adjacency list
+    :dict_key    : int (a vertex)
+    :dict_value  : set (consisted of vertices adjacent to key vertex)
+    """"""
+    a_graph = {i: set() for i in range("
+8,False,prev_cost,"[' prev', 'prev', ' previous', 'Prev', ' weight', 'previous', 'PREV', ' (', 'weight', ' Previous', 'Previous', ' +', ' cost', ' next', ' ', 'Weight', ' Weight', ' len', ' move', ' ((', ' -', ' weights', ' sum', '1', ' int', ' _', ' curr', ' moves', ' prior', 'PREVIOUS', '(', ' weighted', 'cost', ' abs', ' Move', ' n', '0', ' get', ' min', ' PRE']","def cost_n_moves(prev_cost: int, weight: int = 1) -> int:
+    """""" 'g(n)' cost  function that adds a 'weight' to each move.""""""
+    return "
+9,False,"msg: str, sound: bool = False, timeout","['prompt', ' prompt', 'message', 'question', 'msg', 'user', '\n   ', 'input', 'self', '\n       ', ' question', 'text', 's', 'name', 'title', 'ask', 'key', ' message', 'f', 'Prompt', 'n', ' promp', 'func', 'string', '\n', 'a', ' Prompt', 'request', 'str', 't', 'in', '):', '\n ', ' user', 'x', 'User', 'e', 'default', 'd', ' msg']",def user_prompt(
+10,True,p,"[' p', 'p', '1', '2', '0', '4', '3', ' ', ' (', '5', ' int', 'int', ' test', ' ""', ' -', ' a', ' +', 'a', '7', '(', '6', '9', "" '"", ' x', '\n', ' f', ' sum', ' [', 'test', '8', ' example', '�', 'sum', ' \\', '+', 'x', ' str', 'str', ' get', ' n']","def test_query(p: int = 1) -> int:
+    """"""
+    Example 2 for a unit test
+    :param p: example of description
+    :return: return data
+    """"""
+    return "
+13,False,"money_dist: list, pot","['value', 'x', 'val', 'input', 'num', 'number', 'n', 'f', 'self', 'a', 'func', 's', 't', 'i', 'v', ' value', 'e', 'data', 'string', '\n   ', 'm', 'd', 'c', 'r', 'float', 'in', 'my', 'obj', 'name', 'str', 'X', 'p', ' x', 'round', 'raw', 'arr', ' ', 'b', '1', 'base']",def rounder(
+16,False,n,"[' total', 'total', 'Total', ' Total', ' ', ' tot', '(', '_', 'tot', '\n', 'TOTAL', ' (', 'otal', ':', 'rn', ' =', ' -', ' ret', ' [', ' TOT', 'ge', 'val', 've', '总', ' n', ' +', 'rt', 'r', 'sn', '1', 'ts', 'll', '\n\n', 'ame', '[', 'v', 'getTotal', '\n   ', 'j', 'ret']","def solution(n: int = 4000000) -> int:
+    """"""Returns the sum of all fibonacci sequence even elements that are lower
+    or equals to n.
+
+    >>> solution(10)
+    10
+    >>> solution(15)
+    10
+    >>> solution(2)
+    2
+    >>> solution(1)
+    0
+    >>> solution(34)
+    44
+    """"""
+
+    fib = [0, 1]
+    i = 0
+    while fib[i] <= n:
+        fib.append(fib[i] + fib[i + 1])
+        if fib[i + 2] > n:
+            break
+        i += 1
+    total = 0
+    for j in range(len(fib) - 1):
+        if fib[j] % 2 == 0:
+            total += fib[j]
+
+    retur"
+21,False,"ss, verbose","['proc', ' proc', 'Proc', 'processing', ' Proc', 'process', ' processing', 'time', 'Processing', 'PROC', 'processed', 'value', ' process', 't', 'Process', ' Processing', 's', 'self', 'procs', 'PROCESS', 'str', 'processor', ' PROC', ' Process', 'x', 'input', 'in', ' processed', 'a', 'raw', ' time', 'data', 'Processor', 'val', 'proces', ' procedure', 'string', 'Time', 'f', 'n']",def formatProccessingTime(
+31,True,num,"['num', ' num', 'str', 'Num', 'math', ' (', ' ', 'number', '\n           ', '0', '1', 's', 'log', 'np', 'Number', 'round', 'NUM', 'abs', 'int', 'get', 'm', '<fim_middle>', ' number', 're', 'to', ' math', '2', 'div', ' str', 'f', 'Math', 'float', 'd', 'x', '(', 'is', '3', 'os', 'a', '9']","def _radix_length(num: int) -> int:
+    """"""Finds the number of digits for a number""""""
+
+    if num == 0:
+        return 1
+
+    digits: int = 0
+    while num != 0:
+        digits += 1
+        num = int("
+37,False,"
+        person_main_topics: list,
+        scopus_topics: list,
+        k_relevant","['subject', 'subjects', 'Subject', ' subject', ' subjects', ' Subject', 'self', 'SUBJECT', 'subj', 'person', '\n   ', '\n       ', 'db', 'request', 'f', 'data', 's', 'a', '\n', 'Person', 'list', ' person', 'n', 'useful', 'in', 'all', 'use', 'obj', 'x', 'current', 'people', '\n           ', 'from', 'b', 'name', 'q', 'e', 'c', 'p', 'g']",def useful_person_for_subjects(
+38,True,red,"['red', ' red', 'blue', ' blue', 'green', 'Red', ' ', '\n       ', '0', 'Blue', 'white', ' green', 'RED', ' Red', '2', '红', ' (', '\n           ', '\n   ', 'BLUE', ' RED', '<fim_middle>', 'yellow', '\n               ', '\n     ', 'r', '<fim_suffix>', '1', ' yellow', ' Blue', 'a', 'ff', 'int', '\n', 'x', ' white', 'black', 'component', '<<', '  ']","def color(red: int, green: int, blue: int, white: int = 0):
+    """"""Convert the provided red, green, blue color to a 24-bit color value.
+    Each color component should be a value 0-255 where 0 is the lowest intensity
+    and 255 is the highest intensity.
+
+    Note the sequencing has been changed from RGB (most significant->least significant) to
+    GRB - this seems to be a ""feature"" of the light strip I have!
+
+    :param red: red component 0-255
+    :param green: green component 0-255
+    :param blue: blue component 0-255
+    :param white: overall brightness, 0-255, defaults to 0
+    :return:
+    """"""
+    return (white << 24) | (green << 16) | ("
+39,False,"s: str, max_len","['string', 's', 'url', 'text', 'str', 'input', 'n', 'x', '\n   ', 'value', 'self', 'data', 'a', 'f', 'long', 'name', 't', 'path', 'in', '\n       ', 'v', 'obj', ' string', 'd', 'val', ' ', '\n', 'i', 'r', 'URL', 'num', 'p', 'm', 'e', 'message', 'to', 'msg', 'S', ' text', 'String']",def shorten(
+44,False,"hex_str: str, width","['hex', ' hex', 's', 'input', 'a', 'x', 'Hex', 'string', 'str', 'n', 'value', 'data', 'self', 'c', ' ', 'i', 'e', 'f', 'd', ' Hex', 'in', 'b', 'num', 'dec', '\n   ', ' input', 't', 'val', 'HEX', 'h', 'm', '\n', ' hexadecimal', 'v', 'r', '1', 'my', '<fim_suffix>', 'p', 'o']",def hex_to_bin(
+45,False,"in_dict: dict, debug_level","['modules', 'yang', ' yang', ' modules', 'dict', 'module', 'Modules', '\n   ', 'd', 's', ' Modules', 'in', 'input', 'a', 'mod', '\n', 'dictionary', 'self', '\n       ', 'data', 'f', ' dict', 'x', 'the', 'm', ' module', 'c', 'v', 'map', 'Module', 'all', ' ', 'n', 'o', 'model', 'MODULES', 'p', 'original', 'r', 't']",def invert_yang_modules_dict(
+51,False,"lcs : dict, cut_requirement ","['a', 'self', 'string', 'left', 'A', 'input', 'str', 'x', 'original', 'target', 's', '\n   ', 'text', 'old', 'start', 'n', 'l', 'source', 'base', '\n       ', 'L', 'data', 'in', 'src', '\n', 'f', 't', 'one', 'list', 'lcs', 'current', 'm', 'd', 'p', '1', 'this', 'X', 'test', 'first', 'seq']",def trim_lcs(
+54,False,"data: str, spaces","['s', 'level', 'text', 'string', 'f', 'a', 'str', 'indent', 'x', 'self', 't', 'n', ' level', 'ed', 'value', 'line', 'lines', 'xml', 'd', ' *', 'num', 'ind', 'Level', 'i', 'obj', 'S', ' ', '\n   ', 'in', 'count', 'e', 'c', '):', '_', 'l', 'tab', 'v', 'p', '(', ' indent']",def indent(
+58,False,"files: list, active_item_index","['file', ' file', 'files', 'list', 'File', '\n   ', ' files', 'data', 'f', 's', '\n       ', 'input', 'in', ' File', 'd', 'self', 'x', 'List', '\n', ' list', 'filename', 'obj', 'FILE', 'path', 'a', 'Files', 't', 'n', 'p', 'root', 'b', 'i', 'object', '\n ', 'the', 'm', 'e', 'l', 'items', 'v']",def serialize_file_list(
+60,False,kernel_size,"['kernel', ' kernel', 'Kernel', 'KERNEL', ' Kernel', ' ', 'int', '1', '<fim_middle>', ' (', '2', 'd', ' -', 'kern', 'conv', 'framework', '\n       ', 'dilation', '\n           ', 'pad', '\n               ', 'D', ' kernels', '<fim_suffix>', 'np', 'ker', ' d', 'static', 'torch', '\n', 'kernels', '3', '\n   ', 'k', 'float', '\xa0', 'od', 'long', 'ernel', 'stride']","def is_static_pad(kernel_size: int, stride: int = 1, dilation: int = 1, **_) -> bool:
+    """"""Can `same` padding for given args be done statically?.""""""
+    return stride == 1 and (dilation * ("
+61,False,"string: str, maxsplit","['str', 'string', ' str', 's', 'input', 'Str', ' string', 'a', 'x', 'String', 'n', 'text', 'f', 'data', 'in', 'self', 'line', 'value', '\n   ', 't', 'v', 'd', 'm', 'STR', ' s', ' input', '\n', 'p', '\n       ', 'r', ' ', ' Str', 'l', 'i', 'my', 'S', 'e', 'c', 'target', 'list']",def split_str(
+65,False,"directory=None, cmdverbose ","['input', 'file', 'self', 'data', 'a', 'f', 'obj', 'string', 'in', '\n   ', 'object', 'path', ' ', 'i', 'text', 'str', 'n', 'name', 'x', ' input', 's', 'filename', 'content', 'target', 'd', '1', '\n', 't', '\n       ', 'File', 'un', 'e', 'my', ' file', 'o', 'args', 'raw', 'p', 'url', '2']",def gzipOA(
+70,False,"ec_number_one: str, ec_number_two: str, wildcard_level","['ec', ' ec', 'EC', ' EC', '\n   ', 'Ec', '\n       ', 'self', 'db', 's', 'a', 'e', 'x', 'fit', '\n', 'value', '\n           ', 'list', 'n', 'input', 'str', 'df', 'obj', '\n ', 'f', 'c', 'test', 'in', 'item', ' Ec', 't', 'i', 'line', 'query', '1', 'row', 'p', 'data', 'E', 'target']",def is_fitting_ec_numbers(
+77,True,row,"['row', ' row', 'Row', 'count', 'col', 'ROW', 'rows', ' Row', ' ', 'Count', 'getRow', ' (', ' count', '1', '0', 'int', 'i', ' ROW', 'grid', 'r', 'rowCount', '<fim_middle>', '行', ' col', ' rows', '(', '--', '((', 'a', 's', 'ro', '3', '2', 'f', '\n               ', '  ', '+', 'key', '4', ' counting']","def placeShipV(row: int, col: int, lg: int , grid: list, symbol: str) -> bool:
+    """"""
+    Place the ship vertically if possible.
+
+    Parameters
+    ----------
+    row : int
+        Row number.
+    col : int
+        Column number.
+    lg : int
+        Number of cells occupied by the ship that is tried to be placed.
+    grid : list
+        Battleship grid.
+    symbol : str
+        Character that represents the ship.
+
+    Returns
+    -------
+    bool
+        True if the ship is placed, False otherwise.
+
+    """"""
+    shipInPlace = True
+    if row+lg>10:
+            shipInPlace = False
+    else:
+        for count in range(lg):
+            if grid[row+count][col]!=""E"":
+                shipInPlace = False
+    if shipInPlace:
+        for count in range(lg):
+            grid["
+78,False,"a: float,
+                 b: float,
+                 sig_fig","['a', 'A', 'x', '\n   ', 'actual', 't', ' a', 'd', 's', 'f', 'self', 'v', 'first', 'p', '\n', ' A', 'n', '1', 'e', 'value', 'left', ' ', 'm', 'c', 'test', '\n ', 'float', 'array', 'y', '\n       ', 'num', 'i', 'one', 'expected', 'arr', 'b', 'this', 'obj', ' actual', 'u']",def nearly_equal(
+81,False,"selection_bbox: dict, page_bboxes: list, tolerance","['b', '\n   ', 'self', 'all', '\n       ', 'img', 'x', 'image', 'data', 'n', 'input', 'select', '\n', 'args', 'a', 'boxes', '\n ', 'raw', 'B', ' b', 'selected', 'target', 'result', 'config', 's', 'box', 'model', 'object', 'base', 'bbox', 'p', 'r', ' ', 'f', 'src', 'source', 'in', 't', 'X', 'e']",def select_bboxes(
+82,True,x,"['x', ' x', 'int', ' int', ' ', 'X', 'abs', '1', ' (', 'n', '2', 's', 'round', '0', 'y', '<fim_middle>', 'float', 'i', 'a', 'dec', '-', '(', 'Decimal', '<fim_suffix>', 'm', 'ord', 'str', '3', '  ', ' X', ' abs', ' [', 'N', 'max', '8', ' -', 'd', 'get', 'self', 'in']","def dec2bin(x: int, n: int = 2) -> str:
+    """"""Converts a single decimal integer to it binary representation
+    and returns as string for length >= n.
+    """"""
+    return str(int(bin("
+84,False,subjectNumber,"[' subject', 'subject', 'Subject', 'SUBJECT', ' Subject', '2', ' (', '1', 'subj', ' subjects', '3', 'subjects', '\xa0', ' ', ' part', '4', '5', '<fim_middle>', '<fim_suffix>', 'x', '9', '\t', 'i', ' mod', '0', 'key', 'product', 'get', '(', ' ""', ' ((', ' product', '6', 'factor', '8', '_', 'Factors', 'presents', '<', 'Part']","def calculateEncryptionKey(subjectNumber: int, numLoops: int) -> int:
+   """"""
+   Calculates encryption key
+   """"""
+   val: int = 1
+
+   for _ in range(numLoops):
+      val *= "
+86,False,n,"[' True', 'True', ' true', 'true', '\n', ' bool', ' TRUE', '_', 'bool', ' ', 'rn', 'sn', 'ts', 'ush', 'TRUE', ' False', 'st', 've', 'ge', 'val', 'vel', 'j', 'tn', 'r', 'rive', '(', 'xt', ';', '1', 'cm', ':', '\n\n', 'un', 'ct', 'ame', 'll', '\u200c', 'vals', '\n   ', 'ilt']","def fermat_primality_test(n: int, k: int = 3) -> bool:
+    """"""
+    https://en.wikipedia.org/wiki/Fermat_primality_test
+
+    >>> assert all(fermat_primality_test(i) for i in [2, 3, 5, 7, 11])
+    >>> assert not all(fermat_primality_test(i) for i in [4, 6, 8, 9, 10])
+    """"""
+    from math import gcd
+    from random import randrange
+    for _ in range(k):
+        random_num = randrange(1, n)
+        if gcd(n, random_num) != 1 or pow(random_num, n - 1, n) != 1:
+            return False
+    retur"
+87,True,number,"['number', ' number', 'base', 'Number', ' base', 'Base', 'NUMBER', 'BASE', ' Number', 'getBase', 'umber', ' Base', 'getNumber', ' BASE', ' ', 'bases', 'numbers', ' (', '1', '\n           ', 'Bases', 'num', ' NUMBER', 'BaseType', ' bases', ' numbers', ' número', '<fim_middle>', 'int', '基', 'file', '2', 'enumber', 'get', 'value', '0', 'self', 's', 'n', '4']","def display_level(number: int or float, base: int, labels: list, level: int, round_num=2):
+    """"""
+    根据数值大小展现不同等级的label
+    :param round_num: 保留几位小数
+    :param number: 需要显示的数值
+    :param base: 数值基数
+    :param labels: 数值单位
+    :param level: 显示等级
+    :return: render level
+    >>> file1 = 1023 # filesize is 1023b
+    >>> display_level(file1, base=1024, labels=['b', 'kb', 'm'], level=3)
+    >>> '1023b'
+    >>> file2 = 4589 # filesize is 4589
+    >>> display_level(file2, base=1024, labels=['b', 'kb', 'm'], level=3)
+    >>> '4.48kb'
+    """"""
+    if level != len(labels):
+        raise Exception(f'Label length({len(labels)}) not equal levels number({level}).')
+    for i in range(1, level + 1):
+        if number < base ** i:
+            return str(round(number / base ** (i - 1), round_num)).strip('.0') + str(labels[i - 1])
+    if number > base ** level:
+        return str(round("
+90,True,number,"[' number', 'number', 'if', '1', ' if', ' #', '2', '\n       ', '\n', '0', ' ', '<|endoftext|>', ' =', ' ...', '3', '#', ' (', '5', '4', '\n   ', '_', ' .', '\n\n', ' +', ' -', '\t', '\n\n       ', '(', ' for', ' %', '-', '9', ',', '.', 'Number', 'div', ' div', '7', ' and', '\n\n   ']","def having_sum_pythonic(number: int) -> int:
+    """"""Returns all elements of the sum are the results of integer division.
+
+    Args:
+        number (int): a number to get divisible from
+
+    Examples:
+        >>> assert having_sum_pythonic(25) == 47
+    """"""
+    count: int = 0
+    while number:
+        count += number
+        "
+92,True,num,"[' num', 'num', 'Num', ' int', 'int', '0', ' number', '1', ' (', 'NUM', ' ', '2', ' Num', '3', '\t', '4', '\n', ' NUM', '数', ' str', '8', "" '"", ' min', ' color', '5', 'number', ' hex', ' -', ' n', '9', ' {', ' Number', ' ""', ' numer', ' =', '6', 'getNum', 'hex', ' numOf', 'nump']","def int_to_hexcolor(num: int, *mode: str):
+    """"""Convert int to hex color
+    arg:
+        num: int (base=10)
+    return:
+        hexcolor string like 'ffba78'
+    """"""
+    blue = num % 16**2
+    num = int(num / 16**2)
+    green = num % 16**2
+    num = int(num / 16**2)
+    red = "
+93,False,"data: dict, key: str, depth","['dict', 'dictionary', ' dict', ' dictionary', 'Dict', 'search', 'key', 'dic', 'Dictionary', 'd', ' Dictionary', ' Dict', 'a', 'list', 'data', ' search', 'obj', 'self', 'in', 'input', 'x', 'target', 's', 'my', 'f', 'DICT', 'Search', '\n   ', 'query', 'dicts', 'hay', 'keys', 'n', ' dic', 'array', 'the', 'value', 'v', ' Search', 'm']",def dict_search(
+94,False,n,"[' total', 'total', 'Total', ' Total', ' ', ' tot', '(', '\n', '_', 'tot', 'TOTAL', ' (', ':', 'otal', ' TOT', ' -', '总', ' [', ' ret', 'rn', 've', 'ts', ' totals', ' =', 'ge', 'rt', '\n\n', '<|endoftext|>', 'sn', '[', '1', ' n', 'getTotal', ' +', '<fim_pad>', 'll', '\n   ', 'ame', 'st', 'r']","def solution(n: int = 4000000) -> int:
+    """"""
+    Returns the sum of all even fibonacci sequence elements that are lower
+    or equal to n.
+
+    >>> solution(10)
+    10
+    >>> solution(15)
+    10
+    >>> solution(2)
+    2
+    >>> solution(1)
+    0
+    >>> solution(34)
+    44
+    """"""
+
+    i = 1
+    j = 2
+    total = 0
+    while j <= n:
+        if j % 2 == 0:
+            total += j
+        i, j = j, i + j
+
+    retur"
+97,False,"value: str, code","['self', 'x', 'data', 'value', 's', 't', '\n   ', 'input', 'a', 'tc', 'obj', 'val', 'text', 'i', '\n       ', 'f', 'enc', 'string', 'name', 'n', 'str', 'c', 'b', 'v', 'key', 'r', 'u', 'X', 'd', '\n', 'args', ' ', 'target', 'func', 'in', 'o', 'T', 'm', 'e', ' self']",def _tc_enc(
+98,False,"l: list, n","['list', 'List', ' list', 'input', ' List', 'lst', 'a', 'original', 'self', 'LIST', 'x', 'n', 'alist', 'data', 'lista', '\n   ', 's', 'l', 'f', 'my', 'in', 'arr', ' lista', 'string', ' lst', 'd', 'array', 'source', '\n       ', '\n', 'full', ' input', 'lists', '列表', 'big', ' LIST', 'str', 'the', 'A', 'src']",def split_list(
+99,False,"fin: str, size","['file', 'n', 'lines', 'f', ' file', 'filename', 'line', 'input', ' n', 'a', 'in', 'text', 's', 'path', ' lines', 'N', 'data', '\n   ', 'string', 'x', 'self', 'File', 'str', 'obj', '\n', 'txt', 'fn', 'start', 'i', ' ', 'd', 'Lines', 'p', 'c', 'e', 'my', 't', 'num', 'b', '1']",def get_n_lines(

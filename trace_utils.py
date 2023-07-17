@@ -57,7 +57,9 @@ class Trace(contextlib.AbstractContextManager):
         clone=False,
         detach=True,
         retain_grad=False,
-        edit_output=None,
+        edit_output_block=None,
+        edit_output_attn=None,
+        edit_output_mlp=None,
         stop=False,
     ):
         """
@@ -70,9 +72,9 @@ class Trace(contextlib.AbstractContextManager):
             module = get_module(module, layer)
 
         def retain_hook_block(m, inputs, output):
-            if edit_output:
+            if edit_output_block:
                 output = invoke_with_optional_args(
-                    edit_output, output=output, layer=self.layer, inputs=inputs
+                    edit_output_block, output=output, layer=self.layer, inputs=inputs
                 )
             if retain_input:
                 retainer.block_input = recursive_copy(
@@ -95,9 +97,9 @@ class Trace(contextlib.AbstractContextManager):
             return output
         
         def retain_hook_attn(m, inputs, output):
-            if edit_output:
+            if edit_output_attn:
                 output = invoke_with_optional_args(
-                    edit_output, output=output, layer=self.layer, inputs=inputs
+                    edit_output_attn, output=output, layer=self.layer, inputs=inputs
                 )
             if retain_input:
                 retainer.attn_input = recursive_copy(
@@ -120,9 +122,9 @@ class Trace(contextlib.AbstractContextManager):
             return output
         
         def retain_hook_mlp(m, inputs, output):
-            if edit_output:
+            if edit_output_mlp:
                 output = invoke_with_optional_args(
-                    edit_output, output=output, layer=self.layer, inputs=inputs
+                    edit_output_mlp, output=output, layer=self.layer, inputs=inputs
                 )
             if retain_input:
                 retainer.mlp_input = recursive_copy(
@@ -145,8 +147,8 @@ class Trace(contextlib.AbstractContextManager):
             return output
 
         self.registered_hook = module.register_forward_hook(retain_hook_block)
-        self.registered_attn_hook = module.attn.register_forward_hook(retain_hook_attn)
-        self.registered_mlp_hook = module.mlp.register_forward_hook(retain_hook_mlp)
+        # self.registered_attn_hook = module.attn.register_forward_hook(retain_hook_attn)
+        # self.registered_mlp_hook = module.mlp.register_forward_hook(retain_hook_mlp)
         self.stop = stop
 
     def __enter__(self):
@@ -188,7 +190,9 @@ class TraceDict(OrderedDict, contextlib.AbstractContextManager):
         clone=False,
         detach=False,
         retain_grad=False,
-        edit_output=None,
+        edit_output_block=None,
+        edit_output_attn=None,
+        edit_output_mlp=None,
         stop=False,
     ):
         self.stop = stop
@@ -222,7 +226,9 @@ class TraceDict(OrderedDict, contextlib.AbstractContextManager):
                 clone=optional_dict(clone),
                 detach=optional_dict(detach),
                 retain_grad=optional_dict(retain_grad),
-                edit_output=optional_dict(edit_output),
+                edit_output_block=optional_dict(edit_output_block),
+                edit_output_attn=optional_dict(edit_output_attn),
+                edit_output_mlp=optional_dict(edit_output_mlp),
                 stop=stop and is_last,
             )
 
