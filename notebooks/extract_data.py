@@ -62,3 +62,19 @@ def select_short_py_func_with_asserts(dataset: Dataset, nlines=10, max_ex=sys.ma
         if len(func.split("\n")) < nlines:
             edited_data["train"].append(ex)
     return Dataset.from_dict(edited_data)
+
+def crop_to_assert(ex: dict):
+    """
+    Note input ex is dict with field for tests (asserts) and content (func)
+    """
+    func = ex["content"]
+    test = ex["tests"][0]
+    assert test is not None, ex
+    if "!=" in test:
+        crop_assert = test.split("!=")[0] + "!= "
+    elif "==" in test:
+        crop_assert = test.split("==")[0] + "== "
+    else:
+        crop_assert = ""
+    return func + "\n\n" + crop_assert
+    

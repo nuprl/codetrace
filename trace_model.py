@@ -1,6 +1,6 @@
 import torch
 from trace_utils import *
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteriaList
 from typing import Union, List
 from model_utils import extract_layer_formats, layername
 import numpy as np
@@ -44,7 +44,34 @@ class ModelLoader:
         self.tokenizer.clean_up_tokenization_spaces=False
         self.tokenizer.padding_side="left"
         self.tokenizer.pad_token = self.tokenizer.eos_token  
-            
+         
+    def generate(self, prompt, max_new_tokens=100, stop_tokens = [], temperature=1.0, only_generated=False, do_print=False, do_sample=False):
+        inputs = self.tokenizer(prompt, padding=True, return_tensors="pt").to(self.model.device)
+        ## stop criteria
+        stop_ids = [self.tokenizer(stop_tok, padding=True, return_tensors='pt')['input_ids'] 
+                    for stop_tok in stop_tokens]
+        
+        encounters = [prompt.count(stop_tok)+1 for stop_tok in stop_tokens]
+        
+        stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(stops=stop_ids, 
+                                                                        encounters=encounters)])
+        outputs = self.model.generate(**inputs, max_new_tokens=max_new_tokens,
+                                         pad_token_id=self.tokenizer.eos_token_id,
+                                         stopping_criteria=stopping_criteria,
+                                         temperature=temperature,
+                                         do_sample=do_sample)
+        
+        generated = self.tokenizer.decode(outputs[0])[len(prompt):]
+        
+        if only_generated:
+            if do_print:
+                print(generated)
+            return generated
+        else:
+            if do_print:
+                print(prompt + generated)
+            return prompt + generated
+    
     def extract_fields(self):
         """
         model_type
@@ -335,7 +362,6 @@ class ModelLoader:
         return new_toks, probs
     
 
-     
       
     # def search_causal_heads(self, prompt, layers = range(20,31), replace=False, noise=0.9):
     #     heads_to_patch = []

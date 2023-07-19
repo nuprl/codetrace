@@ -1,7 +1,7 @@
 import torch
 import re
 import gc
-
+from transformers import StoppingCriteria
 
 """
 Cuda utils
@@ -56,7 +56,29 @@ def extract_layer_formats(named_params_iterator):
         
     return {"mlp":mlp, "attn":attn, "layer":layer}
 
+"""
+StoppingCritera
+"""
 
+class StoppingCriteriaSub(StoppingCriteria):
 
-
-    
+    def __init__(self, stops = [], encounters=None):
+        super().__init__()
+        if encounters is None:
+            self.encounters = [1]*len(stops)
+        else:
+            self.encounters=encounters
+        self.stops = [stop[0].tolist() for stop in stops]
+        self.stop_count = [i-1 for i in self.encounters]
+        
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
+        in_ids = input_ids[0].tolist()
+        for i,stop in enumerate(self.stops):
+            ## count occurence of sublist stop, eg. [44 54] in input_ids eg. [1 2 3 44 54]
+            
+            if(in_ids[-len(stop):] == stop):
+                self.stop_count[i] += 1
+                
+        if any([self.stop_count[j] >= self.encounters[j] for j in range(len(self.stop_count))]):
+            return True
+        return False

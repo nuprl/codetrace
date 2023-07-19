@@ -1,0 +1,897 @@
+,logits,prompt prefix,gold
+0,"['\n', ' ', ',', '<|endoftext|>', '\n\n', ' #', ' sum', '.', 'sum', ' ==', ' and', ' *', ' +', ' (', ' &&', ' is', ' ""', '5', '  ', ';', '2', '_', '1', ' \\', ':', ' Sum', ' =', ' //', ' assert', 'Sum', ' n', 'L', ' -', 'n', ' <', '\n\n\n', ' as', ' because', '+', '""']","def gaussian_sum(number: int) -> int:
+    """"""
+    Gets the sum of all numbers up to the provided number.
+    E.g. gaussian_sum(5) == sum([1, 2, 3, 4, 5])
+    :param number:
+    :return:
+    """"""
+    return number * (1 + number) // 2
+
+assert gaussian_sum(11) == ","assert gaussian_sum(11) == 66, ""Should be 66"""
+1,"['<fim_suffix>', '<filename>', '<reponame>', '<gh_stars>', '<', '\n', 'import', ' ', 'from', 'def', '\r', ' def', ' import', '#', ' from', '""', 'a', ' class', 'class', '""""""', 'i', '#!/', '<commit_before>', ""'"", 's', '_', '/', 'f', '\n\n', '1', '(', ' <', 'n', '\r\n\r', '<fim_middle>', 'v', 'c', 'x', '[', '__']","def list_account(account_id):
+    """"""For a specific account list the subfolders that are available.""""""
+    return ['transactions', 'balance']
+
+assert list_account(2) == ","assert list_account(2) == ['transactions', 'balance']"
+2,"['0', '\n', 'e', '5', '3', ' /', '2', '1', '9', ' *', '4', '6', '\n\n', ' ', '8', '7', '\n   ', 'E', ' **', '\n ', 'f', 'j', '�', 'd', '/', '\n\n\n', ',""', 'to', 'float', ' ""', 'T', 'hn', '   ', 'class', ' (/', ' +-', '<|endoftext|>', '\r', '\r\n\r', '    ']","def _calc_resolelement(w, fcol, r, A):
+    """"""Calculate the resolution element using dw=r*w/A/fcol
+
+       returns resolution element in mm
+    """"""
+    return r * w / A / fcol
+
+assert _calc_resolelement(1.0, 1.0, 1.0, 10.0) == ","assert _calc_resolelement(1.0, 1.0, 1.0, 10.0) == 0.1"
+3,"[' ...', '...', ' ...)', '(...', '...)', ',...', ',', '(...)', ' ""...', ' [...', ""...'"", '..."")', '..."",', ' ...,', '....', '...</', ' ....', ""...')"", ""...',"", '...""', ' ellipsis', '...\\', 'ellipsis', '...,', ' ...""', ' ...]', ' (...', '...]', ' (...)', ' {...', '..."");', ' El', 'El', '......', ""...');"", 'lipsis', '.....', '……', '[...,', ' ..']","def _to_lowercase(ftype, fname, *_):
+    """"""Transforms a feature to it's lowercase representation.""""""
+    return ftype, fname if fname is ... else fname.lower()
+
+assert _to_lowercase(bool,...) == ","assert _to_lowercase(bool,...) == (bool,...)"
+4,"['\n', '9', '0', ' ', '7', '\n\n', '1', '5', '6', ' +', '2', '3', '8', '4', ' *', ',', '<|endoftext|>', ' //', '.', '*', 'flat', '\n   ', ';', 'i', '\n       ', '\n ', ' #', 'u', ' <', ' (', '\n\n\n', ' %', 'T', 'L', '\n\n   ', ' and', ' is', ' &', ' total', '\r']","def encode_problem_index(function_idx, dimension_idx, instance_idx):
+    """"""
+    Compute the problem index for the bbob suite with 15 instances and 24 functions.
+    """"""
+    return instance_idx + (function_idx * 15) + (dimension_idx * 15 * 24)
+
+assert encode_problem_index(0, 0, 19) == ","assert encode_problem_index(0, 0, 19) == 19"
+5,"[' None', 'None', ',', ' for', ']*', 'mpty', ']', ' ', 'for', ' none', '],', 'NONE', 'none', '  ', ' undefined', 'undefined', ' ,', '   ', ']]', 'Type', 'nil', '*', ' in', '    ', ' NONE', ' null', ' nil', '        ', 'y', ' if', 'NaN', ']+', '     ', '\t', ' while', '+', '-', '],[', 'mpy', '\xa0']","def array(row, col):
+    """"""
+    >>> a = array(2, 3)
+    >>> a
+    [[None, None, None], [None, None, None]]
+    """"""
+    return [[None for c in range(col)] for r in range(row)]
+
+assert array(2, 2) == ","assert array(2, 2) == [[None, None], [None, None]]"
+6,"['3', 'zip', ' zip', '\n', ' ', '5', ',', '4', ' Zip', 'Zip', '7', '.', '0', ""'"", '1', '\n\n', 'L', '8', '6', '-', '<fim_middle>', ' ZIP', '\n   ', '9', '_', '2', '<', '  ', '   ', ' +', '""', '\\', ':', 'e', '\n ', ' {', '**', 'd', ')', ' ""']","def clean_zip_city(word):
+    """"""Remove leading comma and line break from zip_city""""""
+    return word.lstrip(',').strip()
+
+assert clean_zip_city(',12345 ') == ","assert clean_zip_city(',12345 ') == '12345'"
+7,"['assert', ' assert', '\n', '<|endoftext|>', 'print', '#', 'import', '""""""', '_', 'def', '(', '```', 'a', 'get', '""', '<', '1', '</', '2', '[', 'try', 'df', ' print', 'Assert', 'if', ' #', 'del', 'with', '-', 'from', 'x', 'f', 'A', 't', 's', ""'''"", '@', ' Assert', ' ```', '/']","def get_pandas_df():
+    """""" Gets pandas DataFrame if we can import it """"""
+    try:
+        import pandas as pd
+        df = pd.DataFrame
+    except (ModuleNotFoundError, ImportError):
+        df = None
+    return df
+
+assert get_pandas_df() == ",assert get_pandas_df() == None
+8,"["" ['"", ' [', ' [""', "" ('"", "" '"", "" {'"", ""['"", ' #', ' {', ""(['"", ' [],', ' list', ' (', ' [[', ' ([', ' (""', ""=['"", ' sorted', ""('"", ' ""', ' tuple', ' expected', ""',["", "" [['"", ' range', ' names', 'pytest', ' None', ' ', ' {""', '[""', ' expect', ' np', 'sorted', ' [(', ' List', ' pytest', '"",[', ' dict', '],[']","def transform_data(scores):
+    """"""Convert list of dicts to a list of lists""""""
+    transformed_data = [list(col) for col in zip(*[d.values() for d in scores])]
+    return transformed_data[0], transformed_data[1]
+
+assert transform_data(
+    [
+        {'name': 'Tom','score': 60},
+        {'name': 'Jerry','score': 70},
+        {'name': 'Tom','score': 80},
+        {'name': 'Jerry','score': 90},
+    ]
+) == ","assert transform_data(
+    [
+        {'name': 'Tom','score': 60},
+        {'name': 'Jerry','score': 70},
+        {'name': 'Tom','score': 80},
+        {'name': 'Jerry','score': 90},
+    ]
+) == (
+    ['Tom', 'Jerry', 'Tom', 'Jerry'],
+    [60, 70, 80, 90]
+)"
+9,"['ham', '.', 'am', '1', '<', '-', 'host', '<fim_middle>', '_', 'video', 'videos', '2', 'com', '<fim_suffix>', ' ', 'ch', '\n', 'gam', 'vid', 'hm', 'Ham', 'es', 'iam', 'ho', 'hs', 'ray', 'H', 'id', '/', 'www', ':', ' (', 'hive', '5', '0', ' am', '8', 'h', 'press', 'box']","def get_vidhost(url):
+    """"""
+    Trim the url to get the video hoster
+    :return vidhost
+    """"""
+    parts = url.split('/')[2].split('.')
+    vidhost = '%s.%s'%(parts[len(parts)-2],parts[len(parts)-1])
+    return vidhost
+
+assert get_vidhost('http://www.xhamster.com/videos/video/123456') == ",assert get_vidhost('http://www.xhamster.com/videos/video/123456') == 'xhamster.com'
+10,"['\n', '.', ' ', '<|endoftext|>', '\n\n', '0', ',', ' #', ' ""', '\n\n\n', '  ', '\r', '%', ' and', '/', '   ', ' assert', ' \\', ' or', "" '"", "",'"", ',""', '\\', '<', '_', '    ', '\n ', ';', ' is', '""', ' %', ' &&', ' .', ' percent', '\n\n\n\n', '\n   ', '**', '      ', ""'"", '*']","def niceformat(ret):
+    """"""
+    Converts to percentage and format to 1 decimal place
+    """"""
+    return round(ret*100,1)
+
+assert niceformat(0.88) == ",assert niceformat(0.88) == 88.0
+11,"['assert', ' assert', '\n', '<|endoftext|>', 'for', 'print', '#', 'try', 'Assert', '_', 'a', 'if', '(', 'def', 'from', 'pp', 'is', 'ASSERT', 'del', 'test', '<', 'L', '1', ' Assert', ' for', 'F', 'T', ' #', 't', 'with', 'f', 'c', '""', '[', ' ', ' print', 'd', '""""""', 'set', 'b']","def contains_non_letters(word):
+    """"""Helper for :meth:`analyze`""""""
+    for char in word:
+        if not char.isalpha():
+            if not char in [""'"", ""-""]:
+                return True
+    return False
+
+assert contains_non_letters(u""FOO"") == ","assert contains_non_letters(u""FOO"") == False"
+12,"['assert', ' assert', '\n', '<|endoftext|>', 'Assert', '#', 'print', ' Assert', 'for', 'a', '_', 'def', 'ASSERT', '(', ' #', 's', 'if', 't', 'pairs', 'x', 'm', 'b', '1', 'd', 'from', 'f', '[', 'try', 'c', 'import', 'ass', 'r', 'is', 'test', 'set', '<', 'ssert', 'T', '2', 'e']","def pairs(sequence):
+    """"""Returns the list of pairs that you can create from the sequence. The results
+    are ordered and no duplicates will be included, also, if <a,b> is in the result
+    then <b,a> won't be.""""""
+    sequence = sorted(list(set(sequence)))
+    indices = list(range(len(sequence)))
+    return [(sequence[i], sequence[j]) for i in indices for j in indices if i < j]
+
+assert pairs(set([1, 2])) == ","assert pairs(set([1, 2])) == [(1, 2)]"
+13,"['assert', ' assert', '\n', '<|endoftext|>', 'if', 'def', 'del', 'print', 'try', '#', '_', 'import', 'Assert', 'is', 'from', ' Assert', 'a', ' if', ' del', '(', ' #', '1', 'os', 'class', '""""""', '""', ' try', 'for', '__', ' ', 's', ' print', '-', 'f', '[', 'set', 'i', 'd', '```', 'with']","def _is_interactive(module):
+    """""" Decide whether this is running in a REPL or IPython notebook """"""
+    return not hasattr(module, '__file__')
+
+assert _is_interactive(1.1) == ",assert _is_interactive(1.1) == True
+14,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', '_', ' Assert', 'if', '#', 'for', 'def', 'a', ' print', '(', '1', 'import', 'try', 'T', 'x', '-', 'ASSERT', '```', 'ass', 's', 'is', 'y', ' ', ' ...', '...', 't', '[', 'c', 'b', 'from', '<', '2', 'B', 'd', 'f']","def sign(x):
+    """"""
+    Returns 1 or -1 depending on the sign of x
+    """"""
+    if x >= 0:
+        return 1
+    else:
+        return -1
+
+assert sign(1.5) == ",assert sign(1.5) == 1
+15,"['assert', ' assert', '\n', '<|endoftext|>', 'print', '#', '_', 'Assert', '1', 'for', 'def', 'if', 'import', 'a', ' ', ' #', '(', '-', 'try', '""""""', ' print', '```', '2', '[', 'is', ' Assert', 'n', 'c', 'd', 'L', '...', '%', '""', ' ...', 'F', 'from', 'T', 'm', '<', 'N']","def _isleap(year):
+    """"""Return True for leap years and False otherwise.
+    """"""
+    return year % 4 == 0 and (year % 100 !=0 or year % 400 == 0)
+
+assert _isleap(2046) == ",assert _isleap(2046) == False
+16,"[':', 'pad', 'Pad', ' pad', ' Pad', '::', ':%', "":'"", 'PAD', ':""', '-', ':(', ' :', '_', '.', ':/', ' padded', ':**', ':{', '/', ':[', 'key', '[:', ' padding', 'padded', ' PAD', ':#', '://', 'Redis', '1', 'padding', 'prefix', '：', ':<', ',', ' ', 'redis', '<fim_middle>', ':\\', 'Key']","def pad_key(padname, prefix='pad'):
+    """"""Redis Pad key generator. Key contains Pad name and prefix.
+
+    :param padname: redis pad name.
+    :param prefix: redis key prefix.
+    """"""
+    return '%s:%s' % (prefix, padname)
+
+assert pad_key('Pad', 'another') == ","assert pad_key('Pad', 'another') == 'another:Pad'"
+17,"['-', 'Bar', 'bar', '_', ' bar', 'BAR', ' Bar', ' BAR', ' -', 'bars', '--', '.', ' ', ' bars', ""'"", '+', '__', '---', '/', '<fim_middle>', '\\', '\\-', '#', '<', '  ', '\t', 'a', '~', '%', 'Bars', '@', ':', '$', '2', 'A', '=', '\n', ""',"", '!', '1']","def db_to_ascii(field):
+    """""" converts an db style atom name to ascii """"""
+    field = field.replace('_','-')
+    return field
+
+assert db_to_ascii('foo-bar') == ",assert db_to_ascii('foo-bar') == 'foo-bar'
+18,"['\n', '\n\n', ' ', ',', '<|endoftext|>', '.', '0', ' ""', ' and', ' assert', '\n\n\n', '""""""', ' ==', ' #', '""', "" '"", '_', '2', ' \\', '`', '```', ' *', ' <', '\n   ', "",'"", '\\', '<', ':', ' (', ' +', '  ', 'L', ' is', ' &&', ' \n', '1', ';', '    ', '</', '5']","def twice_x(x):
+    """"""Callback to fill the marketing example value.""""""
+    return float(x) * 2
+
+assert twice_x(5) == ",assert twice_x(5) == 10
+19,"['5', '0', 'Hal', ' half', 'Half', 'half', 'mp', '\n', ' *', '7', '2', 'hal', ' Hal', '8', 'zw', '6', '4', 'dot', '9', 'mid', ' ', 'iam', ' mid', 'j', 'aspx', ' hal', 'Double', 'arrow', 'stl', ' /', 'lo', 'Pror', '3', 'f', ' Half', 'conan', 'sqrt', 'QUAD', 'chunk', 'FIELDS']","def tilted_L1(u, quantile=0.5):
+    """"""
+    tilted_L1(u; quant) = quant * [u]_+ + (1 - quant) * [u]_
+    """"""
+    return 0.5 * abs(u) + (quantile - 0.5) * u
+
+assert tilted_L1(2, 0.5) == ","assert tilted_L1(2, 0.5) == 1.0"
+20,"['foo', ' foo', 'Foo', 'FOO', 'fo', 'bar', 'foobar', '^', ' Foo', 's', 'food', '\\\\', 'oo', 'abc', 'o', 'f', 'baz', ' \\', '((', '<fim_middle>', 'word', ' (', '(?:', '(?', '@', '(\\', 'foot', '(""', '(', 'item', '__', '\n', 'C', 'test', 'root', 'a', ""('"", ' ""', 'ft', ' bar']","def escape(pattern):
+	"""""" Manage escape in pattern """"""
+	result = """"
+	for char in pattern:
+		if char in '()[]{}?*+-|^$\\.&~# \t\n\r\v\f':
+			result += ""\\""
+		result += char
+	return result
+
+assert escape(""foo{bar}baz[quux]"") == ","assert escape(""foo{bar}baz[quux]"") == r""foo\{bar\}baz\[quux\]"""
+21,"['0', '\n', '1', ' ', '9', '5', '\n\n', '\n   ', ' -', 'e', '2', ' +', ' /', '4', ' (', '7', '3', '\n\n   ', '\n       ', '8', '\n ', '<|endoftext|>', '<fim_middle>', ' **', ',', 'error', '  ', ' #', '6', '   ', 'abs', '\r', ' <', '\r\n\r', 'f', '<fim_suffix>', '       ', 'to', '\n\n\n', ' ""']","def get_p2p_scatter_2praw(model):
+    """"""
+    Get ratio of variability (sum of squared differences of consecutive
+    values) of folded and unfolded models.
+    """"""
+    return model['scatter_2praw']
+
+assert get_p2p_scatter_2praw(
+    {'scatter_2praw': -0.000001}
+    ) == ","assert get_p2p_scatter_2praw(
+    {'scatter_2praw': -0.000001}
+    ) == -0.000001"
+22,"['assert', ' assert', '\n', '<|endoftext|>', 'Assert', 'is', 'for', 'print', '#', '_', 'if', ' Assert', '```', '(', 'a', '""""""', ' ', '1', 's', '<', '<fim_middle>', 'try', '-', 'test', 't', '[', 'def', 'ASSERT', 'i', 'set', 'f', '\t', ' #', '...', 'ass', 'get', 'from', '""', '\xa0', 'with']","def is_symbol_included_for_completeness(symbol: str) -> bool:
+    """""" Determine whether a symbol is listed for sake of type completeness. """"""
+
+    return symbol.endswith(':completeness')
+
+assert is_symbol_included_for_completeness('a:some_other_value') == ",assert is_symbol_included_for_completeness('a:some_other_value') == False
+23,"['assert', ' assert', '\n', '<|endoftext|>', 'print', ' ', '#', 'Assert', 'a', ' Assert', 'test', '_', '1', '(', 'def', 'import', 's', 'for', ' #', 'if', 'm', '""', ' print', '2', 'is', '-', '\t', 'x', '<fim_middle>', '[', '...', 'd', 'i', 'b', 'from', '0', ' (', 'n', 't', 'c']","def test_regions(regions,x,y):
+    """"""
+    Determines whether point (x,y) falls within any of regions
+    """"""
+    
+    for region in regions:
+        if x > region[0] and x < region[2] and y > region[1] and y < region[3]:
+            return True
+    return False
+
+assert test_regions(
+        [[0,0,1,1], [1,0,2,1], [2,0,3,1]],
+        0,
+        1
+    ) == ","assert test_regions(
+        [[0,0,1,1], [1,0,2,1], [2,0,3,1]],
+        0,
+        1
+    ) == False"
+24,"['assert', ' assert', '\n', '<|endoftext|>', 'print', '#', 'calculate', 'for', 'def', 'Assert', 'a', ' calculate', '_', 'if', '(', ' ', ' print', ' Assert', 'import', '1', 'is', 's', 'try', 't', 'n', 'Calculate', ' #', 'T', 'test', 'from', 'N', '""', 'f', 'L', 'c', 'set', 'm', 'S', 'F', '2']","def calculate_fcc_nc(listA, listB):
+    """"""
+    Calculates the fraction of common elements between two lists
+    not taking into account chain IDs. Much Slower.
+    """"""
+    
+    largest,smallest = sorted([listA, listB], key=len)
+    ncommon = len([ele for ele in largest if ele in smallest])
+    return (ncommon, ncommon)
+
+assert calculate_fcc_nc(range(5), range(10)) == ","assert calculate_fcc_nc(range(5), range(10)) == (5,5)"
+25,"[' _', ' ""', ' \\', "" '"", ' ', ' (', ' ""_', ' (_', ' True', ' range', '._', '\\', '(_', "" '_"", ' [', ' print', ' repr', ' str', ' f', '   ', '1', '  ', 'True', '    ', ' AssertionError', ' assert', 'repr', ' __', ' `_', ' list', '     ', '        ', '      ', ' (""', ' len', '=_', '::_', ' ValueError', '-_', 'range']","def _get_min_and_index(lst):
+    """"""
+    Private function for obtaining min and max indicies.
+    """"""
+    minval, minidx = lst[0], 0
+    for i, v in enumerate(lst[1:]):
+        if v < minval:
+            minval, minidx = v, i + 1
+    return minval, minidx
+
+assert _get_min_and_index(range(10)) == ","assert _get_min_and_index(range(10)) == (0, 0)"
+26,"['a', 'dl', '7', 'F', 'f', 'b', 'd', 'e', 'auf', '9', 'via', '<', '2', 'B', 'dr', '\\', 'E', 'ASF', '1', ' record', 'wire', '5', 'Du', 'du', 'HealthCheck', ' via', '.', '0', 'hash', 'df', 'D', 'c', '3', 'Dl', 'trials', ' <', 'aff', 'Obj', ',', 'ップ']","def rgb_to_hex(r, g, b):
+    """"""
+    Convert RGB color to an Hexadecimal representation
+    """"""
+    return ""%02x%02x%02x"" % (r, g, b)
+
+assert rgb_to_hex(23, 178, 17) == ","assert rgb_to_hex(23, 178, 17) == '17b211'"
+27,"['.', '0', ' ', 'mask', '1', ' mask', 'Mask', 'nd', '-', 'bit', '2', '�', ' Mask', '<fim_suffix>', '4', '**', '5', 'a', '3', ""'"", 'MASK', ' bit', '8', ' masks', ' MASK', '<', 'e', '环', ' (', '\n', ' **', 'bin', ' .', '(', '[', '<fim_middle>', '6', 'f', '9', '7']","def mask_dotted_from_bits(bits):
+   """"""Creates a subnet mask string in dotted notation from number of bits.""""""
+   assert bits > 0 
+   assert bits <= 32
+   mask = '0' * 32
+   mask = mask.replace('0', '1', bits)
+   dot_mask = '%s.%s.%s.%s' % ( int(mask[:8], 2), int(mask[8:16], 2),
+                                int(mask[16:24], 2), int(mask[24:], 2) )
+   return dot_mask
+
+assert mask_dotted_from_bits(14) == ",assert mask_dotted_from_bits(14) == '255.252.0.0'
+28,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', '#', 'for', 'if', '(', ' Assert', 'def', ' ', 'a', ' print', '_', '1', 'n', 'x', '-', 's', 'is', ' #', 'b', '[', '2', 'f', 'import', 'd', 'm', 'c', '""', 'test', 'k', 't', 'set', 'class', 'ass', '0', '""""""']","def collision(state, n):
+    """"""returns true if boulder collides with alien""""""
+    for i in range(n):
+        p=False
+        if state[0:n][i]==state[-n:][i] and state[0:n][i]=='1':
+            return True
+    return False
+
+assert collision(
+    '00000000000000001111111111111111', 5) == ","assert collision(
+    '00000000000000001111111111111111', 5) == False, ""False"""
+29,"[' find', 'find', ' update', ' create', ' get', ' Find', ' is', ' test', ' check', ' delete', ' remove', ' calculate', ' make', ' add', ' _', ' search', ' format', ' process', ' generate', ' vehicle', ' validate', ' has', 'Find', ' filter', ' build', ' convert', ' merge', ' set', ' found', ' compare', ' save', ' parse', ' does', ' __', ' sort', 'update', ' select', ' map', ' finds', ' assign']","def find_vehicle_collateral_by_id(vehicle_id: int, vehicle_collateral):
+    """"""Search existing list of vehicle_collateral objects for a matching vehicle id.""""""
+    collateral = None
+
+    if vehicle_id and vehicle_collateral:
+        for v_collateral in vehicle_collateral:
+            if v_collateral.id == vehicle_id and not v_collateral.registration_id_end:
+                collateral = v_collateral
+    return collateral
+
+assert find_vehicle_collateral_by_id(1, []) == ","assert find_vehicle_collateral_by_id(1, []) == None"
+30,"['_', ""':"", 'ids', ' ids', 'Ids', 'id', 'Id', ':', '"":', 'ID', ""'"", 'tensor', 'IDs', ' id', 'Tensor', '1', ' IDs', ' ', 'CLS', ' tokens', '-', ' tensors', 'Features', 'tokens', ""':'"", 'features', 'token', ' features', '<fim_middle>', 'IDS', ' tensor', 'ted', 'idf', 'size', 'ed', '/', ""',"", 't', '<fim_suffix>', 'e']","def example_to_features_predict(input_ids, attention_masks, token_type_ids):
+    """"""
+        Convert the test examples into Bert compatible format.
+    """"""
+    return {""input_ids"": input_ids,
+            ""attention_mask"": attention_masks,
+            ""token_type_ids"": token_type_ids}
+
+assert example_to_features_predict(""10"", ""10"", ""10"") == ","assert example_to_features_predict(""10"", ""10"", ""10"") == {""input_ids"": ""10"",
+                                                        ""attention_mask"": ""10"",
+                                                        ""token_type_ids"": ""10""}"
+31,"['\n', '<|endoftext|>', 'def', ' def', ' ', '1', '2', ' (', '\n    ', ' #', 'class', ' class', ' ""', '\n        ', '\n\n', 'import', '0', ' -', ' =', ' *', ' _', ' import', ' [', '3', 'a', ' __', '(', '\n   ', '<fim_middle>', '\n ', 'from', '#', '5', '8', '6', '\n\n\n', "" '"", '\t', '4', ' @']","def compose(im, y, fns):
+    """""" apply a collection of transformation functions fns to images
+    """"""
+    for fn in fns:
+        #pdb.set_trace()
+        im, y =fn(im, y)
+    return im if y is None else (im, y)
+
+assert compose(1, None, [lambda x,y: (x,y)]) == ","assert compose(1, None, [lambda x,y: (x,y)]) == 1"
+32,"['text', ' text', 'Text', 'TEXT', 'g', '文本', 'svg', ' Text', 'label', 'style', 'test', 'span', 'path', 'txt', 'tex', 'h', ' TEXT', 'a', 'defs', 'script', '\\', 't', 'tr', ' texto', '<fim_middle>', 'p', 's', 'div', '![', '[', 'texts', 'pre', '...', ' texts', 'xml', 'x', 'data', 'object', 'title', 'input']","def _make_particle_visible_svg(text,particles,plidx):
+    """"""
+    Takes svg file and makes particle visible at specified file
+    location.
+    """"""
+    for particle in particles:
+        lidx = text.find(""label=\""%s\""""%str(particle+1),plidx)
+        text = text[:lidx]+text[lidx:].replace(""display:none"",""display:inline"",1)
+    return text
+
+assert _make_particle_visible_svg(
+    """"""<text x=""0"" y=""0"" style=""font-size:8.0px;stroke-width:0.1;font-family:Arial,Helvetica,sans-serif;stroke:none;fill:black;font-weight:normal;font-style:normal;text-anchor:start;line-height:1.25"" xml:space=""preserve"" label=""1"">1</text>"""""",
+    [1],
+    0
+) == ","assert _make_particle_visible_svg(
+    """"""<text x=""0"" y=""0"" style=""font-size:8.0px;stroke-width:0.1;font-family:Arial,Helvetica,sans-serif;stroke:none;fill:black;font-weight:normal;font-style:normal;text-anchor:start;line-height:1.25"" xml:space=""preserve"" label=""1"">1</text>"""""",
+    [1],
+    0
+) == """"""<text x=""0"" y=""0"" style=""font-size:8.0px;stroke-width:0.1;font-family:Arial,Helvetica,sans-serif;stroke:none;fill:black;font-weight:normal;font-style:normal;text-anchor:start;line-height:1.25"" xml:space=""preserve"" label=""1"">1</text>"""""""
+33,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', 'a', '_', '#', ' Assert', 'def', '1', 'x', 'ASSERT', 's', ' print', 'hash', 'd', 'try', '(', 'list', 'if', 'L', '2', 't', 'for', 'del', 'is', 'from', ' #', 'A', '```', '[', 'f', 'b', 'ssert', 'X', 'class', 'T', 'S']","def hashable(obj):
+    """"""Convert `obj` into a hashable object.""""""
+    if isinstance(obj, list):
+        # Convert a list to a tuple (hashable)
+        return tuple(obj)
+    elif isinstance(obj, dict):
+        # Convert a dict to a frozenset of items (hashable)
+        return frozenset(obj.items())
+    return obj
+
+assert hashable((3, 4)) == ","assert hashable((3, 4)) == (3, 4)"
+34,"['assert', ' assert', 'for', '\n', '<|endoftext|>', '_', 'Assert', ' for', '#', 'print', 'a', '(', '1', 'n', 'if', 'x', ' Assert', 'b', 'test', 'c', '[', 's', '2', 't', ' ', 'i', 'def', 'f', 'ASSERT', 'F', '""', 'd', 'is', ' #', 'T', 'k', 'B', '-', 'from', '0']","def popcnt(b):
+    """""" Return number of ""1"" bits set in 'b' """"""
+    return len([x for x in bin(b) if x == ""1""])
+
+assert popcnt(0) == ",assert popcnt(0) == 0
+35,"['True', ' True', 'False', '\n', '\n   ', ' False', '1', 'true', ' ', 'bool', '\n ', "" '"", 'not', '  ', ""('"", ' ""', ' true', '2', 'ip', 'lambda', '0', ' (', '   ', 'P', '\n       ', 'false', ' \n   ', '3', 'T', 'str', '<|endoftext|>', 'ok', 'a', ' [', 'len', 'tr', '\n  ', 'd', 'c', 'f']","def _is_ipv6_addr_link_local(ip_addr):
+    """"""Indicates if a given IPv6 address is link-local""""""
+    return ip_addr.lower().startswith('fe80::')
+
+assert _is_ipv6_addr_link_local(
+    'fe80::204:61ff:fe9d:f156'
+) == ","assert _is_ipv6_addr_link_local(
+    'fe80::204:61ff:fe9d:f156'
+) == True"
+36,"['assert', ' assert', '\n', '<|endoftext|>', 'Assert', 'def', ' Assert', 'ASSERT', '#', 'is', 'if', 'print', 'for', 'try', '_', 'del', 'a', 'ok', 'from', 'ssert', '""""""', '(', '1', '-', '<', 'f', '```', '<fim_middle>', 't', '[', 'c', 'class', ' assertion', 'check', '\t', 's', 'asser', 'assertions', 'd', ' ASSERT']","def isFrozen(status):
+    """"""
+    Return a boolean indicating whether the given status name is frozen or not.
+
+    @type status: C{unicode}
+    @rtype: C{bool}
+    """"""
+    return status.startswith(u'.')
+
+assert isFrozen(u'foo bar') == ",assert isFrozen(u'foo bar') == False
+37,"['_', 'string', ' string', 'String', 'STRING', ' STRING', ' String', '-', '""', 'str', ' ', '2', ' strings', '字符串', 'tring', '/', '.', '<', '\\_', ' _', '文字列', '__', 'strings', 'st', 'a', 'getString', '<fim_middle>', 'l', 'S', ' str', '1', 't', 'd', 'y', '\\', 'Strings', 'b', 'n', 's', '"",']","def unwrap_string(s):
+    """"""A utility function that converts a ""'string'"" to a ""string"" """"""
+    s = s.replace(""'"", """")
+    return s
+
+assert unwrap_string(""'test_string'"") == ","assert unwrap_string(""'test_string'"") == ""test_string"""
+38,"[""',"", ""','"", ',', '"",', ""'"", '"",""', ' b', ' ', ':', ' ,', "" '"", '-', '  ', 'en', ' !', '~', '.', '\\', ' B', '<', '@', '   ', ' c', ' .', '<fim_pad>', '""', ' j', ' s', ';', ' ..', '<|endoftext|>', ' ""', '+', '1', 'B', '     ', '=', ""']"", ' e', '\t']","def listsplit(liststr=''):
+    """"""Return a split and stripped list.""""""
+    ret = []
+    for e in liststr.split(','):
+        ret.append(e.strip())
+    return ret
+
+assert listsplit(' a, b, c,, ') == ","assert listsplit(' a, b, c,, ') == ['a', 'b', 'c', '', '']"
+39,"['assert', ' assert', '\n', '<|endoftext|>', 'Assert', '#', 'def', ' Assert', 'print', '_', 'ASSERT', 'if', 'for', ' #', 'try', 'class', 'a', '(', 'del', '1', '<', 's', 'is', '```', '[', 'test', 'T', 't', '-', ' ', 'L', 'm', 'g', 'b', 'x', 'F', '2', 'ssert', 'with', 'i']","def _PruneMessage(obj):
+  """"""Remove any common structure in the message object before printing.""""""
+  if isinstance(obj, list) and len(obj) == 1:
+    return _PruneMessage(obj[0])
+  elif isinstance(obj, dict) and len(obj) == 1:
+    for v in obj.values():
+      return _PruneMessage(v)
+  else:
+    return obj
+
+assert _PruneMessage({'a': 1, 'b': 2}) == ","assert _PruneMessage({'a': 1, 'b': 2}) == {'a': 1, 'b': 2}"
+40,"['0', '7', '5', '3', '6', '4', '\n', '2', '8', 'e', '1', ' /', ' *', '9', ' ', '\n\n', 'E', '\n ', 'upt', 'to', '\n   ', ' :', ' **', 'j', '\r', 'py', 'f', 'd', 'jo', ' +', '/', ' ""', "",'"", ' +-', '<fim_middle>', '?', ' -', ',""', 'post', '安全']","def crr_m(ksigma, msf, crr_m7p5):
+    """"""Cyclic resistance ratio corrected for magnitude and confining stress""""""
+    return crr_m7p5 * ksigma * msf
+
+assert crr_m(1.0, 1.0, 1.0) == ","assert crr_m(1.0, 1.0, 1.0) == 1.0"
+41,"['\n', ',', ' ', '\n\n', '.', '0', ' &&', ' ==', ' ""', '<|endoftext|>', ':', ' power', "" '"", '""', ' and', '4', 'Power', ' *', ' \\', ' &', '\r', 'power', ' <', '_', '\r\n\r', ' pow', '\n\n\n', ' __', ' #', ',""', 'u', ' =', ' (', '\n   ', '(', ';', ' %', '\n ', ' !=', "",'""]","def power(n, power):
+    """"""Prints the power""""""
+
+    value = n ** power
+    print(""%s to the power of %s is %s"" % (n, power, value))
+    return n, power, value
+
+assert power(5, 4) == ","assert power(5, 4) == (5, 4, 625)"
+42,"[' ""', ' ""/', ' https', ' (""', ' (', ' ""{', 'https', "" '"", ' url', ' """"""', ' {', ' URL', "" ('"", "" '/"", ' ({', ' {""', ' ""<', ' [', ' GET', ' u', ' API', ' ([', ' urllib', ' build', ' HTTPS', ' ur', ' EXPECT', ' api', '(""', '\',""', ' \\', ' ""%', ' expand', ' http', ' r', ' None', ' \'{""', ' ""?', "" '{"", ' expected']","def jenkins_api_query_build_statuses(jenkins_url):
+    """"""Construct API query to Jenkins (CI).""""""
+    return ""{url}/api/json?tree=builds[result]"".format(url=jenkins_url)
+
+assert jenkins_api_query_build_statuses(""https://ci.example.com"") == ","assert jenkins_api_query_build_statuses(""https://ci.example.com"") == \
+    ""https://ci.example.com/api/json?tree=builds[result]"""
+43,"['_', '1', 's', '__', '_{', ' ', '<', '<fim_suffix>', '2', '-', '""', 'a', '(', '\\_', 't', 'm', ':', '<fim_middle>', '.', 'l', 'd', '/', 'S', '3', 'one', 'test', 'A', '_""', 'c', '_(', '___', 'x', 'is', '0', 'h', '₁', '_%', ' _', 'n', 'M']","def make_dummy_notebook_name(fig_no):
+    """"""
+    convert 1.11 to fig_1_11.ipynb
+    """"""
+    return f""fig_{fig_no.replace('.','_')}.ipynb""
+
+assert make_dummy_notebook_name(""1.23"") == ","assert make_dummy_notebook_name(""1.23"") == ""fig_1_23.ipynb"""
+44,"['7', '<fim_pad>', '<fim_middle>', '8', '\n', 'u', '6', ' ', '4', ' +', '�', '5', ' seven', '9', '+', '.', '3', '<fim_suffix>', '-', '<', '**', ',', '_', 'abc', '1', 'L', ' *', 'wner', 'i', '0', '\n   ', 'e', ' #', '2', 'atch', 'xx', '#', ' -', 'nn', 'st']","def patch_id(options):
+    """"""Returns the review ID or the GitHub pull request number.""""""
+    return options['review_id'] or options['github']
+
+assert patch_id(
+    {'review_id': None, 'github': 5678}) == ","assert patch_id(
+    {'review_id': None, 'github': 5678}) == 5678"
+45,"['&#', ' a', 'a', '&', ' &#', ';', 'amp', ';&', ' &', ';;', 'source', 'A', 'ab', '-&', 'avo', '&(', 'escaped', 'lt', 'cpu', 'ail', 'OiJ', 'i', ',&', 'escape', 'ote', 'alert', ' \\;', '(&', ' escape', ' applies', 'ap', '/&', '<', ' an', 'tt', 'example', 'addr', 'aped', 'sp', 'abc']","def _escape(s):
+    """"""
+    Escape HTML characters and return an escaped string.
+    """"""
+    s = s.replace('&', '&amp;')
+    s = s.replace('<', '&lt;')
+    s = s.replace('>', '&gt;')
+    return s
+
+assert _escape('>a & b') == ",assert _escape('>a & b') == '&gt;a &amp; b'
+46,"[':', "":'"", ':""', ' :', ':(', ':{', 'L', ':<', ',', ':`', "" '"", 'F', ""(':"", ':%', ':\\', '::', 'Upper', ':/', 'f', '\n', ' ""', ' colon', ':**', "",'"", "" ':"", '\\:', 'upper', ':,', 'Colon', '.', '0', '：', ""('"", 'T', ':[', 'colon', ':-', '_', ' +', 'th']","def pos_upper(num, string):
+    """"""
+    Returns a string containing its first argument, and its second argument in upper case.
+
+    :param num: int
+    :param string: str
+    :return: str
+    """"""
+    return f'{num}:{string.upper()}'
+
+assert pos_upper(10, 'fred') == ","assert pos_upper(10, 'fred') == '10:FRED'"
+47,"['_', '/', 'ID', '-', 'Event', '.', 'event', ""'"", 'id', 'Events', ' ID', ' event', 'Id', 'events', ' events', '+', ':', ' /', ' ', '<', ' id', ' and', '1', 'Name', '\n', '\\', '""', '\\_', '//', ""',"", 'e', '__', 'And', '(', ',', '->', '@', ':/', ' Events', '<fim_suffix>']","def get_resource(row):
+    """"""Get resource from STO query result row.""""""
+    resource_split_list = row.split('/')
+    resource = '/'.join(resource_split_list[4:])
+    return resource
+
+assert get_resource(
+    'https://api.smartthings.com/v1/devices/DEVICE_ID/events/EVENT_ID/LOCATION_ID'
+) == ","assert get_resource(
+    'https://api.smartthings.com/v1/devices/DEVICE_ID/events/EVENT_ID/LOCATION_ID'
+) == 'devices/DEVICE_ID/events/EVENT_ID/LOCATION_ID'"
+48,"['_', '(', 's', ' ', 'ed', '\n', '2', 'Buffer', '1', '.', 'er', 'String', '<fim_middle>', 'str', '  ', ' (', '<fim_suffix>', ""('"", 'ing', 'a', ' \\', '6', ' +', 'ify', ':', 'e', '[', 'bin', '*', 'buffer', 'ion', '\n\n', '   ', ',', 'b', 'string', 'Str', ' buffer', 'S', '0']","def _digest_buffer(buf):
+    """"""Debug function for showing buffers""""""
+    if not isinstance(buf, str):
+        return ''.join([""\\x%02x"" % c for c in buf])
+    return ''.join([""\\x%02x"" % ord(c) for c in buf])
+
+assert _digest_buffer(b'abcdefghijklmnopqrstuvwxyz') == ",assert _digest_buffer(b'abcdefghijklmnopqrstuvwxyz') == '\\x61\\x62\\x63\\x64\\x65\\x66\\x67\\x68\\x69\\x6a\\x6b\\x6c\\x6d\\x6e\\x6f\\x70\\x71\\x72\\x73\\x74\\x75\\x76\\x77\\x78\\x79\\x7a'
+49,"[':', '<', '::', ' :', 'user', '1', '\\', ' ', '   ', 'Uid', '\t', '@', '    ', '.', '/', '""', ':""', '  ', '2', '=', '：', '      ', ' user', 'X', '       ', '        ', 'uid', '0', ':<', '_', 'a', 'x', '     ', ':\\', ',', ':*', 'g', ' \\', ' pts', '3']","def make_passwd_line(claims):
+    """"""Create an entry for /etc/passwd based on our claims.  Returns a
+    newline-terminated string.
+    """"""
+    uname = claims[""uid""]
+    uid = claims[""uidNumber""]
+    pwline = ""{}:x:{}:{}::/home/{}:/bin/bash\n"".format(uname, uid, uid, uname)
+    return pwline
+
+assert make_passwd_line(
+    {
+        ""uid"": ""alice"",
+        ""uidNumber"": 123,
+        ""gidNumber"": 123,
+    }
+) == ","assert make_passwd_line(
+    {
+        ""uid"": ""alice"",
+        ""uidNumber"": 123,
+        ""gidNumber"": 123,
+    }
+) == ""alice:x:123:123::/home/alice:/bin/bash\n"""
+50,"['\n', '<|endoftext|>', 'def', '1', ' def', ' ', '""""""', ' #', '2', ' """"""', ' -', ' (', '```', '0', 'help', ' =', ' __', ' +', 'doc', ' [', ' @', ' help', ' doc', ' \\', ' *', ' ""', "" '"", '#', '@', ' with', 'Doc', '�', '3', '5', '\n    ', ' from', '7', ' ...', '(', ' ```']","def do_something(a, b, c=None):
+    """"""Do something.
+    """"""
+    return a + b if c else 0
+
+assert do_something(1, 2, 3) == ","assert do_something(1, 2, 3) == 1 + 2"
+51,"['.', 'Dot', '\\\\.', 'bar', ' dot', ' bar', '...', 'dot', '..', '\\.', 'DOT', ' .', '-', 'Bar', '_', '....', '.*', ':', 'foo', ' dots', '．', ' prefix', '%', '<fim_middle>', 'h', 'expand', 'prefix', '/', '::', '\\\\', '\\', '\\\\\\\\', 'log', '    ', "".'"", '1', 'a', ""',"", '.<', '.{']","def expandPrefix(prefix):
+    """"""Expand prefix string by adding a trailing period if needed.
+
+    expandPrefix(p) should be used instead of p+'.' in most contexts.
+    """"""
+    if prefix and not prefix.endswith('.'):
+        return prefix + '.'
+    return prefix
+
+assert expandPrefix('foo.bar...') == ",assert expandPrefix('foo.bar...') == 'foo.bar...'
+52,"['bin', ' binary', ' bin', '进制', 'bit', ' decimal', ' bit', '\n', 'binary', 'Decimal', '0', ' bits', 'bits', 'binaries', ' binaries', '進', 'Binary', '二', 'Bin', ' BIN', ' ', ' dec', ',', '.', 'Bit', '2', 'decimal', 'BIN', 'sbin', '진', ' Decimal', ' Bin', ' Bit', ' Dec', 'DECIMAL', ' Binary', ' bins', 'th', '1', 'Bits']","def convert_to_binary(decimal) -> str:
+    """"""
+    Converts Decimal numbers into Binanry Digits
+    """"""
+    binary = bin(decimal).replace(""0b"", """")
+    return binary
+
+assert convert_to_binary(20) == ","assert convert_to_binary(20) == ""10100"""
+53,"['assert', ' assert', '\n', 'print', '<|endoftext|>', 'Assert', '#', ' Assert', 'for', ' print', 'a', 'def', 'if', '_', 'is', 'try', 'ASSERT', 'test', 'f', 'w', ' #', '1', 't', 'import', 's', '(', '_,', 'm', 'x', 'b', 'n', 'B', 'from', 'with', 'i', 'A', 'd', 'T', 'set', '""""""']","def w_fct(stim, color_control):
+    """"""function for word_task, to modulate strength of word reading based on 1-strength of color_naming ControlSignal""""""
+    # print('stim: ', stim)
+    # print(""Color control: "", color_control)
+    return stim * (1 - color_control)
+
+assert w_fct(2, 0) == ","assert w_fct(2, 0) == 2"
+54,"['assert', ' assert', '\n', 'def', 'Assert', '<|endoftext|>', 'class', '_', ' Assert', 'is', '#', 'for', 'del', '(', '@', ' class', '1', 'a', 'ASSERT', ' def', 'L', '<', 'Command', '[', 'if', 'cmd', 'print', 'from', 'set', 'ssert', 'A', 'f', ' del', 'c', '<fim_middle>', 'F', 'import', 'B', 'with', '0']","def is_command(meth):
+    """""" Return True if method is an exposed Lua command """"""
+    return getattr(meth, '_is_command', False)
+
+assert is_command(lambda cls, x=1, y=2: None) == ","assert is_command(lambda cls, x=1, y=2: None) == False"
+55,"['assert', ' assert', '\n', '<|endoftext|>', 'Assert', 'print', '#', 'for', 'try', 'if', '_', 'def', ' Assert', ' #', '(', '<', ' ...', '```', 'ASSERT', 'is', '[', ' for', ' print', ' ', 'F', '1', 'a', ' try', 'del', 'T', 't', '...', 'k', 'f', 'import', 'sys', '</', 's', 'g', 'with']","def IsHash(git_hash):
+  """"""Returns True iff git_hash is a full SHA-1 hash.
+
+  Commits keyed by full git hashes are guaranteed to not change. It's unsafe
+  to cache things that can change (e.g. `HEAD`, `master`, tag names)
+  """"""
+  return git_hash.isalnum() and len(git_hash) == 40
+
+assert IsHash('a' * 40) == ",assert IsHash('a' * 40) == True
+56,"['assert', ' assert', '\n', '<|endoftext|>', 'print', '#', 'def', 'Assert', 'for', '_', 'a', 'try', ' print', '```', '\n\n', ' Assert', '(', 'if', ' #', '""""""', 'x', '1', 's', ' ', '""', 'with', 'A', 'b', 'is', 'N', 'T', 'm', 'class', 'B', ' for', 'c', 'from', 'r', 'f', 'd']","def str_to_nat(s):
+    """"""Convert string to natural number.""""""
+    return ord(s) - ord(""a"")
+
+assert str_to_nat(chr(107)) == ",assert str_to_nat(chr(107)) == 10
+57,"['2', 'T', '1', 'B', ' ', '0', '3', 'b', '4', 'https', 'D', '5', 'd', 'string', '9', '(', 'A', 'E', '  ', 'date', '6', 'S', '7', '8', '   ', 'Z', 'test', 'M', 'a', 'Y', 'P', 'C', '`', ' T', 's', '\n', '?', 'y', 'I', 'R']","def date(string):
+    """"""Strip off the T from the datetime string""""""
+    return string.replace('T', ' ')
+
+assert date('2020-10-21B14:30:00.000Z') == ",assert date('2020-10-21B14:30:00.000Z') == '2020-10-21B14:30:00.000Z'
+58,"['assert', ' assert', '\n', '<|endoftext|>', 'print', '#', 'def', 'Assert', 'ass', ' Assert', '(', ' print', 'pos', 'a', ' #', 'for', 'get', 'try', '```', 'import', 'L', 'if', '""""""', 'cur', '""', 'is', ' ass', 'ok', ' ...', '_', 's', '\\', 'm', ' ', 'H', 'T', 'set', '1', ""'''"", 'N']","def obter_pos_l(pos):
+    """"""
+    obter_pos_l: posicao -> str
+    Recebe uma posicao e devolve a componente linha da posicao.
+    """"""
+    return pos['l']
+
+assert obter_pos_l({'l': 1, 'c': 0}) == ","assert obter_pos_l({'l': 1, 'c': 0}) == 1"
+59,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', '#', ' Assert', 'for', '_', 'a', 'ASSERT', 'def', 't', '<fim_middle>', 'is', '(', 'if', '1', 's', 'f', 'remove', ' #', 'with', 'test', 'd', 'F', 'n', 'm', '\xa0', ' print', ' ', '<', 'try', '-', 'ass', 'from', 'T', 'r', 'c']","def remove_leading_trailing_pipe(line):
+    """""" Remove optional leading and trailing pipe """"""
+
+    return line.strip('|')
+
+assert remove_leading_trailing_pipe('') == ",assert remove_leading_trailing_pipe('') == ''
+60,"['assert', ' assert', '\n', 'print', '<|endoftext|>', 'try', '#', 'Assert', '_', 'for', 'if', ' Assert', 'def', ' print', 'a', 'is', '```', '1', '(', ' #', 'with', 'from', 'import', ' ', ' try', 'del', 'test', '""', 'y', 'x', '-', 'ASSERT', 't', 'str', 's', 'set', 'f', '""""""', 'm', '[']","def _str_to_bool(s):
+    """"""Convert either of the strings 'True' or 'False' to their Boolean equivalent""""""
+    if s == 'True':
+        return True
+    elif s == 'False':
+        return False
+    else:
+        raise ValueError(""Please specify either True or False"")
+
+assert _str_to_bool(str(False)) == ",assert _str_to_bool(str(False)) == False
+61,"['assert', ' assert', '\n', '<|endoftext|>', 'print', '#', 'for', 'Assert', '_', ' print', '```', '1', ' ', 'a', ' Assert', 'def', 'try', '(', 'x', 'if', ' #', 's', 'check', '-', '""""""', '0', '2', 'b', 'is', '[', '""', '...', 't', 'import', ' for', 'T', 'i', 'B', ' ...', 'f']","def check_bit(val, offs):
+    """"""Test bit at offset 'offs' in value.""""""
+    return True if val & (1 << offs) else False
+
+assert check_bit(0b11001010, 7) == ","assert check_bit(0b11001010, 7) == True"
+62,"['0', '\n', '2', ' ', '1', ' ==', '4', '5', '9', ' *', '6', '.', ',', '\n   ', '8', '3', '\n\n', '7', '<|endoftext|>', ' **', 'L', ' +', '_', '**', '*', '\n\n   ', '\n ', ' is', '\n       ', ' (', ' #', ' <', ' \\', ' \n', ' /', ' in', ' and', '\\', '\n\n\n', ':']","def validate_line(line):
+    """"""
+    Validates ``line``.
+    """"""
+    # if not VALID_PATTERN.match(line):
+    #     raise MalformedPacket(""Got malformed packet: {}"".format(line))
+    return True
+
+assert validate_line(b'100,100,200,200,300,300,400,400,500,500,600,600,700,700,800,800,900,900,1000,1000,1100,1100,1200,1200,1300,1300,1400,1400,1500,1500,1600,1600,1700,1700,1800,1800,1900,1900,2000,2000,2100,2100,2200,2200,2300,2300,2400,2400,2500,2500,2600,2600,2700,2700,2800,2800,2900,2900') == ","assert validate_line(b'100,100,200,200,300,300,400,400,500,500,600,600,700,700,800,800,900,900,1000,1000,1100,1100,1200,1200,1300,1300,1400,1400,1500,1500,1600,1600,1700,1700,1800,1800,1900,1900,2000,2000,2100,2100,2200,2200,2300,2300,2400,2400,2500,2500,2600,2600,2700,2700,2800,2800,2900,2900') == True"
+63,"['0', '[', '\n', '2', '.', ' ', '_', '1', ':', '-', '4', ',', '7', '<', '3', '(', '6', '5', '9', '/', ""['"", ' (', '\n\n', 'd', '<fim_middle>', 'e', 'b', 's', 'a', ' [', 'c', '8', ""'"", '""', '<fim_suffix>', ')', ' ""', 'T', 'm', 'C']","def format_node(cluster_name, node):
+    """"""Formats a string representation of a node.""""""
+    return '<{0}[{1}]>'.format(cluster_name, node)
+
+assert format_node(0, 100000000) == ","assert format_node(0, 100000000) == '<0[100000000]>'"
+64,"['0', ' ', '1', '\n', '<fim_middle>', 'e', '2', 'f', '5', ' ""', 'j', 'd', "" '"", "",'"", 'float', '\n\n', '3', ' **', '4', 'E', 'value', ' (', ' *', '9', 'to', ' <', '  ', '\n   ', '7', 'g', ' \\', '<fim_suffix>', ',""', ' #', ' float', '8', ' not', '6', 'o', 'json']","def get_null_value(value):
+    """"""Gets None from null token""""""
+    if value.lower().strip(' ') == ""null"":
+        return None
+    else:
+        return value
+
+assert get_null_value(""1.0"") == ","assert get_null_value(""1.0"") == ""1.0"""
+65,"["" '<"", ' edit', ' ""<', 'edit', ""'<"", ""('<"", ' `<', ' Edit', '`<', ""='<"", '(""<', 'Edit', 'EDIT', ' <', ' f', ' link', '""<', '=""<', ' Link', ' edits', '编辑', ' """"""', "" '"", ' edited', ' editing', '<', ' EDIT', ' html', ' HTML', ' expected', "" ('"", '/<', '|<', 'link', ' (<', ' (', ' ""', 'LINK', "" '''"", '""><']","def edit_form_link(link_text='Submit edits'):
+    """"""Return HTML for link to form for edits""""""
+
+    return f'<a href=""https://docs.google.com/forms/d/e/1FAIpQLScw8EUGIOtUj994IYEM1W7PfBGV0anXjEmz_YKiKJc4fm-tTg/viewform"">{link_text}</a>'
+
+assert edit_form_link('Submit a new form') == ","assert edit_form_link('Submit a new form') == \
+    '<a href=""https://docs.google.com/forms/d/e/1FAIpQLScw8EUGIOtUj994IYEM1W7PfBGV0anXjEmz_YKiKJc4fm-tTg/viewform"">Submit a new form</a>'"
+66,"['assert', ' assert', '\n', '<|endoftext|>', 'for', 'print', 'Assert', '#', '_', 'a', '(', ' Assert', 'is', 'ASSERT', 'if', 'def', ' for', 'test', 'f', '1', '[', ' ', 'from', '<', 'try', 'i', 's', '\t', 'import', 'L', 'del', 'ass', 't', 'F', ' #', 'asser', '<fim_middle>', ' print', 'ok', 'd']","def _is_clustal_seq_line(line):
+    """"""Returns True if line starts with a non-blank character but not 'CLUSTAL'
+
+    Useful for filtering other lines out of the file.
+    """"""
+    return line and (not line[0].isspace()) and\
+        (not line.startswith('CLUSTAL')) and (not line.startswith('MUSCLE'))
+
+assert _is_clustal_seq_line('     CLUSTAL     ') == ",assert _is_clustal_seq_line('     CLUSTAL     ') == False
+67,"['2', ' ', '1', '3', '\n', ' foot', '0', 'ish', '4', ' and', ' +', ' in', 'in', '5', 'foot', 'nd', '**', '7', '--', ' t', 'height', ' (', 'l', '  ', ' height', '6', ' a', 'r', '8', ' to', ' f', 'x', ',', ""'."", '@', ' walk', '.', ' is', '9', 'n']","def height_human(float_inches):
+    """"""Takes float inches and converts to human height in ft/inches""""""
+
+    feet = int(round(float_inches / 12, 2))  # round down
+    inches_left = round(float_inches - feet * 12)
+    result = f""{feet} foot, {inches_left} inches""
+    return result
+
+assert height_human(2.2) == ","assert height_human(2.2) == ""0 foot, 2 inches"""
+68,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', ' Assert', '#', 'def', '_', 'a', ' print', '1', ' ', 'test', 'try', 'if', '(', 'x', 'is', 'z', 'import', ' #', 'T', 't', 'from', 'for', 's', '""', '\n\n', 'd', 'ASSERT', 'f', '```', '-', '2', 'X', '""""""', 'b', '0']","def z_score(x, mean, std):
+    """"""z_score""""""
+    return (x - mean) / std
+
+assert z_score(3, 1, 1) == ","assert z_score(3, 1, 1) == 2.0"
+69,"['\n', '\n\n', '<|endoftext|>', ' ', '\n\n\n', ' #', ' \n', ' ""', '\t', ',', ' +', ' assert', 'L', '7', '\n\t', ',""', '\r\n\r', ' and', '  ', '\n\n\n\n', '\r', ' \\', '0', 'ish', ' ==', '+', ' //', ' \n\n', '9', '.', ' &&', '\n ', ' -', '\n\t\t', '<', '\\', '   ', ' <', ';', ' chars']","def tinyurlFindUrlend( msg, urlstart ):
+	""""""Finds the ends of URLs (Strips following punctuation)""""""
+	m = msg[urlstart:]
+	index = m.find( "" "" )
+	if index == -1:
+		index = len(m)
+	while msg[index-1] in ( ""?"", ""."", ""!"" ):
+		index -= 1
+	return index + urlstart
+
+assert tinyurlFindUrlend( ""hello http://google.com world.!?"", 11 ) == ","assert tinyurlFindUrlend( ""hello http://google.com world.!?"", 11 ) == 23"
+70,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', ' Assert', '#', 'a', 'import', 'ASSERT', 'from', 'try', ' print', '_', 'for', 'n', 'is', ' ...', 'def', '""', 'ass', '(', 'test', '-', 'if', ' #', '1', 'asser', ' ASSERT', '2', 'x', ' ', 'T', 'd', 'm', '...', 't', 'N', '""""""']","def regular_polygon_area(perimeter, apothem):
+    """"""Returns the area of a regular polygon""""""
+    # You have to code here
+    # REMEMBER: Tests first!!!
+    return (1/2) * perimeter * apothem
+
+assert regular_polygon_area(2, 1) == ","assert regular_polygon_area(2, 1) == 1"
+71,"['c', ' c', 'C', '\n', '...', ' ', ' C', '0', ',', 'd', '<', '_', '.', '-', '1', '..', ' ""', '<fim_suffix>', '8', ' ...', '2', ' (', 'p', '\n\n', 'a', 'u', '<|endoftext|>', '/', 'L', ' <', '4', 's', ':', 'head', 'o', 'M', 'co', ' *', '<fim_middle>', 'n']","def format_revision(sha):
+    """""" Return a shorter git sha """"""
+    return sha[:7]
+
+assert format_revision(""50c034243f3d4c842d39e573b9f97f0f9a0329810"") == ","assert format_revision(""50c034243f3d4c842d39e573b9f97f0f9a0329810"") == ""50c0342"""
+72,"['feed', 'SB', 'Msg', ' sb', 'sb', ' cw', 'Cw', 'msg', ' Msg', 'Dead', '0', 'Deprecated', 'MSG', ' msg', 'Yw', '{:', 'Corre', 'CB', 'cw', 'Message', ' message', 'message', '%', 'Mag', '1', 'Feed', 'response', 'JW', '<fim_suffix>', '2', 'CW', ' RESULT', 'Cap', 'CF', ' Deprecated', ' dead', 'cdn', 'wv', 'boat', ' Cap']","def get_legacy_msg_type(identifier):
+    """"""
+    Convert an SBP spec identifier to the message type #define identifier according to the legacy API
+    Only works for real messages, will assert when called for any other type
+    """"""
+
+    assert identifier[:4] == ""MSG_""
+    return ""SBP_"" + identifier
+
+assert get_legacy_msg_type(""MSG_CW_RESULTS"") == ","assert get_legacy_msg_type(""MSG_CW_RESULTS"") == ""SBP_MSG_CW_RESULTS"""
+73,"[""':"", '"":', ':', ""'"", ' ', ""',"", '/', '1', '\\"":', ""':'"", '`:', ' ->', '|', ':.', '_', '=', '-', '.', ' proportion', 'Ratio', ' relative', 'frac', '**:', 'pro', '=.', '2', '  ', '+', ""'}"", 'X', '():', '->', ' =>', '==', ' b', '#', '""', '   ', 'D', 'Relative']","def get_term_frequency(hash_abundance):
+    """"""Convert raw term abundance to relative frequency in document""""""
+    total_counts = sum(hash_abundance.values())
+    return {k: v/total_counts for k, v in hash_abundance.items()}
+
+assert get_term_frequency({'a': 1, 'b': 2, 'c': 3, 'd': 4, 'e': 5}) == ","assert get_term_frequency({'a': 1, 'b': 2, 'c': 3, 'd': 4, 'e': 5}) == {'a': 1./15, 'b': 2./15, 'c': 3./15, 'd': 4./15, 'e': 5./15}"
+74,"[' ""', "" '"", ' ', ' #', ' """"""', ' line', ' out', ' ""\\', ' str', 'line', ' lines', '   ', '  ', ' f', ' [', ' Line', '    ', 'Line', ' P', '\n', '\t', ' (', '1', ' ""#', ']\\', ' {', ' block', 'lines', ' Out', ' Block', ' T', 'fort', ' comment', ' None', ' (""', 'Out', 'out', '(""', ' `', ' K']","def _write_outpt(parameters):
+    """"""Write OUTPT block data.""""""
+    outpt = parameters[""react""][""output""]
+
+    values = [outpt[""format""]]
+    values += [x for x in outpt[""shape""][:3]] if ""shape"" in outpt else []
+    out = [""{}\n"".format("" "".join(str(x) for x in values))]
+
+    return out
+
+assert _write_outpt({""react"": {""output"": {""format"": 1}}}) == ","assert _write_outpt({""react"": {""output"": {""format"": 1}}}) == [""1\n""]"
+75,"['.', './', ',', '/', 'sqrt', '0', ' *', '7', '3', '6', ' /', '9', '*', '5', 'M', '8', '1', ' sqrt', '2', '4', '**', 'e', 'over', ' m', 'm', 'E', '#', 'Chapter', ' ', 'H', 'Oc', ' **', '.,', 'nth', 'root', ' ./', 'py', 'pnt', 'u', 'L']","def Mceta(m1, m2):
+    """"""Compute chirp mass and symmetric mass ratio from component masses""""""
+    Mc = (m1*m2)**(3./5.)*(m1+m2)**(-1./5.)
+    eta = m1*m2/(m1+m2)/(m1+m2)
+    return Mc, eta
+
+assert Mceta(1, 2) == ","assert Mceta(1, 2) == Mceta(1.0, 2.0)"
+76,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', '_', 'is', '#', ' Assert', ' print', ' ', '(', '1', 'a', '```', '-', 'if', 's', 'for', '""""""', 'def', '""', '<', ' #', '[', 'c', 'f', '2', 'b', 'import', '/', 'os', ' ""', 'x', 'm', 'y', 'd', 'set', 'class']","def is_command(attribute):
+    """"""
+    Test if a method is an command.
+    """"""
+    return attribute.startswith('do_')
+
+assert is_command(
+    ""this_""
+) == ","assert is_command(
+    ""this_""
+) == False"
+77,"['\n', ' ', ' assert', ' \\', 'assert', ' #', ' ==', '<|endoftext|>', ' and', '  ', ' ""', '\r', ' or', '     ', '    ', '       ', '      ', '        ', '\n\n', '_', '   ', ' is', '#', ' (', '         ', '            ', ',', '           ', '             ', '          ', 'in', 's', ' ,', '               ', ' in', '                ', '<', '1', ' a', ' Assert']","def inc_args(s):
+    """"""process a string of includes to a set of them""""""
+    return set([inc.strip() for inc in s.split("" "") if inc.strip()])
+
+assert inc_args(""\n"") == ","assert inc_args(""\n"") == set([])"
+78,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', '#', '_', 'try', '\t', 'a', ' Assert', 'if', 'class', 'is', 'def', '(', 'for', 'T', ' #', '<', '1', ' print', 'x', 'f', 's', '```', '""', 't', 'c', 'F', 'i', '""""""', 'b', '2', 'A', ' ', '__', 'B', '[']","def is_subclass(T1, T2):
+	""""""
+	""""""
+	try:
+		return issubclass(T1, T2)
+	except TypeError:
+		return False
+
+assert is_subclass(str, (int, float, bool, str)) == ","assert is_subclass(str, (int, float, bool, str)) == True"
+79,"['6', '8', '9', 'dotnet', '3', 'quot', '5', 'uh', ' Qu', 'iger', 'div', 'to', '7', 'rat', 'as', 'unsafe', '2', 'mp', '4', 'into', 'IAM', 'gf', ' LD', 'As', 'close', 'nan', 'lose', 'double', ' resulting', 'friend', 'GOO', 'mek', 'hor', 'every', 'build', 'Maker', ' forth', 'Aspect', 'Ratio', 'theme']","def grain_to_dry_malt_weight(malt):
+    """"""
+    Grain to DME Weight
+
+    :param float grain: Weight of Grain
+    :return: DME Weight
+    :rtype: float
+    """"""
+    return malt * 3.0 / 5.0
+
+assert grain_to_dry_malt_weight(1.00) == ",assert grain_to_dry_malt_weight(1.00) == 0.6
+80,"['assert', ' assert', '\n', '<|endoftext|>', '#', 'print', 'Assert', 'a', 'for', '_', 'try', 'def', 't', 'if', '(', 'get', ' Assert', 's', 'test', 'from', 'x', ' #', '1', 'f', 'b', 'is', ' ', '[', 'e', 'm', 'c', '<fim_middle>', '""', '<', 'ASSERT', 'd', 'ok', 'r', 'k', 'i']","def get_array_from_raw(name, raw):
+    """"""
+    For parsing out jquery array ajax stuff
+    """"""
+    array = []
+    for term in raw.split('&'):
+        if term.startswith(name + '%5B%5D='):
+            array.append(term[len(name)+7:])
+    return array
+
+assert get_array_from_raw(u'x', u'') == ","assert get_array_from_raw(u'x', u'') == []"
+81,"['c', 'b', 'bc', 'ba', 'bb', 'cc', 'aa', 'C', 'a', 'B', '<fim_middle>', '1', 's', 'ab', 'bd', 'bo', 'd', '<fim_suffix>', 'bu', 'e', 'ce', '2', 'ic', 'cb', 'dd', 'g', 'ac', 'cs', 'z', 'ble', 'be', 'p', 'zz', '0', 'с', 'by', 'ca', 'f', 'cd', 'bs']","def _GetNextString(s):
+  """"""Get smallest string that larger than all strings prefix with s.""""""
+  return s[:-1] + chr(ord(s[-1]) + 1)
+
+assert _GetNextString(u'bb') == ",assert _GetNextString(u'bb') == u'bc'
+82,"['2', '5', '1', ' secondary', '4', '�', '₂', '\n', 'f', ' down', ' twice', '3', ' ', '8', ' two', 'Ratio', '�', '0', 'Hal', ' **', 'two', 'l', 'Half', '\n   ', '两个', 'uh', '9', ' Appro', ' /', 'to', ' over', 'secondary', 'half', '二十', ' proportion', ' -&', 'Over', 'as', 'physics', 'e']","def iam(target, mixture):
+    """"""""Compute ideal amplitude mask""""""
+    mask = target / mixture
+    return mask
+
+assert iam(200, 1000) == ","assert iam(200, 1000) == 0.2"
+83,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'is', '```', '#', '_', 'Assert', ' print', 'a', 'try', ' Assert', '(', ' ', '1', 'if', 'for', 's', '""""""', '-', '<', 'def', ' ```', ' #', 'with', '2', 't', '""', 'from', 'y', 'get', 'd', 'ASSERT', 'x', 'f', 'c', '[', 'S']","def is_int(s) -> bool:
+    """"""Check if the value is an Integer.""""""
+    if s is None:
+        return False
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+assert is_int(' 1') == ",assert is_int(' 1') == True
+84,"['1', 'th', '2', '0', '9', ' +', '3', '4', '7', '8', 'YY', '<fim_pad>', 'y', '\n', '.', ' ', '5', 'xx', 'w', '6', 'l', ' *', 'TH', '*', '<fim_middle>', '<', 'H', '+', 'd', 'yy', '_', '-', '\xa0', 'c', 'b', ',', 'a', ' ""', ' <<', '/']","def convert_tuple_to_8_int(tuple_date):
+    """""" Converts a date tuple (Y,M,D) to 8-digit integer date (e.g. 20161231).
+    """"""
+    return int('{0}{1:02}{2:02}'.format(*tuple_date))
+
+assert convert_tuple_to_8_int((2018, 12, 31)) == ","assert convert_tuple_to_8_int((2018, 12, 31)) == 20181231"
+85,"[' get', ' ""', 'get', ' \\', "" '"", ' (', ' assert', ' (""', ' Get', ' ', ' f', ' got', ' `', ' """"""', ' ""\'', ' str', 'assert', ' [', ' _', ' __', ' {', ' ""`', ' repr', '(""', ' failed', ' AssertionError', ' \'""', '\\', ' GET', ' print', ' list', ' msg', ' type', ' set', ' Test', ' lambda', ' not', ' ""#', ' ""[', ' Free']","def get_progress(context, scope):
+    """""" Returns the number of calls to callbacks registered in the specified `scope`. """"""
+    return context.get(""progress"", {}).get(scope)
+
+assert get_progress(
+    {""progress"": {""a"": 1, ""b"": 2, ""c"": 3}}, ""c""
+) == ","assert get_progress(
+    {""progress"": {""a"": 1, ""b"": 2, ""c"": 3}}, ""c""
+) == 3"
+86,"[' there', 'there', 'There', ' There', ' ther', ' world', ' space', ' here', '-', 'THER', 'here', '_', ' friend', ' ', '<fim_middle>', ' th', 'ther', 'space', ',', ' again', '<', ' World', ' thanks', ' the', '.', '\xa0', ' though', ' -', ' t', '  ', ' spaces', ' <', ' s', ' SPACE', 'Space', ' where', ""'"", ' through', ':', 'friend']","def append_space(prompt):
+    """"""Adds a space to the end of the given string if none is present.""""""
+    if not prompt.endswith(' '):
+        return prompt + ' '
+    return prompt
+
+assert append_space('hello there friend') == ",assert append_space('hello there friend') == 'hello there friend '
+87,"['=', '_', 'qu', '__', '=\\""', ""='"", ' qu', '=""', ' =', 's', '=_', 'Dimension', 'Dims', 'Qu', 'dim', '=%', ' =~', '-', 'Dim', ' DIM', '""', '维', ':', '\\\\', 'dims', '\\\\\\\\', '=[', '.', '={', 'q', ' dimensional', '\\_', 'ab', '�', 'dimension', 'Metric', ' dimension', 'string', 'alt', 'pct']","def _format_dimensions(dimensions):
+    """"""
+    Formats a dictionary as a comma-delimited list of key=value tokens.
+    This was copied from docker-collectd-plugin.
+    """"""
+    return "","".join([""="".join((key.replace(""."", ""_""), value)) for key, value in dimensions.items()])
+
+assert _format_dimensions(
+    {""foo"": ""bar"", ""baz"": ""qux""}) == ","assert _format_dimensions(
+    {""foo"": ""bar"", ""baz"": ""qux""}) == ""foo=bar,baz=qux"""
+88,"['real', ' real', ' Real', 'Real', 'REAL', "" '"", ' REAL', ' ""', ' ', ' \\', ' realize', ' (', '真', 'repr', '  ', ' True', ' realized', 'realtime', ' not', ' print', '     ', ' [', '   ', ' assert', ' f', ' repr', ' ре', ' fail', ' reality', 'True', ' str', ' r', ' test', 'realpath', '      ', ' actual', ' `', ' ""\'', '    ', ' fake']","def realFile(file):
+    """"""
+        Filter out temporary files created by vim
+    """"""
+    return not (file[-1]=='~' or file[-4:]=='.swp')
+
+assert realFile('a') == ",assert realFile('a') == True
+89,"['assert', ' assert', '\n', '<|endoftext|>', 'Assert', '_', '#', 'def', ' Assert', 'print', '(', 'for', 'a', '```', ' ', 'if', 'ASSERT', '-', '""', ' #', 'del', '\n\n', 'is', 's', 'import', '""""""', 'class', 'i', '...', 'from', '[', '__', 'test', 'T', '<', 'L', '1', ' (', 'x', 'd']","def _next_break(primitive_boundaries, pos, expects):
+    """"""(internal)
+    """"""
+
+    for i in range(pos, len(primitive_boundaries)):
+        sb = primitive_boundaries[i][1]
+        if sb in expects:
+            return sb
+    return None
+
+assert _next_break(
+    [
+        (0, ""a""),
+        (4, ""b""),
+        (8, ""c""),
+        (12, ""d""),
+        (13, ""e""),
+        (18, ""f""),
+    ],
+    2,
+    [""d""]
+) == ","assert _next_break(
+    [
+        (0, ""a""),
+        (4, ""b""),
+        (8, ""c""),
+        (12, ""d""),
+        (13, ""e""),
+        (18, ""f""),
+    ],
+    2,
+    [""d""]
+) == ""d"""
+90,"[' World', 'World', ' world', 'world', 'WORLD', '世界', 'orld', ' ', 'ORLD', ' W', '-', '<fim_middle>', '!', ""'"", ""',"", ' Word', '  ', '\xa0', ' Hello', ' universe', '   ', '""', '_', ',', '    ', '\\', '%', '\t', '     ', ' wor', '.', ' C', '<', ' M', ' word', ' <', 'Word', ' Web', '&', ' ""']","def strip_some_punct(s):
+    """"""
+    Return a string stripped from some leading and trailing punctuations.
+    """"""
+    if s:
+        s = s.strip(''','""}{-_:;&''')
+        s = s.lstrip('.>)]')
+        s = s.rstrip('<([')
+    return s
+
+assert strip_some_punct(
+    'Hello World!') == ","assert strip_some_punct(
+    'Hello World!') == 'Hello World!'"
+91,"['assert', ' assert', '\n', '<|endoftext|>', 'Assert', '#', 'for', 'print', ' Assert', 'a', 'if', '_', 'ASSERT', '1', '(', 'try', 't', 's', 'def', 'is', ' #', 'test', 'x', ' for', 'e', ' ', '<fim_middle>', 'b', 'i', 'c', 'ok', '[', '<', 'f', 'm', 'set', 'k', 'd', '""', 'y']","def MatchesAnyRegexp(flag, list_of_regexps):
+  """"""Returns true if the first argument matches any regular expression in the
+  given list.""""""
+  for regexp in list_of_regexps:
+    if regexp.search(flag) != None:
+      return True
+  return False
+
+assert MatchesAnyRegexp(""abc"", []) == ","assert MatchesAnyRegexp(""abc"", []) == False"
+92,"['2', 'st', ':', '0', '4', ' ', '9', '3', ' year', '5', '.', '1', 'year', '7', '6', '8', '-', '<', 's', '  ', '/', 'd', '<fim_middle>', ' :', '<fim_suffix>', ""'"", '\n', '..', '_', '   ', 'T', '[', 'D', 'Year', 'St', 'a', 'h', ',', 'test', '\\']","def dark_id_to_date(dark_id):
+    """"""
+    Convert ``dark_id`` (YYYYDOY) to the corresponding DateTime 'date' format.
+
+    :param date: dark id (YYYYDOY)
+    :returns: str in DateTime 'date' format
+    """"""
+    return '{}:{}'.format(dark_id[:4], dark_id[4:])
+
+assert dark_id_to_date('123456') == ",assert dark_id_to_date('123456') == '1234:56'
+93,"['0', '5', '6', '\n', ' standard', ' std', 'std', 'STD', '7', '8', '3', 'quo', 'Std', ' Standard', ' ', 'standard', ' /', ' Std', '2', '1', '4', ' Normal', 'Standard', '\n   ', '9', ' *', 'rd', 'normal', '***', 'Normalized', '\n\n', 'f', ' (', 'tptr', '\n ', 'SD', '\n       ', ' standards', '\n\n   ', ' equivalent']","def z_score(val, v_mean, v_std):
+    """"""Calculate a z-score given a value, mean, and standard deviation.
+
+    NOTE: The z_score() of a constant vector is 0
+    """"""
+    score = 0 if v_std == 0 else (val - v_mean) / v_std
+    return score
+
+assert z_score(8, 2, 3) == ","assert z_score(8, 2, 3) == 2.0"
+94,"['=', '1', '==', ' =', ' ', '_', '-', '=%', ',', '__', '%', ""='"", ':', 'Int', 'int', '""', '=[', '=-', '={', '2', '0', '=(', '(', '=$', '+', '<fim_middle>', '=""', '.', '/', 'S', 'one', '>=', '=<', '~', '<|endoftext|>', '<fim_suffix>', '<', 'eq', '3', 'T']","def lookupToString(lookup_dict):
+    """"""
+    Convert the lookup dict into a string.
+    e.g.:
+        {""field1"": ""a"", ""field2"": ""b""} -> ""field1=a,field2=b""
+    """"""
+    return "","".join(""%s=%s"" % (k, v) for k, v in lookup_dict.items())
+
+assert lookupToString({""a"": 1, ""b"": 2}) == ","assert lookupToString({""a"": 1, ""b"": 2}) == ""a=1,b=2"""
+95,"['\n', ' ', ' \\', ' #', '<|endoftext|>', '1', ' assert', '2', '\n\n', ' ==', 'assert', "" '"", ' (', '0', ' and', ' <', ' or', '3', 'or', ' ""', '5', ' +', '4', ' *', '==', ' ...', ' is', ' -', ',', '\xa0', '\\', ' ,', '_', ' in', 'and', '\n\n\n\n', '+', '-', '7', ' --']","def filter_by_threshold(line):
+    """"""
+    Just a filter
+    """"""
+    temp = float(str.split(line, ',')[2])
+    return temp > 50
+
+assert filter_by_threshold(
+    '2014-01-01T11:00:00,2014-01-01T11:01:00.000Z,12.55') == ","assert filter_by_threshold(
+    '2014-01-01T11:00:00,2014-01-01T11:01:00.000Z,12.55') == False"
+96,"['assert', ' assert', '\n', '<|endoftext|>', 'print', 'Assert', '\t', 'for', ' Assert', '#', ' print', 'a', 'ASSERT', '_', '1', '(', 'if', 'def', 'x', ' ', 's', 'is', '2', 'n', 't', 'b', 'f', 'd', 'c', '0', 'F', 'T', 'k', 'm', '-', 'import', 'i', ' for', '[', ' #']","def is_palindrome(num):
+	"""""" Returns true if a number is a palindrome """"""
+	reverse, forward = 0, num
+	while (num > 0):
+		reverse = reverse*10 + num%10
+		num /= 10
+	return forward == reverse
+
+assert is_palindrome(12345) == ",assert is_palindrome(12345) == False
+97,"[' world', 'world', ' World', 'World', 'WORLD', '世界', 'orld', ' universe', 'ORLD', ' wor', ' word', ' hello', ' w', ' there', ' earth', '\xa0', '_', ' planet', 'universe', ' ', 'Word', ' space', '-', '\\', ' Word', 'loworld', 'Earth', ""',"", 'hello', 'helloworld', ' s', 'iverse', ' Earth', ' again', ' future', '<fim_middle>', ' kernel', ""'"", '<fim_pad>', '    ']","def rotate(string, n):
+    """"""Rotate characters in a string. Expects string and n (int) for 
+       number of characters to move.
+    """"""
+    return string[n:] + string[:n]
+
+assert rotate(u'hello world', 0) == ","assert rotate(u'hello world', 0) == u'hello world'"
+98,"['Both', 'both', ' both', ' Both', '两个', '两种', 'BOTH', '两', ' twice', '2', 'yx', ' Bi', 'ne', '双', 'Amb', '二', ' two', ' amb', ' bi', ' 두', 'float', ' LR', 'normalized', 'bi', 'sqrt', 'Ne', 'har', 'two', 'share', 'unsafe', ' float', ' equal', 'equal', '\n', 'toFloat', 'Bi', ' TWO', ' normalized', ' normalization', 'normalize']","def normalized_in_degree(in_degree_dict):
+    """""" dict -> dict
+    Takes a dictionary of nodes with their indegree value, and returns a 
+    normalized dictionary whose values sum up to 1.
+    """"""
+    normalized = {}
+    for key in in_degree_dict:
+        normalized[key] = float(in_degree_dict[key]) / len(in_degree_dict)
+    return normalized
+
+assert normalized_in_degree({'x': 1, 'y': 1}) == ","assert normalized_in_degree({'x': 1, 'y': 1}) == {'x': 0.5, 'y': 0.5}"
+99,"['.', ' epoch', 'epoch', 'JD', '\n', ' ', 'Epoch', 'mJ', 'Jul', 'JM', ' Mid', ' Modified', ' *', ' +', 'jul', 'pulsar', ',', 'Jf', 'MJ', 'hj', 'hemer', 'zM', ' Jul', 'Jd', '_', 'Mid', '\n   ', '*', ':', 'BJ', '�', ' mid', '\n\n', 'CJ', 'Ep', 'Dat', '+', 'ResultCode', '  ', '5']","def Julian_Epoch_to_MJD(jepoch):
+    """"""
+    Julian_Epoch_to_MJD(jepoch):
+       Convert Julian Epoch to Modified Julian Date (MJD)
+    """"""
+    return 51544.5 + (jepoch-2000.0)*365.25
+
+assert Julian_Epoch_to_MJD(2000.5) == ",assert Julian_Epoch_to_MJD(2000.5) == 51544.5 + 365.25/2
