@@ -15,7 +15,6 @@ from model_utils import *
 
 '''
 
-
 class ModelLoader:
     def __init__(self, 
                  model_name_or_path, 
@@ -98,7 +97,8 @@ class ModelLoader:
     def trace_generate(
             self,
             prompts: Union[str, List[str]],                 
-            max_new_toks: int = 1,          
+            max_new_toks: int = None,
+            stop_toks : List[str] = [],          
             request_activations: List[int] = [],
             request_logits: List[int] = [],
             report_topk_logits : int = 10,
@@ -108,6 +108,11 @@ class ModelLoader:
         '''
         Trace with cache implementation if possible
         '''
+        if max_new_toks is None and stop_toks == []:
+            raise(ValueError, "Either max_new_toks or stop_toks must be specified")
+        # if pick_from_topk is not None and pick_greedily == True:
+        #     raise(ValueError, "pick_from_topk and pick_greedily cannot be both specified")
+        
         if(type(prompts) == str):
             prompts = [prompts]
         
@@ -144,15 +149,23 @@ class ModelLoader:
             report_input_tokenized.append((curr_inp_tok))
         ret_dict = {"input_tokenized": report_input_tokenized}
 
-
         # init size of context
         past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item()) 
 
-        
         generated_tokens = [[] for _ in range(input_ids.size(0))]
         with torch.no_grad():
-            max_out_len =  prompt_len + max_new_toks
-            while input_ids.size(1) < max_out_len: 
+            if max_new_toks is not None:
+                max_out_len = prompt_len + max_new_toks
+            else:
+                max_out_len = prompt_len + 512
+                
+            if stop_toks != []:
+                stop_ids = [self.tokenizer(stop_tok, padding=True, return_tensors='pt')['input_ids'].tolist()[0]
+                    for stop_tok in stop_toks]
+            else:
+                stop_ids = [self.model.config.eos_token_id]
+                
+            while input_ids.size(1) < max_out_len:
 
                 ## traces curr_inputs -> prediction of next tok
                 with TraceDict(
@@ -209,8 +222,11 @@ class ModelLoader:
                     new_tok_indices = torch.multinomial(softmax_out_top_k, 1)
                     new_toks = torch.gather(tk, 1, new_tok_indices)
                 else:
-                    new_tok_indices = torch.topk(softmax_out_top_k, dim=1, k=1)
-                    new_toks = torch.gather(tk, 1, new_tok_indices.indices)
+                    top_idx = torch.tensor([0]).cuda()
+                    new_tok_indices = torch.index_select(softmax_out_top_k[0], 0, top_idx)
+                    # new_tok_indices = torch.topk(softmax_out_top_k, dim=1, k=1, sorted=False)
+                    print(new_tok_indices[0])
+                    new_toks = torch.gather(tk, 1, 0)
 
                 for i in range(input_ids.size(0)):
                     generated_tokens[i].append(
@@ -247,9 +263,8 @@ class ModelLoader:
                     if last_non_masked[i].item() + 1 != cur_context.stop:
                         continue
 
-
                     # Stop generating if we've already maxed out for this prompt
-                    if new_idx < max_out_len:
+                    if new_idx < max_out_len and [new_toks[i]] not in stop_ids:
                         # print("new_toks", new_toks[i], i)
                         input_ids[i][new_idx] = new_toks[i]
                         attention_mask[i][new_idx] = 1
@@ -260,8 +275,8 @@ class ModelLoader:
             cur_context = slice(0, cur_context.stop + 1)
 
             # clear up GPU
-            del(traces)
-            del(model_out)
+            # del(traces)
+            # del(model_out)
             torch.cuda.empty_cache()                
 
             txt = [self.tokenizer.decode(x) for x in input_ids.detach().cpu().numpy().tolist()]
@@ -281,101 +296,3 @@ class ModelLoader:
             if request_logits is not None and len(request_logits) > 0:
                 ret_dict["logits"] = layer_logits_track
             return txt, ret_dict
-
-    
-        
-    def trace_with_patch(
-        self,
-        prompts,
-        heads_to_patch, # (head_index, layername)
-        states_to_patch, # (layer_from, layer_to, start_tok, end_tok)
-    ):
-        pass
-    
-        
-    def patch_hidden_states(
-        self,
-        prompts,
-        state_to_state, # [(from,to)] # start, end tok
-        pick_greedily= False,
-        pick_from_topk = None
-    ):
-        layers_dst = [layername(self.model, i) for i in list(list(zip(*state_to_state))[1])]
-        layers_src = [layername(self.model, i) for i in list(list(zip(*state_to_state))[0])]
-        
-        dst_2_src= {layername(self.model, to) : layername(self.model, from_) 
-                          for (from_, to) in state_to_state}
-        src_2_dst = {from_: to for to, from_ in dst_2_src.items()}
-        
-        if pick_from_topk is None:
-            pick_from_topk = self.model.config.vocab_size
-            
-        toks = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
-        inp = toks["input_ids"]
-        
-        embed_layername = layername(self.model, 0, "embed")
-        
-        # keep embed layer uncorrupted
-        
-        assert embed_layername not in layers_dst+layers_src
-        
-
-        src_activations = {layername(self.model, i): None for i in range(1, 40)}
-        # print(layers_dst, layers_src, dst_2_src, src_2_dst)
-        def patch_rep(x, layer): # x is the output of the layer
-            # print(layer)
-            if layer in layers_src:
-                src_activations[layer] = x
-                # print("SRC", x, src_activations[layer])
-                assert all(torch.eq(src_activations[layer][0], x[0]).flatten().tolist())
-                return x
-            elif layer in layers_dst:
-                # print("DST", x, src_activations[dst_2_src[layer]])
-                assert False in (torch.eq(src_activations[dst_2_src[layer]][0], x[0]).flatten().tolist())
-                return src_activations[dst_2_src[layer]]
-            else:
-                return x
-            return x
-            
-
-        # With the patching rules defined, run the patched model in inference.
-        with torch.no_grad(), TraceDict(
-            self.model,
-            [layername(self.model, i) for i in range(1, 40)],
-            edit_output_block=patch_rep,
-        ) as td:
-            model_out = self.model(inp)
-
-        # We report softmax probabilities for the answers_t token predictions of interest.
-        probs = torch.nn.functional.softmax(model_out.logits[:, -1, :], dim=1)
-        tk = torch.topk(probs, pick_from_topk, dim=1).indices
-        softmax_out_top_k = torch.gather(probs, 1, tk)
-        softmax_out_top_k = softmax_out_top_k / softmax_out_top_k.sum(1)[:, None]
-
-        if(pick_greedily == False):
-            new_tok_indices = torch.multinomial(softmax_out_top_k, 1)
-            new_toks = torch.gather(tk, 1, new_tok_indices)
-        else:
-            new_tok_indices = torch.topk(softmax_out_top_k, dim=1, k=1)
-            new_toks = torch.gather(tk, 1, new_tok_indices.indices)
-
-        return new_toks, probs
-    
-
-      
-    # def search_causal_heads(self, prompt, layers = range(20,31), replace=False, noise=0.9):
-    #     heads_to_patch = []
-    #     for l in layers:
-    #         layername = self.layername(l)
-    #         heads_to_patch += [(i, layername) for i in range(48)]
-            
-    #     probs = self.trace_with_patch(prompt, heads_to_patch=heads_to_patch, 
-    #                             replace=replace, noise = noise)
-    #     top_completion = self.tokenizer.decode(probs.argmax(dim=0))
-    #     # print(top_completion, heads_to_patch)
-    #     try:
-    #         tc = int(top_completion)
-    #     except:
-    #         return []
-            
-        # return heads_to_patch
