@@ -8,43 +8,44 @@ import unicodedata
 from pathlib import Path
 import os
 import numpy
+import time
 from collections import defaultdict
-# from baukit.nethook import get_module, set_requires_grad
 from model_utils import *
 '''
-
+Wrapper class for Transformer models
 '''
 
 class ModelLoader:
     def __init__(self, 
                  model_name_or_path, 
                  dtype = torch.float32) -> None:
-        
         self.model_name = model_name_or_path
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name, 
             output_attentions=True,
-            use_auth_token=True,
             low_cpu_mem_usage=True, ## loads with accelerate
             torch_dtype=dtype,
             trust_remote_code=True,
-            
         )
         torch.set_grad_enabled(False)
         self.model.eval().cuda()
          
-        # post process
+        # extract field names
         self.extract_fields()
         
-        set_requires_grad(False, self.model)
-        
-        ## set pad tokens
+        ## init tok
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name) 
         self.tokenizer.clean_up_tokenization_spaces=False
         self.tokenizer.padding_side="left"
         self.tokenizer.pad_token = self.tokenizer.eos_token  
          
-    def generate(self, prompt, max_new_tokens=100, stop_tokens = [], temperature=1.0, only_generated=False, do_print=False, do_sample=False):
+    def generate(self, 
+                 prompt : str, 
+                 max_new_tokens : int = 100, 
+                 stop_tokens : List[str]= [], 
+                 temperature : float=1.0, 
+                 do_sample : bool =False,
+                 append_prompt_prefix : bool = True):
         inputs = self.tokenizer(prompt, padding=True, return_tensors="pt").to(self.model.device)
         ## stop criteria
         stop_ids = [self.tokenizer(stop_tok, padding=True, return_tensors='pt')['input_ids'] 
@@ -54,7 +55,8 @@ class ModelLoader:
         
         stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(stops=stop_ids, 
                                                                         encounters=encounters)])
-        outputs = self.model.generate(**inputs, max_new_tokens=max_new_tokens,
+        outputs = self.model.generate(**inputs, 
+                                         max_new_tokens=max_new_tokens,
                                          pad_token_id=self.tokenizer.eos_token_id,
                                          stopping_criteria=stopping_criteria,
                                          temperature=temperature,
@@ -62,22 +64,20 @@ class ModelLoader:
         
         generated = self.tokenizer.decode(outputs[0])[len(prompt):]
         
-        if only_generated:
-            if do_print:
-                print(generated)
-            return generated
+        if append_prompt_prefix:
+            return gprompt + generated
         else:
-            if do_print:
-                print(prompt + generated)
-            return prompt + generated
+            return generated
     
     def extract_fields(self):
         """
-        model_type
-        no_split_module_classes
-        layer_name_format
-        mlp_module_name_format
-        attn_module_name_format
+        Inits the following fields:
+        - tracable_modules
+        - model_type
+        - no_split_module_classes
+        - layer_name_format
+        - mlp_module_name_format
+        - attn_module_name_format
         """
         self.model_type = self.model.config.model_type
         self.no_split_module_classes = self.model._no_split_modules
@@ -87,36 +87,34 @@ class ModelLoader:
         self.mlp_module_name_format = formats["mlp"]
         self.attn_module_name_format = formats["attn"]
         
-
         if(self.model_type is not None):
             self.layer_names = [self.layer_name_format.format(i) for i in range(self.model.config.n_layer)]
             self.mlp_module_names = [self.mlp_module_name_format.format(i) for i in range(self.model.config.n_layer)]
             self.attn_module_names = [self.attn_module_name_format.format(i) for i in range(self.model.config.n_layer)]
             self.tracable_modules =  self.mlp_module_names + self.attn_module_names + self.layer_names
             
+    
     def trace_generate(
             self,
-            prompts: Union[str, List[str]],                 
-            max_new_toks: int = None,
+            prompt: str,                 
+            max_new_toks: int = 512,
             stop_toks : List[str] = [],          
             request_activations: List[int] = [],
             request_logits: List[int] = [],
-            report_topk_logits : int = 10,
-            pick_from_topk : int = None,
-            pick_greedily : bool = False, 
+            do_greedy_decoding : bool = True,
+            gather_only_topk_logits : int = None,
         ):
         '''
-        Trace with cache implementation if possible
+        generate with trace (collecting either logits or activations at specified layers)
         '''
+        if gather_only_topk_logits is None:
+            # get all logits
+            gather_only_topk_logits = self.model.config.vocab_size
+            
+        # Setup with warnings
         if max_new_toks is None and stop_toks == []:
             raise(ValueError, "Either max_new_toks or stop_toks must be specified")
-        # if pick_from_topk is not None and pick_greedily == True:
-        #     raise(ValueError, "pick_from_topk and pick_greedily cannot be both specified")
         
-        if(type(prompts) == str):
-            prompts = [prompts]
-        
-        # print(self.tracable_modules)
         if(len(request_activations) > 0):
             invalid_module = list(set(request_activations) - set(self.tracable_modules))
             assert(
@@ -132,41 +130,39 @@ class ModelLoader:
             ), f"modules {invalid_module} are not in the list of tracable modules"
             layer_logits_track = {k: None for k in request_logits}
         
+        prompts = [prompt]
         tokenized = self.tokenizer(prompts, padding=True, return_tensors="pt").to(self.model.device)
         input_ids, attention_mask = tokenized["input_ids"], tokenized["attention_mask"]
         prompt_len = input_ids.size(1)
         batch_size = input_ids.size(0)
-        assert batch_size == 1, "batch size must be 1"
+        assert batch_size == 1, "batch size must be 1" # TODO expand
 
         ## add prompt to ret dict
-        report_input_tokenized = []
-        for b in range(batch_size):
-            curr_inp_tok = []
-            for t, a in zip(input_ids[b], attention_mask[b]):
-                if(a == 0):
-                    break
-                curr_inp_tok.append((self.tokenizer.decode(t), t.item()))
-            report_input_tokenized.append((curr_inp_tok))
-        ret_dict = {"input_tokenized": report_input_tokenized}
+        prompt_toks = []
+        for tok, mask in zip(input_ids[0], attention_mask[0]):
+            if(mask == 0):
+                break
+            prompt_toks.append((self.tokenizer.decode(tok), tok.item()))
+        ret_dict = {"input_tokenized": [prompt_toks]}
 
         # init size of context
         past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item()) 
-
         generated_tokens = [[] for _ in range(input_ids.size(0))]
+        
+        # prep stopping criterias
+        max_out_len = prompt_len + max_new_toks
+            
+        if stop_toks != []:
+            stop_ids = [self.tokenizer(stop_tok, padding=True, return_tensors='pt')['input_ids'].tolist()[0]
+                for stop_tok in stop_toks]
+        else:
+            stop_ids = [self.model.config.eos_token_id]
+                
+        # generate loop
         with torch.no_grad():
-            if max_new_toks is not None:
-                max_out_len = prompt_len + max_new_toks
-            else:
-                max_out_len = prompt_len + 512
-                
-            if stop_toks != []:
-                stop_ids = [self.tokenizer(stop_tok, padding=True, return_tensors='pt')['input_ids'].tolist()[0]
-                    for stop_tok in stop_toks]
-            else:
-                stop_ids = [self.model.config.eos_token_id]
-                
+            # while < max_out_len and not stop_tok
             while input_ids.size(1) < max_out_len:
-
+                # and input_ids[:, cur_context][:,-1].tolist() not in stop_ids):
                 ## traces curr_inputs -> prediction of next tok
                 with TraceDict(
                     self.model, 
@@ -181,6 +177,7 @@ class ModelLoader:
                         use_cache = False,  
                     )
 
+                # collect activations
                 if(len(request_activations) > 0):
                     assert layername(self.model, 0, "embed") not in request_activations, "Embedding layer is not supported"
                     if(input_ids.size(1) == max_out_len - 1):
@@ -191,7 +188,9 @@ class ModelLoader:
                                 attn_track[module] = traces[module].attn_output[0].cpu().numpy()
                             if(mlp_track[module] is None):
                                 mlp_track[module] = traces[module].mlp_output[0].cpu().numpy()
+                # collect logits
                 if(len(request_logits) > 0):
+                    num_logits_to_return = 10
                     assert layername(self.model, 0, "embed") not in request_logits, "Embedding layer is not supported"
                     if(input_ids.size(1) == max_out_len - 1):
                         for module in request_logits:
@@ -202,40 +201,21 @@ class ModelLoader:
                                 apply_head = torch.softmax(
                                         lm_head(ln_f(probs[:, -1, :])), dim=1
                                     )
-                                rets = torch.topk(apply_head[-1], report_topk_logits)
+                                rets = torch.topk(apply_head[-1], num_logits_to_return)
                                 tokenized = [self.tokenizer.decode(i) for i in rets.indices]
-                                assert(len(tokenized) == report_topk_logits)
+                                assert(len(tokenized) == num_logits_to_return)
                                 layer_logits_track[module] = list(zip(tokenized, rets.values.cpu().numpy()))
-                                
-                final_logits, past_key_values = model_out.logits, model_out.past_key_values
+                           
+                new_toks, topk_logits,softmax_out= trace_decode(model_out, do_greedy_decoding, gather_only_topk_logits)
 
-                softmax_out = torch.nn.functional.softmax(final_logits[:, -1, :], dim=1)
-
-                # Top-k sampling
-                if pick_from_topk == None:
-                    pick_from_topk = self.model.config.vocab_size
-                tk = torch.topk(softmax_out, pick_from_topk, dim=1).indices
-                softmax_out_top_k = torch.gather(softmax_out, 1, tk)
-                softmax_out_top_k = softmax_out_top_k / softmax_out_top_k.sum(1)[:, None]
-
-                if(pick_greedily == False):
-                    new_tok_indices = torch.multinomial(softmax_out_top_k, 1)
-                    new_toks = torch.gather(tk, 1, new_tok_indices)
-                else:
-                    top_idx = torch.tensor([0]).cuda()
-                    new_tok_indices = torch.index_select(softmax_out_top_k[0], 0, top_idx)
-                    # new_tok_indices = torch.topk(softmax_out_top_k, dim=1, k=1, sorted=False)
-                    print(new_tok_indices[0])
-                    new_toks = torch.gather(tk, 1, 0)
-
+                # collect tokens generated from final layer
                 for i in range(input_ids.size(0)):
                     generated_tokens[i].append(
                         [
                             {"token": self.tokenizer.decode(t), "id": t.item(), "p": softmax_out[i][t.item()].item()}
-                            for t in tk[i]
+                            for t in topk_logits[i]
                         ]
                     )
-
 
                 ## Auto-regression: insert new tok into inputs
 
@@ -264,8 +244,8 @@ class ModelLoader:
                         continue
 
                     # Stop generating if we've already maxed out for this prompt
-                    if new_idx < max_out_len and [new_toks[i]] not in stop_ids:
-                        # print("new_toks", new_toks[i], i)
+                    if new_idx < max_out_len:
+                    # and new_toks[i].tolist() not in stop_ids:
                         input_ids[i][new_idx] = new_toks[i]
                         attention_mask[i][new_idx] = 1
                         cur_context = slice(0, new_idx.item()+1)
@@ -281,13 +261,6 @@ class ModelLoader:
 
             txt = [self.tokenizer.decode(x) for x in input_ids.detach().cpu().numpy().tolist()]
 
-            txt = [
-                unicodedata.normalize("NFKD", x)
-                # .replace("\n\n", " ")
-                # .replace("<|endoftext|>", "")
-                for x in txt
-            ]
-
             ret_dict["generated_tokens"] = generated_tokens
             if(request_activations is not None and len(request_activations) > 0):
                 ret_dict["block"] = activation_track
@@ -295,4 +268,4 @@ class ModelLoader:
                 ret_dict["mlp"] = mlp_track
             if request_logits is not None and len(request_logits) > 0:
                 ret_dict["logits"] = layer_logits_track
-            return txt, ret_dict
+            return txt[0], ret_dict

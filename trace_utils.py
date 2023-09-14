@@ -147,8 +147,8 @@ class Trace(contextlib.AbstractContextManager):
             return output
 
         self.registered_hook = module.register_forward_hook(retain_hook_block)
-        # self.registered_attn_hook = module.attn.register_forward_hook(retain_hook_attn)
-        # self.registered_mlp_hook = module.mlp.register_forward_hook(retain_hook_mlp)
+        self.registered_attn_hook = module.attn.register_forward_hook(retain_hook_attn)
+        self.registered_mlp_hook = module.mlp.register_forward_hook(retain_hook_mlp)
         self.stop = stop
 
     def __enter__(self):
@@ -160,6 +160,8 @@ class Trace(contextlib.AbstractContextManager):
             return True
 
     def close(self):
+        self.registered_attn_hook.remove()
+        self.registered_mlp_hook.remove()
         self.registered_hook.remove()
 
 

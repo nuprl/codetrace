@@ -1,0 +1,595 @@
+,seed,is_correct,completion,gold,input n,layernum,prompt
+0,0,True_First,l,d,38,18,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+1,0,True_First,j,d,40,18,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+2,0,True_First,j,d,41,18,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+3,0,True_First,j,d,42,18,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+4,0,True_First,j,d,43,18,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+5,0,True_Last,e,d,46,21,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+6,0,True_First,j,d,47,18,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+7,0,True_First,j,d,48,18,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+8,0,True_First,j,d,49,18,"def func(i : int) -> str:
+    if i == 6:
+        return ""e""
+    elif i == 11:
+        return ""c""
+    elif i == 0:
+        return ""b""
+    elif i == 4:
+        return ""j""
+    elif i == 7:
+        return ""m""
+    elif i == 3:
+        return ""l""
+    elif i == 2:
+        return ""h""
+    elif i == 10:
+        return ""a""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""g""
+    elif i == 9:
+        return ""k""
+    elif i == 1:
+        return ""i""
+    else:
+        return ""d"""
+9,1,True_First,h,k,31,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+10,1,True_First,h,k,35,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+11,1,True_First,h,k,36,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+12,1,True_First,h,k,38,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+13,1,True_First,h,k,39,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+14,1,True_First,j,k,40,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+15,1,True_First,j,k,41,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+16,1,True_First,j,k,42,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+17,1,True_First,j,k,43,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+18,1,True_First,j,k,46,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+19,1,True_First,j,k,47,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+20,1,True_First,j,k,48,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
+21,1,True_First,j,k,49,18,"def func(i : int) -> str:
+    if i == 2:
+        return ""a""
+    elif i == 9:
+        return ""g""
+    elif i == 1:
+        return ""l""
+    elif i == 4:
+        return ""j""
+    elif i == 10:
+        return ""m""
+    elif i == 3:
+        return ""h""
+    elif i == 6:
+        return ""c""
+    elif i == 5:
+        return ""f""
+    elif i == 8:
+        return ""b""
+    elif i == 0:
+        return ""i""
+    elif i == 11:
+        return ""e""
+    elif i == 7:
+        return ""d""
+    else:
+        return ""k"""
