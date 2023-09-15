@@ -1,5 +1,4 @@
 """
-Modified from baukit
 Utilities for instrumenting a torch model.
 
 Trace will hook one layer at a time.
@@ -15,8 +14,12 @@ import inspect
 from collections import OrderedDict
 from baukit.nethook import StopForward, recursive_copy, invoke_with_optional_args, get_module, get_parameter, replace_module, subsequence, set_requires_grad
 import torch
+from typing import Callable, List, Tuple
+import numpy
 
-
+"""
+Modified from baukit: added patch for attn and mlp
+"""
 class Trace(contextlib.AbstractContextManager):
     """
     To retain the output of the named layer during the computation of
@@ -245,3 +248,5 @@ class TraceDict(OrderedDict, contextlib.AbstractContextManager):
     def close(self):
         for layer, trace in reversed(self.items()):
             trace.close()
+
+

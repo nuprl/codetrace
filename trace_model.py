@@ -15,7 +15,7 @@ from model_utils import *
 Wrapper class for Transformer models
 '''
 
-class ModelLoader:
+class TraceBase:
     def __init__(self, 
                  model_name_or_path, 
                  dtype = torch.float32) -> None:
@@ -38,7 +38,24 @@ class ModelLoader:
         self.tokenizer.clean_up_tokenization_spaces=False
         self.tokenizer.padding_side="left"
         self.tokenizer.pad_token = self.tokenizer.eos_token  
-         
+    
+    
+    def layername(self, num : int, kind : str = None) -> str:
+        """ Get layername """
+        model = self.model
+        if hasattr(model, "transformer"):
+            if kind == "embed":
+                return "transformer.wte"
+            return f'transformer.h.{num}{"" if kind is None else "." + kind}'
+        if hasattr(model, "gpt_neox"):
+            if kind == "embed":
+                return "gpt_neox.embed_in"
+            if kind == "attn":
+                kind = "attention"
+            return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
+        assert False, "unknown transformer structure"  
+        
+        
     def generate(self, 
                  prompt : str, 
                  max_new_tokens : int = 100, 
@@ -65,7 +82,7 @@ class ModelLoader:
         generated = self.tokenizer.decode(outputs[0])[len(prompt):]
         
         if append_prompt_prefix:
-            return gprompt + generated
+            return prompt + generated
         else:
             return generated
     
@@ -98,11 +115,14 @@ class ModelLoader:
             self,
             prompt: str,                 
             max_new_toks: int = 512,
-            stop_toks : List[str] = [],          
-            request_activations: List[int] = [],
-            request_logits: List[int] = [],
+            stop_toks : List[str] = None,          
+            request_activations: List[str] = [],
+            request_logits: List[str] = [],
             do_greedy_decoding : bool = True,
             gather_only_topk_logits : int = None,
+            edit_output_attn: callable = None,
+            edit_output_mlp: callable = None,
+            edit_output_block: callable = None,
         ):
         '''
         generate with trace (collecting either logits or activations at specified layers)
@@ -112,7 +132,7 @@ class ModelLoader:
             gather_only_topk_logits = self.model.config.vocab_size
             
         # Setup with warnings
-        if max_new_toks is None and stop_toks == []:
+        if max_new_toks is None and stop_toks is None:
             raise(ValueError, "Either max_new_toks or stop_toks must be specified")
         
         if(len(request_activations) > 0):
@@ -152,7 +172,7 @@ class ModelLoader:
         # prep stopping criterias
         max_out_len = prompt_len + max_new_toks
             
-        if stop_toks != []:
+        if stop_toks:
             stop_ids = [self.tokenizer(stop_tok, padding=True, return_tensors='pt')['input_ids'].tolist()[0]
                 for stop_tok in stop_toks]
         else:
@@ -166,9 +186,12 @@ class ModelLoader:
                 ## traces curr_inputs -> prediction of next tok
                 with TraceDict(
                     self.model, 
-                    layers = request_activations+request_logits,
+                    layers = list(set(request_activations+request_logits)),
                     retain_input=True,
-                    retain_output=True
+                    retain_output=True,
+                    edit_output_attn=edit_output_attn,
+                    edit_output_mlp=edit_output_mlp,
+                    edit_output_block=edit_output_block,
                 ) as traces:
                     model_out = self.model(
                         input_ids=input_ids[:, cur_context],
@@ -176,6 +199,7 @@ class ModelLoader:
                         past_key_values=past_key_values,
                         use_cache = False,  
                     )
+                traces.close()
 
                 # collect activations
                 if(len(request_activations) > 0):
@@ -206,14 +230,19 @@ class ModelLoader:
                                 assert(len(tokenized) == num_logits_to_return)
                                 layer_logits_track[module] = list(zip(tokenized, rets.values.cpu().numpy()))
                            
-                new_toks, topk_logits,softmax_out= trace_decode(model_out, do_greedy_decoding, gather_only_topk_logits)
+                new_toks, topk_logits, softmax_out= trace_decode(model_out, do_greedy_decoding, gather_only_topk_logits)
 
+
+                def calc_probs(batch_i, logit_idx):
+                    return softmax_out[batch_i][logit_idx].item()
+                    
                 # collect tokens generated from final layer
-                for i in range(input_ids.size(0)):
-                    generated_tokens[i].append(
+                # for every prompt in batch i 
+                for batch_i in range(input_ids.size(0)): 
+                    generated_tokens[batch_i].append(
                         [
-                            {"token": self.tokenizer.decode(t), "id": t.item(), "p": softmax_out[i][t.item()].item()}
-                            for t in topk_logits[i]
+                            {"token": self.tokenizer.decode(token_id), "id": token_id.item(), "p": calc_probs(batch_i, logit_idx)}
+                            for logit_idx,token_id in enumerate(topk_logits[batch_i])
                         ]
                     )
 

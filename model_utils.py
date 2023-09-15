@@ -2,6 +2,7 @@ import torch
 import re
 import gc
 from transformers import StoppingCriteria
+from typing import Callable
 
 """
 Cuda utils
@@ -27,17 +28,17 @@ def clear_devs():
 Model generation utils
 """
 def layername(model, num, kind=None):
-        if hasattr(model, "transformer"):
-            if kind == "embed":
-                return "transformer.wte"
-            return f'transformer.h.{num}{"" if kind is None else "." + kind}'
-        if hasattr(model, "gpt_neox"):
-            if kind == "embed":
-                return "gpt_neox.embed_in"
-            if kind == "attn":
-                kind = "attention"
-            return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
-        assert False, "unknown transformer structure"    
+    if hasattr(model, "transformer"):
+        if kind == "embed":
+            return "transformer.wte"
+        return f'transformer.h.{num}{"" if kind is None else "." + kind}'
+    if hasattr(model, "gpt_neox"):
+        if kind == "embed":
+            return "gpt_neox.embed_in"
+        if kind == "attn":
+            kind = "attention"
+        return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
+    assert False, "unknown transformer structure"    
  
 
 def extract_layer_formats(named_params_iterator):
@@ -56,7 +57,7 @@ def extract_layer_formats(named_params_iterator):
         
     return {"mlp":mlp, "attn":attn, "layer":layer}
 
-def trace_decode(model_out, do_greedy_decoding, gather_only_topk_logits):
+def trace_decode(model_out, do_greedy_decoding : bool, gather_only_topk_logits : int):
     ## last layer logits     
     final_logits, past_key_values = model_out.logits, model_out.past_key_values
     softmax_out = torch.nn.functional.softmax(final_logits[:, -1, :], dim=1)
@@ -75,7 +76,31 @@ def trace_decode(model_out, do_greedy_decoding, gather_only_topk_logits):
         new_tok_indices = torch.topk(softmax_out_top_k, dim=1, k=1)
         new_toks = torch.gather(topk_logits, 1, new_tok_indices.indices)
 
+    assert(topk_logits.shape[-1] == gather_only_topk_logits), topk_logits.shape
+    assert( softmax_out_top_k.shape[-1] == gather_only_topk_logits),  softmax_out_top_k.shape
+    
     return new_toks, topk_logits, softmax_out_top_k
+
+
+def find_idx_tok(prompt, target, tokenizer):
+    print("""WARNING: this is a hacky way to find the index of a token in a prompt.
+        Picks first appearance of token ignoring rest.""")
+    prompt_t = [tokenizer.decode(i) for i in list(tokenizer([prompt])["input_ids"])[0]]
+    for i,tok in enumerate(prompt_t):
+        if target in tok:
+            return i
+    raise KeyError
+
+def make_noise_fn(noise_amt : float,
+                uniform_noise : bool) -> Callable:
+    ## noise create
+    rs = numpy.random.RandomState(1)  
+    if uniform_noise:
+        prng = lambda *shape: rs.uniform(-1, 1, shape)
+    else:
+        prng = lambda *shape: rs.randn(*shape)
+
+    return lambda x: (noise_amt * torch.from_numpy(prng(*x))).type(torch.FloatTensor)
 
 """
 StoppingCritera
