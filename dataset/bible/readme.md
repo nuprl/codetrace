@@ -10,5 +10,5 @@ This dir contains variations of one ts program "bible" from stenotype-eval-datas
 ## LLM performance
 
 CodeLlama: 0
-Starcoder: 0
-`unknown` is hard because it is a broad definition. Surprisingly, `BookTitle` is also hard for CodeLlamas, probably because it is confusing the theme "bible". Starcoder finds it easy.
+Starcoder: good
+`unknown` is hard because it is a broad definition. Surprisingly, `BookTitle` is also hard for CodeLlamas, probably because it is confusing the theme "bible". Starcoder finds both easy.

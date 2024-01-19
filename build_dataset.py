@@ -26,6 +26,11 @@ def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
 def std_to_placeholder_fmt(prompt : str, fim : FimObj) -> str:
     return prompt.replace(fim.prefix, "").replace(fim.suffix, fim.placeholder).replace(fim.token,"")
 
+def unfim(text : str, fim : FimObj) -> str:
+    prefix = text.split(fim.prefix)[-1].split(fim.suffix)[0]
+    suffix = text.split(fim.suffix)[-1].split(fim.token)[0]
+    middle = text.split(fim.token)[-1]
+    return prefix+middle+suffix
 
 def generate_test(prompts : Tuple[str, str], 
                   llm : LLM, 
