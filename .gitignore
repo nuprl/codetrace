@@ -2,3 +2,8 @@
 __pycache__/
 build/
 completions/
+node_modules/
+ts-benchmark-dataset/
+notebooks/
+package-lock.json
+package.json

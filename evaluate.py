@@ -39,7 +39,7 @@ def replace_between_points(original_string : str, start_point : Tuple[int], end_
         temp.write(original_string)
         temp.seek(0)
         original_string = temp.read()
-    replacement = ": "+replacement
+    # replacement = ": "+replacement
     start_index = len("\n".join(original_string.splitlines()[:start_point[0]])) + start_point[1]+1
     end_index = len("\n".join(original_string.splitlines()[:end_point[0]])) + end_point[1]+1
     modified_string = (
@@ -86,8 +86,10 @@ function countPeople(ln: Line): number {
         f.write(s)
 
 
-def fim_example(ex):
-    prog = ex["content"]
+def fim_example(ex : dict) -> list[str]:
+    return fim_prog(ex["content"])
+
+def fim_prog(prog : str) -> list[str]:
     tree = parser.parse(bytes( prog, "utf8"))
     
     query = TS_LANGUAGE.query(
@@ -112,13 +114,8 @@ def fim_dataset(hf_dataset):
 
 if __name__ == "__main__":
     # test_tree_sitter()
-    # ds = datasets.load_dataset("franlucc/stenotype-eval-dataset", split="train")
-    # fim_examples = fim_dataset(ds)
-    # with open("fim_eval_prompts.json", "w") as f:
-    #     json.dump(fim_examples, f, indent=4)
-    
-    with open("fim_eval_prompts.json", "r") as f:
-        fim_examples = json.load(f)
+    ds = datasets.load_from_disk("ts-benchmark-dataset")
+    fim_examples = fim_dataset(ds)
     
     ## model
     root = "/home"
@@ -136,9 +133,9 @@ if __name__ == "__main__":
             f.write(unfim(prompt+generated_text, starcoder_fim))
 
     def full_generate():
-        completions_dir = "completions/starcoder/singletok"
+        completions_dir = "completions/starcoderbase-7b/multitok"
         os.makedirs(completions_dir, exist_ok=True)
-        params = SamplingParams(temperature=0, max_tokens=1)
+        params = SamplingParams(temperature=0, max_tokens=50)
         for k,ex in enumerate(fim_examples):
             prompts = [placeholder_to_std_fmt(prompt_fim_var, starcoder_fim) for prompt_fim_var in ex]
             out = llm.generate(prompts, params)
@@ -149,12 +146,13 @@ if __name__ == "__main__":
                 with open(f"{completions_dir}/prog_{k}/var_{i}.ts","w") as f:
                   f.write(unfim(prompt+generated_text,starcoder_fim))
 
-    # full_generate()
+    full_generate()
+    test_single()
 
-    def run_tsc(ts_dir):
-        """
-        todo: run tsc on all ts files in ts_dir and capture output - parse or no parse
-        """
-        for prog in glob.glob(f"{ts_dir}/*.ts"):
-            cont = open(prog, "r").read()
-            pass
+    # def run_tsc(ts_dir):
+    #     """
+    #     todo: run tsc on all ts files in ts_dir and capture output - parse or no parse
+    #     """                                                                                                                                                                                                  3*                                                                                                                                                                                           
+    #     for prog in glob.glob(f"{ts_dir}/*.ts"):
+    #         cont = open(prog, "r").read()
+    #         pass
