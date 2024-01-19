@@ -148,11 +148,3 @@ if __name__ == "__main__":
 
     full_generate()
     test_single()
-
-    # def run_tsc(ts_dir):
-    #     """
-    #     todo: run tsc on all ts files in ts_dir and capture output - parse or no parse
-    #     """                                                                                                                                                                                                  3*                                                                                                                                                                                           
-    #     for prog in glob.glob(f"{ts_dir}/*.ts"):
-    #         cont = open(prog, "r").read()
-    #         pass
