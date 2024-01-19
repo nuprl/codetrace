@@ -1,4 +1,4 @@
 .ipynb_*/
 __pycache__/
 build/
-completions
+completions/
