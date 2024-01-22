@@ -7,3 +7,5 @@ ts-benchmark-dataset/
 notebooks/
 package-lock.json
 package.json
+log/
+generations/
