@@ -1,4 +1,7 @@
 # TODO
 
-[] basic type activation patching
-[] find the circuit from task above (attn visualization first, then attn knockout)
+[] patch from one bad example to good
+    - collect dataset of bad examples for a model
+    - test generation in NNSight
+
+[] TODO: disable KV cache

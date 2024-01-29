@@ -2,7 +2,6 @@ import glob
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 import numpy as np
-from vllm import LLM, SamplingParams
 import os
 import json
 from tree_sitter import Language, Parser
@@ -96,10 +95,38 @@ def fim_prog(prog : str) -> list[str]:
     return fim_variations
 
 
+def fim_prog_func(prog : str) -> list[Tuple[str]]:
+    """
+    Given a typescript program, return a list of variations with FIM placeholders.
+    Only affect type annotations within function signatures
+    """
+    tree = TS_PARSER.parse(bytes( prog, "utf8"))
+    
+    # captures types within functions
+    query = TS_LANGUAGE.query(
+        """
+(required_parameter
+      pattern: (_) (type_annotation) @tp)
+  (optional_parameter
+      pattern: (_) (type_annotation) @tp)
+    return_type: (type_annotation) @tp
+    """
+    )
+    fim_variations = []
+    captures = query.captures(tree.root_node)
+    for c in captures:
+        text = c[0].text.decode("utf-8").replace(":", "").strip()
+        s = replace_between_points(prog, c[0].start_point, c[0].end_point, fim_placeholder)
+        fim_variations.append((s, text))
+    return fim_variations
+
+
 def replace_between_points(original_string : str, start_point : Tuple[int], end_point : Tuple[int], replacement):
     '''
     Replace a string A with a string B at interval (start_point, end_point) where each point 
     is a tuple of (column,row) of a char in the multiline string A [tree-sitter convention]
+    
+    TODO a type annotation could be union types eg. a | b
     '''
     with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
         temp.write(original_string)

@@ -101,7 +101,8 @@ def patch_fim_tokens(model : LanguageModel,
                      corrupted_prompt : str,
                      fim_tokens : FimObj,
                      correct_index : int,
-                     incorrect_index : int):
+                     incorrect_index : int,
+                     layers : list[int]):
     """
     Patch fim_tokens from corrupted prompt with the ones in clean_prompt
     """
@@ -167,7 +168,7 @@ def patch_fim_tokens(model : LanguageModel,
         
         patching_results = []
         patched_predictions = []
-        for layer_idx in tqdm(range(8,15)):
+        for layer_idx in tqdm(layers):
             layer_patching_results = []
                 
             with runner.invoke(corrupted_prompt) as invoker:
