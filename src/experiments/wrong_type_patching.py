@@ -58,13 +58,39 @@ def make_dataset(model, tokenizer) -> datasets.Dataset:
         
 def get_avg_activations(model: LanguageModel,
                            prompts: list[str],
+                           layers: List[int],
+                           token_idx: int,
+                           fim : FimObj):
+    """
+    Get the average activation of a token in a layer for a list of prompts
+    """
+    for p in tqdm(prompts):
+        prompt = placeholder_to_std_fmt(p, fim)
+        
+        with model.forward() as runner:
+            target_layers = {i:[] for i in layers}
+            # Clean run
+            with runner.invoke(prompt) as invoker:
+                
+                for layer_idx in layers:
+                    target_layers[layer_idx].append(model.transformer.h[layer_idx].output[0].t[token_idx].save())
+    
+    for layer, activations in target_layers.items():
+        target_layers[layer] = torch.stack(activations).mean(dim=0)
+               
+    return target_layers
+
+def get_fim_avg_activations(model: LanguageModel,
+                           prompts: list[str],
                            layer_idx: int,
                            token_idx: int,
                            fim : FimObj):
     """
     Get the average activation of a token in a layer for a list of prompts
     """
-    activations = []
+    activations_middle = []
+    activations_suffix = [] 
+    activations_prefix = []
     for p in tqdm(prompts):
         prompt = placeholder_to_std_fmt(p, fim)
         
@@ -73,10 +99,31 @@ def get_avg_activations(model: LanguageModel,
             # Clean run
             with runner.invoke(prompt) as invoker:
                 
-                target_hs = model.transformer.h[layer_idx].output[0].t[token_idx]
-                activations.append(target_hs.save())
+                suffix_id = model.tokenizer.encode(fim.suffix)[0]
+                prefix_id = model.tokenizer.encode(fim.prefix)[0]
+                middle_id = model.tokenizer.encode(fim.token)[0]
+
+                tokens = invoker.input["input_ids"][0]
+                    
+                for idx, t in enumerate(tokens.numpy().tolist()):
+                    if t == suffix_id:
+                        patch_suffix_idx = idx
+                    if t == prefix_id:
+                        patch_prefix_idx = idx
+                    if t == middle_id:
+                        patch_middle_idx = idx
                 
-    return torch.stack(activations).mean(dim=0)
+                middle_hs = model.transformer.h[layer_idx].output[0].t[patch_middle_idx]
+                prefix_hs = model.transformer.h[layer_idx].output[0].t[patch_prefix_idx]
+                suffix_hs = model.transformer.h[layer_idx].output[0].t[patch_suffix_idx]
+                activations_middle.append(middle_hs.save())
+                activations_prefix.append(prefix_hs.save())
+                activations_suffix.append(suffix_hs.save())
+                
+                
+    return {"middle":torch.stack(activations_middle).mean(dim=0), 
+            "prefix":torch.stack(activations_prefix).mean(dim=0),
+            "suffix":torch.stack(activations_suffix).mean(dim=0)}
 
 
 def perform_patch(model: LanguageModel,
@@ -84,9 +131,80 @@ def perform_patch(model: LanguageModel,
                   solutions: list[str],
                   layer_idx: list[int],
                   token_idx: int,
-                  patch: torch.Tensor,
+                  patches: Dict[int, torch.Tensor],
                   fim : FimObj,
                   num_tokens: int = 5):
+    
+    def greedy_decode(hs : torch.Tensor):
+        return model.lm_head(model.transformer.ln_f(hs))
+    
+    results = []
+    model.tokenizer.padding_side = "left"
+    for i,p in tqdm(enumerate(prompts)):
+        prompt = placeholder_to_std_fmt(p, fim)
+        new = ""
+        for n in range(num_tokens):
+            prompt += new
+            with model.generate(max_new_tokens=1) as generator:
+                
+                suffix_id = model.tokenizer.encode(fim.suffix)[0]
+                prefix_id = model.tokenizer.encode(fim.prefix)[0]
+                middle_id = model.tokenizer.encode(fim.token)[0]
+                
+                with generator.invoke(prompt) as invoker:
+                    tokens = invoker.input["input_ids"][0]
+                    
+                    for idx, t in enumerate(tokens.numpy().tolist()):
+                        if t == suffix_id:
+                            patch_suffix_idx = idx
+                        if t == prefix_id:
+                            patch_prefix_idx = idx
+                        if t == middle_id:
+                            patch_middle_idx = idx
+                           
+                    for l in layer_idx:
+                        pass
+                        # model.transformer.h[l].output[0].t[-1] += patch
+                        # model.transformer.h[l].output[0].t[patch_middle_idx] = patches[l]
+                        
+                        
+                        # model.transformer.h[layer_idx].output[0].t[patch_suffix_idx] += patch
+                        # model.transformer.h[layer_idx].output[0].t[patch_prefix_idx] += patch
+                        # hidden_states = model.transformer.h[-1].output[0].save()
+                    invoker.next()
+                    
+                    # model.transformer.h[layer_idx].output[0].t[token_idx] += patch
+                    hidden_states = model.transformer.h[-1].output[0].save()
+                    # patched_logits = model.lm_head.output.save()
+                    
+                    # # get the prediction
+                    # probs = patched_logits.softmax(dim=-1)
+                    # # find argmax of -1, prob shape is [1,2,vocab_size]
+                    # max_logit = probs[0, -1].argmax().save()
+                    
+            out = generator.output
+            out = util.apply(out, lambda x: x.value, Proxy)
+            new = model.tokenizer.decode(out.cpu().numpy().tolist()[0][-1])
+            
+            
+        solution_idx = model.tokenizer.encode(solutions[i])[-1]
+        results.append({"prompt":p, 
+                            "generated":out, 
+                            "solution":solutions[i],})
+                
+    return results
+
+
+def perform_patch_full(model: LanguageModel,
+                    prompts: list[str],
+                    solutions: list[str],
+                    layer_idx: list[int],
+                    token_idx: int,
+                    patch_mid: torch.Tensor,
+                    patch_pre: torch.Tensor,
+                    patch_suf: torch.Tensor,
+                    fim : FimObj,
+                    num_tokens: int = 5):
     
     results = []
     model.tokenizer.padding_side = "left"
@@ -114,8 +232,11 @@ def perform_patch(model: LanguageModel,
                             patch_middle_idx = idx
                            
                     for l in layer_idx:
-                        # model.transformer.h[layer_idx].output[0].t[-1] += patch
-                        model.transformer.h[l].output[0].t[patch_middle_idx] += patch
+                        # pass
+                        # model.transformer.h[l].output[0].t[-1] += patch
+                        model.transformer.h[l].output[0].t[patch_middle_idx] = patch_mid
+                        model.transformer.h[l].output[0].t[patch_suffix_idx] = patch_suf
+                        model.transformer.h[l].output[0].t[patch_prefix_idx] = patch_pre
                         # model.transformer.h[layer_idx].output[0].t[patch_suffix_idx] += patch
                         # model.transformer.h[layer_idx].output[0].t[patch_prefix_idx] += patch
                         # hidden_states = model.transformer.h[-1].output[0].save()
