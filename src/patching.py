@@ -83,10 +83,13 @@ def attention_vis(model: LanguageModel,
     """
     Returns a list of attention patterns for each layer.
     """
-    with model.generate(max_new_tokens=1) as generator:
+    if layers is None:
+        layers = list(range(model.config.n_layer))
+    with model.generate(max_new_tokens=1, output_attentions=True) as generator:
         with generator.invoke(prompt) as invoker:
             tokens = invoker.input.tokens()
-            attn_hidden_states = [model.transformer.h[layer_idx].attn.output[1][0].save() for layer_idx in range(len(model.transformer.h))]
+            ## bigcode attn returns (attn_out, present, attn_weights [scores])
+            attn_hidden_states = [model.transformer.h[layer_idx].attn.output[-1][0].save() for layer_idx in range(len(model.transformer.h))]
 
     attn_hidden_states = util.apply(attn_hidden_states, lambda x : x.value, Proxy)
     
