@@ -54,109 +54,174 @@ from tqdm import tqdm
 import sys
 from src.utils import *
 import einops
-
+from typing import List
+import random
+import numpy as np
+import datasets
+import wandb
 
 def apply_mask(llm: LanguageModel,
                mask: torch.Tensor,
-               prompt: str,
-               correct_idx: int,
-               incorrect_idx:int) -> int:
+               prompts: List[str],
+               correct_idxs: List[int],
+               incorrect_idxs: List[int],
+               debug=False) -> List[int]:
 
+    def randomize_values_with_mask(original_tensor, mask):
+        torch.random.manual_seed(42)
+        # Generate random values for the indices where the mask is equal to 1
+        random_values = torch.rand_like(original_tensor) * mask
+        
+        # Apply the random values to the original tensor
+        result_tensor = original_tensor * (1 - mask) + random_values
+        
+        return result_tensor
+    llm.tokenizer.padding_side = "left"
     with llm.generate(max_new_tokens=1, 
+                    pad_token_id=llm.tokenizer.eos_token_id,
                     return_dict_in_generate=True,
                     output_attentions=True,) as generator:
-        with generator.invoke(prompt) as invoker:
+        llm.tokenizer.pad_token_id = llm.tokenizer.eos_token_id
+        with generator.invoke(prompts) as invoker:
             # apply mask
+
             for layer in range(llm.config.n_layer):
                 
                 target_shape = llm.transformer.h[layer].attn.c_proj.output.shape
-                print(target_shape)
-                # get a tensor of 0s
-                attn_mask = torch.zeros(target_shape, device=device)
+                # shape (1,1,16)
+                attn_mask = mask[layer][0].repeat(1,128,1).mT.reshape(1,1,2048)
+                
                 # apply mask to any attn heads
-                llm.transformer.h[layer].attn.c_proj.output= llm.transformer.h[layer].attn.c_proj.output.mul(attn_mask)
-                #^ this works
+                llm.transformer.h[layer].attn.c_proj.output= randomize_values_with_mask(llm.transformer.h[layer].attn.c_proj.output, attn_mask)
                 
-                # target_shape = llm.transformer.h[layer].attn.c_proj.output.shape
+                # target_shape_mlp = llm.transformer.h[layer].mlp.output.shape
+                # # shape (1,1,16)
+                # mlp_mask = mask[layer][1].repeat(1,128,1).mT.reshape(1,1,2048)
+
                 # # apply mask to any attn heads
-                # attn_mask = mask[layer][:,0]
-                # attn_mask = attn_mask.unsqueeze(0).unsqueeze(0)
-                # print(target_shape, attn_mask.shape)
-                # # repeat for head_dim
-                # attn_mask = attn_mask.repeat(1,target_shape[2],1)
-                # print(attn_mask.shape)
-                # attn_mask = einops.rearrange(attn_mask, 'b h t -> b t h')
-                # print(attn_mask.shape)
+                # llm.transformer.h[layer].mlp.output= randomize_values_with_mask(llm.transformer.h[layer].mlp.output, mlp_mask)
                 
-                # # expand per prompts n
-                # attn_mask = attn_mask.expand(target_shape[0], attn_mask.shape[1], attn_mask.shape[2])
-                # print(attn_mask.shape)
-                # # expand per tokens t
-                # attn_mask = attn_mask.expand(attn_mask.shape[0], target_shape[1], attn_mask.shape[2])
-                # print(attn_mask.shape)
-                
-                # print(attn_mask.shape)
-                # print(llm.transformer.h[layer].attn.c_attn.output.shape)
-                # # print(llm.transformer.h[layer].attn.output[1].shape)
-                # # print(llm.transformer.h[layer].attn.output[-1].shape)
-                # llm.transformer.h[layer].attn.c_attn.output= llm.transformer.h[layer].attn.c_attn.output.mul(attn_mask)
-                
-                # # apply mask to any mlp dim
-                # mlp_mask = mask[layer][1]
-                # llm.transformer.h[layer].mlp.output = llm.transformer.h[layer].mlp.output.mul(mlp_mask)
-            
             final_hs = llm.transformer.h[-1].output[0]
             final_hs = llm.lm_head(llm.transformer.ln_f(final_hs)).save()
-    
+
         final_logits = final_hs.softmax(dim=-1)
-        max_prob_idx = final_logits[:,-1].argmax().item().save()
-        correct_idx_prob = final_logits[:,-1,correct_idx].item()
-        incorrect_idx_prob = final_logits[:,-1,incorrect_idx].item()
-        
-        diff = correct_idx_prob - incorrect_idx_prob
-        diff = diff.save()
-        
-    return diff, max_prob_idx
+        if debug:
+            max_prob_idxs = []
+            for i in range(len(prompts)):
+                max_prob_idxs.append(final_logits[i][-1].argmax().save())
+        else:
+            max_prob_idxs = None
+
+        correct_idx_prob = final_logits[:,-1,correct_idxs].squeeze()
+        incorrect_idx_prob = final_logits[:,-1,incorrect_idxs].squeeze()
+        diff = ((incorrect_idx_prob - correct_idx_prob)/correct_idx_prob)*10
+        diff = diff.squeeze()
+        if diff.dim() == 0:
+            diff = diff.item().save()
+        else:
+            diff = diff.diag().save()
+
+    return diff, max_prob_idxs
         
         
 class MatrixAutoEncoder(nn.Module):
     def __init__(self, device="cpu"):
         super().__init__()
         self.device = device
-        ## encoder layers ##
-        # conv layer (depth from 3 --> 16), 3x3 kernels
         self.conv1 = nn.Conv2d(24, 16, 3, padding=1)  
-        # conv layer (depth from 16 --> 4), 3x3 kernels
         self.conv2 = nn.Conv2d(16, 4, 3, padding=1)
-        # pooling layer to reduce x-y dims by two; kernel and stride of 2
         self.pool = nn.MaxPool2d(2, 2)
         
-        ## decoder layers ##
-        ## a kernel of 2 and a stride of 2 will increase the spatial dims by 2
         self.t_conv1 = nn.ConvTranspose2d(4, 16, 2, stride=2)
         self.t_conv2 = nn.ConvTranspose2d(16, 24, 2, stride=2)
 
+
     def forward(self, x):
-        ## encode ##
-        # add hidden layers with relu activation function
-        # and maxpooling after
         x = F.relu(self.conv1(x))
         x = self.pool(x)
-        # add second hidden layer
+
         x = F.relu(self.conv2(x))
-        x = self.pool(x)  # compressed representation
+        x = self.pool(x) 
         
-        ## decode ##
-        # add transpose conv layers, with relu activation function
+        # relu forces output 0,1
         x = F.relu(self.t_conv1(x))
-        # output layer (with sigmoid for scaling from 0 to 1)
-        x = F.sigmoid(self.t_conv2(x))
-        # print(x.shape)
+        x = F.relu(self.t_conv2(x))
+        
+        x_min = x.min()
+        x_max = x.max()
+        x_normalized = (x - x_min) / (x_max - x_min)
+        x = (x_normalized > 0.5).float()
+
         return x
 
-def causal_loss(correct_tok_prob, incorrect_tok_prob):
-    return incorreect_tok_prob - correct_tok_prob
 
+def train_loop(llm):
+    """
+    TODO
+    dataloader
+    """
+    torch.random.manual_seed(42)
+    wandb.init(project='crazy_interp_mask', name='v0')
+
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    batch_size = 5
+    model = MatrixAutoEncoder()
+    causal_mask = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head, llm.config.n_head))
+    dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
+    print(len(dataset))
+    dataset = dataset.filter(lambda x: len(x["prompt"]) < 8000)
+    print(len(dataset))
+    
+    prompts = [d["prompt"] for d in dataset]
+    correct_idxs = [llm.tokenizer.encode(d["fim_sol"])[0] for d in dataset]
+    incorrect_idxs = [llm.tokenizer.encode(d["generated_text"])[0] for d in dataset]
+    train_data = list(zip(prompts, correct_idxs, incorrect_idxs))
+    # shuffle train data
+    random.shuffle(train_data)
+    
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, num_workers=1)
+
+    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5, weight_decay=0.01)
+
+    print("Training...")
+    # number of epochs to train the model
+    n_epochs = 10
+
+    for epoch in range(1, n_epochs+1):
+        # monitor training loss
+        train_loss = 0.0
+        
+        for data in train_loader:
+            prompts, correct_idxs, incorrect_idxs = data
+            if len(prompts) == 1:
+                continue
+            
+            inpt = causal_mask.to(device=model.device, dtype=model.conv1.weight.dtype)
+            optimizer.zero_grad()
+
+            output= model(inpt)
+            # print(output.shape)
+            causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+            causal_loss = util.apply(causal_loss, lambda x: x.value, Proxy)
+            causal_loss = causal_loss.clone().detach().requires_grad_(True)
+            loss = causal_loss.mean()
+            loss.backward()
+            optimizer.step()
+            print(f"Batch loss: {loss.item()}")
+            wandb.log({'training_loss': loss.item(), "epoch":epoch, "batch_size":batch_size})
+            train_loss += loss.item()
+            
+        # print avg training statistics 
+        train_loss = train_loss/len(train_loader)
+        print('Epoch: {} \tTraining Loss: {:.6f}'.format(
+            epoch, 
+            train_loss
+            ))
+        # save output to pt file
+        with torch.no_grad():
+            with open(f"causal_mask_epoch_{epoch}.pt", "wb") as f:
+                torch.save(output, f)
+    wandb.finish()
 
 def mask_to_matrix(llm : LanguageModel, mask_json : dict):
     """
@@ -187,89 +252,32 @@ def mask_to_matrix(llm : LanguageModel, mask_json : dict):
 
 
 if __name__ == "__main__":
-    device = int(sys.argv[1])
-    if device == -1:
-        device = "cpu"
-    else:
-        device = f"cuda:{device}"
+    # device = sys.argv[1]
+    # if device == -1:
+    #     device = "cpu"
+    # else:
+    #     device = f"cuda:{device}"
     starcoderbase_1b = "/home/arjun/models/starcoderbase-1b/"
-    llm = LanguageModel(starcoderbase_1b, device_map=device)
+    llm = LanguageModel(starcoderbase_1b, device_map="auto")
     
-    prompt = """
+    prompts = ["""
     def my_print(s : <FILL>): 
         print("My name is ", s)
+    """,
     """
-    prompt = placeholder_to_std_fmt(prompt, STARCODER_FIM)
-    correct = llm.tokenizer.encode("str")
-    incorrect = llm.tokenizer.encode("int")
+    def my_print(n : <FILL>): 
+        print("My age is ", n)
+    """]*5
+    solns = ["str", "int"]*5
+    this_correct_idxs = [llm.tokenizer.encode(soln) for soln in solns]
+    this_incorrect_idxs = [llm.tokenizer.encode("int"), llm.tokenizer.encode("str")]*5
     
-    mask = {
-        0 : {"attn" : [1,2,3],
-             "mlp" : [4,5,130*3]}, 
-    }
-    mask_mat = mask_to_matrix(llm, mask)
-    # print(mask_mat[0][3])
-    
-    out = apply_mask(llm, torch.tensor(mask_mat), prompt, correct, incorrect)
+    prompts = [placeholder_to_std_fmt(p, STARCODER_FIM) for p in prompts]
+
+    mask_mat = torch.zeros((llm.config.n_layer, llm.config.n_head, llm.config.n_head))
+    # mask_mat = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head, llm.config.n_head))
+    out = apply_mask(llm, torch.tensor(mask_mat), prompts, this_correct_idxs, this_incorrect_idxs, debug=True)
     out = util.apply(out, lambda x: x.value, Proxy)
-    print(out[0], llm.tokenizer.decode(out[1]))
+    print(out[0], [llm.tokenizer.decode(o.item()) for o in out[1]])
 
-# model = MatrixAutoEncoder()
-
-# import random
-# import numpy as np
-
-# values = np.array([random.randint(0,1)/1 for i in range(24*16*2048)])
-# inpt = torch.from_numpy(values).view(24,16,2048).to(device=model.device, dtype=model.conv1.weight.dtype)
-# print(inpt.shape, inpt[0][0], inpt.dtype)
-# model(inpt)
-
-# train_data = []
-# for ex in tqdm(range(100)):
-#     random.seed(ex)
-#     random.shuffle(values)
-#     inpt = torch.from_numpy(values).view(24,16,2048)
-#     train_data.append(inpt)
-
-# train_loader = torch.utils.data.DataLoader(train_data, batch_size=10, num_workers=4)
-
-# # specify loss function
-# criterion = nn.BCELoss()
-# ceriterion=my_loss
-# # specify loss function
-# optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-# print("Training...")
-# # number of epochs to train the model
-# n_epochs = 10
-
-# for epoch in range(1, n_epochs+1):
-#     # monitor training loss
-#     train_loss = 0.0
-    
-#     ###################
-#     # train the model #
-#     ###################
-#     for data in train_loader:
-#         # _ stands in for labels, here
-#         # no need to flatten images
-#         prompt, correct_incorrect_idx_tup = data.to(device=model.device, dtype=model.conv1.weight.dtype)
-#         # clear the gradients of all optimized variables
-#         optimizer.zero_grad()
-#         # forward pass: compute predicted outputs by passing inputs to the model
-#         outputs = model(images)
-#         # calculate the loss
-#         loss = criterion(outputs, correct_incorrect_tup, model.device)
-#         # backward pass: compute gradient of the loss with respect to model parameters
-#         loss.backward()
-#         # perform a single optimization step (parameter update)
-#         optimizer.step()
-#         # update running training loss
-#         train_loss += loss.item()*images.size(0)
-            
-#     # print avg training statistics 
-#     train_loss = train_loss/len(train_loader)
-#     print('Epoch: {} \tTraining Loss: {:.6f}'.format(
-#         epoch, 
-#         train_loss
-#         ))
+    train_loop(llm)
