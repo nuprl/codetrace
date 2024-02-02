@@ -1,0 +1,11 @@
+392
+278
+Training...
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 300, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 209, in train_loop
+    inpt = causal_mask.to(device=model.device, dtype=model.conv1.weight.dtype)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1695, in __getattr__
+    raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+AttributeError: 'MatrixAutoEncoder' object has no attribute 'device'

@@ -1,0 +1,85 @@
+264
+216
+Training...
+Batch loss: 0.3848086893558502
+Batch loss: 0.4292726516723633
+Batch loss: 0.3228635787963867
+Batch loss: 0.6233236193656921
+Batch loss: 0.4394850730895996
+Batch loss: 0.566943347454071
+Batch loss: 0.7031499743461609
+Batch loss: 0.48052722215652466
+Batch loss: 0.23093190789222717
+Batch loss: 0.43567219376564026
+Batch loss: 0.42458853125572205
+Batch loss: 0.4809604585170746
+Batch loss: 0.47994667291641235
+Batch loss: 0.6657232642173767
+Batch loss: 0.29294684529304504
+Batch loss: 0.39450809359550476
+Batch loss: 0.37715110182762146
+Batch loss: 0.38068386912345886
+Batch loss: 0.4464188516139984
+Batch loss: 0.3880777060985565
+Batch loss: 0.36715444922447205
+Batch loss: 0.5186622738838196
+Batch loss: 0.2576805055141449
+Batch loss: 0.4004419445991516
+Batch loss: 0.32123932242393494
+Batch loss: 0.32794055342674255
+Batch loss: 0.22007083892822266
+Batch loss: 0.5461719632148743
+Batch loss: 0.632251501083374
+Batch loss: 0.28716644644737244
+Batch loss: 0.3860120475292206
+Batch loss: 0.5998387932777405
+Batch loss: 0.31732964515686035
+Batch loss: 0.35088178515434265
+Batch loss: 0.45794978737831116
+Batch loss: 0.35255560278892517
+Batch loss: 0.5525059103965759
+Batch loss: 0.3414112329483032
+Batch loss: 0.12082169204950333
+Batch loss: 0.17531275749206543
+Batch loss: 0.4198646545410156
+Batch loss: 0.37084752321243286
+Batch loss: 0.27147722244262695
+Epoch: 1 	Training Loss: 0.398718
+Batch loss: 0.43674787878990173
+Batch loss: 0.5467206239700317
+Batch loss: 0.2661343514919281
+Batch loss: 0.6356304287910461
+Batch loss: 0.44311410188674927
+Batch loss: 0.5253516435623169
+Batch loss: 0.6145607829093933
+Batch loss: 0.4481886029243469
+Batch loss: 0.25050100684165955
+Batch loss: 0.3941201865673065
+Batch loss: 0.47151288390159607
+Batch loss: 0.4777285158634186
+Batch loss: 0.4550735652446747
+Batch loss: 0.5315232276916504
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 275, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 196, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 79, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/LanguageModel.py", line 166, in _generation
+    return super()._generation(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 412, in _generation
+    return self.local_model.generate(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 1474, in generate
+    return self.greedy_search(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 2392, in greedy_search
+    if unfinished_sequences.max() == 0:
+KeyboardInterrupt

@@ -1,0 +1,443 @@
+2024-02-02 05:37:16,858 INFO    StreamThr :3587385 [internal.py:wandb_internal():86] W&B internal server running at pid: 3587385, started at: 2024-02-02 05:37:16.858628
+2024-02-02 05:37:16,859 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status
+2024-02-02 05:37:16,861 INFO    WriterThread:3587385 [datastore.py:open_for_write():85] open: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/run-j3phjtir.wandb
+2024-02-02 05:37:16,861 DEBUG   SenderThread:3587385 [sender.py:send():380] send: header
+2024-02-02 05:37:16,865 DEBUG   SenderThread:3587385 [sender.py:send():380] send: run
+2024-02-02 05:37:17,134 INFO    SenderThread:3587385 [dir_watcher.py:__init__():211] watching files in: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files
+2024-02-02 05:37:17,134 INFO    SenderThread:3587385 [sender.py:_start_run_threads():1124] run started: j3phjtir with start time 1706852236.859029
+2024-02-02 05:37:17,144 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: check_version
+2024-02-02 05:37:17,144 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: check_version
+2024-02-02 05:37:17,273 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: run_start
+2024-02-02 05:37:17,279 DEBUG   HandlerThread:3587385 [system_info.py:__init__():32] System info init
+2024-02-02 05:37:17,279 DEBUG   HandlerThread:3587385 [system_info.py:__init__():47] System info init done
+2024-02-02 05:37:17,279 INFO    HandlerThread:3587385 [system_monitor.py:start():194] Starting system monitor
+2024-02-02 05:37:17,279 INFO    SystemMonitor:3587385 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2024-02-02 05:37:17,279 INFO    HandlerThread:3587385 [system_monitor.py:probe():214] Collecting system info
+2024-02-02 05:37:17,280 INFO    SystemMonitor:3587385 [interfaces.py:start():190] Started cpu monitoring
+2024-02-02 05:37:17,280 INFO    SystemMonitor:3587385 [interfaces.py:start():190] Started disk monitoring
+2024-02-02 05:37:17,280 INFO    SystemMonitor:3587385 [interfaces.py:start():190] Started gpu monitoring
+2024-02-02 05:37:17,281 INFO    SystemMonitor:3587385 [interfaces.py:start():190] Started memory monitoring
+2024-02-02 05:37:17,281 INFO    SystemMonitor:3587385 [interfaces.py:start():190] Started network monitoring
+2024-02-02 05:37:17,398 DEBUG   HandlerThread:3587385 [system_info.py:probe():196] Probing system
+2024-02-02 05:37:17,402 DEBUG   HandlerThread:3587385 [system_info.py:_probe_git():181] Probing git
+2024-02-02 05:37:17,411 DEBUG   HandlerThread:3587385 [system_info.py:_probe_git():189] Probing git done
+2024-02-02 05:37:17,411 DEBUG   HandlerThread:3587385 [system_info.py:probe():244] Probing system done
+2024-02-02 05:37:17,411 DEBUG   HandlerThread:3587385 [system_monitor.py:probe():223] {'os': 'Linux-5.15.0-76-generic-x86_64-with-glibc2.35', 'python': '3.10.12', 'heartbeatAt': '2024-02-02T05:37:17.399059', 'startedAt': '2024-02-02T05:37:16.854970', 'docker': None, 'cuda': None, 'args': (), 'state': 'running', 'program': '/home/franlucc/projects/codetrace/train.py', 'codePathLocal': 'train.py', 'codePath': 'train.py', 'git': {'remote': 'https://github.com/flucchetti/codetrace.git', 'commit': 'ad61327ae0f36f4733fbef40b90ffd9d08b751c6'}, 'email': 'fr.lucchetti@gmail.com', 'root': '/home/franlucc/projects/codetrace', 'host': 'boa', 'username': 'franlucc', 'executable': '/home/franlucc/venvs/gpu/bin/python', 'cpu_count': 48, 'cpu_count_logical': 96, 'cpu_freq': {'current': 1577.6263749999998, 'min': 800.0, 'max': 3500.0}, 'cpu_freq_per_core': [{'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 1700.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 1700.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 2300.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 1600.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 1200.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 1600.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 2200.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 2600.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 2200.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3300.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 2200.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 2100.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 2200.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 2200.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 800.0, 'min': 800.0, 'max': 3500.0}, {'current': 3500.0, 'min': 800.0, 'max': 3500.0}], 'disk': {'/': {'total': 2196.9036254882812, 'used': 1787.5162162780762}}, 'gpu': 'NVIDIA H100 PCIe', 'gpu_count': 4, 'gpu_devices': [{'name': 'NVIDIA H100 PCIe', 'memory_total': 85520809984}, {'name': 'NVIDIA H100 PCIe', 'memory_total': 85520809984}, {'name': 'NVIDIA H100 PCIe', 'memory_total': 85520809984}, {'name': 'NVIDIA H100 PCIe', 'memory_total': 85520809984}], 'memory': {'total': 1007.3301734924316}}
+2024-02-02 05:37:17,412 INFO    HandlerThread:3587385 [system_monitor.py:probe():224] Finished collecting system info
+2024-02-02 05:37:17,412 INFO    HandlerThread:3587385 [system_monitor.py:probe():227] Publishing system info
+2024-02-02 05:37:17,412 DEBUG   HandlerThread:3587385 [system_info.py:_save_pip():52] Saving list of pip packages installed into the current environment
+2024-02-02 05:37:17,413 DEBUG   HandlerThread:3587385 [system_info.py:_save_pip():68] Saving pip packages done
+2024-02-02 05:37:17,415 INFO    HandlerThread:3587385 [system_monitor.py:probe():229] Finished publishing system info
+2024-02-02 05:37:17,418 DEBUG   SenderThread:3587385 [sender.py:send():380] send: files
+2024-02-02 05:37:17,418 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-metadata.json with policy now
+2024-02-02 05:37:17,428 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: stop_status
+2024-02-02 05:37:17,428 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: stop_status
+2024-02-02 05:37:17,432 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:37:17,720 DEBUG   SenderThread:3587385 [sender.py:send():380] send: telemetry
+2024-02-02 05:37:17,836 INFO    wandb-upload_0:3587385 [upload_job.py:push():131] Uploaded file /tmp/tmprwf0eq3zwandb/o5t0uv6a-wandb-metadata.json
+2024-02-02 05:37:18,135 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_created():271] file/dir created: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/requirements.txt
+2024-02-02 05:37:18,136 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_created():271] file/dir created: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-metadata.json
+2024-02-02 05:37:19,134 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_created():271] file/dir created: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:21,135 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:21,798 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:21,801 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:21,801 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:21,802 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:22,135 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_created():271] file/dir created: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:22,802 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:37:23,135 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:25,225 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:25,227 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:25,227 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:25,230 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:26,137 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:27,137 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:28,076 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:28,077 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:37:28,077 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:28,078 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:28,079 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:28,137 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:29,138 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:31,452 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:31,454 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:31,454 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:31,455 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:32,139 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:32,429 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:37:32,429 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: stop_status
+2024-02-02 05:37:32,430 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: stop_status
+2024-02-02 05:37:33,139 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:33,520 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:37:34,859 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:34,861 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:34,861 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:34,862 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:35,140 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:35,140 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:37,634 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:37,636 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:37,636 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:37,640 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:38,141 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:38,641 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:37:39,141 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:40,991 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:40,993 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:40,993 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:40,996 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:41,142 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:41,142 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:43,794 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:43,795 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:37:43,795 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:43,795 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:43,795 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:44,143 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:45,143 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:46,403 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:46,404 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:46,404 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:46,405 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:47,144 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:47,144 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:47,429 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: stop_status
+2024-02-02 05:37:47,429 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: stop_status
+2024-02-02 05:37:47,433 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:37:48,719 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:48,720 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:48,721 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:48,724 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:49,145 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:49,145 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:49,730 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:37:50,145 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/config.yaml
+2024-02-02 05:37:52,267 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:52,268 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:52,268 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:52,269 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:53,146 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:53,147 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:54,899 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:54,900 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:37:54,900 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:54,901 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:54,901 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:55,147 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:55,147 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:56,925 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:56,927 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:56,927 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:56,928 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:37:57,148 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:37:57,148 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:37:59,513 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:37:59,515 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:37:59,515 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:37:59,518 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:00,149 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:00,519 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:01,149 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:02,432 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: stop_status
+2024-02-02 05:38:02,433 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:38:02,434 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: stop_status
+2024-02-02 05:38:02,971 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:02,973 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:02,974 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:02,977 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:03,150 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:03,151 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:05,979 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:06,426 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:06,428 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:06,429 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:06,430 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:07,152 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:07,152 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:09,286 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:09,288 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:09,288 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:09,289 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:10,152 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:11,153 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:11,290 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:11,485 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:11,487 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:11,487 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:11,488 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:12,153 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:13,154 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:14,867 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:14,868 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:14,869 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:14,869 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:15,154 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:15,155 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:16,871 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:17,281 DEBUG   SystemMonitor:3587385 [system_monitor.py:_start():172] Starting system metrics aggregation loop
+2024-02-02 05:38:17,284 DEBUG   SenderThread:3587385 [sender.py:send():380] send: stats
+2024-02-02 05:38:17,429 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: stop_status
+2024-02-02 05:38:17,429 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: stop_status
+2024-02-02 05:38:17,431 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:38:18,607 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:18,609 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:18,609 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:18,609 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:19,156 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:19,156 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:22,087 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:22,089 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:22,089 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:22,090 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:22,090 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:22,157 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:23,157 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:25,600 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:25,602 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:25,602 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:25,606 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:26,158 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:27,158 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:27,607 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:28,200 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:28,201 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:28,202 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:28,202 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:29,159 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:29,160 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:30,808 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:30,810 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:30,811 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:30,811 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:31,160 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:31,161 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:32,429 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: stop_status
+2024-02-02 05:38:32,430 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: stop_status
+2024-02-02 05:38:32,430 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:38:33,587 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:33,971 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:33,973 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:33,973 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:33,974 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:34,161 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:35,162 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:37,389 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:37,390 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:37,391 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:37,394 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:38,163 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:39,163 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:39,395 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:39,742 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:39,743 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:39,744 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:39,745 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:40,164 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:41,164 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:42,296 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:42,297 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:42,298 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:42,299 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:43,165 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:43,166 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:44,939 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:44,941 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:44,941 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:44,942 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:44,942 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:45,166 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:45,166 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:47,286 DEBUG   SenderThread:3587385 [sender.py:send():380] send: stats
+2024-02-02 05:38:47,464 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:38:47,465 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: stop_status
+2024-02-02 05:38:47,465 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: stop_status
+2024-02-02 05:38:47,543 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:47,586 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:47,587 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:47,590 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:48,167 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:49,168 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:50,591 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:50,878 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:50,880 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:50,880 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:50,881 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:51,169 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:51,169 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:53,459 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:53,461 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:53,461 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:53,461 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:54,170 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:55,170 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:55,980 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:55,982 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:38:55,982 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:55,982 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:55,983 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:38:56,171 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:38:57,171 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:38:59,459 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:38:59,461 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:38:59,462 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:38:59,465 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:39:00,173 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:39:01,173 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:39:01,466 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:39:02,328 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:39:02,330 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:39:02,331 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:39:02,332 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:39:02,465 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:39:02,465 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: stop_status
+2024-02-02 05:39:02,466 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: stop_status
+2024-02-02 05:39:03,174 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:39:03,175 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:39:04,848 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: partial_history
+2024-02-02 05:39:04,850 DEBUG   SenderThread:3587385 [sender.py:send():380] send: history
+2024-02-02 05:39:04,851 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: summary_record
+2024-02-02 05:39:04,852 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:39:05,175 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:39:05,175 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:39:06,329 DEBUG   SenderThread:3587385 [sender.py:send():380] send: exit
+2024-02-02 05:39:06,329 INFO    SenderThread:3587385 [sender.py:send_exit():585] handling exit code: 255
+2024-02-02 05:39:06,330 INFO    SenderThread:3587385 [sender.py:send_exit():587] handling runtime: 109
+2024-02-02 05:39:06,330 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:39:06,331 INFO    SenderThread:3587385 [sender.py:send_exit():593] send defer
+2024-02-02 05:39:06,331 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:06,331 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 0
+2024-02-02 05:39:06,332 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:06,332 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 0
+2024-02-02 05:39:06,332 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 1
+2024-02-02 05:39:06,332 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:06,332 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 1
+2024-02-02 05:39:06,332 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:06,333 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 1
+2024-02-02 05:39:06,333 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 2
+2024-02-02 05:39:06,333 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:06,333 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 2
+2024-02-02 05:39:06,333 INFO    HandlerThread:3587385 [system_monitor.py:finish():203] Stopping system monitor
+2024-02-02 05:39:06,334 DEBUG   SystemMonitor:3587385 [system_monitor.py:_start():179] Finished system metrics aggregation loop
+2024-02-02 05:39:06,334 INFO    HandlerThread:3587385 [interfaces.py:finish():202] Joined cpu monitor
+2024-02-02 05:39:06,334 DEBUG   SystemMonitor:3587385 [system_monitor.py:_start():183] Publishing last batch of metrics
+2024-02-02 05:39:06,335 INFO    HandlerThread:3587385 [interfaces.py:finish():202] Joined disk monitor
+2024-02-02 05:39:06,704 INFO    HandlerThread:3587385 [interfaces.py:finish():202] Joined gpu monitor
+2024-02-02 05:39:06,704 INFO    HandlerThread:3587385 [interfaces.py:finish():202] Joined memory monitor
+2024-02-02 05:39:06,705 INFO    HandlerThread:3587385 [interfaces.py:finish():202] Joined network monitor
+2024-02-02 05:39:06,705 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:06,705 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 2
+2024-02-02 05:39:06,706 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 3
+2024-02-02 05:39:06,706 DEBUG   SenderThread:3587385 [sender.py:send():380] send: stats
+2024-02-02 05:39:06,708 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:06,708 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 3
+2024-02-02 05:39:06,708 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:39:06,708 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:06,708 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 3
+2024-02-02 05:39:06,709 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 4
+2024-02-02 05:39:06,709 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:06,709 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 4
+2024-02-02 05:39:06,709 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:06,709 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 4
+2024-02-02 05:39:06,709 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 5
+2024-02-02 05:39:06,709 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:06,710 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 5
+2024-02-02 05:39:06,710 DEBUG   SenderThread:3587385 [sender.py:send():380] send: summary
+2024-02-02 05:39:06,710 INFO    SenderThread:3587385 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2024-02-02 05:39:06,711 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:06,711 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 5
+2024-02-02 05:39:06,711 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 6
+2024-02-02 05:39:06,711 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:06,712 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 6
+2024-02-02 05:39:06,712 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:06,712 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 6
+2024-02-02 05:39:06,712 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 7
+2024-02-02 05:39:06,712 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: status_report
+2024-02-02 05:39:06,712 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:06,712 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 7
+2024-02-02 05:39:06,713 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:06,713 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 7
+2024-02-02 05:39:07,176 INFO    Thread-12 :3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:39:07,329 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: poll_exit
+2024-02-02 05:39:08,327 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 8
+2024-02-02 05:39:08,328 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: poll_exit
+2024-02-02 05:39:08,328 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:08,328 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 8
+2024-02-02 05:39:08,329 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:08,329 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 8
+2024-02-02 05:39:08,329 INFO    SenderThread:3587385 [job_builder.py:build():298] Attempting to build job artifact
+2024-02-02 05:39:08,330 INFO    SenderThread:3587385 [job_builder.py:_get_source_type():428] is repo sourced job
+2024-02-02 05:39:08,332 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: poll_exit
+2024-02-02 05:39:08,350 INFO    SenderThread:3587385 [job_builder.py:build():404] adding wandb-job metadata file
+2024-02-02 05:39:08,355 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 9
+2024-02-02 05:39:08,355 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: poll_exit
+2024-02-02 05:39:08,355 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:08,356 DEBUG   SenderThread:3587385 [sender.py:send():380] send: artifact
+2024-02-02 05:39:08,356 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 9
+2024-02-02 05:39:08,707 INFO    SenderThread:3587385 [sender.py:send_artifact():1458] sent artifact job-https___github.com_flucchetti_codetrace.git_train.py - {'id': 'QXJ0aWZhY3Q6NzExNDI2NTAw', 'state': 'COMMITTED', 'artifactSequence': {'id': 'QXJ0aWZhY3RDb2xsZWN0aW9uOjEzNjIzNDE3MA==', 'latestArtifact': {'id': 'QXJ0aWZhY3Q6NzExNDI2NTAw', 'versionIndex': 1}}}
+2024-02-02 05:39:08,707 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:08,707 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 9
+2024-02-02 05:39:08,708 INFO    SenderThread:3587385 [dir_watcher.py:finish():358] shutting down directory watcher
+2024-02-02 05:39:09,177 INFO    SenderThread:3587385 [dir_watcher.py:_on_file_modified():288] file/dir modified: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:39:09,178 INFO    SenderThread:3587385 [dir_watcher.py:finish():388] scan: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files
+2024-02-02 05:39:09,178 INFO    SenderThread:3587385 [dir_watcher.py:finish():402] scan save: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-metadata.json wandb-metadata.json
+2024-02-02 05:39:09,178 INFO    SenderThread:3587385 [dir_watcher.py:finish():402] scan save: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log output.log
+2024-02-02 05:39:09,179 INFO    SenderThread:3587385 [dir_watcher.py:finish():402] scan save: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/config.yaml config.yaml
+2024-02-02 05:39:09,179 INFO    SenderThread:3587385 [dir_watcher.py:finish():402] scan save: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/requirements.txt requirements.txt
+2024-02-02 05:39:09,186 INFO    SenderThread:3587385 [dir_watcher.py:finish():402] scan save: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json wandb-summary.json
+2024-02-02 05:39:09,189 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 10
+2024-02-02 05:39:09,191 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:09,191 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 10
+2024-02-02 05:39:09,191 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:09,192 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 10
+2024-02-02 05:39:09,192 INFO    SenderThread:3587385 [file_pusher.py:finish():175] shutting down file pusher
+2024-02-02 05:39:09,333 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: poll_exit
+2024-02-02 05:39:09,334 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: poll_exit
+2024-02-02 05:39:09,381 INFO    wandb-upload_1:3587385 [upload_job.py:push():131] Uploaded file /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/output.log
+2024-02-02 05:39:09,689 INFO    wandb-upload_2:3587385 [upload_job.py:push():131] Uploaded file /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/requirements.txt
+2024-02-02 05:39:09,718 INFO    wandb-upload_0:3587385 [upload_job.py:push():131] Uploaded file /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/config.yaml
+2024-02-02 05:39:09,804 INFO    wandb-upload_3:3587385 [upload_job.py:push():131] Uploaded file /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/files/wandb-summary.json
+2024-02-02 05:39:10,004 INFO    Thread-11 (_thread_body):3587385 [sender.py:transition_state():613] send defer: 11
+2024-02-02 05:39:10,005 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:10,005 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 11
+2024-02-02 05:39:10,005 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:10,005 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 11
+2024-02-02 05:39:10,006 INFO    SenderThread:3587385 [file_pusher.py:join():181] waiting for file pusher
+2024-02-02 05:39:10,006 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 12
+2024-02-02 05:39:10,006 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:10,006 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 12
+2024-02-02 05:39:10,006 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:10,006 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 12
+2024-02-02 05:39:10,007 INFO    SenderThread:3587385 [file_stream.py:finish():595] file stream finish called
+2024-02-02 05:39:10,076 INFO    SenderThread:3587385 [file_stream.py:finish():599] file stream finish is done
+2024-02-02 05:39:10,076 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 13
+2024-02-02 05:39:10,076 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:10,076 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 13
+2024-02-02 05:39:10,077 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:10,077 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 13
+2024-02-02 05:39:10,077 INFO    SenderThread:3587385 [sender.py:transition_state():613] send defer: 14
+2024-02-02 05:39:10,077 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: defer
+2024-02-02 05:39:10,078 INFO    HandlerThread:3587385 [handler.py:handle_request_defer():172] handle defer: 14
+2024-02-02 05:39:10,078 DEBUG   SenderThread:3587385 [sender.py:send():380] send: final
+2024-02-02 05:39:10,078 DEBUG   SenderThread:3587385 [sender.py:send():380] send: footer
+2024-02-02 05:39:10,078 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: defer
+2024-02-02 05:39:10,078 INFO    SenderThread:3587385 [sender.py:send_request_defer():609] handle sender defer: 14
+2024-02-02 05:39:10,079 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: poll_exit
+2024-02-02 05:39:10,080 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: poll_exit
+2024-02-02 05:39:10,080 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: poll_exit
+2024-02-02 05:39:10,081 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: poll_exit
+2024-02-02 05:39:10,081 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: server_info
+2024-02-02 05:39:10,081 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: server_info
+2024-02-02 05:39:10,086 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: get_summary
+2024-02-02 05:39:10,086 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: sampled_history
+2024-02-02 05:39:10,088 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: internal_messages
+2024-02-02 05:39:10,088 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: job_info
+2024-02-02 05:39:10,136 DEBUG   SenderThread:3587385 [sender.py:send_request():407] send_request: job_info
+2024-02-02 05:39:10,136 INFO    MainThread:3587385 [wandb_run.py:_footer_history_summary_info():3760] rendering history
+2024-02-02 05:39:10,137 INFO    MainThread:3587385 [wandb_run.py:_footer_history_summary_info():3792] rendering summary
+2024-02-02 05:39:10,137 INFO    MainThread:3587385 [wandb_run.py:_footer_sync_info():3719] logging synced files
+2024-02-02 05:39:10,138 DEBUG   HandlerThread:3587385 [handler.py:handle_request():146] handle_request: shutdown
+2024-02-02 05:39:10,138 INFO    HandlerThread:3587385 [handler.py:finish():866] shutting down handler
+2024-02-02 05:39:11,089 INFO    WriterThread:3587385 [datastore.py:close():294] close: /home/franlucc/projects/codetrace/wandb/run-20240202_053716-j3phjtir/run-j3phjtir.wandb
+2024-02-02 05:39:11,136 INFO    SenderThread:3587385 [sender.py:finish():1536] shutting down sender
+2024-02-02 05:39:11,136 INFO    SenderThread:3587385 [file_pusher.py:finish():175] shutting down file pusher
+2024-02-02 05:39:11,136 INFO    SenderThread:3587385 [file_pusher.py:join():181] waiting for file pusher

@@ -1,0 +1,64 @@
+392
+278
+Training...
+conv1.weight - Gradient: None
+conv1.bias - Gradient: None
+t_conv2.weight - Gradient: None
+t_conv2.bias - Gradient: None
+Epoch: 1 	Training Loss: 0.006215
+conv1.weight - Gradient: None
+conv1.bias - Gradient: None
+t_conv2.weight - Gradient: None
+t_conv2.bias - Gradient: None
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 307, in <module>
+    out = util.apply(out, lambda x: x.value, Proxy)
+  File "/home/franlucc/projects/codetrace/train.py", line 224, in train_loop
+    causal_loss, _ = apply_mask(llm, output.clone().detach().requires_grad_(True), prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 90, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/LanguageModel.py", line 166, in _generation
+    return super()._generation(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 412, in _generation
+    return self.local_model.generate(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 1474, in generate
+    return self.greedy_search(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 2335, in greedy_search
+    outputs = self(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1568, in _call_impl
+    result = forward_call(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/accelerate/hooks.py", line 165, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 1265, in forward
+    transformer_outputs = self.transformer(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 1118, in forward
+    outputs = block(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/accelerate/hooks.py", line 160, in new_forward
+    args, kwargs = module._hf_hook.pre_forward(module, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/accelerate/hooks.py", line 297, in pre_forward
+    return send_to_device(args, self.execution_device), send_to_device(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/accelerate/utils/operations.py", line 161, in send_to_device
+    {
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/accelerate/utils/operations.py", line 162, in <dictcomp>
+    k: t if k in skip_keys else send_to_device(t, device, non_blocking=non_blocking, skip_keys=skip_keys)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/accelerate/utils/operations.py", line 171, in send_to_device
+    return tensor.to(device, non_blocking=non_blocking)
+KeyboardInterrupt

@@ -1,0 +1,99 @@
+264
+216
+Training...
+Batch loss: 0.2630959153175354
+Batch loss: 0.23081599175930023
+Batch loss: 0.5900692343711853
+Batch loss: 0.44135284423828125
+Batch loss: 0.28833624720573425
+Batch loss: 0.3729207217693329
+Batch loss: 0.6249436736106873
+Batch loss: 0.3327026963233948
+Batch loss: 0.6235736012458801
+Batch loss: 0.6605998873710632
+Batch loss: 0.4263913631439209
+Batch loss: 0.45954227447509766
+Batch loss: 0.3821144104003906
+Batch loss: 0.3998907506465912
+Batch loss: 0.5944333076477051
+Batch loss: 0.5498421788215637
+Batch loss: 0.44942522048950195
+Batch loss: 0.33895373344421387
+Batch loss: 0.25515881180763245
+Batch loss: 0.210317924618721
+Batch loss: 0.47548532485961914
+Batch loss: 0.5240345597267151
+Batch loss: 0.4827168583869934
+Batch loss: 0.5022411942481995
+Batch loss: 0.48438510298728943
+Batch loss: 0.6313313841819763
+Batch loss: 0.4806668758392334
+Batch loss: 0.3752366006374359
+Batch loss: 0.29036131501197815
+Batch loss: 0.44691362977027893
+Batch loss: 0.29368171095848083
+Batch loss: 0.3472376763820648
+Batch loss: 0.48488956689834595
+Batch loss: 0.34537890553474426
+Batch loss: 0.6402987837791443
+Batch loss: 0.3859870433807373
+Batch loss: 0.6325218081474304
+Batch loss: 0.49289971590042114
+Batch loss: 0.31839117407798767
+Batch loss: 0.5837280750274658
+Batch loss: 0.24670664966106415
+Batch loss: 0.4905042350292206
+Batch loss: 0.5719667673110962
+Epoch: 1 	Training Loss: 0.432319
+Batch loss: 0.24947944283485413
+Batch loss: 0.2208925485610962
+Batch loss: 0.5158767700195312
+Batch loss: 0.3521451950073242
+Batch loss: 0.23270535469055176
+Batch loss: 0.27281710505485535
+Batch loss: 0.6268028020858765
+Batch loss: 0.35552141070365906
+Batch loss: 0.5543808341026306
+Batch loss: 0.644858181476593
+Batch loss: 0.3973448872566223
+Batch loss: 0.4452562928199768
+Batch loss: 0.3472220003604889
+Batch loss: 0.4329139292240143
+Batch loss: 0.5161487460136414
+Batch loss: 0.582767903804779
+Batch loss: 0.37739166617393494
+Batch loss: 0.3335409164428711
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 276, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 197, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 79, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 69, in __exit__
+    raise exc_val
+  File "/home/franlucc/projects/codetrace/train.py", line 84, in apply_mask
+    with generator.invoke(prompts) as invoker:
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Invoker.py", line 79, in __exit__
+    raise exc_val
+  File "/home/franlucc/projects/codetrace/train.py", line 94, in apply_mask
+    llm.transformer.h[layer].attn.c_proj.output= randomize_values_with_mask(llm.transformer.h[layer].attn.c_proj.output, attn_mask)
+  File "/home/franlucc/projects/codetrace/train.py", line 72, in randomize_values_with_mask
+    random_values = torch.rand_like(original_tensor) * mask
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Proxy.py", line 134, in __mul__
+    return self.node.graph.add(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Graph.py", line 237, in add
+    stack = inspect.stack()
+  File "/usr/lib/python3.10/inspect.py", line 1673, in stack
+    return getouterframes(sys._getframe(1), context)
+  File "/usr/lib/python3.10/inspect.py", line 1650, in getouterframes
+    frameinfo = (frame,) + getframeinfo(frame, context)
+  File "/usr/lib/python3.10/inspect.py", line 1624, in getframeinfo
+    lines, lnum = findsource(frame)
+  File "/usr/lib/python3.10/inspect.py", line 940, in findsource
+    file = getsourcefile(object)
+  File "/usr/lib/python3.10/inspect.py", line 826, in getsourcefile
+    if os.path.exists(filename):
+  File "/usr/lib/python3.10/genericpath.py", line 19, in exists
+    os.stat(path)
+KeyboardInterrupt

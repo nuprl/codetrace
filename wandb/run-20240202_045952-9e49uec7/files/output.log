@@ -1,0 +1,207 @@
+264
+216
+Training...
+Batch loss: 0.000526926654856652
+Batch loss: 0.03442094475030899
+Batch loss: 0.0005498661776073277
+Batch loss: 0.0007648975006304681
+Batch loss: -0.0070387632586061954
+Batch loss: -0.0029761269688606262
+Batch loss: -0.011358330957591534
+Batch loss: 0.014544445089995861
+Batch loss: 0.007540975697338581
+Batch loss: 0.0143191022798419
+Batch loss: 0.003226080210879445
+Batch loss: 0.04003553465008736
+Batch loss: -0.00311356782913208
+Batch loss: -0.0025839991867542267
+Batch loss: -0.01721877232193947
+Batch loss: -0.010624291375279427
+Batch loss: 0.021207433193922043
+Batch loss: -0.0009060482843779027
+Batch loss: 0.015256518498063087
+Batch loss: 0.0121051836758852
+Batch loss: -0.0004958870122209191
+Batch loss: 0.010250655002892017
+Batch loss: 0.06458338350057602
+Batch loss: 0.0006642438820563257
+Batch loss: -0.003201443003490567
+Batch loss: -0.0033985283225774765
+Batch loss: 0.0006695101037621498
+Batch loss: 0.012666239403188229
+Batch loss: 0.05169352889060974
+Batch loss: -0.011198737658560276
+Batch loss: 0.0382620170712471
+Batch loss: 0.021648408845067024
+Batch loss: -0.00453932024538517
+Batch loss: -0.008727907203137875
+Batch loss: 0.03011305071413517
+Batch loss: 0.0004859968612436205
+Batch loss: -0.00014774780720472336
+Batch loss: 0.006937070284038782
+Batch loss: 0.030286366119980812
+Batch loss: 0.010274031199514866
+Batch loss: 0.009982018731534481
+Batch loss: 0.02053695172071457
+Batch loss: -0.017112698405981064
+Epoch: 1 	Training Loss: 0.008384
+Batch loss: -0.011649936437606812
+Batch loss: 0.003972718492150307
+Batch loss: 0.005682728718966246
+Batch loss: 0.05024705454707146
+Batch loss: 0.008995430544018745
+Batch loss: -0.004964672960340977
+Batch loss: -0.011623116210103035
+Batch loss: 0.013440369628369808
+Batch loss: 0.02155357599258423
+Batch loss: 0.0009660475188866258
+Batch loss: -0.0026122573763132095
+Batch loss: 0.004221938084810972
+Batch loss: 0.0008548338082619011
+Batch loss: -0.014986990951001644
+Batch loss: -0.009212291799485683
+Batch loss: -0.007661243434995413
+Batch loss: 0.026177827268838882
+Batch loss: -0.0014867553254589438
+Batch loss: 0.01132273394614458
+Batch loss: 0.015827570110559464
+Batch loss: -0.0024686886463314295
+Batch loss: 0.01067257858812809
+Batch loss: 0.0012905941111966968
+Batch loss: 0.007051421795040369
+Batch loss: -0.0049616931937634945
+Batch loss: 0.06291267275810242
+Batch loss: 0.00860576331615448
+Batch loss: -0.0023236677516251802
+Batch loss: -0.08551328629255295
+Batch loss: -0.009287131018936634
+Batch loss: 0.010431699454784393
+Batch loss: 0.0014229287626221776
+Batch loss: -0.018947182223200798
+Batch loss: -0.0009473158279433846
+Batch loss: 0.006360683590173721
+Batch loss: -0.003891861531883478
+Batch loss: 0.01966690458357334
+Batch loss: -0.0011314291041344404
+Batch loss: 0.004125569481402636
+Batch loss: 0.033816177397966385
+Batch loss: 0.000608826638199389
+Batch loss: -0.002119064796715975
+Batch loss: -0.008721107617020607
+Epoch: 2 	Training Loss: 0.002857
+Batch loss: 0.03898762911558151
+Batch loss: 0.012688822112977505
+Batch loss: -0.00039704469963908195
+Batch loss: -0.0010704717133194208
+Batch loss: -0.005484187044203281
+Batch loss: -0.018684737384319305
+Batch loss: -0.0001811692927731201
+Batch loss: 0.010804853402078152
+Batch loss: 0.017239008098840714
+Batch loss: 0.012808221392333508
+Batch loss: 0.00903375819325447
+Batch loss: 0.013734552077949047
+Batch loss: 0.004492261912673712
+Batch loss: -0.029391786083579063
+Batch loss: -0.002063718158751726
+Batch loss: -0.008497598581016064
+Batch loss: -0.013629560358822346
+Batch loss: -0.018893947824835777
+Batch loss: 0.012709992937743664
+Batch loss: 0.014474543742835522
+Batch loss: 0.0041199298575520515
+Batch loss: 0.005587804596871138
+Batch loss: -0.03176933154463768
+Batch loss: -0.002788939978927374
+Batch loss: -0.002764882519841194
+Batch loss: 0.003877076553180814
+Batch loss: -0.0005631941021420062
+Batch loss: 0.000987711362540722
+Batch loss: -0.0018192967399954796
+Batch loss: -0.0107786376029253
+Batch loss: -0.0011160526191815734
+Batch loss: 0.00024729236611165106
+Batch loss: -0.004569733049720526
+Batch loss: -0.03116721846163273
+Batch loss: 0.008466267958283424
+Batch loss: -0.0009750498575158417
+Batch loss: 0.004805474076420069
+Batch loss: 0.002716108923777938
+Batch loss: 0.022845497354865074
+Batch loss: -0.00010718307748902589
+Batch loss: 0.032441429793834686
+Batch loss: 0.0020135766826570034
+Batch loss: 0.0006344871944747865
+Epoch: 3 	Training Loss: 0.001114
+Batch loss: 0.006720096804201603
+Batch loss: 0.01534462720155716
+Batch loss: 0.007804949767887592
+Batch loss: -0.007296368014067411
+Batch loss: -0.0023650063667446375
+Batch loss: -0.005074079614132643
+Batch loss: -0.0010425358777865767
+Batch loss: 0.0001461951032979414
+Batch loss: 0.010416305623948574
+Batch loss: 0.008762349374592304
+Batch loss: 0.0028426945209503174
+Batch loss: 0.012341940775513649
+Batch loss: 0.002836900996044278
+Batch loss: -0.013461536727845669
+Batch loss: 0.011512437835335732
+Batch loss: 0.000508200959302485
+Batch loss: -0.0078021022491157055
+Batch loss: -0.001938228728249669
+Batch loss: 0.004654351621866226
+Batch loss: 0.00712518859654665
+Batch loss: -0.016338078305125237
+Batch loss: 0.03969684988260269
+Batch loss: -0.01838781125843525
+Batch loss: -0.0012978862505406141
+Batch loss: -0.008916657418012619
+Batch loss: 0.016591807827353477
+Batch loss: 0.015754546970129013
+Batch loss: 0.0071504185907542706
+Batch loss: -0.00035497546195983887
+Batch loss: -0.011541438288986683
+Batch loss: 0.043732184916734695
+Batch loss: 0.0020373507868498564
+Batch loss: -0.005202229600399733
+Batch loss: -0.012059269472956657
+Batch loss: -0.023595137521624565
+Batch loss: -0.00020503264386206865
+Batch loss: 0.0061524598859250546
+Batch loss: 0.01033792458474636
+Batch loss: 0.011960400268435478
+Batch loss: -0.0010829424718394876
+Batch loss: -0.00028728024335578084
+Batch loss: 0.0011942603159695864
+Batch loss: -0.003745970083400607
+Epoch: 4 	Training Loss: 0.002355
+Batch loss: -0.003926034551113844
+Batch loss: 0.01267252117395401
+Batch loss: -0.004025809001177549
+Batch loss: 0.011357235722243786
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 282, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 203, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 79, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/LanguageModel.py", line 166, in _generation
+    return super()._generation(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 412, in _generation
+    return self.local_model.generate(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 1474, in generate
+    return self.greedy_search(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 2392, in greedy_search
+    if unfinished_sequences.max() == 0:
+KeyboardInterrupt

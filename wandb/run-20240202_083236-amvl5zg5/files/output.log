@@ -1,0 +1,33 @@
+392
+278
+Training...
+conv1.weight - Gradient: None
+conv1.bias - Gradient: None
+t_conv2.weight - Gradient: None
+t_conv2.bias - Gradient: None
+Loss grad None
+conv1.weight - Gradient: None
+conv1.bias - Gradient: None
+t_conv2.weight - Gradient: None
+t_conv2.bias - Gradient: None
+/home/franlucc/projects/codetrace/train.py:228: UserWarning: The .grad attribute of a Tensor that is not a leaf Tensor is being accessed. Its .grad attribute won't be populated during autograd.backward(). If you indeed want the .grad field to be populated for a non-leaf Tensor, use .retain_grad() on the non-leaf Tensor. If you access the non-leaf Tensor by mistake, make sure you access the leaf Tensor instead. See github.com/pytorch/pytorch/pull/30531 for more informations. (Triggered internally at aten/src/ATen/core/TensorBody.h:489.)
+  print("Loss grad", loss.grad)
+Loss grad None
+conv1.weight - Gradient: None
+conv1.bias - Gradient: None
+t_conv2.weight - Gradient: None
+t_conv2.bias - Gradient: None
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 309, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 223, in train_loop
+    causal_loss, _ = apply_mask(llm, output.clone().requires_grad_(True), prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 89, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 200, in __call__
+    gc.collect()
+KeyboardInterrupt

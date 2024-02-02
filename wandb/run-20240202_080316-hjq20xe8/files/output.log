@@ -1,0 +1,36 @@
+392
+278
+Training...
+conv1.weight - Gradient: None
+conv1.bias - Gradient: None
+t_conv2.weight - Gradient: None
+t_conv2.bias - Gradient: None
+Epoch: 1 	Training Loss: 0.008011
+conv1.weight - Gradient: None
+conv1.bias - Gradient: None
+t_conv2.weight - Gradient: None
+t_conv2.bias - Gradient: None
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 312, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 223, in train_loop
+    causal_loss, _ = apply_mask(llm, output.clone().detach().requires_grad_(True), prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 90, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/LanguageModel.py", line 166, in _generation
+    return super()._generation(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 412, in _generation
+    return self.local_model.generate(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 1474, in generate
+    return self.greedy_search(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 2392, in greedy_search
+    if unfinished_sequences.max() == 0:
+KeyboardInterrupt

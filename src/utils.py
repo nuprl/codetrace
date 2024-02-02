@@ -115,7 +115,7 @@ def fim_prog_func(prog : str) -> list[Tuple[str]]:
     fim_variations = []
     captures = query.captures(tree.root_node)
     for c in captures:
-        text = c[0].text.decode("utf-8").replace(":", "").strip()
+        text = c[0].text.decode("utf-8").strip()[1:]
         s = replace_between_points(prog, c[0].start_point, c[0].end_point, fim_placeholder)
         fim_variations.append((s, text))
     return fim_variations

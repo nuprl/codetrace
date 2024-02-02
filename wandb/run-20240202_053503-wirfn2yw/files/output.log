@@ -1,0 +1,67 @@
+392
+278
+Training...
+Batch loss: 0.6352995038032532
+Batch loss: 9.855606079101562
+Batch loss: -0.2073550522327423
+Batch loss: 2.102652072906494
+Batch loss: 0.48941999673843384
+Batch loss: 0.6384609937667847
+Batch loss: -0.1478225737810135
+Batch loss: 3.1025493144989014
+Batch loss: 0.3780030310153961
+Batch loss: -0.3604032099246979
+Batch loss: 5.004354000091553
+Batch loss: -0.529441237449646
+Batch loss: 1.7371494770050049
+Batch loss: -0.11129056662321091
+Batch loss: 1.8416340351104736
+Batch loss: 0.2274225950241089
+Batch loss: -0.699734628200531
+Batch loss: 1.8383625745773315
+Batch loss: -0.5331723093986511
+Batch loss: 1.5516307353973389
+Batch loss: 65.28499603271484
+Batch loss: 0.4747626781463623
+Batch loss: 1.3157716989517212
+Batch loss: 4.1426239013671875
+Batch loss: 1.2107305526733398
+Batch loss: 0.857254683971405
+Batch loss: 0.42218777537345886
+Batch loss: 4.8528337478637695
+Batch loss: -0.7657899260520935
+Batch loss: 0.4222516715526581
+Batch loss: 0.6434887051582336
+Batch loss: 1.0292848348617554
+Batch loss: 1.811644434928894
+Batch loss: 1.3971055746078491
+Batch loss: 0.5358464121818542
+Batch loss: -0.5723081827163696
+Batch loss: -0.1157495379447937
+Batch loss: 3.6561028957366943
+Batch loss: 2.31274151802063
+Batch loss: 1.5687707662582397
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 284, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 205, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 80, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/LanguageModel.py", line 166, in _generation
+    return super()._generation(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 412, in _generation
+    return self.local_model.generate(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 1474, in generate
+    return self.greedy_search(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 2392, in greedy_search
+    if unfinished_sequences.max() == 0:
+KeyboardInterrupt

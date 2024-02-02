@@ -1,0 +1,249 @@
+264
+216
+Training...
+Batch loss: 0.46702587604522705
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.2906727194786072
+Batch loss: 0.47481483221054077
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3731118142604828
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5465642809867859
+Batch loss: 0.017981812357902527
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.04612116515636444
+Batch loss: -0.003729015588760376
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.0037012100219726562
+Batch loss: 0.47427061200141907
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.26925331354141235
+Batch loss: 0.3155919015407562
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.34189313650131226
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.2578681707382202
+Batch loss: 0.690405011177063
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.6717751026153564
+Batch loss: 0.6809291839599609
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.4424975514411926
+Batch loss: 0.3735710382461548
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5706932544708252
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.2811833620071411
+Batch loss: 0.1510361284017563
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.11165295541286469
+Batch loss: 0.8086040616035461
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.33640122413635254
+Batch loss: 0.06999963521957397
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3000735342502594
+Batch loss: 0.4650897979736328
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.2118017077445984
+Batch loss: 0.06740288436412811
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.2723782956600189
+Batch loss: 0.3331614136695862
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.8349857330322266
+Batch loss: 0.6295661926269531
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.33557942509651184
+Batch loss: 0.3070158064365387
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.7527836561203003
+Batch loss: 0.26497846841812134
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.6100932955741882
+Batch loss: 0.8225484490394592
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.37518250942230225
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.4675215482711792
+Batch loss: 0.7015649080276489
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.32590430974960327
+Batch loss: 0.25390687584877014
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.4759357273578644
+Batch loss: 0.5810027122497559
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.4080895781517029
+Batch loss: 0.43216967582702637
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5066993832588196
+Batch loss: 0.6417214870452881
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.21603716909885406
+Batch loss: 0.49873217940330505
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.7892068028450012
+Batch loss: 0.4595407545566559
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.44701915979385376
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3694114089012146
+Batch loss: 0.22673863172531128
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5046437382698059
+Batch loss: 0.2978804111480713
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3583637475967407
+Batch loss: 0.6655564308166504
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5677375793457031
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3792182505130768
+Batch loss: 0.37953981757164
+Batch loss: 0.6064489483833313
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.1345175802707672
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.9083001613616943
+Batch loss: 0.3608677089214325
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.502521812915802
+Batch loss: 0.7154583930969238
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3923313617706299
+Batch loss: 0.6741770505905151
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5165252685546875
+Batch loss: 0.3970215320587158
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.2990686595439911
+Batch loss: 0.5441999435424805
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5267770290374756
+Batch loss: 0.3646925389766693
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.494351327419281
+Batch loss: 0.4705493450164795
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.883316159248352
+Batch loss: 0.5045747756958008
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5410422086715698
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5636583566665649
+Batch loss: 0.817487359046936
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3214585781097412
+Batch loss: 0.4788596034049988
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.36617040634155273
+Batch loss: 0.35130995512008667
+Batch loss: 0.5621953010559082
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3586995303630829
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.686196506023407
+Batch loss: 0.3112834692001343
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3059332072734833
+Batch loss: 0.6600875854492188
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.549346923828125
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.517732560634613
+Batch loss: 0.230900838971138
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5175400972366333
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.5544657707214355
+Batch loss: 0.46314385533332825
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.3055188059806824
+Batch loss: 0.2609686255455017
+Batch loss: 0.3309289813041687
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.562849760055542
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.6350867748260498
+Batch loss: 0.15628495812416077
+Epoch: 1 	Training Loss: 0.438014
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Batch loss: 0.47419095039367676
+Batch loss: 0.2847413420677185
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:0 for open-end generation.
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 265, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 190, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 79, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/LanguageModel.py", line 166, in _generation
+    return super()._generation(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 412, in _generation
+    return self.local_model.generate(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 1474, in generate
+    return self.greedy_search(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 2392, in greedy_search
+    if unfinished_sequences.max() == 0:
+KeyboardInterrupt

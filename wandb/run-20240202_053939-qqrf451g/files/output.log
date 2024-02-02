@@ -1,0 +1,51 @@
+392
+278
+Training...
+Batch loss: -0.451453298330307
+Batch loss: 5.241243839263916
+Batch loss: 2.124864339828491
+Batch loss: 3.733785629272461
+Batch loss: 3.996094226837158
+Batch loss: 0.38950735330581665
+Batch loss: -0.2563732862472534
+Batch loss: 2.379115104675293
+Batch loss: 1.583739161491394
+Batch loss: 13.645187377929688
+Batch loss: -0.4344305992126465
+Batch loss: 0.8120962381362915
+Batch loss: 0.5871090888977051
+Batch loss: 3.3156681060791016
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 284, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 205, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 80, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 69, in __exit__
+    raise exc_val
+  File "/home/franlucc/projects/codetrace/train.py", line 85, in apply_mask
+    with generator.invoke(prompts) as invoker:
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Invoker.py", line 79, in __exit__
+    raise exc_val
+  File "/home/franlucc/projects/codetrace/train.py", line 102, in apply_mask
+    llm.transformer.h[layer].mlp.output= randomize_values_with_mask(llm.transformer.h[layer].mlp.output, mlp_mask)
+  File "/home/franlucc/projects/codetrace/train.py", line 73, in randomize_values_with_mask
+    random_values = torch.rand_like(original_tensor) * mask
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Proxy.py", line 134, in __mul__
+    return self.node.graph.add(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Graph.py", line 237, in add
+    stack = inspect.stack()
+  File "/usr/lib/python3.10/inspect.py", line 1673, in stack
+    return getouterframes(sys._getframe(1), context)
+  File "/usr/lib/python3.10/inspect.py", line 1650, in getouterframes
+    frameinfo = (frame,) + getframeinfo(frame, context)
+  File "/usr/lib/python3.10/inspect.py", line 1624, in getframeinfo
+    lines, lnum = findsource(frame)
+  File "/usr/lib/python3.10/inspect.py", line 940, in findsource
+    file = getsourcefile(object)
+  File "/usr/lib/python3.10/inspect.py", line 826, in getsourcefile
+    if os.path.exists(filename):
+  File "/usr/lib/python3.10/genericpath.py", line 19, in exists
+    os.stat(path)
+KeyboardInterrupt

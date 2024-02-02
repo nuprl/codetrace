@@ -34,8 +34,7 @@ Note: mlp dim needs to be divisible by attn heads
 
 dimensions are (l, a, (d//a)+1)
 
-TODO: change both to 2048
-n_dim is 2048, h_dim is 128, a is 16 -> 16*128 = 2048
+TODO: disconnected computation graph somewhere
 
 """
 mask_example = [
@@ -59,6 +58,16 @@ import random
 import numpy as np
 import datasets
 import wandb
+
+def kl_divergence_loss(prob_dist1, prob_dist2,margin=0.1):
+    # Calculate KL divergence between prob_dist1 and prob_dist2
+    kl_divergence = F.kl_div(torch.log(prob_dist2), prob_dist1, reduction='batchmean')
+    # Apply margin-based constraint
+    margin_constraint = torch.clamp(prob_dist1 - prob_dist2 + margin, min=0.0).mean()
+    # Combine KL divergence and margin constraint
+    loss = kl_divergence + margin_constraint
+    return kl_divergence
+
 
 def apply_mask(llm: LanguageModel,
                mask: torch.Tensor,
@@ -89,7 +98,7 @@ def apply_mask(llm: LanguageModel,
                 
                 target_shape = llm.transformer.h[layer].attn.c_proj.output.shape
                 # shape (1,1,16)
-                attn_mask = mask[layer][0].repeat(1,128,1).mT.reshape(1,1,2048)
+                attn_mask = mask[layer].repeat(1,128).mT.reshape(1,2048)
                 
                 # apply mask to any attn heads
                 llm.transformer.h[layer].attn.c_proj.output= randomize_values_with_mask(llm.transformer.h[layer].attn.c_proj.output, attn_mask)
@@ -114,12 +123,7 @@ def apply_mask(llm: LanguageModel,
 
         correct_idx_prob = final_logits[:,-1,correct_idxs].squeeze()
         incorrect_idx_prob = final_logits[:,-1,incorrect_idxs].squeeze()
-        diff = ((incorrect_idx_prob - correct_idx_prob)/correct_idx_prob)*10
-        diff = diff.squeeze()
-        if diff.dim() == 0:
-            diff = diff.item().save()
-        else:
-            diff = diff.diag().save()
+        diff = kl_divergence_loss(correct_idx_prob,incorrect_idx_prob).save()
 
     return diff, max_prob_idxs
         
@@ -128,32 +132,39 @@ class MatrixAutoEncoder(nn.Module):
     def __init__(self, device="cpu"):
         super().__init__()
         self.device = device
-        self.conv1 = nn.Conv2d(24, 16, 3, padding=1)  
-        self.conv2 = nn.Conv2d(16, 4, 3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)
+        self.conv1 = nn.Conv1d(24, 16, 3, padding=1)  
+
+        # self.conv2 = nn.Conv1d(16, 4, 3, padding=1)
+        self.pool = nn.MaxPool1d(2, 2)
         
-        self.t_conv1 = nn.ConvTranspose2d(4, 16, 2, stride=2)
-        self.t_conv2 = nn.ConvTranspose2d(16, 24, 2, stride=2)
+        # self.t_conv1 = nn.ConvTranspose1d(4, 16, 2, stride=2)
+        self.t_conv2 = nn.ConvTranspose1d(16, 24, 2, stride=2)
+
 
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = self.pool(x)
 
-        x = F.relu(self.conv2(x))
-        x = self.pool(x) 
+        # x = F.relu(self.conv2(x))
+        # x = self.pool(x) 
         
         # relu forces output 0,1
-        x = F.relu(self.t_conv1(x))
-        x = F.relu(self.t_conv2(x))
+        # x = F.relu(self.t_conv1(x))
+        x = F.sigmoid(self.t_conv2(x))
         
-        x_min = x.min()
-        x_max = x.max()
-        x_normalized = (x - x_min) / (x_max - x_min)
-        x = (x_normalized > 0.5).float()
+        # x_min = x.min()
+        # x_max = x.max()
+        # x_normalized = (x - x_min) / (x_max - x_min)
+        # x = (x > 0.5).float()
 
         return x
 
+def z_score_normalize(matrix):
+    mean = matrix.mean()
+    std_dev = matrix.std()
+    normalized_matrix = (matrix - mean) / std_dev
+    return normalized_matrix
 
 def train_loop(llm):
     """
@@ -161,12 +172,13 @@ def train_loop(llm):
     dataloader
     """
     torch.random.manual_seed(42)
-    wandb.init(project='crazy_interp_mask', name='v0')
+    # wandb.init(project='crazy_interp_mask', name='v0')
 
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     batch_size = 5
     model = MatrixAutoEncoder()
-    causal_mask = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head, llm.config.n_head))
+    model.train()
+    causal_mask = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head))
     dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
     print(len(dataset))
     dataset = dataset.filter(lambda x: len(x["prompt"]) < 8000)
@@ -177,15 +189,24 @@ def train_loop(llm):
     incorrect_idxs = [llm.tokenizer.encode(d["generated_text"])[0] for d in dataset]
     train_data = list(zip(prompts, correct_idxs, incorrect_idxs))
     # shuffle train data
+    random.seed(42)
     random.shuffle(train_data)
     
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, num_workers=1)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5, weight_decay=0.01)
+    optimizer = torch.optim.Adam(model.parameters(),  lr=0.001, weight_decay=1e-4)  # Increase the learning rate
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Apply gradient clipping
+
 
     print("Training...")
     # number of epochs to train the model
     n_epochs = 10
+    
+    for name, param in model.named_parameters():
+        if param.is_leaf:
+            param.requires_grad = True
+            param.retain_grad() 
+    
 
     for epoch in range(1, n_epochs+1):
         # monitor training loss
@@ -200,15 +221,25 @@ def train_loop(llm):
             optimizer.zero_grad()
 
             output= model(inpt)
+            output = z_score_normalize(output)
+            output = (output > 0.5).float()
             # print(output.shape)
-            causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+            causal_loss, _ = apply_mask(llm, output.clone().requires_grad_(True), prompts, correct_idxs, incorrect_idxs)
             causal_loss = util.apply(causal_loss, lambda x: x.value, Proxy)
-            causal_loss = causal_loss.clone().detach().requires_grad_(True)
-            loss = causal_loss.mean()
+            causal_loss = torch.tensor([5.], dtype=torch.float32)
+            # create a clone of causal loss that is attatched to the graph of model and trainable
+            loss = causal_loss.clone().requires_grad_(True).mean()
+            loss.retain_grad()
             loss.backward()
+            print("Loss grad", loss.grad)
+            for name, param in model.named_parameters():
+                print(f"{name} - Gradient: {param.requires_grad}")
+                print(f"{name} - Gradient: {param.grad}")
+                print(f"{name} - Is Leaf: {param.is_leaf}")
+
             optimizer.step()
-            print(f"Batch loss: {loss.item()}")
-            wandb.log({'training_loss': loss.item(), "epoch":epoch, "batch_size":batch_size})
+            # print(f"Batch loss: {loss.item()}")
+            # wandb.log({'training_loss': loss.item(), "epoch":epoch, "batch_size":batch_size})
             train_loss += loss.item()
             
         # print avg training statistics 
@@ -217,11 +248,15 @@ def train_loop(llm):
             epoch, 
             train_loss
             ))
+        
+        for name, param in model.named_parameters():
+            print(f"{name} - Gradient: {param.grad}")
+            
         # save output to pt file
         with torch.no_grad():
             with open(f"causal_mask_epoch_{epoch}.pt", "wb") as f:
                 torch.save(output, f)
-    wandb.finish()
+    # wandb.finish()
 
 def mask_to_matrix(llm : LanguageModel, mask_json : dict):
     """
@@ -274,9 +309,9 @@ if __name__ == "__main__":
     
     prompts = [placeholder_to_std_fmt(p, STARCODER_FIM) for p in prompts]
 
-    mask_mat = torch.zeros((llm.config.n_layer, llm.config.n_head, llm.config.n_head))
+    mask_mat = torch.zeros((llm.config.n_layer, llm.config.n_head))
     # mask_mat = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head, llm.config.n_head))
-    out = apply_mask(llm, torch.tensor(mask_mat), prompts, this_correct_idxs, this_incorrect_idxs, debug=True)
+    out = apply_mask(llm, mask_mat.clone().detach().requires_grad_(True), prompts, this_correct_idxs, this_incorrect_idxs, debug=True)
     out = util.apply(out, lambda x: x.value, Proxy)
     print(out[0], [llm.tokenizer.decode(o.item()) for o in out[1]])
 

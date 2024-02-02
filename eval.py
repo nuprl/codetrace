@@ -14,9 +14,37 @@ import datasets
 import wandb
 from train import apply_mask
 
+def shuffle_tensor(tensor):
+    # Generate a random permutation of indices
+    indices = torch.randperm(tensor.numel())
+
+    # Reshape the tensor to a 1D tensor, shuffle using the indices, and reshape back
+    shuffled_tensor = tensor.view(-1)[indices].view(tensor.size())
+
+    return shuffled_tensor
+
+
+def shuffle_tensor_along_dimension(tensor, dim):
+    # Get the size of the specified dimension
+    dim_size = tensor.size(dim)
+
+    # Generate a random permutation of indices along the specified dimension
+    indices = torch.randperm(dim_size)
+
+    # Use the shuffled indices to permute the specified dimension
+    shuffled_tensor = tensor.index_select(dim, indices)
+
+    return shuffled_tensor
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
-mask = torch.load("causal_mask_epoch_1.pt")
+mask = torch.load("1d_causal_mask_epoch_1.pt")
+# shuffle randomly mask
+# mask_new = shuffle_tensor_along_dimension(mask, 0)
+# while mask_new.equal(mask):
+#     mask_new = shuffle_tensor_along_dimension(mask, 0)
+
+print(mask.shape)
 dataset = dataset.filter(lambda x: len(x["prompt"]) < 8000)
 starcoderbase_1b = "/home/arjun/models/starcoderbase-1b/"
 llm = LanguageModel(starcoderbase_1b, device_map="auto")
@@ -54,3 +82,4 @@ for res in results:
         succ_count += 1
 
 print("Success rate:", succ_count / len(results), "(", succ_count, "/", len(results), ")")
+# print(mask_new)

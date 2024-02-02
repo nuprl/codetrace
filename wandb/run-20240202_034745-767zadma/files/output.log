@@ -1,0 +1,64 @@
+264
+216
+Training...
+Batch loss: 0.5207268595695496
+Batch loss: 0.6253561973571777
+Batch loss: 0.5377389192581177
+Batch loss: 0.3608620762825012
+Batch loss: 0.3817700147628784
+Batch loss: 0.5521909594535828
+Batch loss: 0.4302089810371399
+Batch loss: 0.20305576920509338
+Batch loss: 0.48631641268730164
+Batch loss: 0.4668195843696594
+Batch loss: 0.4331565797328949
+Batch loss: 0.10147767513990402
+Batch loss: 0.6799482703208923
+Batch loss: 0.7645135521888733
+Batch loss: 0.48953017592430115
+Batch loss: 0.578504741191864
+Batch loss: 0.3748939633369446
+Batch loss: 0.3485592007637024
+Batch loss: 0.4589512050151825
+Batch loss: 0.3131794035434723
+Batch loss: 0.2595226466655731
+Batch loss: 0.3054639995098114
+Batch loss: 0.23021988570690155
+Batch loss: 0.21811926364898682
+Batch loss: 0.34393489360809326
+Batch loss: 0.4734101891517639
+Batch loss: 0.4760536253452301
+Batch loss: 0.5552050471305847
+Batch loss: 0.6189443469047546
+Batch loss: 0.3731783628463745
+Batch loss: 0.7059904932975769
+Batch loss: 0.4236256778240204
+Batch loss: 0.37150850892066956
+Batch loss: 0.3664418160915375
+Batch loss: 0.4224499762058258
+Batch loss: 0.2897648513317108
+Batch loss: 0.2618885934352875
+Batch loss: 0.5730103850364685
+Batch loss: 0.39659905433654785
+Batch loss: 0.3033481240272522
+Batch loss: 0.3583616316318512
+Batch loss: 0.3657945990562439
+Batch loss: 0.5423295497894287
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 266, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 191, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 79, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 69, in __exit__
+    raise exc_val
+  File "/home/franlucc/projects/codetrace/train.py", line 117, in apply_mask
+    diff = diff.squeeze().diag()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Proxy.py", line 55, in __call__
+    return self.node.graph.add(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Graph.py", line 219, in add
+    value = target(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Proxy.py", line 25, in proxy_call
+    return callable(*args, **kwargs)
+RuntimeError: diag(): Supports 1D or 2D tensors. Got 0D

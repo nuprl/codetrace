@@ -1,0 +1,174 @@
+264
+216
+Training...
+Batch loss: 0.6821408271789551
+Batch loss: 0.5321294069290161
+Batch loss: 0.5532001852989197
+Batch loss: 0.4829338490962982
+Batch loss: 0.6876168251037598
+Batch loss: 0.5664693713188171
+Batch loss: 0.5706421732902527
+Batch loss: 0.3765581548213959
+Batch loss: 0.6262206435203552
+Batch loss: 0.5852740406990051
+Batch loss: 0.5704662203788757
+Batch loss: 0.6380560398101807
+Batch loss: 0.5942366719245911
+Batch loss: 0.6353830695152283
+Batch loss: 0.5211780667304993
+Batch loss: 0.5889278650283813
+Batch loss: 0.5359393954277039
+Batch loss: 0.6246698498725891
+Batch loss: 0.6326505541801453
+Batch loss: 0.6145910620689392
+Batch loss: 0.5384184718132019
+Batch loss: 0.5157683491706848
+Batch loss: 0.5080370306968689
+Batch loss: 0.6220093369483948
+Batch loss: 0.5391963124275208
+Batch loss: 0.5975708365440369
+Batch loss: 0.6462956666946411
+Batch loss: 0.5566416382789612
+Batch loss: 0.34418949484825134
+Batch loss: 0.6160158514976501
+Batch loss: 0.6303784847259521
+Batch loss: 0.4428735673427582
+Batch loss: 0.6846429109573364
+Batch loss: 0.6307574510574341
+Batch loss: 0.4483570158481598
+Batch loss: 0.5763877034187317
+Batch loss: 0.4805358350276947
+Batch loss: 0.4617805480957031
+Batch loss: 0.5322107672691345
+Batch loss: 0.6538184285163879
+Batch loss: 0.5326440334320068
+Batch loss: 0.5496589541435242
+Batch loss: 0.520191490650177
+Epoch: 1 	Training Loss: 0.551083
+Batch loss: 0.7006246447563171
+Batch loss: 0.5471355319023132
+Batch loss: 0.5303678512573242
+Batch loss: 0.4381921887397766
+Batch loss: 0.7305695414543152
+Batch loss: 0.5606489181518555
+Batch loss: 0.5635835528373718
+Batch loss: 0.4098437428474426
+Batch loss: 0.6486456394195557
+Batch loss: 0.5493173003196716
+Batch loss: 0.6088717579841614
+Batch loss: 0.689537525177002
+Batch loss: 0.6218945384025574
+Batch loss: 0.6564220190048218
+Batch loss: 0.5371097922325134
+Batch loss: 0.5725122690200806
+Batch loss: 0.5646197199821472
+Batch loss: 0.5818812847137451
+Batch loss: 0.6712042689323425
+Batch loss: 0.6218851208686829
+Batch loss: 0.6310416460037231
+Batch loss: 0.5456588268280029
+Batch loss: 0.49922800064086914
+Batch loss: 0.6415356993675232
+Batch loss: 0.5539517998695374
+Batch loss: 0.5145391225814819
+Batch loss: 0.6589992642402649
+Batch loss: 0.5721572041511536
+Batch loss: 0.3763890862464905
+Batch loss: 0.596271812915802
+Batch loss: 0.6218907237052917
+Batch loss: 0.48021793365478516
+Batch loss: 0.6884969472885132
+Batch loss: 0.5644871592521667
+Batch loss: 0.4804542064666748
+Batch loss: 0.5335399508476257
+Batch loss: 0.5387548804283142
+Batch loss: 0.48492860794067383
+Batch loss: 0.5637445449829102
+Batch loss: 0.6865255236625671
+Batch loss: 0.5703434348106384
+Batch loss: 0.5666027069091797
+Batch loss: 0.46725693345069885
+Epoch: 2 	Training Loss: 0.560043
+Batch loss: 0.6648384928703308
+Batch loss: 0.5337435603141785
+Batch loss: 0.5027066469192505
+Batch loss: 0.4447009265422821
+Batch loss: 0.7273651957511902
+Batch loss: 0.6091977953910828
+Batch loss: 0.5501360893249512
+Batch loss: 0.43476277589797974
+Batch loss: 0.6642616391181946
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 276, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 197, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 79, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/LanguageModel.py", line 166, in _generation
+    return super()._generation(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 412, in _generation
+    return self.local_model.generate(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 1474, in generate
+    return self.greedy_search(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 2335, in greedy_search
+    outputs = self(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1568, in _call_impl
+    result = forward_call(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/accelerate/hooks.py", line 165, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 1265, in forward
+    transformer_outputs = self.transformer(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 1118, in forward
+    outputs = block(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/accelerate/hooks.py", line 165, in new_forward
+    output = module._old_forward(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 764, in forward
+    feed_forward_hidden_states = self.mlp(hidden_states)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1581, in _call_impl
+    hook_result = hook(self, args, result)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/intervention.py", line 321, in output_hook
+    return self.output_hook(output, module_path)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 184, in <lambda>
+    output_hook=lambda activations, module_path: intervene(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/intervention.py", line 251, in intervene
+    node.set_value(value)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Node.py", line 279, in set_value
+    listener.execute()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Node.py", line 261, in execute
+    self.set_value(output)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Node.py", line 279, in set_value
+    listener.execute()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Node.py", line 230, in execute
+    args, kwargs = self.prepare_inputs()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Node.py", line 218, in prepare_inputs
+    args = util.apply(args, _to, torch.Tensor)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/util.py", line 25, in apply
+    return [apply(_data, fn, cls) for _data in data]
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/util.py", line 25, in <listcomp>
+    return [apply(_data, fn, cls) for _data in data]
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/util.py", line 22, in apply
+    return fn(data)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/tracing/Node.py", line 216, in _to
+    return value.to(device)
+KeyboardInterrupt

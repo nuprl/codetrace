@@ -1,0 +1,42 @@
+392
+278
+Training...
+Batch loss: -0.3405139446258545
+Batch loss: 0.2577376961708069
+Batch loss: 0.21463146805763245
+Batch loss: -0.08764176070690155
+Batch loss: 3.837609052658081
+Batch loss: -0.004569840617477894
+Batch loss: 0.8103188276290894
+Batch loss: 1.7012958526611328
+Batch loss: 0.9998540878295898
+Batch loss: 0.05216958373785019
+Batch loss: 0.9805793762207031
+Batch loss: -0.41663509607315063
+Batch loss: 0.5785304307937622
+Batch loss: 0.43931692838668823
+Batch loss: 1.1349055767059326
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 284, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 205, in train_loop
+    causal_loss, _ = apply_mask(llm, output, prompts, correct_idxs, incorrect_idxs)
+  File "/home/franlucc/projects/codetrace/train.py", line 80, in apply_mask
+    with llm.generate(max_new_tokens=1,
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/LanguageModel.py", line 166, in _generation
+    return super()._generation(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 412, in _generation
+    return self.local_model.generate(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 1474, in generate
+    return self.greedy_search(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/transformers/generation/utils.py", line 2392, in greedy_search
+    if unfinished_sequences.max() == 0:
+KeyboardInterrupt

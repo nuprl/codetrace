@@ -1,0 +1,29 @@
+264
+216
+Training...
+Batch loss: 0.0007910891436040401
+Batch loss: 0.0005994350067339838
+Batch loss: 0.0029812948778271675
+Batch loss: -0.011381487362086773
+Batch loss: 0.050774093717336655
+Batch loss: 0.049647361040115356
+Batch loss: -0.018488166853785515
+Batch loss: 0.0012266382109373808
+Batch loss: 0.0021924306638538837
+Batch loss: 0.010426118038594723
+Batch loss: -0.003300098469480872
+Batch loss: 0.01752905733883381
+Batch loss: 0.008912828750908375
+Batch loss: 6.18144913460128e-05
+Traceback (most recent call last):
+  File "/home/franlucc/projects/codetrace/train.py", line 282, in <module>
+    train_loop(llm)
+  File "/home/franlucc/projects/codetrace/train.py", line 193, in train_loop
+    for data in train_loader:
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 626, in __next__
+    with torch.autograd.profiler.record_function(self._profile_name):
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/autograd/profiler.py", line 631, in __enter__
+    self.record = torch.ops.profiler._record_function_enter_new(
+  File "/home/franlucc/venvs/gpu/lib/python3.10/site-packages/torch/_ops.py", line 692, in __call__
+    return self._op(*args, **kwargs or {})
+KeyboardInterrupt
