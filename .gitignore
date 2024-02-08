@@ -10,3 +10,4 @@ package.json
 log/
 generations/
 images/
+wandb/

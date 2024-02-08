@@ -207,7 +207,7 @@ def train_loop(llm):
             param.requires_grad = True
             param.retain_grad() 
     
-
+    criterion = nn.BCELoss()
     for epoch in range(1, n_epochs+1):
         # monitor training loss
         train_loss = 0.0
@@ -228,17 +228,18 @@ def train_loop(llm):
             causal_loss = util.apply(causal_loss, lambda x: x.value, Proxy)
             causal_loss = torch.tensor([5.], dtype=torch.float32)
             # create a clone of causal loss that is attatched to the graph of model and trainable
-            loss = causal_loss.clone().requires_grad_(True).mean()
-            loss.retain_grad()
+            llm_loss_reqard = causal_loss.clone().requires_grad_(True)
+            
+            loss = criterion(output, inpt).requires_grad_(True)
             loss.backward()
             print("Loss grad", loss.grad)
-            for name, param in model.named_parameters():
-                print(f"{name} - Gradient: {param.requires_grad}")
-                print(f"{name} - Gradient: {param.grad}")
-                print(f"{name} - Is Leaf: {param.is_leaf}")
+            # for name, param in model.named_parameters():
+            #     print(f"{name} - Gradient: {param.requires_grad}")
+            #     print(f"{name} - Gradient: {param.grad}")
+            #     print(f"{name} - Is Leaf: {param.is_leaf}")
 
             optimizer.step()
-            # print(f"Batch loss: {loss.item()}")
+            print(f"Batch loss: {loss.item()}")
             # wandb.log({'training_loss': loss.item(), "epoch":epoch, "batch_size":batch_size})
             train_loss += loss.item()
             
