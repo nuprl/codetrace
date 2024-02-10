@@ -11,3 +11,5 @@ log/
 generations/
 images/
 wandb/
+models/
+masks/

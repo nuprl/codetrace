@@ -58,15 +58,17 @@ import random
 import numpy as np
 import datasets
 import wandb
+wandb_on = True
 
-def kl_divergence_loss(prob_dist1, prob_dist2,margin=0.1):
+def kl_divergence_loss(prob_dist1, prob_dist2):
     # Calculate KL divergence between prob_dist1 and prob_dist2
-    kl_divergence = F.kl_div(torch.log(prob_dist2), prob_dist1, reduction='batchmean')
-    # Apply margin-based constraint
-    margin_constraint = torch.clamp(prob_dist1 - prob_dist2 + margin, min=0.0).mean()
-    # Combine KL divergence and margin constraint
-    loss = kl_divergence + margin_constraint
+    kl_divergence = F.kl_div(torch.log(prob_dist1), prob_dist2, reduction='batchmean')
     return kl_divergence
+
+def relative_distance_loss(prob_dist1, prob_dist2):
+    prob_dist1 = prob_dist1.mean()
+    prob_dist2 = prob_dist2.mean()
+    return prob_dist1 / prob_dist2
 
 
 def apply_mask(llm: LanguageModel,
@@ -76,6 +78,10 @@ def apply_mask(llm: LanguageModel,
                incorrect_idxs: List[int],
                debug=False) -> List[int]:
 
+    # normalize mask
+    mask = z_score_normalize(mask)
+    mask = (mask > 0.5).float()
+    
     def randomize_values_with_mask(original_tensor, mask):
         torch.random.manual_seed(42)
         # Generate random values for the indices where the mask is equal to 1
@@ -97,7 +103,6 @@ def apply_mask(llm: LanguageModel,
             for layer in range(llm.config.n_layer):
                 
                 target_shape = llm.transformer.h[layer].attn.c_proj.output.shape
-                # shape (1,1,16)
                 attn_mask = mask[layer].repeat(1,128).mT.reshape(1,2048)
                 
                 # apply mask to any attn heads
@@ -121,11 +126,10 @@ def apply_mask(llm: LanguageModel,
         else:
             max_prob_idxs = None
 
-        correct_idx_prob = final_logits[:,-1,correct_idxs].squeeze()
-        incorrect_idx_prob = final_logits[:,-1,incorrect_idxs].squeeze()
-        diff = kl_divergence_loss(correct_idx_prob,incorrect_idx_prob).save()
+        correct_idx_prob = final_logits[:,-1,correct_idxs].save()
+        incorrect_idx_prob = final_logits[:,-1,incorrect_idxs].save()
 
-    return diff, max_prob_idxs
+    return correct_idx_prob, incorrect_idx_prob, max_prob_idxs
         
         
 class MatrixAutoEncoder(nn.Module):
@@ -133,31 +137,28 @@ class MatrixAutoEncoder(nn.Module):
         super().__init__()
         self.device = device
         self.conv1 = nn.Conv1d(24, 16, 3, padding=1)  
-
-        # self.conv2 = nn.Conv1d(16, 4, 3, padding=1)
+        self.conv2 = nn.Conv1d(16, 4, 3, padding=1)
+        self.conv3 = nn.Conv1d(4, 1, 3, padding=1)
+        self.conv4 = nn.Conv1d(1, 1, 3, padding=1)
         self.pool = nn.MaxPool1d(2, 2)
-        
-        # self.t_conv1 = nn.ConvTranspose1d(4, 16, 2, stride=2)
-        self.t_conv2 = nn.ConvTranspose1d(16, 24, 2, stride=2)
-
-
+        self.t_conv0 = nn.ConvTranspose1d(1, 1, 2, stride=2)
+        self.t_conv1 = nn.ConvTranspose1d(1, 4, 2, stride=2)
+        self.t_conv2 = nn.ConvTranspose1d(4, 16, 2, stride=2)
+        self.t_conv3 = nn.ConvTranspose1d(16, 24, 2, stride=2)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = self.pool(x)
-
-        # x = F.relu(self.conv2(x))
-        # x = self.pool(x) 
-        
-        # relu forces output 0,1
-        # x = F.relu(self.t_conv1(x))
-        x = F.sigmoid(self.t_conv2(x))
-        
-        # x_min = x.min()
-        # x_max = x.max()
-        # x_normalized = (x - x_min) / (x_max - x_min)
-        # x = (x > 0.5).float()
-
+        x = F.relu(self.conv2(x))
+        x = self.pool(x)
+        x = F.relu(self.conv3(x))
+        x = self.pool(x)
+        x = F.relu(self.conv4(x))
+        x = self.pool(x)
+        x = F.relu(self.t_conv0(x))
+        x = F.relu(self.t_conv1(x))
+        x = F.relu(self.t_conv2(x))
+        x = F.sigmoid(self.t_conv3(x))
         return x
 
 def z_score_normalize(matrix):
@@ -168,80 +169,87 @@ def z_score_normalize(matrix):
 
 def train_loop(llm):
     """
-    TODO
-    dataloader
+    model not updating?
     """
     torch.random.manual_seed(42)
-    # wandb.init(project='crazy_interp_mask', name='v0')
+    if wandb_on:
+        wandb.init(project='crazy_interp_mask', name='v0')
 
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    batch_size = 5
+    batch_size = 5 # for OOM
     model = MatrixAutoEncoder()
     model.train()
-    causal_mask = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head))
-    dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
-    print(len(dataset))
-    dataset = dataset.filter(lambda x: len(x["prompt"]) < 8000)
-    print(len(dataset))
     
+    causal_mask = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head)).float()
+    # causal_mask = torch.zeros((llm.config.n_layer, llm.config.n_head)).float()
+    dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
+    dataset = dataset.filter(lambda x: len(x["prompt"]) < 8000) # for OOM
     prompts = [d["prompt"] for d in dataset]
     correct_idxs = [llm.tokenizer.encode(d["fim_sol"])[0] for d in dataset]
     incorrect_idxs = [llm.tokenizer.encode(d["generated_text"])[0] for d in dataset]
-    train_data = list(zip(prompts, correct_idxs, incorrect_idxs))
+    idxs = list(zip(correct_idxs, incorrect_idxs))
+    train_data = list(zip(prompts, idxs))
+
+    
     # shuffle train data
     random.seed(42)
     random.shuffle(train_data)
     
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, num_workers=1)
 
-    optimizer = torch.optim.Adam(model.parameters(),  lr=0.001, weight_decay=1e-4)  # Increase the learning rate
-    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Apply gradient clipping
+    optimizer = torch.optim.AdamW(model.parameters(),  lr=0.001)
+    # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Apply gradient clipping
 
 
     print("Training...")
     # number of epochs to train the model
-    n_epochs = 10
+    n_epochs = 20
+    e = 10
     
-    for name, param in model.named_parameters():
-        if param.is_leaf:
-            param.requires_grad = True
-            param.retain_grad() 
-    
-    criterion = nn.BCELoss()
+    criterion = nn.MSELoss()
+    # criterion = nn.KLDivLoss()
     for epoch in range(1, n_epochs+1):
         # monitor training loss
         train_loss = 0.0
         
         for data in train_loader:
-            prompts, correct_idxs, incorrect_idxs = data
+            prompts, (correct_idxs, incorrect_idxs) = data
             if len(prompts) == 1:
                 continue
             
-            inpt = causal_mask.to(device=model.device, dtype=model.conv1.weight.dtype)
             optimizer.zero_grad()
 
-            output= model(inpt)
-            output = z_score_normalize(output)
-            output = (output > 0.5).float()
-            # print(output.shape)
-            causal_loss, _ = apply_mask(llm, output.clone().requires_grad_(True), prompts, correct_idxs, incorrect_idxs)
-            causal_loss = util.apply(causal_loss, lambda x: x.value, Proxy)
-            causal_loss = torch.tensor([5.], dtype=torch.float32)
-            # create a clone of causal loss that is attatched to the graph of model and trainable
-            llm_loss_reqard = causal_loss.clone().requires_grad_(True)
+            output= model(causal_mask)
+            # print(f"Output: {output}")
             
-            loss = criterion(output, inpt).requires_grad_(True)
-            loss.backward()
-            print("Loss grad", loss.grad)
-            # for name, param in model.named_parameters():
-            #     print(f"{name} - Gradient: {param.requires_grad}")
-            #     print(f"{name} - Gradient: {param.grad}")
-            #     print(f"{name} - Is Leaf: {param.is_leaf}")
+            correct_idx, incorrect_idx, _ = apply_mask(llm, output.clone(), prompts, correct_idxs, incorrect_idxs)
+            correct_idx = util.apply(correct_idx, lambda x: x.value, Proxy)
+            incorrect_idx = util.apply(incorrect_idx, lambda x: x.value, Proxy)
+            correct_idx = correct_idx.clone().detach().to(model.device).requires_grad_(True)
+            incorrect_idx = incorrect_idx.clone().detach().to(model.device).requires_grad_(True)
+            # print(f"Correct idx: {correct_idx}, Incorrect idx: {incorrect_idx}")
+            # create a clone of causal loss that is attatched to the graph of model and trainable
+            # loss = causal_loss.detach().clone().to(model.device).requires_grad_(True)
+            # loss = kl_divergence_loss(incorrect_idx, correct_idx).requires_grad_(True)
+            
+            with torch.enable_grad():
+                # causal_loss = kl_divergence_loss(incorrect_idx,correct_idx)
+                causal_loss = relative_distance_loss(incorrect_idx,correct_idx)
+                # loss = criterion(output, causal_mask)/1000 + incorrect_idx.mean()
+                loss = criterion(output, causal_mask) + causal_loss
+
+                # print(f"diff: {criterion(output, causal_mask)}, {causal_loss*e}")
+                loss.backward()
+            
+                # for name, param in model.named_parameters():
+                #     print(f"{name} - Gradient: {param.grad}")
 
             optimizer.step()
             print(f"Batch loss: {loss.item()}")
-            # wandb.log({'training_loss': loss.item(), "epoch":epoch, "batch_size":batch_size})
+            if wandb_on:
+                wandb.log({'training_loss': loss.item(), "epoch":epoch, "batch_size":batch_size})
             train_loss += loss.item()
+            
             
         # print avg training statistics 
         train_loss = train_loss/len(train_loader)
@@ -250,14 +258,20 @@ def train_loop(llm):
             train_loss
             ))
         
-        for name, param in model.named_parameters():
-            print(f"{name} - Gradient: {param.grad}")
+        # for name, param in model.named_parameters():
+        #     print(f"{name} - Gradient: {param.grad}")
             
         # save output to pt file
         with torch.no_grad():
-            with open(f"causal_mask_epoch_{epoch}.pt", "wb") as f:
-                torch.save(output, f)
-    # wandb.finish()
+            with open(f"_causal_mask_epoch_{epoch}.pt", "wb") as f:
+                out = model(causal_mask)
+                out = z_score_normalize(out)
+                out = (out > 0.5).float()
+                torch.save(out, f)
+            # save model
+            torch.save(model.state_dict(), f"_model_epoch_{epoch}.pt")
+    if wandb_on:
+        wandb.finish()
 
 def mask_to_matrix(llm : LanguageModel, mask_json : dict):
     """
@@ -288,32 +302,32 @@ def mask_to_matrix(llm : LanguageModel, mask_json : dict):
 
 
 if __name__ == "__main__":
-    # device = sys.argv[1]
-    # if device == -1:
-    #     device = "cpu"
-    # else:
-    #     device = f"cuda:{device}"
+    device = sys.argv[1]
+    if device == -1:
+        device = "cpu"
+    else:
+        device = f"cuda:{device}"
     starcoderbase_1b = "/home/arjun/models/starcoderbase-1b/"
-    llm = LanguageModel(starcoderbase_1b, device_map="auto")
+    llm = LanguageModel(starcoderbase_1b, device_map=device)
     
-    prompts = ["""
-    def my_print(s : <FILL>): 
-        print("My name is ", s)
-    """,
-    """
-    def my_print(n : <FILL>): 
-        print("My age is ", n)
-    """]*5
-    solns = ["str", "int"]*5
-    this_correct_idxs = [llm.tokenizer.encode(soln) for soln in solns]
-    this_incorrect_idxs = [llm.tokenizer.encode("int"), llm.tokenizer.encode("str")]*5
+    # prompts = ["""
+    # def my_print(s : <FILL>): 
+    #     print("My name is ", s)
+    # """,
+    # """
+    # def my_print(n : <FILL>): 
+    #     print("My age is ", n)
+    # """]*5
+    # solns = ["str", "int"]*5
+    # this_correct_idxs = [llm.tokenizer.encode(soln) for soln in solns]
+    # this_incorrect_idxs = [llm.tokenizer.encode("int"), llm.tokenizer.encode("str")]*5
     
-    prompts = [placeholder_to_std_fmt(p, STARCODER_FIM) for p in prompts]
+    # prompts = [placeholder_to_std_fmt(p, STARCODER_FIM) for p in prompts]
 
-    mask_mat = torch.zeros((llm.config.n_layer, llm.config.n_head))
-    # mask_mat = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head, llm.config.n_head))
-    out = apply_mask(llm, mask_mat.clone().detach().requires_grad_(True), prompts, this_correct_idxs, this_incorrect_idxs, debug=True)
-    out = util.apply(out, lambda x: x.value, Proxy)
-    print(out[0], [llm.tokenizer.decode(o.item()) for o in out[1]])
+    # mask_mat = torch.zeros((llm.config.n_layer, llm.config.n_head))
+    # # mask_mat = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head, llm.config.n_head))
+    # out = apply_mask(llm, mask_mat.clone().detach().requires_grad_(True), prompts, this_correct_idxs, this_incorrect_idxs, debug=True)
+    # out = util.apply(out, lambda x: x.value, Proxy)
+    # print(out[0], [llm.tokenizer.decode(o.item()) for o in out[1]])
 
     train_loop(llm)

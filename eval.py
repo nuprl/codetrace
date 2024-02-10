@@ -12,7 +12,8 @@ import random
 import numpy as np
 import datasets
 import wandb
-from train import apply_mask
+from datasets import Dataset
+from train import apply_mask, z_score_normalize
 
 def shuffle_tensor(tensor):
     # Generate a random permutation of indices
@@ -38,7 +39,7 @@ def shuffle_tensor_along_dimension(tensor, dim):
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
-mask = torch.load("1d_causal_mask_epoch_1.pt")
+mask = torch.load("_causal_mask_epoch_4.pt")
 # shuffle randomly mask
 # mask_new = shuffle_tensor_along_dimension(mask, 0)
 # while mask_new.equal(mask):
@@ -47,27 +48,46 @@ mask = torch.load("1d_causal_mask_epoch_1.pt")
 print(mask.shape)
 dataset = dataset.filter(lambda x: len(x["prompt"]) < 8000)
 starcoderbase_1b = "/home/arjun/models/starcoderbase-1b/"
-llm = LanguageModel(starcoderbase_1b, device_map="auto")
+llm = LanguageModel(starcoderbase_1b, device_map=f"cuda:{sys.argv[1]}")
 
 batch_size = 2
 prompts = [d["prompt"] for d in dataset]
 correct_idxs = [llm.tokenizer.encode(d["fim_sol"])[0] for d in dataset]
 incorrect_idxs = [llm.tokenizer.encode(d["generated_text"])[0] for d in dataset]
-train_data = list(zip(prompts, correct_idxs, incorrect_idxs))
+idxs = list(zip(correct_idxs, incorrect_idxs))
+train_data = list(zip(prompts, idxs))
+
 # shuffle train data
 random.shuffle(train_data)
 
-train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, num_workers=1)
-    
+
+train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, num_workers=2)
+
+
+
 results=[]
+mask_n = z_score_normalize(mask)
+mask_n = (mask_n > 0.5).float()
+# print(mask_n)
+mask = torch.zeros((llm.config.n_layer, llm.config.n_head)).float()
 # traverse the dataset in 
-for data in tqdm(train_loader):
-    prompts, correct_idxs, incorrect_idxs = data
+for data in train_loader:
+    
+    prompts, (correct_idxs, incorrect_idxs) = data
+    
+    
+    # print("Prompts:", prompts)
+    # print("Correct idxs:", correct_idxs)
+    # print("Incorrect idxs:", incorrect_idxs)
 
-    out = apply_mask(llm, mask, prompts, correct_idxs, incorrect_idxs, debug=True)
+    correct_idx_p, incorrect_idx_p, max_probs = apply_mask(llm, mask, prompts, correct_idxs, incorrect_idxs, debug=True)
 
-    out = util.apply(out, lambda x: x.value, Proxy)
-    max_probs = out[1]
+    correct_idx_p = util.apply(correct_idx_p, lambda x: x.value, Proxy)
+    incorrect_idx_p = util.apply(incorrect_idx_p, lambda x: x.value, Proxy)
+    # print("Correct idxs:", correct_idx_p)
+    # print("Incorrect idxs:", incorrect_idx_p)
+    max_probs = util.apply(max_probs, lambda x: x.value, Proxy)
+
     solutions = [llm.tokenizer.decode(idx) for idx in correct_idxs]
     generated = [llm.tokenizer.decode(idx) for idx in incorrect_idxs]
     predictions = [llm.tokenizer.decode(idx) for idx in max_probs]
@@ -77,9 +97,12 @@ for data in tqdm(train_loader):
         print("Prediction:", prediction, "Solution:", solution, "Generated:", generated)
 
 succ_count = 0
+unchanged = 0
 for res in results:
     if res["post_patch_prediction"] == res["fim_sol"]:
         succ_count += 1
+    if res["post_patch_prediction"] == res["generated"]:
+        unchanged +=1
 
 print("Success rate:", succ_count / len(results), "(", succ_count, "/", len(results), ")")
-# print(mask_new)
+print("Unchanged rate:", unchanged / len(results), "(", unchanged, "/", len(results), ")")
