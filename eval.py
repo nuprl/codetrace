@@ -39,7 +39,9 @@ def shuffle_tensor_along_dimension(tensor, dim):
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
-mask = torch.load("_causal_mask_epoch_4.pt")
+
+
+mask = torch.load("masks/success_maybe_attn_only/causal_mask_epoch_1.pt")
 # shuffle randomly mask
 # mask_new = shuffle_tensor_along_dimension(mask, 0)
 # while mask_new.equal(mask):
@@ -90,7 +92,7 @@ for data in train_loader:
 
     solutions = [llm.tokenizer.decode(idx) for idx in correct_idxs]
     generated = [llm.tokenizer.decode(idx) for idx in incorrect_idxs]
-    predictions = [llm.tokenizer.decode(idx) for idx in max_probs]
+    predictions = [llm.tokenizer.decode(idx) for idx in max_probs.indices]
     
     for solution, prediction, generated in zip(solutions, predictions, generated):
         results.append({"post_patch_prediction": prediction, "fim_sol": solution, "generated": generated})
