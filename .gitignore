@@ -4,7 +4,6 @@ build/
 completions/
 node_modules/
 ts-benchmark-dataset/
-notebooks/
 package-lock.json
 package.json
 log/
@@ -13,3 +12,5 @@ images/
 wandb/
 models/
 masks/
+data/
+results/
