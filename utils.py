@@ -148,6 +148,7 @@ def replace_between_points(original_string : str,
     return modified_string
 
 
+
 def point_to_index_loc(point: Tuple[int], original_string: str) -> int:
     """
     Translate tree-sitter tuple indexing to int
