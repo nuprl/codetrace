@@ -16,6 +16,8 @@ TS_LANGUAGE = Language("build/my-languages.so", "typescript")
 TS_PARSER = Parser()
 TS_PARSER.set_language(TS_LANGUAGE)
 
+
+
 class FimObj:
     def __init__(self,
                  fim_prefix : str,
@@ -121,7 +123,11 @@ def fim_prog_func(prog : str) -> list[Tuple[str]]:
     return fim_variations
 
 
-def replace_between_points(original_string : str, start_point : Tuple[int], end_point : Tuple[int], replacement):
+def replace_between_points(original_string : str, 
+                           start_point : Tuple[int], 
+                           end_point : Tuple[int], 
+                           replacement,
+                           add_colon = True):
     '''
     Replace a string A with a string B at interval (start_point, end_point) where each point 
     is a tuple of (column,row) of a char in the multiline string A [tree-sitter convention]
@@ -132,13 +138,47 @@ def replace_between_points(original_string : str, start_point : Tuple[int], end_
         temp.write(original_string)
         temp.seek(0)
         original_string = temp.read()
-    replacement = ": "+replacement
+    if add_colon:
+        replacement = ": "+replacement
     start_index = len("\n".join(original_string.splitlines()[:start_point[0]])) + start_point[1]+1
     end_index = len("\n".join(original_string.splitlines()[:end_point[0]])) + end_point[1]+1
     modified_string = (
         original_string[:start_index] + replacement + original_string[end_index:]
     )
     return modified_string
+
+
+def point_to_index_loc(point: Tuple[int], original_string: str) -> int:
+    """
+    Translate tree-sitter tuple indexing to int
+    """
+    row = point[0]
+    col = point[1]
+    if row == 0:
+        return len("\n".join(original_string.splitlines()[:row])) + col
+    else:
+        return len("\n".join(original_string.splitlines()[:row])) + col+1 # for "\n"
+        
+def remove_between_points(original_string : str, 
+                           start_point : Tuple[int], 
+                           end_point : Tuple[int]):
+    '''
+    Remove tree-sitter interval (start_point, end_point) from a string.
+    Inclusive of start_point and end_point
+    '''
+    with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
+        temp.write(original_string)
+        temp.seek(0)
+        original_string = temp.read()
+
+    start_index = point_to_index_loc(start_point, original_string)
+    end_index = point_to_index_loc(end_point, original_string)
+
+    modified_string = (
+        original_string[:start_index] + original_string[end_index:]
+    )
+    return modified_string
+
     
 
 # from MultiPL-E
