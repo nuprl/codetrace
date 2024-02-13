@@ -38,16 +38,16 @@ def shuffle_tensor_along_dimension(tensor, dim):
     return shuffled_tensor
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
+dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq_corrected", split="train")
 
 
-mask = torch.load("masks/success_maybe_attn_only/causal_mask_epoch_1.pt")
+mask = torch.load("masks/search/mask.pt")
 # shuffle randomly mask
 # mask_new = shuffle_tensor_along_dimension(mask, 0)
 # while mask_new.equal(mask):
 #     mask_new = shuffle_tensor_along_dimension(mask, 0)
 
-print(mask.shape)
+print(mask)
 dataset = dataset.filter(lambda x: len(x["prompt"]) < 8000)
 starcoderbase_1b = "/home/arjun/models/starcoderbase-1b/"
 llm = LanguageModel(starcoderbase_1b, device_map=f"cuda:{sys.argv[1]}")

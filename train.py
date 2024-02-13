@@ -122,6 +122,7 @@ def apply_mask(llm: LanguageModel,
             final_hs = llm.lm_head(llm.transformer.ln_f(final_hs)).save()
 
         final_logits = final_hs.softmax(dim=-1)
+
         if debug:
             max_prob_idxs = final_logits[:,-1,:].max(dim=-1).save()
             # max_prob_idxs = final_logits[:,-1,:].argmax().save()
@@ -195,19 +196,19 @@ def train_loop(llm):
     n_epochs = 10
     lr = 2e-5
     weight_decay = 0.01
-    loss_fn = accuracy_loss
+    loss_fn = relative_loss
 
     if wandb_on:
         wandb.init(project='crazy_interp_mask2', name='ffn_v0')
     
-    model = CNNEncoder()
+    model = FFNEncoder()
     model.train()
     
     # causal_mask = torch.randint(2, size=(llm.config.n_layer, llm.config.n_head)).float()
     causal_mask = torch.zeros((llm.config.n_layer, llm.config.n_head)).float()
     # causal_mask = torch.load("masks/success_maybe_attn_only/causal_mask_epoch_1.pt")
     # print(causal_mask)
-    dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq", split="train")
+    dataset = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq_v1", split="train")
     dataset = dataset.filter(lambda x: len(x["prompt"]) < 8000) # for OOM
     prompts = [d["prompt"] for d in dataset]
     correct_idxs = [llm.tokenizer.encode(d["fim_sol"])[0] for d in dataset]
@@ -241,7 +242,6 @@ def train_loop(llm):
             # print(f"Output: {output}")
             # set all idxs that incremented from output to causal_mask to 1
             output = (output < 0.5).float()
-            print(output)
             
             correct_idx, incorrect_idx, max_probs = apply_mask(llm, output.clone(), 
                                                                prompts, 
