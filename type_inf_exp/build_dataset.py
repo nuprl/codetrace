@@ -40,23 +40,6 @@ def filter_types(dataset : datasets.Dataset, query_str : str = QUERY_ALL_TYPES) 
 
     dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
     return dataset
-
-
-def filter_types_with_idx(dataset : datasets.Dataset, query_str : str = QUERY_ALL_TYPES) -> datasets.Dataset:
-    """
-    remove all type annotations from the dataset. Stores direct index access
-    """
-    new_ds = []
-    for ex in dataset:
-        prompts = fim_remove_types(ex["content"], query_str)
-        for p in prompts:
-            ex = ex.copy()
-            ex["fim_program"] = p[0]
-            ex["fim_type"] = json.dumps(p[1])
-            new_ds.append(ex)
-
-    dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-    return dataset
     
 
 def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[str, dict]:
@@ -86,13 +69,25 @@ def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[str, 
     return ts_prog, type_map
 
 
+def make_typeinf_prompts(dataset : datasets.Dataset, query_str : str = QUERY_ALL_TYPES) -> datasets.Dataset:
+    """
+    Make a dataset with all type annotations removed and a prompt for each type annotation
+    """
+    new_ds = []
+    for ex in dataset:
+        prompts = fim_remove_types(ex["content"], query_str)
+        for p in prompts:
+            ex = ex.copy()
+            ex["fim_program"] = p[0]
+            ex["fim_type"] = json.dumps(p[1])
+            new_ds.append(ex)
+
+    dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
+    return dataset
+
 def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tuple[str, str]]:
     """
-    remove all type annotations from the program
-    
-    NOTE: Supports direct indexing to insert _one_ type annotation back into
-    the stripped program.
-    Only issue is multiline type annotations will remain multiline
+    Make fim prompts for each type annotation in the program, remove all other type annotations
     """
     original = ts_prog
     tree = TS_PARSER.parse(bytes( ts_prog, "utf-8"))
@@ -101,21 +96,22 @@ def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tu
     captures = query.captures(tree.root_node)
     if len(captures) == 0:
         return []
-    captures = merge_captures(captures[::-1])
+    captures = merge_captures(captures[::-1]) # walk backwards to preserve idx
     
     prompts = []
     
-    for i in range(len(captures)): # this is backwards to preserve idx
+    for i in range(len(captures)):
         c = captures[i][0]
         captured_type = c.text.decode("utf-8")[1:].strip()
         
         stripped = ts_prog
-        for j in range(len(captures)): # this is backwards to preserve idx
+        for j in range(len(captures)):
             if i < j:
                 stripped = remove_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point)
             elif i == j:
                 stripped = replace_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point, "<FILL>")
         
+        # for some reason this is necessary, index won't update correctly otherwise
         with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
             temp.write(stripped)
             temp.seek(0)

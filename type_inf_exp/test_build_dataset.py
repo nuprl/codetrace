@@ -278,5 +278,4 @@ if __name__ == "__main__":
     test_remove_types_full()
     # test_remove_types_full_idx()
     # test_byte_filter()
-    # test_no_func_type_annotations()
     # test_index_access()
