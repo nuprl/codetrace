@@ -13,6 +13,7 @@ import pandas as pd
 import json
 from ast import literal_eval
 from typing import Tuple
+import re
 
 QUERY_ALL_TYPES = """((type_annotation) @name)"""
 QUERY_FUNC_TYPES = """
@@ -106,12 +107,17 @@ def remove_types_with_idx(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tu
         captured_type = c.text.decode("utf-8")[1:].strip()
         ts_prog = remove_between_points(ts_prog, c.start_point, c.end_point)
         
+        # remove all other type annotations to find the index of the captured type
         stripped = original
-        for j in range(len(captures)):
+        bytes_shifted = 0
+        for j in range(len(captures)): # this is backwards to preserve idx
             if i != j:
+                if i < j:
+                    bytes_shifted += len(captures[j][0].text)
                 stripped = remove_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point)
+        
         # find idx of captured type in stripped program
-        idx = stripped.find(captured_type)
+        idx = c.start_byte - bytes_shifted
         type_map[idx] = captured_type
         
     return ts_prog, type_map

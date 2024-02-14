@@ -255,6 +255,23 @@ function checkWeek(year, month, day) {
     new_prog, _ = remove_types_with_idx(prog)
     assert new_prog == gold, f"===OLD===:\n {gold}\n===NEW===:\n{new_prog}"
     
+    
+def test_index_access():
+    ds = datasets.load_dataset("franlucc/stenotype-eval-dataset-func-type-stripped-test", split="train")
+    i = 10
+    prog = ds[i]["content_type_removed"].encode("utf8")
+    type_map = json.loads(ds[i]["type_map"])
+    type_map = {literal_eval(k): v for k, v in type_map.items()}
+    for k, v in type_map.items():
+        v_bytes = f": {v}".encode("utf8")
+        new_prog = prog[:k] + v_bytes + prog[k:]
+        with open(f"tmp_{k}_{v}.ts", "w") as f:
+            f.write(new_prog.decode("utf8"))
+    with open("tmp_orig.ts", "w") as f:
+        f.write(ds[i]["content"])
+    with open("tmp_stripped.ts", "w") as f:
+        f.write(prog.decode("utf8"))
+    
 if __name__ == "__main__":
     test_remove_types()
     test_remove_types_multiline()
@@ -262,4 +279,4 @@ if __name__ == "__main__":
     test_remove_types_full_idx()
     test_byte_filter()
     # test_no_func_type_annotations()
-    
+    test_index_access()
