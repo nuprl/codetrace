@@ -101,47 +101,6 @@ def remove_types_with_idx(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tu
     captures = merge_captures(captures[::-1])
     
     type_map = {}
-
-    for i in range(len(captures)):
-        c = captures[i][0]
-        captured_type = c.text.decode("utf-8")[1:].strip()
-        ts_prog = remove_between_points(ts_prog, c.start_point, c.end_point)
-        
-        # TODO: need to make bytes work for efficiency
-        # remove all other type annotations to find the index of the captured type
-        stripped = original
-        bytes_shifted = 0
-        for j in range(len(captures)): # this is backwards to preserve idx
-            if i != j:
-                if i < j:
-                    bytes_shifted += len(captures[j][0].text)
-                stripped = remove_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point)
-        
-        # find idx of captured type in stripped program
-        idx = c.start_byte - bytes_shifted
-        type_map[idx] = captured_type
-        
-    return ts_prog, type_map
-
-
-def remove_types_with_idx(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[int, dict]:
-    """
-    remove all type annotations from the program
-    
-    NOTE: Supports direct indexing to insert _one_ type annotation back into
-    the stripped program.
-    Only issue is multiline type annotations will remain multiline
-    """
-    original = ts_prog
-    tree = TS_PARSER.parse(bytes( ts_prog, "utf-8"))
-    query = TS_LANGUAGE.query(query_str)
-    
-    captures = query.captures(tree.root_node)
-    if len(captures) == 0:
-        return ts_prog, {}
-    captures = merge_captures(captures[::-1])
-    
-    type_map = {}
     bytes_shifted = []
     for i in range(len(captures)):
         c = captures[i][0]
