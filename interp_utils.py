@@ -21,8 +21,8 @@ class TraceResult:
     """
     
     def __init__(self, logits : torch.Tensor, hidden_states : List[torch.Tensor] = None):
-        self.logits = logits
-        self.hidden_states = hidden_states
+        self.logits = logits #[n_layer, n_prompt, n_token, n_vocab]
+        self.hidden_states = hidden_states #[n_layer, n_prompt, n_token, n_embd]
         self._indexes = None
         self._values = None
         self._top_k = None
@@ -36,6 +36,13 @@ class TraceResult:
         self._indexes = torch_topk.indices
         self._values = torch_topk.values
         return self
+    
+    def _select(self, tensor, layers : List[int], token_idx : int, prompt_idx : int):
+        """
+        Select indexes
+        """
+        return tensor[layers, prompt_idx, token_idx, :]
+        
         
     def get_tokens(self, 
                    model : LanguageModel,
@@ -51,24 +58,31 @@ class TraceResult:
         
         selected = self._indexes[layers, prompt_idx, token_idx] # returns a tensor of shape (layers, top_k)
         layer_tokens = []
-        for layer_idx in layers:
-            layer_tokens.append(model.tokenizer.decode(selected[layer_idx]))
+        for i in range(len(layers)):
+            layer_tokens.append(model.tokenizer.decode(selected[i]))
         return layer_tokens
     
-    def get_indexes(self, select_indexes : Tuple[int]) -> torch.Tensor:
+    def get_indexes(self, 
+                    layers : List[int], 
+                    token_idx : int = -1,
+                    prompt_idx : int =0) -> torch.Tensor:
         """
         Return indexes
         """
-        return self._indexes.select(*select_indexes)
+        return self._select(self._indexes, layers, token_idx, prompt_idx)
     
-    def get_probabilities(self, select_indexes : Tuple[int], do_log_probs : bool = True) -> torch.Tensor:
+    def get_probabilities(self, 
+                          layers : List[int], 
+                          token_idx : int = -1, 
+                          prompt_idx : int = 0, 
+                          do_log_probs : bool = True) -> torch.Tensor:
         """
         Return values
         """
+        values = self._values
         if do_log_probs:
-            return self._values.log().select(*select_indexes)
-        else:
-            return self._values.select(*select_indexes)
+            values = values.log()
+        return self._select(values, layers, token_idx, prompt_idx)
         
 
 

@@ -1,4 +1,5 @@
 from interp_utils import *
+from interp_vis import *
 from nnsight import LanguageModel
 
 # NOTE: make sure padding is left side for list of prompts,
@@ -39,7 +40,12 @@ def test_patch():
     tok_pred = trace_res.score_top(1).get_tokens(model, layers = [-1], prompt_idx=0)[-1]
     assert tok_pred != "world", tok_pred
     
+def test_patch_vis():
+    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], -1, -1, [14,23])
+    patch_logit_heatmap(model, prompts[0], prompts[1], trace_res, [1, 3, 7, 14,23], -1,-1)
+    
 if __name__ == "__main__":
     test_logit_pipeline()
     test_patch()
+    test_patch_vis()
     print("All tests passed!")
