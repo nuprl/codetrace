@@ -277,5 +277,5 @@ if __name__ == "__main__":
     test_remove_types_multiline()
     test_remove_types_full()
     # test_remove_types_full_idx()
-    # test_byte_filter()
+# test_byte_filter()
     # test_index_access()
