@@ -14,6 +14,7 @@ import json
 from ast import literal_eval
 from typing import Tuple
 import re
+import tempfile
 
 QUERY_ALL_TYPES = """((type_annotation) @name)"""
 QUERY_FUNC_TYPES = """
@@ -47,16 +48,18 @@ def filter_types_with_idx(dataset : datasets.Dataset, query_str : str = QUERY_AL
     """
     new_ds = []
     for ex in dataset:
-        content, types = remove_types_with_idx(ex["content"], query_str)
-        ex["content_type_removed"] = content
-        ex["type_map"] = json.dumps(types)
-        new_ds.append(ex)
+        prompts = fim_remove_types(ex["content"], query_str)
+        for p in prompts:
+            ex = ex.copy()
+            ex["fim_program"] = p[0]
+            ex["fim_type"] = json.dumps(p[1])
+            new_ds.append(ex)
 
     dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
     return dataset
     
 
-def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[tuple, dict]:
+def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[str, dict]:
     """
     remove all type annotations from the program
     
@@ -83,7 +86,7 @@ def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[tuple
     return ts_prog, type_map
 
 
-def remove_types_with_idx(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[int, dict]:
+def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tuple[str, str]]:
     """
     remove all type annotations from the program
     
@@ -97,25 +100,32 @@ def remove_types_with_idx(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tu
     
     captures = query.captures(tree.root_node)
     if len(captures) == 0:
-        return ts_prog, {}
+        return []
     captures = merge_captures(captures[::-1])
     
-    type_map = {}
-    bytes_shifted = []
-    for i in range(len(captures)):
+    prompts = []
+    
+    for i in range(len(captures)): # this is backwards to preserve idx
         c = captures[i][0]
         captured_type = c.text.decode("utf-8")[1:].strip()
+        
+        stripped = ts_prog
+        for j in range(len(captures)): # this is backwards to preserve idx
+            if i < j:
+                stripped = remove_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point)
+            elif i == j:
+                stripped = replace_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point, "<FILL>")
+        
+        with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
+            temp.write(stripped)
+            temp.seek(0)
+            stripped = temp.read()
+            
+        prompts.append((stripped, captured_type))
         ts_prog = remove_between_points(ts_prog, c.start_point, c.end_point)
         
-        bytes_shifted.append(len(c.text))
+    return prompts
 
-    for i in range(len(captures)):
-        c = captures[i][0]
-        captured_type = c.text.decode("utf-8")[1:].strip()
-        idx = c.start_byte - sum(bytes_shifted[i+1:])
-        type_map[idx] = captured_type
-        
-    return ts_prog, type_map
 
 
 def merge_captures(captures : list) -> list:

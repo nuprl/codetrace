@@ -147,6 +147,24 @@ def replace_between_points(original_string : str,
     )
     return modified_string
 
+# def insert_at_idx(original_string : str, 
+#                     start_index : int,
+#                     replacement : str,
+#                     add_colon = False):
+#     '''
+#     Insert a string at a point in the original string
+#     '''
+#     with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
+#         temp.write(original_string)
+#         temp.seek(0)
+#         original_string = temp.read()
+#     if add_colon:
+#         replacement = ": "+replacement
+#     modified_string = (
+#         original_string[:start_index] + replacement + original_string[start_index:]
+#     )
+#     return modified_string
+
 
 
 def point_to_index_loc(point: Tuple[int], original_string: str) -> int:
@@ -156,7 +174,7 @@ def point_to_index_loc(point: Tuple[int], original_string: str) -> int:
     row = point[0]
     col = point[1]
     if row == 0:
-        return len("\n".join(original_string.splitlines()[:row])) + col
+        return col
     else:
         return len("\n".join(original_string.splitlines()[:row])) + col+1 # for "\n"
         
@@ -180,7 +198,15 @@ def remove_between_points(original_string : str,
     )
     return modified_string
 
-    
+
+# def insert_bytes_at(prog : str, v : str, k : int) -> str:
+#     prog = prog.encode("utf8")
+#     v_bytes = f": {v}".encode("utf8")
+#     new_prog = prog[:k] + v_bytes + prog[k:]
+#     return new_prog.decode("utf8")
+
+# def insert_chars_at(prog : str, v : str, k : int) -> str:
+#     return prog[:k] + v + prog[k:]
 
 # from MultiPL-E
 def estimator(n: int, c: int, k: int) -> float:
