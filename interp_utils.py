@@ -15,6 +15,7 @@ from typing import List
 import transformers
 import copy
 
+
 class TraceResult:
     """
     Wrapper over full component hidden states and logits
@@ -85,6 +86,16 @@ class TraceResult:
         return self._select(values, layers, token_idx, prompt_idx)
         
 
+def layer_union(traces : List[TraceResult], store_hidden_states=False) -> TraceResult:
+    """
+    Union of all layers
+    """
+    logits = torch.stack([trace.logits for trace in traces], dim=0).mean(dim=0)
+    hidden_states = None
+    if store_hidden_states:
+        hidden_states = torch.stack([trace.hidden_states for trace in traces], dim=0).mean(dim=0)
+    return TraceResult(logits, hidden_states)
+
 
 def collect_hidden_states(model : LanguageModel,
                           prompts : List[str]) -> List[torch.Tensor]:
@@ -144,7 +155,7 @@ def patch_clean_to_corrupt(model : LanguageModel,
                      corrupted_index : int,
                      layers_to_patch : list[int],
                      apply_norm : bool = True,
-                     store_hidden_states : bool = True) -> TraceResult:
+                     store_hidden_states : bool = False) -> TraceResult:
     """
     Patch from clean prompt to corrupted prompt
     clean_idx -> corrupted_idx at target layers. Patches from same layers in clean prompt.

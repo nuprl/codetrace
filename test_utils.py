@@ -2,6 +2,7 @@ from interp_utils import *
 from interp_vis import *
 from nnsight import LanguageModel
 
+# re-run this
 # NOTE: make sure padding is left side for list of prompts,
 # to enable -1 indexing (most common)
 
@@ -24,8 +25,8 @@ def test_logit_pipeline():
     assert hs.shape[3] == model.config.n_embd, hs.shape
     
     logits = logit_lens(model, prompts)
-    tok_world = logits.score_top(1).get_tokens(model, layers = list(range(24)), prompt_idx=0)[-1]
-    tok_0 = logits.score_top(1).get_tokens(model, layers = list(range(24)), prompt_idx=1)[-1]
+    tok_world = logits.score_top(1).get_tokens(model, layers = [23], prompt_idx=0)[0]
+    tok_0 = logits.score_top(1).get_tokens(model, layers = [23], prompt_idx=1)[0]
     assert tok_world == "world", tok_world
     assert tok_0 == "0", tok_0
     

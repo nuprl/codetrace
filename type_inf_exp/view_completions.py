@@ -37,9 +37,9 @@ print(f"Total: {len(df)}")
 df["id"] = df.index
 df = df.sort_values(by=["correctness", "solution"])
 df = df.reset_index(drop=True)
-with open("data/completions/starcoderbase-1b-completions_typeinf_analysis.csv", "w") as f:
-    # remove prompt column
-    df.drop(columns=["prompt"]).to_csv(f)
+# with open("data/completions/starcoderbase-1b-completions_typeinf_analysis.csv", "w") as f:
+#     # remove prompt column
+#     df.drop(columns=["prompt"]).to_csv(f)
 
 ds = datasets.Dataset.from_pandas(df)
 ds.push_to_hub("franlucc/starcoderbase-1b-completions_typeinf_analysis")

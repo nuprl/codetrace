@@ -27,8 +27,8 @@ def patch_logit_heatmap(model : LanguageModel,
                         figtitle : str = "Patch Logit Heatmap",):
     """
     Given hidden states from a patch clean[j]->corrupted[j] at layers,
-    do a heatmap where x is layers, y is original top token logit at (layer, i) in corrupted
-    and color is patched top token logit at (layer, i) in patched.
+    do a heatmap where x is layers, y is prompt num
+    and color is the top token at last lauer AFTER patch at (layer, i)
     Legend stores the patched in token from clean[j]
     Store original clean prediction and corrupted predicion?
     """
@@ -69,8 +69,8 @@ def patch_logit_heatmap(model : LanguageModel,
     # for each probability square, legend shows relative clean_tok->corr_tok
     patches = []
     for i,(a,b) in enumerate(list(zip(clean_token_pred, corrupt_orig_pred))):
-        patches.append(mpatches.Patch(color='grey', label=f"{layers_patched[i]}:'{a}' -> '{b}'"))
-    plt.legend(handles=patches, loc="upper right", bbox_to_anchor=(1.5, 1.0), title="layer:clean->corrupt")
+        patches.append(mpatches.Patch(color='grey', label=f"{layers_patched[i]}:'{repr(a)}' -> '{repr(b)}'"))
+    plt.legend(handles=patches, loc="upper right", bbox_to_anchor=(0.5, 1.0), title="original layer:clean->corrupt")
     
     # build an annotations dict for each square in grid with values from probs_patched_results
     annotations = {i:{} for i in range(len(x_axis_labels)*len(y_axis_labels))}
@@ -84,7 +84,23 @@ def patch_logit_heatmap(model : LanguageModel,
 
     # add annotations
     for pos, text in annotations.items():
-        plt.annotate(text["toptok"], xy=positions[pos],color="black", fontsize=12, ha="center", va="center")
+        plt.annotate(text["toptok"], xy=positions[pos],color="black", fontsize=8, ha="center", va="center")
 
     plt.tight_layout()
     plt.savefig(figtitle.lower().replace(" ", "_") + ".png")
+    
+    
+def patch_logit_heatmap_for_prediction(model : LanguageModel,
+                        clean_prompt : List[str] | str, 
+                        corrupted_prompt : List[str] | str,
+                        patched_logits : TraceResult,
+                        layers_patched : List[int],
+                        clean_token_idx : int,
+                        corrupted_token_idx : int, 
+                        figsize : Tuple[int,int] = (10,10),
+                        figtitle : str = "Patch Logit Heatmap",):
+    """
+    Cells on heatmap should be the final token top logit that changes
+    after patch
+    """
+    pass
