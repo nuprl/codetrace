@@ -169,6 +169,7 @@ def patch_clean_to_corrupt(model : LanguageModel,
         
     NOTE: Returns logits only from final layer
     """
+    assert layers_to_patch in range(len(model.transformer.h)), f"layers_to_patch must be in range [0, {len(model.transformer.h)})"
     clean_prompt, corrupted_prompt, layers_to_patch = map(arg_to_list, [clean_prompt, corrupted_prompt, layers_to_patch])
     # Enter nnsight tracing context
     with model.forward() as runner:
