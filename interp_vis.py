@@ -24,9 +24,11 @@ def patched_heatmap_prediction(model : LanguageModel,
                         layers_patched : List[int],
                         clean_token_idx : int = -1,
                         corrupted_token_idx : int = -1, 
+                        annotations : List[Tuple[str,str]] | None = None,
                         figsize : Tuple[int,int] = (10,10),
                         bbox_to_anchor : Tuple[int,int] = (1.6, 1.0),
-                        figtitle : str = "Patch Logit-Prediction Heatmap",):
+                        figtitle : str = "Patch Logit-Prediction Heatmap",
+                        outfile : str = "temp.png"):
     """
     Cells on heatmap should be the final layer top logit that changes
     after patch.
@@ -80,29 +82,36 @@ def patched_heatmap_prediction(model : LanguageModel,
     plt.colorbar(im)
 
     # legend is clean prediction -> corrupted prediction
-    def original_prompt_pred(model, prompts):
-        logits = logit_lens(model, prompts).decode_logits(prompt_idx=list(range(y_len)))
-        tokens, probs = [], []
-        for i in range(len(prompts)):
-            t = logits[0][i].tokens(model.tokenizer)
-            p = logits[0][i].probs()
-            tokens.append(t)
-            probs.append(p)
-        return np.array(tokens), probs
-    
-    original_clean = original_prompt_pred(model, clean_prompts)
-    original_corrupted = original_prompt_pred(model, corrupted_prompts)
-
-    # for each probability square, legend shows relative clean_tok->corr_tok
     patches = []
-    for i in range(y_len):
-        a_pred = original_clean[0][i].item()
-        a_prob = float(f"{original_clean[1][i].item():.2f}")
-        b_pred = original_corrupted[0][i].item()
-        b_prob = float(f"{original_corrupted[1][i].item():.2f}")
-        a = (a_pred, a_prob)
-        b = (b_pred, b_prob)
-        patches.append(mpatches.Patch(color='grey', label=f"{i}: {a} (->) {b}"))
+    if not annotations:
+        def original_prompt_pred(model, prompts):
+            logits = logit_lens(model, prompts).decode_logits(prompt_idx=list(range(y_len)))
+            tokens, probs = [], []
+            for i in range(len(prompts)):
+                t = logits[0][i].tokens(model.tokenizer)
+                p = logits[0][i].probs()
+                tokens.append(t)
+                probs.append(p)
+            return np.array(tokens), probs
+        
+        original_clean = original_prompt_pred(model, clean_prompts)
+        original_corrupted = original_prompt_pred(model, corrupted_prompts)
+
+        # for each probability square, legend shows relative clean_tok->corr_tok
+        patches = []
+        for i in range(y_len):
+            a_pred = original_clean[0][i].item()
+            a_prob = float(f"{original_clean[1][i].item():.2f}")
+            b_pred = original_corrupted[0][i].item()
+            b_prob = float(f"{original_corrupted[1][i].item():.2f}")
+            a = (a_pred, a_prob)
+            b = (b_pred, b_prob)
+            patches.append(mpatches.Patch(color='grey', label=f"{i}: {a} (->) {b}"))
+    else:
+        # NOTE: probs not supported for annotations
+        for i,(a,b) in enumerate(annotations):
+            patches.append(mpatches.Patch(color='grey', label=f"{i}: {repr(a)} (->) {repr(b)}"))
+        
     plt.legend(handles=patches, loc="center right", bbox_to_anchor=bbox_to_anchor, title="original predictions\nprompt: clean (->) corrupt")
 
     # build an annotations dict for each square in grid with values from probs_patched_results
@@ -117,4 +126,5 @@ def patched_heatmap_prediction(model : LanguageModel,
         plt.annotate(text["toptok"], xy=pos,color="black", fontsize=10, ha="center", va="center")
 
     plt.tight_layout()
-    plt.savefig(figtitle.lower().replace(" ", "_") + ".png")
+    plt.savefig(outfile)
+    
