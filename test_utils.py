@@ -25,29 +25,33 @@ def test_logit_pipeline():
     assert hs.shape[3] == model.config.n_embd, hs.shape
     
     logits = logit_lens(model, prompts)
-    logits : Logit = logits.decode_logits(model, layers=[0,23], prompt_idx=[0,1])
-    tok_a_f = logits[1][0].tokens()
-    tok_b_f = logits[1][-1].tokens()
+    logits : Logit = logits.decode_logits( layers=[0,23], prompt_idx=[0,1])
+    tok_a_f = logits[1][0].tokens(model.tokenizer)
+    tok_b_f = logits[1][-1].tokens(model.tokenizer)
     assert tok_b_f == ['2'], tok_b_f
     assert tok_a_f == ['"'], tok_a_f
     
 def test_patch():
-    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], -1, -1, list(range(24)))
-    tok_pred = trace_res.score_top(1).get_tokens(model, layers = [-1], prompt_idx=0)[-1]
-    assert tok_pred == "world", tok_pred
-    trace_res = patch_clean_to_corrupt(model, prompts[1], prompts[0], -1, -1, list(range(24)))
-    tok_pred = trace_res.score_top(1).get_tokens(model, layers = [-1], prompt_idx=0)[-1]
-    assert tok_pred == "0", tok_pred
-    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], -1, -1, [2])
-    tok_pred = trace_res.score_top(1).get_tokens(model, layers = [-1], prompt_idx=0)[-1]
-    assert tok_pred != "world", tok_pred
+    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], list(range(24)))
+    tok_pred = trace_res.decode_logits().tokens(model.tokenizer)
+    assert tok_pred == ['"'], tok_pred
+    trace_res = patch_clean_to_corrupt(model, prompts[1], prompts[0], list(range(24)))
+    tok_pred = trace_res.decode_logits().tokens(model.tokenizer)
+    assert tok_pred == ['2'], tok_pred
+    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], 0)
+    tok_pred = trace_res.decode_logits().tokens(model.tokenizer)
+    assert tok_pred != ['2'] and tok_pred != ['"'], tok_pred
+    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], [])
+    tok_pred = trace_res.decode_logits().tokens(model.tokenizer)
+    assert tok_pred == ['2'], tok_pred
+    
     
 def test_patch_vis():
-    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], -1, -1, [14,23])
+    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], [14,23])
     patch_logit_heatmap(model, prompts[0], prompts[1], trace_res, [1, 3, 7, 14,23], -1,-1)
     
 if __name__ == "__main__":
     test_logit_pipeline()
-    # test_patch()
-    # test_patch_vis()
+    test_patch()
+    test_patch_vis()
     print("All tests passed!")
