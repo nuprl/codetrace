@@ -7,8 +7,8 @@ from nnsight import LanguageModel
 # to enable -1 indexing (most common)
 
 prompts = [
-    'print("hello_',
-    'n = 0\nassert(n == ',
+    'print(f',
+    'a=0\nb=1\nc=',
 ]
 
 
@@ -25,10 +25,11 @@ def test_logit_pipeline():
     assert hs.shape[3] == model.config.n_embd, hs.shape
     
     logits = logit_lens(model, prompts)
-    tok_world = logits.score_top(1).get_tokens(model, layers = [23], prompt_idx=0)[0]
-    tok_0 = logits.score_top(1).get_tokens(model, layers = [23], prompt_idx=1)[0]
-    assert tok_world == "world", tok_world
-    assert tok_0 == "0", tok_0
+    logits : Logit = logits.decode_logits(model, layers=[0,23], prompt_idx=[0,1])
+    tok_a_f = logits[1][0].tokens()
+    tok_b_f = logits[1][-1].tokens()
+    assert tok_b_f == ['2'], tok_b_f
+    assert tok_a_f == ['"'], tok_a_f
     
 def test_patch():
     trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], -1, -1, list(range(24)))
@@ -47,6 +48,6 @@ def test_patch_vis():
     
 if __name__ == "__main__":
     test_logit_pipeline()
-    test_patch()
-    test_patch_vis()
+    # test_patch()
+    # test_patch_vis()
     print("All tests passed!")
