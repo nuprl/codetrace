@@ -23,7 +23,7 @@ def arg_to_list(x):
 def arg_to_literal(x, n=NLAYER):
     return x if x >= 0 else n + x
 
-class Logit:
+class LogitResult:
     """
     tensors in shape [n_layer, n_prompt, n_tokens, topk]
     """
@@ -39,7 +39,7 @@ class Logit:
         """
         TODO: torch like getitem eg. [:, 0, :, :]
         """
-        return Logit(self.token_indices[idx,], self.probabilities[idx,], self.is_log)
+        return LogitResult(self.token_indices[idx,], self.probabilities[idx,], self.is_log)
     
     def tokens(self, tokenizer : transformers.PreTrainedTokenizer) -> List[str]:
         """
@@ -71,7 +71,9 @@ class TraceResult:
                  layer_idxs : List[int] | int,
                  hidden_states : torch.Tensor = None):
         self._logits = logits.detach().cpu()
-        self._hidden_states = hidden_states.detach().cpu() if hidden_states else None
+        if hidden_states != None:
+            hidden_states = hidden_states.detach().cpu()
+        self._hidden_states = hidden_states
         self._layer_idx = [arg_to_literal(i, NLAYER) for i in arg_to_list(layer_idxs)]
         
     def decode_logits(self, 
@@ -79,7 +81,7 @@ class TraceResult:
                     layers : List[int] | int = -1,
                     prompt_idx : List[int] | int = 0,
                     token_idx : List[int] | int = -1,
-                    do_log_probs : bool = False) -> Logit:
+                    do_log_probs : bool = False) -> LogitResult:
         """
         Decode logits to tokens, after scoring top_k
         NOTE: layer idxs are [0, n_layer)
@@ -97,16 +99,19 @@ class TraceResult:
             logits = logits.softmax(dim=-1)
         logits = logits.topk(top_k, dim=-1)
         
-        return Logit(logits.indices, logits.values, do_log_probs)
+        return LogitResult(logits.indices, logits.values, do_log_probs)
 
 
 def collect_hidden_states(model : LanguageModel,
-                          prompts : List[str] | str ) -> List[torch.Tensor]:
+                          prompts : List[str] | str,
+                          layers : List[int] = None) -> List[torch.Tensor]:
     """
-    Collect hidden states for each prompt. By design does all layers
+    Collect hidden states for each prompt. 
+    Optionally, collect hidden states at specific layers and tokens.
     """
     prompts = arg_to_list(prompts)
-    layers = list(range(len(model.transformer.h)))
+    if layers is None:
+        layers = list(range(len(model.transformer.h)))
 
     with model.forward() as runner:
         with runner.invoke(prompts) as invoker:
@@ -116,6 +121,54 @@ def collect_hidden_states(model : LanguageModel,
             ],dim=0).save()
             
     hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
+    return hidden_states
+
+def collect_hidden_states_at_tokens(model : LanguageModel,
+                                    prompts : List[str] | str,
+                                    token_idx : List[int] | int,
+                                    layers : List[int] = None,
+                                    get_logit : bool = False) -> List[torch.Tensor] | TraceResult:
+    """
+    Collect hidden states for each prompt. 
+    Optionally, collect hidden states at specific layers and tokens.
+    """
+    prompts, token_idx = map(arg_to_list, [prompts, token_idx])
+    if layers is None:
+        layers = list(range(len(model.transformer.h)))
+        
+    def decode(x : torch.Tensor) -> torch.Tensor:
+        return model.lm_head(model.transformer.ln_f(x))
+
+    with model.forward() as runner:
+        with runner.invoke(prompts) as invoker:
+            
+            indices = invoker.input["input_ids"].numpy()
+            # for each prompt find the index of token_idx
+            target_idx = np.concatenate([np.where((i  == t)) for t in token_idx for i in indices], axis=0).reshape(indices.shape[0], -1)
+            
+            hidden_states = torch.stack([
+                model.transformer.h[layer_idx].output[0]
+                for layer_idx in layers
+            ],dim=0).save()
+            
+            if get_logit:
+                logits = decode(hidden_states).save()
+            
+    hidden_states = util.apply(hidden_states, lambda x: x.value.cpu(), Proxy)
+    
+    if get_logit:
+        logits = util.apply(logits, lambda x: x.value.cpu(), Proxy)
+        tl = torch.tensor(target_idx)
+        tl = tl.to(logits.device)
+        logits = torch.stack([logits[:,i,tl[i],:] for i in range(len(prompts))], dim = 1)
+    
+    th = torch.tensor(target_idx)
+    th = th.to(hidden_states.device)
+    hidden_states = torch.stack([hidden_states[:,i,th[i],:] for i in range(len(prompts))], dim = 1)
+
+    if get_logit:
+        return TraceResult(logits, layers, hidden_states)
+
     return hidden_states
         
             

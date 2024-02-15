@@ -62,7 +62,7 @@ def patched_heatmap_prediction(model : LanguageModel,
     # need token and probabilities
     tokens, probs = [], []
     for layer_patch in patched_final_logits:
-        patched_logits : Logit = layer_patch.decode_logits(prompt_idx=list(range(y_len)))
+        patched_logits : LogitResult = layer_patch.decode_logits(prompt_idx=list(range(y_len)))
         pt, pp = [], []
         for i in range(y_len):
             pt.append(np.array(patched_logits[0][i].tokens(model.tokenizer)).item())

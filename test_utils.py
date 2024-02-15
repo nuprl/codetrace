@@ -25,7 +25,7 @@ def test_logit_pipeline():
     assert hs.shape[3] == model.config.n_embd, hs.shape
     
     logits = logit_lens(model, prompts)
-    logits : Logit = logits.decode_logits( layers=[0,23], prompt_idx=[0,1])
+    logits : LogitResult = logits.decode_logits( layers=[0,23], prompt_idx=[0,1])
     tok_a_f = logits[1][0].tokens(model.tokenizer)
     tok_b_f = logits[1][-1].tokens(model.tokenizer)
     assert tok_b_f == ['2'], tok_b_f
@@ -68,7 +68,7 @@ def test_patch_vis_mult():
 
 def test_logit_generation_match():
     logits = logit_lens(model, prompts)
-    logits : Logit = logits.decode_logits(prompt_idx=[0,1])
+    logits : LogitResult = logits.decode_logits(prompt_idx=[0,1])
     tok_a_f = logits[0][0].tokens(model.tokenizer)[0]
     tok_b_f = logits[0][1].tokens(model.tokenizer)[0]
     
@@ -81,10 +81,27 @@ def test_logit_generation_match():
     assert toks[0] == tok_a_f, f"{toks[0]} != {tok_a_f}"
     assert toks[1] == tok_b_f, f"{toks[1]} != {tok_b_f}"
     
+    
+def test_collect_at_token_idx():
+    prompts = [
+        '<fim_prefix>print(f<fim_suffix>\n<fim_middle>',
+        "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
+    ]
+    toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
+    tok_idx = [model.tokenizer.encode(t)[0] for t in toks]
+    logits = collect_hidden_states_at_tokens(model, prompts, tok_idx, get_logit=True)
+    logits : LogitResult = logits.decode_logits(prompt_idx=[0,1], token_idx=[0,1,2])
+    
+    tok_a_f = [model.tokenizer.decode(x) for x in logits[-1][0].token_indices.flatten()]
+    tok_b_f = [model.tokenizer.decode(x) for x in logits[-1][1].token_indices.flatten()]
+    assert tok_a_f[-1] == ')', f"{repr(tok_a_f)}"
+    assert tok_b_f[-1] == '6', f"{repr(tok_b_f)}"
+    
 if __name__ == "__main__":
     test_logit_pipeline()
     test_patch()
     test_patch_vis()
     test_patch_vis_mult()
     test_logit_generation_match()
+    test_collect_at_token_idx()
     print("All tests passed!")
