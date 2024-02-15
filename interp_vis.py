@@ -15,92 +15,106 @@ from interp_utils import *
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.patches as mpatches
+import matplotlib as mpl
 
-def patch_logit_heatmap(model : LanguageModel,
-                        clean_prompt : List[str] | str, 
-                        corrupted_prompt : List[str] | str,
-                        patched_logits : TraceResult,
+def patched_heatmap_prediction(model : LanguageModel,
+                        clean_prompts : List[str] | str, 
+                        corrupted_prompts : List[str] | str,
+                        patched_final_logits : List[TraceResult],
                         layers_patched : List[int],
-                        clean_token_idx : int,
-                        corrupted_token_idx : int, 
+                        clean_token_idx : int = -1,
+                        corrupted_token_idx : int = -1, 
                         figsize : Tuple[int,int] = (10,10),
-                        figtitle : str = "Patch Logit Heatmap",):
+                        bbox_to_anchor : Tuple[int,int] = (1.6, 1.0),
+                        figtitle : str = "Patch Logit-Prediction Heatmap",):
     """
-    Given hidden states from a patch clean[j]->corrupted[j] at layers,
-    do a heatmap where x is layers, y is prompt num
-    and color is the top token at last lauer AFTER patch at (layer, i)
-    Legend stores the patched in token from clean[j]
-    Store original clean prediction and corrupted predicion?
+    Cells on heatmap should be the final layer top logit that changes
+    after patch.
+    
+    All prompt pairs are patched in the same layers. Patched logits is
+    list of trace results of the final layer, one for each prompt pair.
+    
+    NOTE: 
+    - assumes top_k in logits is 1
+    - patched_final_logits is 2D when there are multiple prompt pairs, else 1D
+        - 1D is one TraceResult for each layer
+        - 2D is a list of TraceResults for each layer.
+            ex: patched_final_logits[0] is results for each prompt at layer layers_patched[0]
     """
-    if isinstance(clean_prompt, List) or isinstance(corrupted_prompt, List):
-        raise NotImplementedError("Not implemented for multiple prompts")
+    clean_prompts = arg_to_list(clean_prompts)
+    corrupted_prompts = arg_to_list(corrupted_prompts)
+    if not isinstance(patched_final_logits, list):
+        raise ValueError("Given TraceResult, expected List.\nDid you forget to do an individual patch for each layer?")
     
     plt.figure(figsize=figsize)
+    x_len = len(layers_patched)
     x_axis_labels = [f"Layer {i}" for i in layers_patched]
-    y_len = len(clean_prompt) if isinstance(clean_prompt, List) else 1
-    y_axis_labels = [f"Example {i}" for i in range(y_len)]
+    y_len = len(clean_prompts)
+    y_axis_labels = [f"Prompt {i}" for i in range(y_len)]
     
     plt.yticks(list(range(len(y_axis_labels))), y_axis_labels)
     plt.xticks(list(range(len(x_axis_labels))), x_axis_labels)
     plt.xlabel("Patched Layer")
     plt.title(figtitle)
 
-    patched_logits = patched_logits.score_top(1)
-    patched_top_idx = patched_logits.get_indexes(layers_patched, corrupted_token_idx)
-    patched_top_tokens = patched_logits.get_tokens(model, layers=layers_patched, token_idx=corrupted_token_idx)
-    probabilities = patched_logits.get_probabilities(layers=layers_patched, token_idx=corrupted_token_idx, do_log_probs=False).cpu().flatten().numpy()
+    # need token and probabilities
+    tokens, probs = [], []
+    for layer_patch in patched_final_logits:
+        patched_logits : Logit = layer_patch.decode_logits(prompt_idx=list(range(y_len)))
+        pt, pp = [], []
+        for i in range(y_len):
+            pt.append(np.array(patched_logits[0][i].tokens(model.tokenizer)).item())
+            pp.append(patched_logits[0][i].probs().item())
+        tokens.append(pt)
+        probs.append(pp)
+        
+    tokens = np.array(tokens)
+    probs = np.array(probs)
     
-    probabilities = probabilities.reshape(y_len, len(layers_patched))
-    im = plt.imshow(probabilities, cmap="viridis", aspect="auto")
+    cmap = mpl.cm.cool
+    im = plt.imshow(probs.transpose(), cmap=cmap, aspect="auto")
     
     # color is the probability of patched token
-    color_map = im.cmap(probabilities)
+    im.cmap(probs)
     # add colorbar
     plt.colorbar(im)
 
-    # use map to make legend
-    original_corrupted_logits = logit_lens(model, [corrupted_prompt])
-    corrupt_orig_pred = original_corrupted_logits.score_top(1).get_tokens(model, layers=layers_patched, token_idx=corrupted_token_idx)
-
-    # get target clean tokens
-    original_clean_logits = logit_lens(model, [clean_prompt])
-    clean_token_pred = original_clean_logits.score_top(1).get_tokens(model, layers=layers_patched, token_idx=clean_token_idx)
+    # legend is clean prediction -> corrupted prediction
+    def original_prompt_pred(model, prompts):
+        logits = logit_lens(model, prompts).decode_logits(prompt_idx=list(range(y_len)))
+        tokens, probs = [], []
+        for i in range(len(prompts)):
+            t = logits[0][i].tokens(model.tokenizer)
+            p = logits[0][i].probs()
+            tokens.append(t)
+            probs.append(p)
+        return np.array(tokens), probs
     
+    original_clean = original_prompt_pred(model, clean_prompts)
+    original_corrupted = original_prompt_pred(model, corrupted_prompts)
+
     # for each probability square, legend shows relative clean_tok->corr_tok
     patches = []
-    for i,(a,b) in enumerate(list(zip(clean_token_pred, corrupt_orig_pred))):
-        patches.append(mpatches.Patch(color='grey', label=f"{layers_patched[i]}:'{repr(a)}' -> '{repr(b)}'"))
-    plt.legend(handles=patches, loc="upper right", bbox_to_anchor=(0.5, 1.0), title="original layer:clean->corrupt")
-    
-    # build an annotations dict for each square in grid with values from probs_patched_results
-    annotations = {i:{} for i in range(len(x_axis_labels)*len(y_axis_labels))}
-    for i in range(len(x_axis_labels)):
-        for j in range(len(y_axis_labels)):
-            probs = probabilities[j][i]
-            annotations[i+len(y_axis_labels)*j] = {"toptok": f"'{patched_top_tokens[i]}'","prob": f"{probs:.2f}"}
-            
-    # create tuples of positions
-    positions =[(x , y ) for x in range(len(x_axis_labels)) for y in range(len(y_axis_labels))]
+    for i in range(y_len):
+        a_pred = original_clean[0][i].item()
+        a_prob = float(f"{original_clean[1][i].item():.2f}")
+        b_pred = original_corrupted[0][i].item()
+        b_prob = float(f"{original_corrupted[1][i].item():.2f}")
+        a = (a_pred, a_prob)
+        b = (b_pred, b_prob)
+        patches.append(mpatches.Patch(color='grey', label=f"{i}: {a} (->) {b}"))
+    plt.legend(handles=patches, loc="center right", bbox_to_anchor=bbox_to_anchor, title="original predictions\nprompt: clean (->) corrupt")
 
+    # build an annotations dict for each square in grid with values from probs_patched_results
+    annotations = {}
+    for i in range(x_len):
+        for j in range(y_len):
+            p = probs[i][j].item()
+            annotations[(i,j)] = {"toptok": f"{tokens[i][j].item()}","prob": f"{p:.2f}"}
+    
     # add annotations
     for pos, text in annotations.items():
-        plt.annotate(text["toptok"], xy=positions[pos],color="black", fontsize=8, ha="center", va="center")
+        plt.annotate(text["toptok"], xy=pos,color="black", fontsize=10, ha="center", va="center")
 
     plt.tight_layout()
     plt.savefig(figtitle.lower().replace(" ", "_") + ".png")
-    
-    
-def patch_logit_heatmap_for_prediction(model : LanguageModel,
-                        clean_prompt : List[str] | str, 
-                        corrupted_prompt : List[str] | str,
-                        patched_logits : TraceResult,
-                        layers_patched : List[int],
-                        clean_token_idx : int,
-                        corrupted_token_idx : int, 
-                        figsize : Tuple[int,int] = (10,10),
-                        figtitle : str = "Patch Logit Heatmap",):
-    """
-    Cells on heatmap should be the final token top logit that changes
-    after patch
-    """
-    pass

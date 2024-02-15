@@ -47,11 +47,44 @@ def test_patch():
     
     
 def test_patch_vis():
-    trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], [14,23])
-    patch_logit_heatmap(model, prompts[0], prompts[1], trace_res, [1, 3, 7, 14,23], -1,-1)
+    patch_l = [1, 14,23]
+    trace_results = []
+    for l in patch_l:
+        trace_res = patch_clean_to_corrupt(model, prompts[0], prompts[1], l)
+        trace_results.append(trace_res)
+    patched_heatmap_prediction(model, prompts[0], prompts[1], trace_results, patch_l)
+    
+    
+def test_patch_vis_mult():
+    cleans = [prompts[0], prompts[1]]
+    corrs = [prompts[1], prompts[0]]
+    patch_l = [1, 14,23]
+    trace_results = []
+    for l in patch_l:
+        trace_res = patch_clean_to_corrupt(model, cleans, corrs, l)
+        trace_results.append(trace_res)
+    
+    patched_heatmap_prediction(model, cleans,corrs, trace_results, patch_l, figtitle="test_fig")
+
+def test_logit_generation_match():
+    logits = logit_lens(model, prompts)
+    logits : Logit = logits.decode_logits(prompt_idx=[0,1])
+    tok_a_f = logits[0][0].tokens(model.tokenizer)[0]
+    tok_b_f = logits[0][1].tokens(model.tokenizer)[0]
+    
+    with model.generate(max_new_tokens=1) as gen:
+        with gen.invoke(prompts) as invoker:
+            invoker.next()
+
+    output = gen.output
+    toks = [model.tokenizer.decode(x) for x in output[:,-1]]
+    assert toks[0] == tok_a_f, f"{toks[0]} != {tok_a_f}"
+    assert toks[1] == tok_b_f, f"{toks[1]} != {tok_b_f}"
     
 if __name__ == "__main__":
     test_logit_pipeline()
     test_patch()
     test_patch_vis()
+    test_patch_vis_mult()
+    test_logit_generation_match()
     print("All tests passed!")

@@ -36,16 +36,19 @@ class Logit:
         self.is_log = is_log
         
     def __getitem__(self, idx):
+        """
+        TODO: torch like getitem eg. [:, 0, :, :]
+        """
         return Logit(self.token_indices[idx,], self.probabilities[idx,], self.is_log)
     
-    def tokens(self, tokenizer : transformers.PreTrainedTokenizer):
+    def tokens(self, tokenizer : transformers.PreTrainedTokenizer) -> List[str]:
         """
         Decode tokens to strings
         """
         # NOTE: this is only done once token_indices is a 1D tensor
         return [tokenizer.decode(i.item()) for i in self.token_indices]
     
-    def probs(self):
+    def probs(self) -> np.ndarray:
         return self.probabilities.flatten().numpy()
     
 class TraceResult:
