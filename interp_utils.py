@@ -45,6 +45,9 @@ class Logit:
         # NOTE: this is only done once token_indices is a 1D tensor
         return [self.tokenizer.decode(i.item()) for i in self.token_indices]
     
+    def probs(self):
+        return self.probabilities.flatten().numpy()
+    
 class TraceResult:
     """
     Wrapper over hidden states and logits.
@@ -151,61 +154,61 @@ def logit_lens(model : LanguageModel,
         return TraceResult(logits, layers)
     
     
-# def patch_clean_to_corrupt(model : LanguageModel,
-#                      clean_prompt : str, 
-#                      corrupted_prompt : str,
-#                      clean_index : int,
-#                      corrupted_index : int,
-#                      layers_to_patch : list[int],
-#                      apply_norm : bool = True,
-#                      store_hidden_states : bool = False) -> TraceResult:
-#     """
-#     Patch from clean prompt to corrupted prompt
-#     clean_idx -> corrupted_idx at target layers. Patches from same layers in clean prompt.
+def patch_clean_to_corrupt(model : LanguageModel,
+                     clean_prompt : str, 
+                     corrupted_prompt : str,
+                     clean_index : int,
+                     corrupted_index : int,
+                     layers_to_patch : list[int],
+                     apply_norm : bool = True,
+                     store_hidden_states : bool = False) -> TraceResult:
+    """
+    Patch from clean prompt to corrupted prompt
+    clean_idx -> corrupted_idx at target layers. Patches from same layers in clean prompt.
     
-#     Returns patched hidden states from corrupted run
-#     """
-#     def decode(x : torch.Tensor) -> torch.Tensor:
-#         if apply_norm:
-#             x = model.transformer.ln_f(x)
-#         return model.lm_head(x)
+    Returns patched hidden states from corrupted run
+    """
+    def decode(x : torch.Tensor) -> torch.Tensor:
+        if apply_norm:
+            x = model.transformer.ln_f(x)
+        return model.lm_head(x)
     
-#     # Enter nnsight tracing context
-#     with model.forward() as runner:
+    # Enter nnsight tracing context
+    with model.forward() as runner:
 
-#         # Clean run
-#         with runner.invoke(clean_prompt) as invoker:
+        # Clean run
+        with runner.invoke(clean_prompt) as invoker:
             
-#             clean_tokens = invoker.input["input_ids"][0]
+            clean_tokens = invoker.input["input_ids"][0]
             
-#             # save all hidden states
-#             clean_hs = [
-#                 model.transformer.h[layer_idx].output[0].save()
-#                 for layer_idx in range(len(model.transformer.h))
-#             ]
+            # save all hidden states
+            clean_hs = [
+                model.transformer.h[layer_idx].output[0].save()
+                for layer_idx in range(len(model.transformer.h))
+            ]
         
-#         # Patch onto corrupted prompt
-#         hidden_states = []
-#         logits = []
-#         with runner.invoke(corrupted_prompt) as invoker:
+        # Patch onto corrupted prompt
+        hidden_states = []
+        logits = []
+        with runner.invoke(corrupted_prompt) as invoker:
             
-#             for layer in range(len(model.transformer.h)):
-#                 if layer in layers_to_patch:
-#                     # grab patch
-#                     clean_patch = clean_hs[layer].t[clean_index]
-#                     # apply patch
-#                     model.transformer.h[layer].output[0].t[corrupted_index] = clean_patch
+            for layer in range(len(model.transformer.h)):
+                if layer in layers_to_patch:
+                    # grab patch
+                    clean_patch = clean_hs[layer].t[clean_index]
+                    # apply patch
+                    model.transformer.h[layer].output[0].t[corrupted_index] = clean_patch
 
-#                 # save patched hidden states
-#                 hs = model.transformer.h[layer].output[0]
-#                 hidden_states.append(hs.save())
-#                 logits.append(decode(hs).save())
+                # save patched hidden states
+                hs = model.transformer.h[layer].output[0]
+                hidden_states.append(hs.save())
+                logits.append(decode(hs).save())
             
-#     hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
-#     logits = util.apply(logits, lambda x: x.value, Proxy)
-#     hidden_states = torch.stack(hidden_states, dim=0)
+    hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
+    logits = util.apply(logits, lambda x: x.value, Proxy)
+    hidden_states = torch.stack(hidden_states, dim=0)
     
-#     logits = torch.stack(logits, dim=0)
-#     logits = logits.softmax(dim=-1)
-#     return TraceResult(logits, hidden_states)
+    logits = torch.stack(logits, dim=0)
+    logits = logits.softmax(dim=-1)
+    return TraceResult(logits, hidden_states)
     
