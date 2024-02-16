@@ -125,16 +125,20 @@ def collect_hidden_states(model : LanguageModel,
 
 def collect_hidden_states_at_tokens(model : LanguageModel,
                                     prompts : List[str] | str,
-                                    token_idx : List[int] | int,
+                                    token_idx : List[int] | int | List[str] | str,
                                     layers : List[int] = None,
                                     get_logit : bool = False) -> List[torch.Tensor] | TraceResult:
     """
     Collect hidden states for each prompt. 
     Optionally, collect hidden states at specific layers and tokens.
+    
+    NOTE: selects first occurence of token_idx in each prompt
     """
     prompts, token_idx = map(arg_to_list, [prompts, token_idx])
     if layers is None:
         layers = list(range(len(model.transformer.h)))
+    if isinstance(token_idx[0], str):
+        token_idx = [model.tokenizer.encode(t)[0] for t in token_idx]
         
     def decode(x : torch.Tensor) -> torch.Tensor:
         return model.lm_head(model.transformer.ln_f(x))
@@ -170,6 +174,59 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
         return TraceResult(logits, layers, hidden_states)
 
     return hidden_states
+
+
+def insert_patch(model : LanguageModel,
+                 prompts : List[str] | str,
+                 patch : torch.Tensor,
+                 layers_to_patch : List[int],
+                 tokens_to_patch : List[str] | List[int] | str | int,
+                 patch_strength : int = 1) -> TraceResult:
+    """
+    Insert patch at layers and tokens
+    
+    NOTE: patch_strength 1 means substitute full activation
+    """
+    prompts, tokens_to_patch = arg_to_list(prompts), arg_to_list(tokens_to_patch)
+    if patch.shape[0] != len(model.transformer.h):
+        assert patch.shape[0] == len(layers_to_patch), f"Patch shape {patch.shape[0]} != len(layers_to_patch) {len(layers_to_patch)}"
+    if isinstance(tokens_to_patch[0], str):
+        tokens_to_patch = [model.tokenizer.encode(t)[0] for t in tokens_to_patch]
+    if patch_strength < 1:
+        raise NotImplementedError("Patch strength < 1 not yet implemented")
+    
+    def decode(x : torch.Tensor) -> torch.Tensor:
+        return model.lm_head(model.transformer.ln_f(x))
+    
+    with model.forward() as runner:
+        with runner.invoke(prompts) as invoker:
+            
+            indices = invoker.input["input_ids"].numpy()
+    
+            # for each prompt find the index of token_idx
+            target_idx = np.concatenate([np.where((i  == t)) for t in tokens_to_patch for i in indices], axis=0).reshape(indices.shape[0], -1)
+            
+            # apply patch to hidden states at target_idx for each prompt
+            for layer in range(len(model.transformer.h)):
+                if layer in layers_to_patch:
+                    # grab patch
+                    clean_patch = patch[layer]
+                    # apply patch
+                    for i in range(len(prompts)):
+                        model.transformer.h[layer].output[0][[i],target_idx[i],:] = clean_patch
+            
+            hidden_states = torch.stack([
+                model.transformer.h[layer_idx].output[0]
+                for layer_idx in range(len(model.transformer.h))
+            ],dim=0).save()
+            
+            logits = decode(hidden_states).save()
+            
+    hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
+    logits = util.apply(logits, lambda x: x.value, Proxy)
+    
+    return TraceResult(logits, list(range(len(model.transformer.h))), hidden_states)
+    
         
             
 def logit_lens(model : LanguageModel,

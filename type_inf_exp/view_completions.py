@@ -6,7 +6,7 @@ from utils import *
 import json
 import pandas as pd
 
-completions_file = "data/completions/starcoderbase-1b-completions_typeinf.json"
+completions_file = "data/completions/starcoderbase-3b-completions.json"
 
 with open(completions_file, "r") as f:
     completions = json.load(f)
@@ -32,6 +32,9 @@ df["correctness"] = df.apply(lambda row: label(row), axis=1)
 print(df["correctness"].value_counts())
 # print total
 print(f"Total: {len(df)}")
+# print accuracy count
+print(f"Correct: {len(df[df['correctness'] == 'correct'])}")
+print(f"Accuracy: {len(df[df['correctness'] == 'correct']) / len(df) * 100:.2f}%")
 
 # sort by correctness AND solution, save original IDS
 df["id"] = df.index
@@ -42,4 +45,4 @@ df = df.reset_index(drop=True)
 #     df.drop(columns=["prompt"]).to_csv(f)
 
 ds = datasets.Dataset.from_pandas(df)
-ds.push_to_hub("franlucc/starcoderbase-1b-completions_typeinf_analysis")
+ds.push_to_hub("franlucc/starcoderbase-3b-completions_typeinf_analysis")

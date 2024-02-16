@@ -32,6 +32,9 @@ class FimObj:
     def __str__(self):
         return f"FimObj(prefix={self.prefix}, suffix={self.suffix}, token={self.token}, placeholder={self.placeholder})"
     
+    def to_list(self):
+        return [self.prefix, self.suffix, self.token, self.placeholder]
+    
 fim_placeholder = "<FILL>"      
 STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
 
