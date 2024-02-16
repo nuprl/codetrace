@@ -10,10 +10,10 @@ ds = datasets.load_dataset("franlucc/stenotype-eval-dataset-func-type-stripped-v
 
 params = SamplingParams(temperature=0)
 
-model = "/home/arjun/models/starcoderbase-3b"
+model = "/home/arjun/models/starcoderbase-1b"
 LLM = LLM(model)
 
-prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in ds]
+prompts = [placeholder_to_std_fmt("# Predict the correct type.\n"+ex["fim_program"], STARCODER_FIM) for ex in ds]
 hexshas = [ex["hexsha"] for ex in ds]
 solutions = [ex["fim_type"] for ex in ds]
 
@@ -25,6 +25,6 @@ for i,output in enumerate(generations):
     generated_text = output.outputs[0].text.strip()
     completions["generated"].append(generated_text)
     
-with open("starcoderbase-3b-completions.json", "w") as f:
+with open("starcoderbase-3b-completions-cheeky.json", "w") as f:
     json.dump(completions, f)
     

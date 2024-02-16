@@ -19,7 +19,8 @@ Method 2.
 Method 3.
     Do Methdo 1,2 but with sampling instead of greedy predictions. Do beam search.
 
-NOTE: if all else fails, token indexing may be wrong
+NOTE: if all else fails, token indexing may be wrong.
+ALso -> try some ICL. A system prompt "Infer the type"
 """
 from nnsight import LanguageModel
 from typing import List

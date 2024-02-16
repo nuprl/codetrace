@@ -6,7 +6,7 @@ from utils import *
 import json
 import pandas as pd
 
-completions_file = "data/completions/starcoderbase-3b-completions.json"
+completions_file = sys.argv[1]
 
 with open(completions_file, "r") as f:
     completions = json.load(f)
@@ -45,4 +45,5 @@ df = df.reset_index(drop=True)
 #     df.drop(columns=["prompt"]).to_csv(f)
 
 ds = datasets.Dataset.from_pandas(df)
-ds.push_to_hub("franlucc/starcoderbase-3b-completions_typeinf_analysis")
+# basename = os.path.basename(completions_file).replace(".json", "")
+# ds.push_to_hub(f"franlucc/{basename}_typeinf_analysis")
