@@ -289,7 +289,7 @@ def patch_clean_to_corrupt(model : LanguageModel,
         # Clean run
         with runner.invoke(clean_prompt) as invoker:
             
-            clean_tokens = invoker.input["input_ids"][0]
+            # clean_tokens = invoker.input["input_ids"][0]
             
             # save all hidden states
             clean_hs = [
