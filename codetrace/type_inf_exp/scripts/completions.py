@@ -18,7 +18,7 @@ ds = datasets.load_dataset(dataset, split="train")
 
 params = SamplingParams(temperature=0)
 
-LLM = LLM(model)
+LLM = LLM(model, device_map="cuda")
 
 prompts = [placeholder_to_std_fmt("# Predict the correct type.\n"+ex["fim_program"], STARCODER_FIM) for ex in ds]
 hexshas = [ex["hexsha"] for ex in ds]

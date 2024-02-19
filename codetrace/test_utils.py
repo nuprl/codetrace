@@ -1,5 +1,5 @@
-from interp_utils import *
-from interp_vis import *
+from codetrace.interp_utils import *
+from codetrace.interp_vis import *
 from nnsight import LanguageModel
 
 # re-run this
@@ -99,9 +99,9 @@ def test_collect_at_token_idx():
     
 def test_interp_patch():
     prompts = [
+        '<fim_prefix>print("hello world"<fim_suffix>\n<fim_middle>',
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
-        '<fim_prefix>print(f<fim_suffix>\n<fim_middle>',
-    ][::-1]
+    ]
     toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
     hs = collect_hidden_states_at_tokens(model, prompts[0], toks, get_logit=False)
     out = insert_patch(model, prompts, hs, list(range(len(model.transformer.h))), toks)
@@ -113,11 +113,11 @@ def test_interp_patch():
     
     
 if __name__ == "__main__":
-    # test_logit_pipeline()
-    # test_patch()
-    # test_patch_vis()
-    # test_patch_vis_mult()
-    # test_logit_generation_match()
-    # test_collect_at_token_idx()
-    # test_interp_patch()
+    test_logit_pipeline()
+    test_patch()
+    test_patch_vis()
+    test_patch_vis_mult()
+    test_logit_generation_match()
+    test_collect_at_token_idx()
+    test_interp_patch()
     print("All tests passed!")

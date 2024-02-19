@@ -3,7 +3,7 @@ Interp utils
 """
 import sys
 import os
-from utils import *
+from codetrace.utils import *
 import glob
 import datasets
 import pandas as pd
@@ -22,6 +22,7 @@ def arg_to_list(x):
 
 def arg_to_literal(x, n=NLAYER):
     return x if x >= 0 else n + x
+
 
 class LogitResult:
     """
@@ -181,7 +182,7 @@ def insert_patch(model : LanguageModel,
                  patch : torch.Tensor,
                  layers_to_patch : List[int],
                  tokens_to_patch : List[str] | List[int] | str | int,
-                 patch_strength : int = 1) -> TraceResult:
+                 patch_mode : str = "add") -> TraceResult:
     """
     Insert patch at layers and tokens
     
@@ -190,10 +191,12 @@ def insert_patch(model : LanguageModel,
     prompts, tokens_to_patch = arg_to_list(prompts), arg_to_list(tokens_to_patch)
     if patch.shape[0] != len(model.transformer.h):
         assert patch.shape[0] == len(layers_to_patch), f"Patch shape {patch.shape[0]} != len(layers_to_patch) {len(layers_to_patch)}"
+    if patch.shape[1] != len(tokens_to_patch):
+        assert patch.shape[1] == len(tokens_to_patch), f"Patch shape {patch.shape[1]} != len(tokens_to_patch) {len(tokens_to_patch)}"
     if isinstance(tokens_to_patch[0], str):
         tokens_to_patch = [model.tokenizer.encode(t)[0] for t in tokens_to_patch]
-    if patch_strength < 1:
-        raise NotImplementedError("Patch strength < 1 not yet implemented")
+    if patch_mode not in ["sub", "add", "subst"]:
+        raise NotImplementedError(f"Patch mode {patch_mode} not implemented")
     
     def decode(x : torch.Tensor) -> torch.Tensor:
         return model.lm_head(model.transformer.ln_f(x))
@@ -213,8 +216,13 @@ def insert_patch(model : LanguageModel,
                     clean_patch = patch[layer]
                     # apply patch
                     for i in range(len(prompts)):
-                        model.transformer.h[layer].output[0][[i],target_idx[i],:] = clean_patch
-            
+                        if patch_mode == "subst":
+                            model.transformer.h[layer].output[0][[i],target_idx[i],:] = clean_patch
+                        elif patch_mode == "add":
+                            model.transformer.h[layer].output[0][[i],target_idx[i],:] += clean_patch
+                        elif patch_mode == "sub":
+                            model.transformer.h[layer].output[0][[i],target_idx[i],:] -= clean_patch
+                            
             hidden_states = torch.stack([
                 model.transformer.h[layer_idx].output[0]
                 for layer_idx in range(len(model.transformer.h))
@@ -282,14 +290,14 @@ def patch_clean_to_corrupt(model : LanguageModel,
     clean_prompt, corrupted_prompt, layers_to_patch = map(arg_to_list, [clean_prompt, corrupted_prompt, layers_to_patch])
     if set(layers_to_patch).intersection(set(list(range(len(model.transformer.h))))) != set(layers_to_patch):
         raise ValueError(f"layers_to_patch must be in range [0, {len(model.transformer.h)}), received:\n{layers_to_patch}")
+    if len(clean_prompt) != len(corrupted_prompt):
+        raise ValueError(f"clean_prompt and corrupted_prompt must have same length")
     
     # Enter nnsight tracing context
     with model.forward() as runner:
 
         # Clean run
         with runner.invoke(clean_prompt) as invoker:
-            
-            # clean_tokens = invoker.input["input_ids"][0]
             
             # save all hidden states
             clean_hs = [
@@ -301,12 +309,11 @@ def patch_clean_to_corrupt(model : LanguageModel,
         logits = None
         with runner.invoke(corrupted_prompt) as invoker:
             
-            for layer in range(len(model.transformer.h)):
-                if layer in layers_to_patch:
-                    # grab patch
-                    clean_patch = clean_hs[layer].t[clean_index]
-                    # apply patch
-                    model.transformer.h[layer].output[0].t[corrupted_index] = clean_patch
+            for layer in layers_to_patch:
+                # grab patch
+                clean_patch = clean_hs[layer].t[clean_index]
+                # apply patch
+                model.transformer.h[layer].output[0].t[corrupted_index] = clean_patch
 
             # save final logits
             logits = model.lm_head.output.save()

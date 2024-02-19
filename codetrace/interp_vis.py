@@ -3,7 +3,7 @@ Interp visualizations
 """
 import sys
 import os
-from utils import *
+from codetrace.utils import *
 import glob
 import datasets
 import pandas as pd
@@ -11,7 +11,7 @@ import torch
 from tqdm import tqdm
 from nnsight import LanguageModel,util
 from nnsight.tracing.Proxy import Proxy
-from interp_utils import *
+from codetrace.interp_utils import *
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.patches as mpatches

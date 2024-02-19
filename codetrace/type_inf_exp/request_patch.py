@@ -31,13 +31,13 @@ from codetrace.interp_utils import *
 from codetrace.interp_vis import *
 import torch
 from tqdm import tqdm
-from collections import Counter
+from collections import Counter, defaultdict
 import random
 
 def get_averages(model: LanguageModel,
                  prompts : List[str],
                  tokens : List[str],
-                 batch_Size=5) -> torch.Tensor:
+                 batch_size=5) -> torch.Tensor:
     """
     Get averages of tokens at all layers for all prompts
     
@@ -46,70 +46,69 @@ def get_averages(model: LanguageModel,
     tokens = [model.tokenizer.encode(t)[0] for t in tokens]
     
     # batch prompts according to batch size
-    prompt_batches = [prompts[i:i+batch_Size] for i in range(0, len(prompts), batch_Size)]
+    prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     hidden_states = []
     for batch in tqdm(prompt_batches, desc="Batch"):
         hs = collect_hidden_states_at_tokens(model, batch, tokens)
-        hidden_states.append(hs.mean(dim=1)) # batch size mean
+        hs_mean = hs.mean(dim=1) # batch size mean
+        hidden_states.append(hs_mean)
         
     # save tensor
-    hidden_states = torch.cat(hidden_states, dim=1)
+    hidden_states = torch.stack(hidden_states, dim=0)
     print(f"Hidden states shape before avg: {hidden_states.shape}")
-    return hidden_states.mean(dim=1)
+    return hidden_states.mean(dim=0)
 
 
-def filter_prompts(prompts : List[str], 
-                   labels : List[str],
-                   hexshas : List[str],
+def batched_insert_patch(model : LanguageModel,
+                    prompts : List[str] | str,
+                    patch : torch.Tensor,
+                    layers_to_patch : List[int],
+                    tokens_to_patch : List[str] | List[int] | str | int,
+                    patch_mode : str = "sub",
+                    batch_size : int = 5) -> List[TraceResult]:
+    """
+    batched insert patch
+    """
+    # batch prompts according to batch size
+    prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
+    results = []
+    for batch in tqdm(prompt_batches, desc="Batch"):
+        res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode)
+        results.append(res)
+        
+    # save tensor
+    return results
+    
+
+def filter_prompts(dataset : datasets.Dataset,
                    single_tokenize : PreTrainedTokenizer = None,
-                   dedup_threshold : int = 3,
-                   dup_typ_threshold : int = 10) -> List[Tuple[str, str, str]]:
+                   dedup_prog_threshold : int = 3,
+                   dedup_type_threshold : int = 10) -> datasets.Dataset:
     """
     Balance prompts s.t. there is a balanced distribution of labels.
     Do not use more than max_size prompts.
     Remove multi-token label prompts if tokenizer is passed.
-    Deduplicate prompts by hexsha by some dedup_threshold (max prompts for a program)
+    Deduplicate prompts by hexsha by some dedup_prog_threshold (max prompts for a program)
     """
-    assert len(prompts) == len(labels) == len(hexshas)
     if not single_tokenize is None:
-        prompts = [p for i,p in enumerate(prompts) if len(single_tokenize.encode(labels[i])) == 1]
-        labels = [l for l in labels if len(single_tokenize.encode(l)) == 1]
-        
+        dataset = dataset.filter(lambda x : len(single_tokenize.encode(x["solution"])) == 1)
+    
     # get count of labels
+    labels = dataset["solution"]
     counter = Counter(labels)
     
-    hexsha_count = {hexsha : 0 for hexsha in hexshas}
-    label_count = {label : 0 for label in counter.keys()}
+    hexsha_count = {h:0 for h in dataset["hexsha"]}
+    label_count = {label : 0 for label in labels}
     balanced_prompts = []
-    for i,p in enumerate(prompts):
-        if label_count[labels[i]] > dup_typ_threshold:
+    for i,ex in enumerate(dataset):
+        if label_count[ex["solution"]] > dedup_type_threshold:
             continue
-        if hexsha_count[hexshas[i]] > dedup_threshold: # some threshold
+        if hexsha_count[ex["hexsha"]] > dedup_prog_threshold: # some threshold
             continue
-        balanced_prompts.append((p, labels[i], hexshas[i]))
-        label_count[labels[i]] += 1
-        hexsha_count[hexshas[i]] += 1
+        balanced_prompts.append(ex)
+        label_count[ex["solution"]] += 1
+        hexsha_count[ex["hexsha"]] += 1
 
-
-    return balanced_prompts
-
-
-if __name__ == "__main__":
-    # test get_averages
-    model = LanguageModel("/home/arjun/models/starcoderbase-1b")
-    ds = datasets.load_dataset("franlucc/starcoderbase-1b-completions_typeinf_analysis", split="train")
-    ds = ds.filter(lambda x : x["correctness"] == "correct")
-    # test balance prompts
-    prompts = ds['prompt']
-    labels = ds['solution']
-    hexshas = ds['hexsha']
-    out = filter_prompts(prompts, labels, hexshas, dedup_threshold=4,single_tokenize=model.tokenizer)
-    df = pd.DataFrame(out, columns=["prompt", "label", "hexsha"])
-    # count number of labels, hexshas
-    def pretty_print(x):
-        # print a df column in full
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            print(x)
-    pretty_print(df['label'].value_counts())
-    pretty_print(df['hexsha'].value_counts())
-    print(df.shape)
+    df = pd.DataFrame(balanced_prompts)
+    ds = datasets.Dataset.from_pandas(df)
+    return ds

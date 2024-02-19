@@ -16,12 +16,12 @@ npm install --prefix ~/.npm_packages ts-node typescript '@types/node'
 npx --cache ~/.npm_packages ts-node --typeCheck <prog.ts>
 ```
 
+Build package
+```
+python -m build
+export PYTHONPATH=/path/to/your/package:$PYTHONPATH
+```
+
 # Overview
 
-Task: FIM type-inference
-LLMs: CodeLlama 7b and 13b, starcoderbase
-
-- dataset: contains TS programs for benchmark
-- generations: contains single-token and multi-token LLM generations for TS programs in benchmark
-- test_dataset.ipynb: testing benchmark against LLMs) to find easy/hard programs
-- explore_ts_data.ipynb: looking through scraped TS dataset for benchmark problems
+Main interp/util code is in `codetrace/` toplevel. Experiments are organized in subdirectories. The REPL in each experiment subdirectory is `<exp_subdir>/main.ipynb`. Random notebooks in `notebooks/`. Note that only experiment subdir with `__init__.py` are up to date, all others deprecated.
