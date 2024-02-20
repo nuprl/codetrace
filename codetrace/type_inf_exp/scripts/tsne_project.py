@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib import patches as mpatches
 
 exp_dir = "/home/franlucc/projects/codetrace/codetrace/type_inf_exp"
-with open(f"{exp_dir}/exp_data/v2/steering_res.json", "r") as f:
+with open(f"{exp_dir}/exp_data/v3/steering_res.json", "r") as f:
     ds = json.load(f)
     
 df = pd.DataFrame(ds)
@@ -17,7 +17,7 @@ print(incorrect_df)
 # filter out len > 8000
 incorrect_df = incorrect_df[incorrect_df['prompt'].str.len() < 8000]
 # sample some amount
-incorrect_df = incorrect_df.sample(25, random_state=0)
+incorrect_df = incorrect_df.sample(25, random_state=24)
 print(incorrect_df[incorrect_df['success'] == True]['label'].value_counts())
 
 model = LanguageModel("/home/arjun/models/starcoderbase-1b", device_map="cuda")
@@ -25,11 +25,11 @@ activations : torch.tensor = collect_hidden_states_at_tokens(model,
                                               incorrect_df['prompt'].tolist(), 
                                               STARCODER_FIM.token,
                                               layers = [14])
-add_steering_vec = True
+add_steering_vec = False
 
 if add_steering_vec:
     # add steering vector
-    steering_vector = torch.load(f"{exp_dir}/exp_data/v2/diff_tensor.pt")
+    steering_vector = torch.load(f"{exp_dir}/exp_data/v3/diff_tensor.pt")
     print(steering_vector.shape)
     activations = activations + steering_vector[14, -1,:]
 
@@ -69,4 +69,4 @@ for i,lbl in enumerate(typ_list):
     
 plt.tight_layout()
 steer = "steer" if add_steering_vec else ""
-plt.savefig(f"{exp_dir}/exp_data/v2/tsne_{steer}_pp{tsne_model.perplexity}_ee{tsne_model.early_exaggeration}_{tsne_model.metric}.png")
+plt.savefig(f"{exp_dir}/exp_data/v3/tsne_{steer}_pp{tsne_model.perplexity}_ee{tsne_model.early_exaggeration}_{tsne_model.metric}.png")
