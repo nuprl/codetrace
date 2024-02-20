@@ -128,7 +128,7 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
                                     prompts : List[str] | str,
                                     token_idx : List[int] | int | List[str] | str,
                                     layers : List[int] = None,
-                                    get_logit : bool = False) -> List[torch.Tensor] | TraceResult:
+                                    get_logit : bool = False) -> torch.Tensor | TraceResult:
     """
     Collect hidden states for each prompt. 
     Optionally, collect hidden states at specific layers and tokens.

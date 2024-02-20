@@ -21,7 +21,16 @@ Build package
 python -m build
 export PYTHONPATH=/path/to/your/package:$PYTHONPATH
 ```
+In jupyer `kernel.json` add env var, then restart vscode.
+```
+"env": {"PYTHONPATH": "/path/to/your/package:$PYTHONPATH"}`
+```
 
 # Overview
 
 Main interp/util code is in `codetrace/` toplevel. Experiments are organized in subdirectories. The REPL in each experiment subdirectory is `<exp_subdir>/main.ipynb`. Random notebooks in `notebooks/`. Note that only experiment subdir with `__init__.py` are up to date, all others deprecated.
+
+# TODO
+
+[] average tensor with full-prompt tokens, and attention instead of output
+[] train extra module?
