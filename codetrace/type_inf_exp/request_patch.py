@@ -33,6 +33,7 @@ import torch
 from tqdm import tqdm
 from collections import Counter, defaultdict
 import random
+import pickle
 
 def get_averages(model: LanguageModel,
                  prompts : List[str],
@@ -101,9 +102,9 @@ def filter_prompts(dataset : datasets.Dataset,
     label_count = {label : 0 for label in labels}
     balanced_prompts = []
     for i,ex in enumerate(dataset):
-        if label_count[ex["solution"]] > dedup_type_threshold:
+        if label_count[ex["solution"]] >= dedup_type_threshold:
             continue
-        if hexsha_count[ex["hexsha"]] > dedup_prog_threshold: # some threshold
+        if hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: # some threshold
             continue
         balanced_prompts.append(ex)
         label_count[ex["solution"]] += 1

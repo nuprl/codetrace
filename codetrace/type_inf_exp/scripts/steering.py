@@ -20,16 +20,25 @@ model = LanguageModel("/home/arjun/models/starcoderbase-1b", device_map="cuda")
 
 # correct = filter_prompts(correct, 
 #                          single_tokenize=model.tokenizer, 
-#                          dedup_prog_threshold=1, 
-#                          dedup_type_threshold=2)
+#                          dedup_prog_threshold=100, 
+#                          dedup_type_threshold=100)
 # incorrect = filter_prompts(incorrect,
 #                             single_tokenize=model.tokenizer,
-#                             dedup_prog_threshold=4,
-#                             dedup_type_threshold=6)
+#                             dedup_prog_threshold=100,
+#                             dedup_type_threshold=100)
 
 # # filter some weird tree-sitter uncaught types: {}, this
 # incorrect = incorrect.filter(lambda x : x["solution"] not in ["this", "{}"])
 
+# def _pretty_print(ds):
+#     df = pd.DataFrame(ds)
+#     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+#         print(df["solution"].value_counts())
+#         print(df["hexsha"].value_counts())
+#         print(len(df))
+    
+# _pretty_print(correct)
+# _pretty_print(incorrect)
 # correct.to_csv(f"{exp_dir}/exp_data/correct_prompts.csv", encoding='utf-8')
 # incorrect.to_csv(f"{exp_dir}/exp_data/incorrect_prompts.csv", encoding='utf-8')
 
@@ -51,17 +60,19 @@ model = LanguageModel("/home/arjun/models/starcoderbase-1b", device_map="cuda")
 # diff_tensor = correct_avg_tensor - incorrect_avg_tensor
 # torch.save(diff_tensor, f"{exp_dir}/exp_data/diff_tensor.pt")
 
-# ==========================================================================================
-# # PART 3: apply diff tensor to incorrect prompts, record top logit
-# ==========================================================================================
+#==========================================================================================
+# PART 3: apply diff tensor to incorrect prompts, record top logit
+#==========================================================================================
 
 df_incorrect = pd.read_csv(f"{exp_dir}/exp_data/incorrect_prompts.csv", encoding='utf-8')
+ds = datasets.Dataset.from_pandas(df_incorrect)
+ds = ds[300:400]
+df_incorrect = pd.DataFrame(ds)
 # cap it at some size
-df_incorrect = df_incorrect.sample(10, random_state=2)
+# df_incorrect = df_incorrect.sample(10, random_state=2)
+
 # remove too large prompts
-print(df_incorrect)
 df_incorrect = df_incorrect[df_incorrect['prompt'].apply(lambda x : len(x) < 8000)]
-print(df_incorrect)
 
 diff_tensor = torch.load(f"{exp_dir}/exp_data/diff_tensor.pt")
 
