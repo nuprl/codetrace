@@ -1,8 +1,6 @@
 # Installation
 
-Make sure python 3.8
-
-TS install for discovery - not needed ATM
+TS install for boa - not needed ATM
 ```
 // install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
@@ -28,12 +26,12 @@ In jupyer `kernel.json` add env var, then restart vscode.
 
 # Overview
 
-Main interp/util code is in `codetrace/` toplevel. Experiments are organized in subdirectories. The REPL in each experiment subdirectory is `<exp_subdir>/main.ipynb`. Random notebooks in `notebooks/`. Note that only experiment subdir with `__init__.py` are up to date, all others deprecated.
+Main interp and util code is in `codetrace/` toplevel. Experiments are organized in subdirectories. The REPL in each experiment subdirectory is `<exp_subdir>/main.ipynb`. Random notebooks in `notebooks/`. Note that only experiment subdir with `__init__.py` are up to date, all others deprecated.
 
 # TODO
 
 [] average tensor with full-prompt tokens, and attention instead of output
     [] need some way to set token length to be same, maybe set a fixed size padding?
-    [] refac
+[] refac
 [] make mutation dataset (using sythetic typescript? - MultiPLT?)
 [] train extra module?
