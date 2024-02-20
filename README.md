@@ -33,4 +33,7 @@ Main interp/util code is in `codetrace/` toplevel. Experiments are organized in 
 # TODO
 
 [] average tensor with full-prompt tokens, and attention instead of output
+    [] need some way to set token length to be same, maybe set a fixed size padding?
+    [] refac
+[] make mutation dataset (using sythetic typescript? - MultiPLT?)
 [] train extra module?

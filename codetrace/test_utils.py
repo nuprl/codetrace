@@ -84,18 +84,18 @@ def test_logit_generation_match():
     
 def test_collect_at_token_idx():
     prompts = [
-        '<fim_prefix>print(f<fim_suffix>\n<fim_middle>',
+        '<fim_prefix>print("hi"<fim_suffix>\n<fim_middle>',
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
     tok_idx = [model.tokenizer.encode(t)[0] for t in toks]
-    logits = collect_hidden_states_at_tokens(model, prompts, tok_idx, get_logit=True)
-    logits : LogitResult = logits.decode_logits(prompt_idx=[0,1], token_idx=[0,1,2])
+    logits = logit_lens(model, prompts)
+    logits : LogitResult = logits.decode_logits(prompt_idx=[0,1])
     
-    tok_a_f = [model.tokenizer.decode(x) for x in logits[-1][0].token_indices.flatten()]
-    tok_b_f = [model.tokenizer.decode(x) for x in logits[-1][1].token_indices.flatten()]
-    assert tok_a_f[-1] == ')', f"{repr(tok_a_f)}"
-    assert tok_b_f[-1] == '6', f"{repr(tok_b_f)}"
+    tok_a_f = logits[-1][0][-1].tokens(model.tokenizer)[-1]
+    tok_b_f = logits[-1][1][-1].tokens(model.tokenizer)[-1]
+    assert tok_a_f == ')', f"{repr(tok_a_f)}"
+    assert tok_b_f == '6', f"{repr(tok_b_f)}"
     
 def test_interp_patch():
     prompts = [
@@ -103,14 +103,31 @@ def test_interp_patch():
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
-    hs = collect_hidden_states_at_tokens(model, prompts[0], toks, get_logit=False)
-    out = insert_patch(model, prompts, hs, list(range(len(model.transformer.h))), toks)
+    hs = collect_hidden_states_at_tokens(model, prompts[0], toks)
+    out = insert_patch(model, prompts, hs, list(range(len(model.transformer.h))), toks, patch_mode="subst")
     out : Logits = out.decode_logits(prompt_idx=[0,1])
-    tok_a_f = out[-1][0][-1].tokens(model.tokenizer)[0]
-    tok_b_f = out[-1][1][-1].tokens(model.tokenizer)[0]
+    tok_a_f = out[-1][0][-1].tokens(model.tokenizer)[-1]
+    tok_b_f = out[-1][1][-1].tokens(model.tokenizer)[-1]
     assert tok_a_f == ')', f"{repr(tok_a_f)}"
     assert tok_b_f == ')', f"{repr(tok_b_f)}"
     
+def test_attn_collect():
+    prompts = [
+        '<fim_prefix>print("hi<fim_suffix>\n<fim_middle>',
+        "<fim_prefix>a=6\nb=6\nc=<fim_suffix>\n<fim_middle>",
+    ]
+    toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
+    hs = collect_hidden_states_at_tokens(model, prompts[0], toks, target_module="attn")
+    out = insert_patch(model, prompts, hs, list(range(len(model.transformer.h))), 
+                       toks, 
+                       module_to_patch="attn",
+                       patch_mode="subst")
+    out : Logits = out.decode_logits(prompt_idx=[0,1])
+    tok_a_f = out[-1][0][-1].tokens(model.tokenizer)
+    tok_b_f = out[-1][1][-1].tokens(model.tokenizer)
+    assert len(tok_a_f) == 1 and len(tok_b_f) == 1, f"{tok_a_f} {tok_b_f}"
+    assert tok_a_f[-1] == '")', f"{repr(tok_a_f)}"
+    assert tok_b_f[-1] == '")', f"{repr(tok_b_f)}"
     
 if __name__ == "__main__":
     test_logit_pipeline()
@@ -120,4 +137,5 @@ if __name__ == "__main__":
     test_logit_generation_match()
     test_collect_at_token_idx()
     test_interp_patch()
+    test_attn_collect()
     print("All tests passed!")

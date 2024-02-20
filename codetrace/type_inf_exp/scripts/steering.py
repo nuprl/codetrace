@@ -1,5 +1,6 @@
 from codetrace.type_inf_exp.request_patch import *
 from codetrace.utils import *
+from einops import rearrange
 
 exp_dir = "/home/franlucc/projects/codetrace/codetrace/type_inf_exp"
 ds = datasets.load_dataset("franlucc/starcoderbase-1b-completions_typeinf_analysis", split="train")
@@ -46,19 +47,19 @@ model = LanguageModel("/home/arjun/models/starcoderbase-1b", device_map="cuda")
 # # PART 2: averages
 # # ==========================================================================================
 
-# df_correct = pd.read_csv(f"{exp_dir}/exp_data/correct_prompts.csv", encoding='utf-8')
-# df_incorrect = pd.read_csv(f"{exp_dir}/exp_data/incorrect_prompts.csv", encoding='utf-8')
-# # compute averages
-# correct_avg_tensor = get_averages(model, df_correct['prompt'].tolist(), STARCODER_FIM.to_list()[:-1])
-# # save tensor
-# torch.save(correct_avg_tensor, f"{exp_dir}/exp_data/correct_avg_tensor.pt")
+df_correct = pd.read_csv(f"{exp_dir}/exp_data/v1/correct_prompts.csv", encoding='utf-8')
+df_incorrect = pd.read_csv(f"{exp_dir}/exp_data/v1/incorrect_prompts.csv", encoding='utf-8')
+# compute averages
+correct_avg_tensor = get_averages(model, df_correct['prompt'].tolist(), [], target_module="attn")
+# save tensor
+torch.save(correct_avg_tensor, f"{exp_dir}/exp_data/correct_attn_avg_tensor.pt")
 
-# incorrect_avg_tensor = get_averages(model, df_incorrect['prompt'].tolist(), STARCODER_FIM.to_list()[:-1])
-# # save tensor
-# torch.save(incorrect_avg_tensor, f"{exp_dir}/exp_data/incorrect_avg_tensor.pt")
+incorrect_avg_tensor = get_averages(model, df_incorrect['prompt'].tolist(), [], target_module="attn")
+# save tensor
+torch.save(incorrect_avg_tensor, f"{exp_dir}/exp_data/incorrect_attn_avg_tensor.pt")
     
-# diff_tensor = correct_avg_tensor - incorrect_avg_tensor
-# torch.save(diff_tensor, f"{exp_dir}/exp_data/diff_tensor.pt")
+diff_tensor = correct_avg_tensor - incorrect_avg_tensor
+torch.save(diff_tensor, f"{exp_dir}/exp_data/attn_diff_tensor.pt")
 
 #==========================================================================================
 # PART 3: apply diff tensor to incorrect prompts, record top logit
@@ -66,7 +67,7 @@ model = LanguageModel("/home/arjun/models/starcoderbase-1b", device_map="cuda")
 
 df_incorrect = pd.read_csv(f"{exp_dir}/exp_data/incorrect_prompts.csv", encoding='utf-8')
 ds = datasets.Dataset.from_pandas(df_incorrect)
-ds = ds[300:400]
+ds = ds[:30]
 df_incorrect = pd.DataFrame(ds)
 # cap it at some size
 # df_incorrect = df_incorrect.sample(10, random_state=2)
@@ -74,11 +75,11 @@ df_incorrect = pd.DataFrame(ds)
 # remove too large prompts
 df_incorrect = df_incorrect[df_incorrect['prompt'].apply(lambda x : len(x) < 8000)]
 
-diff_tensor = torch.load(f"{exp_dir}/exp_data/diff_tensor.pt")
-
+diff_tensor = torch.load(f"{exp_dir}/exp_data/attn_diff_tensor.pt")
 # diff tensor only last tok id, without changing shape
 diff_tensor = diff_tensor.index_select(1, torch.tensor([2]))
-
+diff_tensor = rearrange(diff_tensor, "b t d -> b 1 t d")
+print(diff_tensor.shape)
 
 prompts = df_incorrect['prompt'].tolist()
 batch_size = 2
@@ -89,6 +90,7 @@ out = batched_insert_patch(model,
                 #    STARCODER_FIM.to_list()[1:-1],
                     STARCODER_FIM.token,
                    patch_mode = "add",
+                   module_to_patch="attn",
                    batch_size=batch_size)
 
 batched_prompts, batched_labels, batched_old_generated, batched_ids = [], [], [], []
@@ -120,14 +122,14 @@ for i,trace_res in tqdm(enumerate(out), desc="Logits"):
                             "id" : batched_ids[i][j]
                              })
     
-with open(f"{exp_dir}/exp_data/steering_res.json", "w") as f:
+with open(f"{exp_dir}/exp_data/attn_steering_res.json", "w") as f:
     json.dump(steering_res, f, indent=4)
     
 # ==========================================================================================
 # # PART 4: plot steering results
 # ==========================================================================================
 
-with open(f"{exp_dir}/exp_data/steering_res.json", "r") as f:
+with open(f"{exp_dir}/exp_data/attn_steering_res.json", "r") as f:
     steering_res = json.load(f)
     
 steering_res = pd.DataFrame(steering_res)

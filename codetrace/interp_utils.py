@@ -105,21 +105,29 @@ class TraceResult:
 
 def collect_hidden_states(model : LanguageModel,
                           prompts : List[str] | str,
-                          layers : List[int] = None) -> List[torch.Tensor]:
+                          layers : List[int] = None,
+                          target_module : str = "output") -> List[torch.Tensor]:
     """
     Collect hidden states for each prompt. 
     Optionally, collect hidden states at specific layers and tokens.
     """
+    assert target_module in ["output", "attn"], f"target_module {target_module} not implemented"
     prompts = arg_to_list(prompts)
     if layers is None:
         layers = list(range(len(model.transformer.h)))
 
     with model.forward() as runner:
         with runner.invoke(prompts) as invoker:
-            hidden_states = torch.stack([
-                model.transformer.h[layer_idx].output[0]
-                for layer_idx in layers
-            ],dim=0).save()
+            if target_module == "output":
+                hidden_states = torch.stack([
+                    model.transformer.h[layer_idx].output[0]
+                    for layer_idx in layers
+                ],dim=0).save()
+            elif target_module == "attn":
+                hidden_states = torch.stack([
+                    model.transformer.h[layer_idx].attn.c_proj.output
+                    for layer_idx in layers
+                ],dim=0).save()
             
     hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
     return hidden_states
@@ -128,13 +136,18 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
                                     prompts : List[str] | str,
                                     token_idx : List[int] | int | List[str] | str,
                                     layers : List[int] = None,
-                                    get_logit : bool = False) -> torch.Tensor | TraceResult:
+                                    target_module : str = "output") -> torch.Tensor:
     """
     Collect hidden states for each prompt. 
     Optionally, collect hidden states at specific layers and tokens.
     
     NOTE: selects first occurence of token_idx in each prompt
+    
+    You can target following modules:
+    - output (of attn+mlp)
+    - attn (attention weights)
     """
+    assert target_module in ["output", "attn"], f"target_module {target_module} not implemented"
     prompts, token_idx = map(arg_to_list, [prompts, token_idx])
     if layers is None:
         layers = list(range(len(model.transformer.h)))
@@ -151,28 +164,22 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
             # for each prompt find the index of token_idx
             target_idx = np.concatenate([np.where((i  == t)) for t in token_idx for i in indices], axis=0).reshape(indices.shape[0], -1)
             
-            hidden_states = torch.stack([
-                model.transformer.h[layer_idx].output[0]
-                for layer_idx in layers
-            ],dim=0).save()
-            
-            if get_logit:
-                logits = decode(hidden_states).save()
+            if target_module == "output":
+                hidden_states = torch.stack([
+                    model.transformer.h[layer_idx].output[0]
+                    for layer_idx in layers
+                ],dim=0).save()
+            elif target_module == "attn":
+                hidden_states = torch.stack([
+                    model.transformer.h[layer_idx].attn.c_proj.output
+                    for layer_idx in layers
+                ],dim=0).save()
             
     hidden_states = util.apply(hidden_states, lambda x: x.value.cpu(), Proxy)
-    
-    if get_logit:
-        logits = util.apply(logits, lambda x: x.value.cpu(), Proxy)
-        tl = torch.tensor(target_idx)
-        tl = tl.to(logits.device)
-        logits = torch.stack([logits[:,i,tl[i],:] for i in range(len(prompts))], dim = 1)
     
     th = torch.tensor(target_idx)
     th = th.to(hidden_states.device)
     hidden_states = torch.stack([hidden_states[:,i,th[i],:] for i in range(len(prompts))], dim = 1)
-
-    if get_logit:
-        return TraceResult(logits, layers, hidden_states)
 
     return hidden_states
 
@@ -182,17 +189,17 @@ def insert_patch(model : LanguageModel,
                  patch : torch.Tensor,
                  layers_to_patch : List[int],
                  tokens_to_patch : List[str] | List[int] | str | int,
+                 module_to_patch : str = "output",
                  patch_mode : str = "add") -> TraceResult:
     """
     Insert patch at layers and tokens
-    
-    NOTE: patch_strength 1 means substitute full activation
     """
+    assert module_to_patch in ["output", "attn"], f"module_to_patch {module_to_patch} not implemented"
     prompts, tokens_to_patch = arg_to_list(prompts), arg_to_list(tokens_to_patch)
     if patch.shape[0] != len(model.transformer.h):
         assert patch.shape[0] == len(layers_to_patch), f"Patch shape {patch.shape[0]} != len(layers_to_patch) {len(layers_to_patch)}"
-    if patch.shape[1] != len(tokens_to_patch):
-        assert patch.shape[1] == len(tokens_to_patch), f"Patch shape {patch.shape[1]} != len(tokens_to_patch) {len(tokens_to_patch)}"
+    if patch.shape[2] != len(tokens_to_patch):
+        assert patch.shape[2] == len(tokens_to_patch), f"Patch shape {patch.shape[2]} != len(tokens_to_patch) {len(tokens_to_patch)}"
     if isinstance(tokens_to_patch[0], str):
         tokens_to_patch = [model.tokenizer.encode(t)[0] for t in tokens_to_patch]
     if patch_mode not in ["sub", "add", "subst"]:
@@ -215,13 +222,19 @@ def insert_patch(model : LanguageModel,
                     # grab patch
                     clean_patch = patch[layer]
                     # apply patch
-                    for i in range(len(prompts)):
-                        if patch_mode == "subst":
-                            model.transformer.h[layer].output[0][[i],target_idx[i],:] = clean_patch
-                        elif patch_mode == "add":
-                            model.transformer.h[layer].output[0][[i],target_idx[i],:] += clean_patch
-                        elif patch_mode == "sub":
-                            model.transformer.h[layer].output[0][[i],target_idx[i],:] -= clean_patch
+                    def apply_patch(x : torch.Tensor) -> torch.Tensor:
+                        for i in range(len(prompts)):
+                            if patch_mode == "subst":
+                                x[[i],target_idx[i],:] = clean_patch
+                            elif patch_mode == "add":
+                                x[[i],target_idx[i],:] += clean_patch
+                            elif patch_mode == "sub":
+                                x[[i],target_idx[i],:] -= clean_patch
+                                
+                    if module_to_patch == "output":
+                        apply_patch(model.transformer.h[layer].output[0])
+                    elif module_to_patch == "attn":
+                        apply_patch(model.transformer.h[layer].attn.c_proj.output)
                             
             hidden_states = torch.stack([
                 model.transformer.h[layer_idx].output[0]

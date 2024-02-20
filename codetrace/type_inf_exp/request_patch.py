@@ -38,6 +38,7 @@ import pickle
 def get_averages(model: LanguageModel,
                  prompts : List[str],
                  tokens : List[str],
+                 target_module : str = "output",
                  batch_size=5) -> torch.Tensor:
     """
     Get averages of tokens at all layers for all prompts
@@ -50,7 +51,10 @@ def get_averages(model: LanguageModel,
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     hidden_states = []
     for batch in tqdm(prompt_batches, desc="Batch"):
-        hs = collect_hidden_states_at_tokens(model, batch, tokens)
+        if tokens == []:
+            hs = collect_hidden_states(model, batch, target_module=target_module)
+        else:
+            hs = collect_hidden_states_at_tokens(model, batch, tokens, target_module=target_module)
         hs_mean = hs.mean(dim=1) # batch size mean
         hidden_states.append(hs_mean)
         
@@ -66,15 +70,18 @@ def batched_insert_patch(model : LanguageModel,
                     layers_to_patch : List[int],
                     tokens_to_patch : List[str] | List[int] | str | int,
                     patch_mode : str = "sub",
+                    module_to_patch : str = "output",
                     batch_size : int = 5) -> List[TraceResult]:
     """
     batched insert patch
     """
+    if tokens_to_patch == []:
+        tokens_to_patch = list(range(patch.shape[1]))
     # batch prompts according to batch size
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     results = []
     for batch in tqdm(prompt_batches, desc="Batch"):
-        res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode)
+        res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, module_to_patch,  patch_mode)
         results.append(res)
         
     # save tensor
