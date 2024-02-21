@@ -1,5 +1,5 @@
 from transformers import GPTBigCodeForCausalLM, AutoTokenizer, GPTBigCodePreTrainedModel
-from training.gpt_bigcode_modeling.gpt_bigcode_modeling_custom_mod import GPTBigCodeModel as Custom_GPTBigCodeModel
+from codetrace.training.gpt_bigcode_modeling.gpt_bigcode_modeling_custom_mod import GPTBigCodeModel as Custom_GPTBigCodeModel
 
 starcoderbase_1b = "/home/arjun/models/starcoderbase-1b"
 

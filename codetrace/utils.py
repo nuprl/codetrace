@@ -16,8 +16,6 @@ TS_LANGUAGE = Language("build/my-languages.so", "typescript")
 TS_PARSER = Parser()
 TS_PARSER.set_language(TS_LANGUAGE)
 
-
-
 class FimObj:
     def __init__(self,
                  fim_prefix : str,
@@ -37,7 +35,6 @@ class FimObj:
     
 fim_placeholder = "<FILL>"      
 STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
-
 
 
 def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
@@ -125,67 +122,13 @@ def fim_prog_func(prog : str) -> list[Tuple[str]]:
         fim_variations.append((s, text))
     return fim_variations
 
-
-def replace_between_points(original_string : str, 
-                           start_point : Tuple[int], 
-                           end_point : Tuple[int], 
-                           replacement,
-                           add_colon = True):
-    '''
-    Replace a string A with a string B at interval (start_point, end_point) where each point 
-    is a tuple of (column,row) of a char in the multiline string A [tree-sitter convention]
-    
-    TODO a type annotation could be union types eg. a | b
-    '''
-    with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
-        temp.write(original_string)
-        temp.seek(0)
-        original_string = temp.read()
-    if add_colon:
-        replacement = ": "+replacement
-    start_index = len("\n".join(original_string.splitlines()[:start_point[0]])) + start_point[1]+1
-    end_index = len("\n".join(original_string.splitlines()[:end_point[0]])) + end_point[1]+1
-    modified_string = (
-        original_string[:start_index] + replacement + original_string[end_index:]
-    )
-    return modified_string
-
-# def insert_at_idx(original_string : str, 
-#                     start_index : int,
-#                     replacement : str,
-#                     add_colon = False):
-#     '''
-#     Insert a string at a point in the original string
-#     '''
-#     with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
-#         temp.write(original_string)
-#         temp.seek(0)
-#         original_string = temp.read()
-#     if add_colon:
-#         replacement = ": "+replacement
-#     modified_string = (
-#         original_string[:start_index] + replacement + original_string[start_index:]
-#     )
-#     return modified_string
-
-
-
-def point_to_index_loc(point: Tuple[int], original_string: str) -> int:
-    """
-    Translate tree-sitter tuple indexing to int
-    """
-    row = point[0]
-    col = point[1]
-    if row == 0:
-        return col
-    else:
-        return len("\n".join(original_string.splitlines()[:row])) + col+1 # for "\n"
         
-def remove_between_points(original_string : str, 
+def replace_between_points(original_string : str,
                            start_point : Tuple[int], 
-                           end_point : Tuple[int]):
+                           end_point : Tuple[int],
+                           replacement : str = "") -> str:
     '''
-    Remove tree-sitter interval (start_point, end_point) from a string.
+    Replace tree-sitter interval (start_point, end_point) from a string.
     Inclusive of start_point and end_point
     '''
     with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
@@ -197,19 +140,21 @@ def remove_between_points(original_string : str,
     end_index = point_to_index_loc(end_point, original_string)
 
     modified_string = (
-        original_string[:start_index] + original_string[end_index:]
+        original_string[:start_index] + replacement + original_string[end_index:]
     )
     return modified_string
 
-
-# def insert_bytes_at(prog : str, v : str, k : int) -> str:
-#     prog = prog.encode("utf8")
-#     v_bytes = f": {v}".encode("utf8")
-#     new_prog = prog[:k] + v_bytes + prog[k:]
-#     return new_prog.decode("utf8")
-
-# def insert_chars_at(prog : str, v : str, k : int) -> str:
-#     return prog[:k] + v + prog[k:]
+def point_to_index_loc(point: Tuple[int], original_string: str) -> int:
+    """
+    Translate tree-sitter tuple indexing to string int indexing
+    """
+    row = point[0]
+    col = point[1]
+    if row == 0:
+        return col
+    else:
+        return len("\n".join(original_string.splitlines()[:row])) + col+1 # for "\n"
+    
 
 # from MultiPL-E
 def estimator(n: int, c: int, k: int) -> float:

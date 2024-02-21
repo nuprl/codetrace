@@ -1,8 +1,5 @@
 """
 take stenotype-eval-dataset and remove all type annotations but keep track of them
-
-TODO:
-- do I also remove types from declarations? or just function signatures?
 """
 from codetrace.utils import *
 import datasets
@@ -22,6 +19,10 @@ QUERY_FUNC_TYPES = """
     return_type: (type_annotation) @tp
 """
 
+"""
+The following functions remove all type annotations, keeping track of their position
+in a bottom-up incremental way.
+"""
 
 def filter_types(dataset : datasets.Dataset, query_str : str = QUERY_ALL_TYPES) -> datasets.Dataset:
     """
@@ -62,9 +63,13 @@ def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[str, 
         
         type_map[(c.start_point, c.end_point)] = captured_type
 
-        ts_prog = remove_between_points(ts_prog, c.start_point, c.end_point)
+        ts_prog = replace_between_points(ts_prog, c.start_point, c.end_point, "")
     return ts_prog, type_map
 
+"""
+The following functions remove all type annotations but one <FILL> fim type, keeping track of the
+position of the index of the <FILL> placeholder
+"""
 
 def make_typeinf_prompts(dataset : datasets.Dataset, query_str : str = QUERY_ALL_TYPES) -> datasets.Dataset:
     """
@@ -104,7 +109,7 @@ def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tu
         stripped = ts_prog
         for j in range(len(captures)):
             if i < j:
-                stripped = remove_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point)
+                stripped = replace_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point, "")
             elif i == j:
                 stripped = replace_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point, "<FILL>")
         
@@ -115,10 +120,9 @@ def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tu
             stripped = temp.read()
             
         prompts.append((stripped, captured_type))
-        ts_prog = remove_between_points(ts_prog, c.start_point, c.end_point)
+        ts_prog = replace_between_points(ts_prog, c.start_point, c.end_point, "")
         
     return prompts
-
 
 
 def merge_captures(captures : list) -> list:
