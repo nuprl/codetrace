@@ -22,6 +22,7 @@ else:
     parser.add_argument("--n_eval", type=int, default=15)
     parser.add_argument("--tokens_to_patch", type=str, nargs="+", default=[])
     parser.add_argument("--layers_to_patch", type=int, nargs="+", default=[])
+    parser.add_argument("--additional_filter", type=bool, default=False)
     # give options: block_out, attn_out
     parser.add_argument("--module_to_patch", type=str, default="block_out", choices=["block_out", "attn_out"])
     args = parser.parse_args()
@@ -58,6 +59,8 @@ if os.path.exists(f"{out_dir}/correct_prompts.csv"):
     correct = pd.read_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
 else:
     correct = ds.filter(lambda x : x["correctness"] == "correct")
+    if args.additional_filter:
+        correct = correct.filter(lambda x : x["solution"] in incorrect["solution"])
     correct = filter_prompts(correct, 
                          single_tokenize=model.tokenizer, 
                          dedup_prog_threshold=args.correct_prog_threshold, 
@@ -67,11 +70,13 @@ if os.path.exists(f"{out_dir}/incorrect_prompts.csv"):
     incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
 else:
     incorrect = ds.filter(lambda x : x["correctness"] == "incorrect")
+    if args.additional_filter:
+        incorrect = incorrect.filter(lambda x : x["solution"] in correct["solution"])
     incorrect = filter_prompts(incorrect,
                                 single_tokenize=model.tokenizer,
                                 dedup_prog_threshold=args.incorrect_prog_threshold,
                                 dedup_type_threshold=args.incorrect_type_threshold)
-    
+
 # save
 correct.to_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
 incorrect.to_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
@@ -82,7 +87,7 @@ scorr = _pretty_print(correct)
 with open(f"{out_dir}/data_readme.md", "w") as f:
     f.write(f"## Correct\n")
     f.write(scorr)
-    f.write(f"## Incorrect\n")
+    f.write(f"\n## Incorrect\n")
     f.write(sinc)
     
 print(sinc)
@@ -128,10 +133,17 @@ torch.save(diff_tensor, f"{out_dir}/{args.module_to_patch}_diff_tensor.pt")
 #==========================================================================================
 print(f"...Applying patch to incorrect prompts...")
 
-df_incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
-args.n_eval = min(args.n_eval, len(df_incorrect))
+incorrect = ds.filter(lambda x : x["correctness"] == "incorrect")
+incorrect = filter_prompts(incorrect,
+                            single_tokenize=model.tokenizer,
+                            dedup_prog_threshold=args.incorrect_prog_threshold,
+                            dedup_type_threshold=args.incorrect_type_threshold)
+df_incorrect = incorrect.to_pandas()
+
 # cap it at some size
 df_incorrect = df_incorrect.sample(args.n_eval, random_state=2)
+# print types in incorrect
+print(df_incorrect["solution"].value_counts())
 
 
 diff_tensor = torch.load(f"{out_dir}/{args.module_to_patch}_diff_tensor.pt")
@@ -198,3 +210,5 @@ with open(f"{out_dir}/{args.module_to_patch}_readme_{args.n_eval}.md", "w") as f
     parser = vars(args)
     for k,v in parser.items():
         f.write(f"{k} : {v}\n")
+    f.write("\nEval type distribution\n")
+    f.write(str(steering_res["label"].value_counts()))

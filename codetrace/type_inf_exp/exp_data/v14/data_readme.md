@@ -1,0 +1,92 @@
+## Correct
+solution
+A              1
+ArrayBuffer    1
+unknown        1
+string         1
+number         1
+boolean        1
+any            1
+Vertex         1
+ValueType      1
+TKey           1
+T              1
+State          1
+Position       1
+Options        1
+Id             1
+Function       1
+Error          1
+Date           1
+Currency       1
+void           1
+Name: count, dtype: int64
+hexsha
+f3813017e9bb14bf831177d63f99b8ab50b44ad4    1
+8942b9bffbeae8bdf02b8ff01a9a7a9bca89f53c    1
+9df566c660a96ca1ea9c774ead4166eff4ea2801    1
+56adb91b1ef4948b08a70815c7446daa4083f9e4    1
+d136cbb659cd7f40984bcec5a5dcf88567bffb4d    1
+56013b675d2c5276fca785f74daf84664803de98    1
+1de17023db3dd839d67e3c887e3f8f7ca9330af7    1
+eaa92966cbe116f28e1b5c9c0f4b724a32bab041    1
+251dc8a6bd0853f15cfeabfb12becc4052d3fe54    1
+7dd6b62e84ab1daa79934e50b59d91cb5cc3ea92    1
+33b7ca5e8483474f1e5fef02a305e0919a37eae4    1
+6fe76b5aaf422ac45ea3f391258b2aeb7c5ddf67    1
+d5ff2fa2b6826801f70c82d95dcdfcf780c62790    1
+7c6b66273a2e2ae0cf4af96fca68877ec089846c    1
+32fad88cf989fe13e31b63cb2ea82544e40b70b9    1
+4dc1c64fd20c06b5dceaa99125c0a14b4492067c    1
+4626f86ebac17685496987c0b44d830041d92194    1
+b54738c443e9096be67646dd7f26ce561c458c70    1
+57d87d12960f35a593f6da68902f487a24c0f939    1
+1d39ec473347edb072e37f629ad2a9736fad5a7a    1
+Name: count, dtype: int64
+20
+## Incorrect
+solution
+A              1
+ArrayBuffer    1
+unknown        1
+string         1
+number         1
+boolean        1
+any            1
+Vertex         1
+ValueType      1
+TKey           1
+T              1
+State          1
+Position       1
+Options        1
+Id             1
+Function       1
+Error          1
+Date           1
+Currency       1
+void           1
+Name: count, dtype: int64
+hexsha
+aa0b04568df03138dc24e8c7c363decf2bd5ba4f    1
+c3a638642c61e9f2f6f40ae6a71cdbf67fc9c4a0    1
+1d39ec473347edb072e37f629ad2a9736fad5a7a    1
+5ee8da532cd90e4925e467deb8769a2f6b51a942    1
+56013b675d2c5276fca785f74daf84664803de98    1
+cb14c7a279f215293358730312da69fac60347a7    1
+56adb91b1ef4948b08a70815c7446daa4083f9e4    1
+eaa92966cbe116f28e1b5c9c0f4b724a32bab041    1
+251dc8a6bd0853f15cfeabfb12becc4052d3fe54    1
+7dd6b62e84ab1daa79934e50b59d91cb5cc3ea92    1
+53b6ef015e8c8793036ec97b599fa436cd131b3f    1
+9eb078d7d68852e0860617c539c62b7d3a9f0a9a    1
+bd5fedd15b33868f0983320e9179fbd4b6751d7e    1
+e8163c19af6d0400d21846442a54c5e20ba9eac3    1
+32fad88cf989fe13e31b63cb2ea82544e40b70b9    1
+4dc1c64fd20c06b5dceaa99125c0a14b4492067c    1
+d7288789b6e870c947d9b5d2c8fe51bb8de33ca3    1
+b54738c443e9096be67646dd7f26ce561c458c70    1
+57d87d12960f35a593f6da68902f487a24c0f939    1
+35b6c6d6cf43374159e7f7c86517b7faf952db91    1
+Name: count, dtype: int64
+20

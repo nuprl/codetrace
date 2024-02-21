@@ -5,8 +5,11 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from matplotlib import patches as mpatches
 
-exp_dir = "/home/franlucc/projects/codetrace/codetrace/type_inf_exp"
-with open(f"{exp_dir}/exp_data/v3/steering_res.json", "r") as f:
+exp_dir = sys.argv[1]
+add_steering_vec = sys.argv[2]
+add_steering_vec = (add_steering_vec == "True")
+
+with open(exp_dir + "/block_out_steering_res_25.json") as f:
     ds = json.load(f)
     
 df = pd.DataFrame(ds)
@@ -25,15 +28,16 @@ activations : torch.tensor = collect_hidden_states_at_tokens(model,
                                               incorrect_df['prompt'].tolist(), 
                                               STARCODER_FIM.token,
                                               layers = [14])
-add_steering_vec = False
+print("Activations shape:" , activations.shape)
 
 if add_steering_vec:
+    print("Adding STEERING vector...")
     # add steering vector
-    steering_vector = torch.load(f"{exp_dir}/exp_data/v3/diff_tensor.pt")
-    print(steering_vector.shape)
-    activations = activations + steering_vector[14, -1,:]
+    steering_vector = torch.load(f"{exp_dir}/block_out_diff_tensor.pt")
+    print("Steering shape:", steering_vector.shape)
+    activations = activations + steering_vector[14, :,-1,:]
+print("Activations shape:", activations.shape)
 
-print(activations.shape)
 # # tsne projection, see if there is a separating hyperplane
 tsne_model = TSNE(n_components=2, 
                   perplexity = 10, # between 5-10, default 30, < num_samples
@@ -69,4 +73,4 @@ for i,lbl in enumerate(typ_list):
     
 plt.tight_layout()
 steer = "steer" if add_steering_vec else ""
-plt.savefig(f"{exp_dir}/exp_data/v3/tsne_{steer}_pp{tsne_model.perplexity}_ee{tsne_model.early_exaggeration}_{tsne_model.metric}.png")
+plt.savefig(f"{exp_dir}/tsne_{steer}_pp{tsne_model.perplexity}_ee{tsne_model.early_exaggeration}_{tsne_model.metric}.png")
