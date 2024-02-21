@@ -1,5 +1,5 @@
-**/*.png
 .ipynb_*/
+temp.png
 __pycache__/
 build/
 completions/

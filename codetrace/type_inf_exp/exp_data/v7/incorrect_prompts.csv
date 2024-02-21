@@ -1,0 +1,5754 @@
+generated,solution,hexsha,prompt,correctness,id
+a,A,aa0b04568df03138dc24e8c7c363decf2bd5ba4f,"<fim_prefix>export type Arrow<A extends any[] = any, B = any> = (...args) => B
+
+export function pipe<A>(a)
+export function pipe<A, B>(a, ab)
+export function pipe<A, B, C>(a, ab, bc)
+export function pipe<A, B, C, D>(a, ab, bc, cd)
+export function pipe<A, B, C, D, E>(a, ab, bc, cd, de)
+export function pipe<A, B, C, D, E, F>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef
+)
+export function pipe<A, B, C, D, E, F, G>(
+  a: <fim_suffix>,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg
+)
+export function pipe<A, B, C, D, E, F, G, H>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh
+)
+export function pipe<A, B, C, D, E, F, G, H, I>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr,
+  rs
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr,
+  rs,
+  st
+)
+export function pipe(
+  a,
+  ab?,
+  bc?,
+  cd?,
+  de?,
+  ef?,
+  fg?,
+  gh?,
+  hi?
+) {
+  switch (arguments.length) {
+    case 1:
+      return a
+    case 2:
+      return ab!(a)
+    case 3:
+      return bc!(ab!(a))
+    case 4:
+      return cd!(bc!(ab!(a)))
+    case 5:
+      return de!(cd!(bc!(ab!(a))))
+    case 6:
+      return ef!(de!(cd!(bc!(ab!(a)))))
+    case 7:
+      return fg!(ef!(de!(cd!(bc!(ab!(a))))))
+    case 8:
+      return gh!(fg!(ef!(de!(cd!(bc!(ab!(a)))))))
+    case 9:
+      return hi!(gh!(fg!(ef!(de!(cd!(bc!(ab!(a))))))))
+    default:
+      // eslint-disable-next-line prefer-rest-params,no-case-declarations
+      let ret = arguments[0]
+      for (let i = 1; i < arguments.length; i++) {
+        // eslint-disable-next-line prefer-rest-params
+        ret = arguments[i](ret)
+      }
+      return ret
+  }
+}
+<fim_middle>",incorrect,1583
+Uint8Array,ArrayBuffer,c3a638642c61e9f2f6f40ae6a71cdbf67fc9c4a0,"<fim_prefix>const INDEX_BIT_COUNT = 12;
+const LENGTH_BIT_COUNT = 4;
+const RAW_LOOK_AHEAD_SIZE = 1 << LENGTH_BIT_COUNT;
+const MAX_OFFSET = (1 << INDEX_BIT_COUNT) + 1;
+const TREE_ROOT = MAX_OFFSET;
+const UNUSED = -1;
+
+enum Child {
+  Smaller = 0,
+  Larger = 1,
+}
+
+interface DefTree {
+  parent: number;
+  children: [number, number];
+  which_child: number;
+}
+
+const tree: DefTree[] = (() => {
+  const t = new Array<DefTree>(MAX_OFFSET + 2);
+  for (let i = 0; i < t.length; i++) {
+    t[i] = { parent: 0, children: [0, 0], which_child: 0 };
+  }
+  return t;
+})();
+
+function initTree() {
+  tree[0].parent = 0;
+  tree[0].children[0] = 0;
+  tree[0].children[1] = 0;
+  tree[0].which_child = 0;
+  for (let i = 1; i < tree.length; i++) {
+    tree[i].parent = UNUSED;
+    tree[i].children[0] = UNUSED;
+    tree[i].children[1] = UNUSED;
+    tree[i].which_child = UNUSED;
+  }
+}
+
+function copyNode(src, tgt) {
+  tree[tgt].parent = tree[src].parent;
+  tree[tgt].children[0] = tree[src].children[0];
+  tree[tgt].children[1] = tree[src].children[1];
+  tree[tgt].which_child = tree[src].which_child;
+}
+
+function replaceParents(node) {
+  tree[tree[node + 1].children[Child.Smaller] + 1].parent = node;
+  tree[tree[node + 1].children[Child.Larger] + 1].parent = node;
+}
+
+function replace_node(old_node, new_node) {
+  copyNode(old_node + 1, new_node + 1);
+
+  replaceParents(new_node);
+
+  tree[tree[old_node + 1].parent + 1].children[tree[old_node + 1].which_child] =
+    new_node;
+}
+
+function updateParent(node, parent, which_child) {
+  tree[node + 1].parent = parent;
+  tree[node + 1].which_child = which_child;
+}
+
+function findNextNode(node) {
+  let next = tree[node + 1].children[Child.Smaller];
+
+  if (tree[next + 1].children[Child.Larger] === UNUSED)
+    tree[node + 1].children[Child.Smaller] =
+      tree[next + 1].children[Child.Smaller];
+  else {
+    while (tree[next + 1].children[Child.Larger] !== UNUSED)
+      next = tree[next + 1].children[Child.Larger];
+    tree[tree[next + 1].parent + 1].children[Child.Larger] =
+      tree[next + 1].children[Child.Smaller];
+  }
+
+  return next;
+}
+
+function updateChild(src_tree, which_child) {
+  if (tree[src_tree + 1].children[which_child] !== UNUSED)
+    updateParent(
+      tree[src_tree + 1].children[which_child],
+      tree[src_tree + 1].parent,
+      tree[src_tree + 1].which_child
+    );
+
+  tree[tree[src_tree + 1].parent + 1].children[tree[src_tree + 1].which_child] =
+    tree[src_tree + 1].children[which_child];
+}
+
+// Adapted from:
+// https://github.com/OBattler/lbatools-c/blob/master/compress/lzmit.c
+export function compressLZSS_LBA_type_2(data): <fim_suffix> {
+  let val = 0;
+  let src_off = 0;
+  let out_len = 1;
+  let offset_off = 0;
+  let flag_bit = 0;
+  let best_match = 1;
+  let best_node = 0;
+
+  const length = data.byteLength;
+
+  if (length <= RAW_LOOK_AHEAD_SIZE) {
+    return data;
+  }
+
+  const input = new Uint8Array(data);
+  const output = new Uint8Array(length);
+
+  initTree();
+
+  while (best_match + src_off - 1 < length) {
+    let i = best_match;
+    while (i > 0) {
+      const src_tree = src_off % MAX_OFFSET;
+
+      if (tree[src_tree + 1].parent !== UNUSED) {
+        if (
+          tree[src_tree + 1].children[Child.Smaller] !== UNUSED &&
+          tree[src_tree + 1].children[Child.Larger] !== UNUSED
+        ) {
+          const replacement = findNextNode(src_tree);
+          updateParent(
+            tree[replacement + 1].children[Child.Smaller],
+            tree[replacement + 1].parent,
+            tree[replacement + 1].which_child
+          );
+          replace_node(src_tree, replacement);
+        } else {
+          updateChild(
+            src_tree,
+            tree[src_tree + 1].children[Child.Smaller] === UNUSED
+              ? Child.Larger
+              : Child.Smaller
+          );
+        }
+      }
+
+      tree[src_tree + 1].children[Child.Larger] = UNUSED;
+      tree[src_tree + 1].children[Child.Smaller] = UNUSED;
+
+      let cur_node = tree[TREE_ROOT + 1].children[Child.Smaller];
+
+      if (cur_node < 0) {
+        best_match = 0;
+        best_node = 0;
+
+        updateParent(src_tree, TREE_ROOT, 0);
+        tree[TREE_ROOT + 1].children[Child.Smaller] = src_tree;
+      } else {
+        best_match = 2;
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          let cur_string = src_off;
+          let cmp_string =
+            cur_string - ((src_tree - cur_node + MAX_OFFSET) % MAX_OFFSET);
+          const node = cur_node;
+          let j = RAW_LOOK_AHEAD_SIZE + 2;
+          cur_node = j - 1;
+
+          let diff: number;
+          do diff = input[cur_string++] - input[cmp_string++];
+          while (--j !== 0 && diff === 0);
+
+          if (j !== 0 || diff !== 0) {
+            cur_node -= j;
+            if (cur_node > best_match) {
+              best_match = cur_node;
+              best_node = node;
+            }
+
+            j = diff >= 0 ? 1 : 0;
+            cur_node = tree[node + 1].children[j];
+
+            if (cur_node < 0) {
+              updateParent(src_tree, node, j);
+              tree[node + 1].children[j] = src_tree;
+              break;
+            }
+          } else {
+            replace_node(node, src_tree);
+            tree[node + 1].parent = UNUSED;
+            best_match = RAW_LOOK_AHEAD_SIZE + 2;
+            best_node = node;
+            break;
+          }
+        }
+      }
+
+      if (--i > 0) src_off++;
+    }
+
+    if (out_len >= length - RAW_LOOK_AHEAD_SIZE - 1) {
+      return data;
+    }
+
+    val >>= 1;
+
+    if (best_match > 2 && src_off + best_match <= length) {
+      const temp =
+        (best_match - 3) |
+        ((src_off - best_node - 1 + MAX_OFFSET) % MAX_OFFSET <<
+          LENGTH_BIT_COUNT);
+      output[out_len] = temp & 0xff;
+      output[out_len + 1] = temp >> 8;
+      out_len += 2;
+    } else {
+      output[out_len++] = input[src_off];
+      val |= 0x80;
+      best_match = 1;
+    }
+
+    flag_bit++;
+    if (flag_bit >= 8) {
+      flag_bit = 0;
+      output[offset_off] = val & 0xff;
+      offset_off = out_len;
+      out_len++;
+    }
+
+    src_off++;
+  }
+
+  if (flag_bit === 0) out_len--;
+  else if (flag_bit < 8) output[offset_off] = val >> (8 - flag_bit);
+
+  return output.buffer.slice(0, out_len);
+}
+<fim_middle>",incorrect,3712
+"any,
+  ij?: any,
+  jk?: any,
+  kl?:",Arrow,aa0b04568df03138dc24e8c7c363decf2bd5ba4f,"<fim_prefix>export type Arrow<A extends any[] = any, B = any> = (...args) => B
+
+export function pipe<A>(a)
+export function pipe<A, B>(a, ab)
+export function pipe<A, B, C>(a, ab, bc)
+export function pipe<A, B, C, D>(a, ab, bc, cd)
+export function pipe<A, B, C, D, E>(a, ab, bc, cd, de)
+export function pipe<A, B, C, D, E, F>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef
+)
+export function pipe<A, B, C, D, E, F, G>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg
+)
+export function pipe<A, B, C, D, E, F, G, H>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh
+)
+export function pipe<A, B, C, D, E, F, G, H, I>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr,
+  rs
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr,
+  rs,
+  st
+)
+export function pipe(
+  a,
+  ab?,
+  bc?,
+  cd?,
+  de?,
+  ef?,
+  fg?,
+  gh?,
+  hi?: <fim_suffix>
+) {
+  switch (arguments.length) {
+    case 1:
+      return a
+    case 2:
+      return ab!(a)
+    case 3:
+      return bc!(ab!(a))
+    case 4:
+      return cd!(bc!(ab!(a)))
+    case 5:
+      return de!(cd!(bc!(ab!(a))))
+    case 6:
+      return ef!(de!(cd!(bc!(ab!(a)))))
+    case 7:
+      return fg!(ef!(de!(cd!(bc!(ab!(a))))))
+    case 8:
+      return gh!(fg!(ef!(de!(cd!(bc!(ab!(a)))))))
+    case 9:
+      return hi!(gh!(fg!(ef!(de!(cd!(bc!(ab!(a))))))))
+    default:
+      // eslint-disable-next-line prefer-rest-params,no-case-declarations
+      let ret = arguments[0]
+      for (let i = 1; i < arguments.length; i++) {
+        // eslint-disable-next-line prefer-rest-params
+        ret = arguments[i](ret)
+      }
+      return ret
+  }
+}
+<fim_middle>",incorrect,1372
+"(b: B) => B
+export function pipe<A, B,",B,aa0b04568df03138dc24e8c7c363decf2bd5ba4f,"<fim_prefix>export type Arrow<A extends any[] = any, B = any> = (...args) => B
+
+export function pipe<A>(a)
+export function pipe<A, B>(a, ab): <fim_suffix>
+export function pipe<A, B, C>(a, ab, bc)
+export function pipe<A, B, C, D>(a, ab, bc, cd)
+export function pipe<A, B, C, D, E>(a, ab, bc, cd, de)
+export function pipe<A, B, C, D, E, F>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef
+)
+export function pipe<A, B, C, D, E, F, G>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg
+)
+export function pipe<A, B, C, D, E, F, G, H>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh
+)
+export function pipe<A, B, C, D, E, F, G, H, I>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr,
+  rs
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr,
+  rs,
+  st
+)
+export function pipe(
+  a,
+  ab?,
+  bc?,
+  cd?,
+  de?,
+  ef?,
+  fg?,
+  gh?,
+  hi?
+) {
+  switch (arguments.length) {
+    case 1:
+      return a
+    case 2:
+      return ab!(a)
+    case 3:
+      return bc!(ab!(a))
+    case 4:
+      return cd!(bc!(ab!(a)))
+    case 5:
+      return de!(cd!(bc!(ab!(a))))
+    case 6:
+      return ef!(de!(cd!(bc!(ab!(a)))))
+    case 7:
+      return fg!(ef!(de!(cd!(bc!(ab!(a))))))
+    case 8:
+      return gh!(fg!(ef!(de!(cd!(bc!(ab!(a)))))))
+    case 9:
+      return hi!(gh!(fg!(ef!(de!(cd!(bc!(ab!(a))))))))
+    default:
+      // eslint-disable-next-line prefer-rest-params,no-case-declarations
+      let ret = arguments[0]
+      for (let i = 1; i < arguments.length; i++) {
+        // eslint-disable-next-line prefer-rest-params
+        ret = arguments[i](ret)
+      }
+      return ret
+  }
+}
+<fim_middle>",incorrect,1606
+"string[]) => {
+    for (let i = 0; i < gues",Board,15b8db192fc5ac36ac290289da3f8a7f39a0fb7b,"<fim_prefix>export type Board = string[][]
+export const numberOfLetters = 5
+export const numberOfRows = 6
+export const word = 'לחמים'
+export const empty = '-'
+
+export const endOfWordToRegularLetters = {
+    ם: 'מ',
+    ן: 'נ',
+    ץ: 'צ',
+    ף: 'פ',
+    ך: 'כ',
+}
+
+export const regularToEndOfWordLetters = {
+    מ: 'ם',
+    נ: 'ן',
+    צ: 'ץ',
+    פ: 'ף',
+    כ: 'ך',
+}
+
+// The enum ordering is used in order to always push a better result into the dict
+export enum LetterType {
+    Unevaluated,
+    Miss,
+    Present,
+    Correct,
+}
+
+export const letterTypeToBgColor = {
+    [LetterType.Unevaluated]: 'hg-unevaluated',
+    [LetterType.Miss]: 'bg-zinc-400',
+    [LetterType.Present]: 'bg-orange-400',
+    [LetterType.Correct]: 'bg-green-400',
+}
+
+export const letterTypeToEmoji = {
+    [LetterType.Miss]: '⬛',
+    [LetterType.Present]: '🟨',
+    [LetterType.Correct]: '🟩',
+}
+
+export const keyboardLettersFromGuesses = (word, guesses) => {
+    let letters = {
+        א: LetterType.Unevaluated,
+        ב: LetterType.Unevaluated,
+        ג: LetterType.Unevaluated,
+        ד: LetterType.Unevaluated,
+        ה: LetterType.Unevaluated,
+        ו: LetterType.Unevaluated,
+        ז: LetterType.Unevaluated,
+        ח: LetterType.Unevaluated,
+        ט: LetterType.Unevaluated,
+        י: LetterType.Unevaluated,
+        כ: LetterType.Unevaluated,
+        ל: LetterType.Unevaluated,
+        מ: LetterType.Unevaluated,
+        נ: LetterType.Unevaluated,
+        ס: LetterType.Unevaluated,
+        ע: LetterType.Unevaluated,
+        פ: LetterType.Unevaluated,
+        צ: LetterType.Unevaluated,
+        ק: LetterType.Unevaluated,
+        ר: LetterType.Unevaluated,
+        ש: LetterType.Unevaluated,
+        ת: LetterType.Unevaluated,
+        ם: LetterType.Unevaluated,
+        ן: LetterType.Unevaluated,
+        ץ: LetterType.Unevaluated,
+        ף: LetterType.Unevaluated,
+        ך: LetterType.Unevaluated,
+    }
+    for (const i in guesses) {
+        let line = guesses[i]
+        let r = getCorrectAndPresent(word, line)
+        for (const t in r) {
+            // Using the enum ordering in order to always push a better result into the dict
+            if (r[t] > letters[line[t]]) letters[line[t]] = r[t]
+        }
+    }
+    return letters
+}
+
+export const emojiFromGuesses = (
+    word,
+    guesses,
+    rtl = false
+) => {
+    let content = []
+    for (let i = 0; i < guesses.length; i++) {
+        if (rtl) {
+            content.push(
+                getCorrectAndPresent(word, guesses[i])
+                    .map((l) => letterTypeToEmoji[l])
+                    .reverse()
+                    .join('')
+            )
+        } else {
+            content.push(
+                getCorrectAndPresent(word, guesses[i])
+                    .map((l) => letterTypeToEmoji[l])
+                    .join('')
+            )
+        }
+    }
+    return content.join('\n')
+}
+
+export const wordInGuesses = (word, guesses: <fim_suffix>) => {
+    for (let i = 0; i < guesses.length; i++) {
+        if (word === guesses[i].join('')) return true
+    }
+    return false
+}
+
+export const sanitizeString = (str) => {
+    let r = []
+    for (let i = 0; i < str.length; i++) {
+        if (str[i] in endOfWordToRegularLetters) {
+            r.push(endOfWordToRegularLetters[str[i]])
+        } else {
+            r.push(str[i])
+        }
+    }
+    return r.join('')
+}
+
+export const getCorrectAndPresent = (
+    word,
+    guess
+) => {
+    const cleanWord = sanitizeString(word)
+    const cleanGuess = guess
+        .map((e) => (e === '' && empty) || e)
+        .map(sanitizeString)
+        .join('')
+
+    let correctAndPresent = {
+        cleanWord: Array(cleanWord.length).fill(LetterType.Unevaluated),
+        cleanGuess: Array(cleanGuess.length).fill(LetterType.Unevaluated),
+    }
+
+    // For each letter of guess, check if it's correct
+    for (let i = 0; i < cleanWord.length; i++) {
+        if (cleanWord[i] === cleanGuess[i])
+            correctAndPresent.cleanGuess[i] = correctAndPresent.cleanWord[i] =
+                LetterType.Correct
+    }
+
+    // Now the tricky part is to find the present
+    // A letter is present iff it appears in the word somewhere that is not already present or correct
+    for (let i = 0; i < cleanGuess.length; i++) {
+        for (let j = 0; j < cleanWord.length; j++) {
+            if (
+                cleanGuess[i] === cleanWord[j] &&
+                correctAndPresent.cleanGuess[i] !== LetterType.Correct &&
+                correctAndPresent.cleanWord[j] !== LetterType.Correct &&
+                correctAndPresent.cleanGuess[i] !== LetterType.Present &&
+                correctAndPresent.cleanWord[j] !== LetterType.Present
+            )
+                correctAndPresent.cleanGuess[i] = correctAndPresent.cleanWord[
+                    j
+                ] = LetterType.Present
+        }
+        if (
+            correctAndPresent.cleanGuess[i] === LetterType.Unevaluated &&
+            cleanGuess[i] !== empty
+        ) {
+            // Finally, set the character to miss
+            correctAndPresent.cleanGuess[i] = LetterType.Miss
+        }
+    }
+
+    return correctAndPresent.cleanGuess
+}
+<fim_middle>",incorrect,3820
+"'EUR') {
+  // ✔️ parameter validation, and default value
+  assert",Currency,57d87d12960f35a593f6da68902f487a24c0f939,"<fim_prefix>// ✔️ Define types (or interfaces, os structs... or even classes)
+type Currency = 'EUR' | 'USD';
+
+type Money = { amount: number; currency: Currency };
+
+type SavingsCondition = { principal: Money; rate: number; years: number };
+
+export function calculateInterest() {
+  // ✔️ object literal
+  const mySavingsConditionsLit: SavingsCondition = {
+    principal: { amount: 1000, currency: 'EUR' },
+    rate: 3.5,
+    years: 1,
+  };
+  // ✔️ object factory
+  const mySavingsConditions: SavingsCondition = conditionsFactory(100, 3.5);
+
+  // ✔️ single parameter
+  const interest = getSimpleInterest(mySavingsConditions);
+  return interest;
+}
+
+function moneyFactory(amount, currency: <fim_suffix> = 'EUR') {
+  // ✔️ parameter validation, and default value
+  assertAmountPositive(amount);
+  return {
+    amount,
+    currency,
+  };
+}
+
+function conditionsFactory(
+  amount,
+  rate,
+  years = 1,
+  currency = 'EUR'
+) {
+  // ✔️ parameter validation
+  assertAmountPositive(amount);
+  assertRateRange(rate);
+  assertYearsRange(years);
+
+  const conditions: SavingsCondition = {
+    principal: moneyFactory(amount, currency),
+    rate: rate,
+    years: years,
+  };
+  return conditions;
+}
+
+function assertYearsRange(years) {
+  const MIN_YEARS = 0;
+  const MAX_YEARS = 100;
+  if (years < MIN_YEARS || years > MAX_YEARS)
+    throw new Error(`Year must be between ${MIN_YEARS} and ${MAX_YEARS}`);
+}
+
+function assertRateRange(rate) {
+  const MIN_RATE = 1;
+  const MAX_RATE = 10;
+  if (rate < MIN_RATE || rate > MAX_RATE)
+    throw new Error(`Rate must be between ${MIN_RATE} and ${MAX_RATE}`);
+}
+
+function assertAmountPositive(amount) {
+  if (amount < 0) throw new Error(`Amount must be positive`);
+}
+
+function getSimpleInterest(conditions) {
+  const PER_CENT = 100;
+  const interestAmount =
+    (conditions.principal.amount * conditions.rate * conditions.years) / PER_CENT;
+  return moneyFactory(interestAmount, conditions.principal.currency);
+}
+<fim_middle>",incorrect,2975
+"C
+export function pipe<A, B, C, D>(a,",D,aa0b04568df03138dc24e8c7c363decf2bd5ba4f,"<fim_prefix>export type Arrow<A extends any[] = any, B = any> = (...args) => B
+
+export function pipe<A>(a)
+export function pipe<A, B>(a, ab)
+export function pipe<A, B, C>(a, ab, bc)
+export function pipe<A, B, C, D>(a, ab, bc, cd): <fim_suffix>
+export function pipe<A, B, C, D, E>(a, ab, bc, cd, de)
+export function pipe<A, B, C, D, E, F>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef
+)
+export function pipe<A, B, C, D, E, F, G>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg
+)
+export function pipe<A, B, C, D, E, F, G, H>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh
+)
+export function pipe<A, B, C, D, E, F, G, H, I>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn
+)
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr,
+  rs
+)
+
+export function pipe<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T>(
+  a,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  fg,
+  gh,
+  hi,
+  ij,
+  jk,
+  kl,
+  lm,
+  mn,
+  no,
+  op,
+  pq,
+  qr,
+  rs,
+  st
+)
+export function pipe(
+  a,
+  ab?,
+  bc?,
+  cd?,
+  de?,
+  ef?,
+  fg?,
+  gh?,
+  hi?
+) {
+  switch (arguments.length) {
+    case 1:
+      return a
+    case 2:
+      return ab!(a)
+    case 3:
+      return bc!(ab!(a))
+    case 4:
+      return cd!(bc!(ab!(a)))
+    case 5:
+      return de!(cd!(bc!(ab!(a))))
+    case 6:
+      return ef!(de!(cd!(bc!(ab!(a)))))
+    case 7:
+      return fg!(ef!(de!(cd!(bc!(ab!(a))))))
+    case 8:
+      return gh!(fg!(ef!(de!(cd!(bc!(ab!(a)))))))
+    case 9:
+      return hi!(gh!(fg!(ef!(de!(cd!(bc!(ab!(a))))))))
+    default:
+      // eslint-disable-next-line prefer-rest-params,no-case-declarations
+      let ret = arguments[0]
+      for (let i = 1; i < arguments.length; i++) {
+        // eslint-disable-next-line prefer-rest-params
+        ret = arguments[i](ret)
+      }
+      return ret
+  }
+}
+<fim_middle>",incorrect,1597
+"string) {
+        return parseDate(this._utc, date)
+    }",Date,b54738c443e9096be67646dd7f26ce561c458c70,"<fim_prefix>interface ParsedDate {
+	year: number,
+	month: number,
+	day: number,
+	hour: number,
+	minute: number,
+	second: number,
+	millisecond: number,
+}
+
+function parseDate(timezone, date) {
+	let year = 0;
+	let month = 0;
+	let day = 1;
+	let hour = 0;
+	let minute = 0;
+	let second = 0;
+	let millisecond = 0;
+
+	timezone.formatToParts(date).forEach((x) => {
+		switch (x.type) {
+            case ""year"":
+                year = +x.value;
+                break;
+            case ""month"":
+                month = (+x.value) - 1;
+                break;
+            case ""day"":
+                day = +x.value;
+                break;
+            case ""hour"":
+                hour = +x.value;
+                break;
+            case ""minute"":
+                minute = +x.value;
+                break;
+            case ""second"":
+                second = +x.value;
+                break;
+            case ""fractionalSecond"" as any:
+                millisecond = +x.value;
+                break;
+		}
+	});
+
+	if (hour === 24) {
+		hour = 0;
+	}
+
+	return { year, month, day, hour, minute, second, millisecond };
+}
+
+
+function toUTCDate(timezone, date) {
+	const { year, month, day, hour, minute, second, millisecond } = parseDate(timezone, date);
+	return Date.UTC(year, month, day, hour, minute, second, millisecond);
+}
+
+
+export class Timezone {
+	private _utc: Intl.DateTimeFormat;
+	private _dtf: Intl.DateTimeFormat;
+
+	public readonly name: string | undefined;
+
+    /**
+     * Use this method to create an instance of this class.
+     *
+     * @see {@link https://www.amcharts.com/docs/v5/getting-started/#New_element_syntax} for more info
+     * @param   timezone  IANA timezone
+     * @return            Instantiated object
+     */
+	static new<C extends typeof Timezone, T extends InstanceType<C>>(this, timezone) {
+		return (new this(timezone, true)) as T;
+	}
+
+	constructor(timezone, isReal) {
+		if (!isReal) {
+			throw new Error(""You cannot use `new Class()`, instead use `Class.new()`"");
+		}
+
+		this.name = timezone;
+
+		this._utc = new Intl.DateTimeFormat(""UTC"", {
+			hour12: false,
+			timeZone: ""UTC"",
+			year: ""numeric"",
+			month: ""2-digit"",
+			day: ""2-digit"",
+			hour: ""2-digit"",
+			minute: ""2-digit"",
+			second: ""2-digit"",
+			fractionalSecondDigits: 3,
+		} as any);
+
+		this._dtf = new Intl.DateTimeFormat(""UTC"", {
+			hour12: false,
+			timeZone: timezone,
+			year: ""numeric"",
+			month: ""2-digit"",
+			day: ""2-digit"",
+			hour: ""2-digit"",
+			minute: ""2-digit"",
+			second: ""2-digit"",
+			fractionalSecondDigits: 3,
+		} as any);
+	}
+
+	convertLocal(date) {
+		const offset = this.offsetUTC(date);
+		const userOffset = date.getTimezoneOffset();
+		const output = new Date(date);
+		output.setUTCMinutes(output.getUTCMinutes() - (offset - userOffset));
+		return output;
+	}
+
+	offsetUTC(date) {
+		const utc = toUTCDate(this._utc, date);
+		const dtf = toUTCDate(this._dtf, date);
+		return (utc - dtf) / 60000;
+	}
+
+    parseDate(date: <fim_suffix>) {
+        return parseDate(this._dtf, date)
+    }
+}
+<fim_middle>",incorrect,690
+any,Error,d7288789b6e870c947d9b5d2c8fe51bb8de33ca3,"<fim_prefix>export type HttpResponse = {
+  statusCode: number;
+  body: any;
+};
+
+export function ok<T>(dto?) {
+  return {
+    statusCode: 200,
+    body: dto,
+  };
+}
+
+export function created(body?) {
+  return {
+    statusCode: 201,
+    body: body !== undefined ? body : undefined,
+  };
+}
+
+export function noContent(body?) {
+  return {
+    statusCode: 204,
+    body: body !== undefined ? body : undefined,
+  };
+}
+
+export function clientError(error) {
+  return {
+    statusCode: 400,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function unauthorized(error) {
+  return {
+    statusCode: 401,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function forbidden(error) {
+  return {
+    statusCode: 403,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function notFound(error) {
+  return {
+    statusCode: 404,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function notAcceptable(error) {
+  return {
+    statusCode: 406,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function conflict(error) {
+  return {
+    statusCode: 409,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function tooMany(error) {
+  return {
+    statusCode: 429,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function fail(error: <fim_suffix>) {
+  return {
+    statusCode: 500,
+    body: {
+      error: error.message,
+    },
+  };
+}
+<fim_middle>",incorrect,1144
+(...args: any[]) => any,Function,4dc1c64fd20c06b5dceaa99125c0a14b4492067c,"<fim_prefix>interface CustomDescriptor {
+  [propsname: string]: any;
+}
+
+type DesType = 'class' | 'method';
+
+function getOwnKeys(object) {
+  const symbolKeys = Object.getOwnPropertySymbols(object).map((item) =>
+    item.toString()
+  );
+
+  return Object.getOwnPropertyNames(object).concat(symbolKeys);
+}
+
+function getOwnPropertyDescriptors(obj) {
+  let descs: CustomDescriptor = {};
+
+  getOwnKeys(obj).forEach((key) => {
+    return (descs[key] = Object.getOwnPropertyDescriptor(obj, key));
+  });
+
+  return descs;
+}
+
+function autoClass(fn, klass, ...rest) {
+  const descs = getOwnPropertyDescriptors(klass.prototype);
+
+  const keys = getOwnKeys(descs);
+
+  keys.forEach((key) => {
+    let desc = descs[key];
+
+    if (typeof desc.value === 'function' && key !== 'constructor') {
+      const descriptor: PropertyDescriptor = fn(
+        klass.prototype,
+        key,
+        desc,
+        ...rest
+      );
+
+      Object.defineProperty(klass.prototype, key, descriptor);
+    }
+  });
+}
+
+function handleDescriptor(fn, desType, args) {
+  if (desType === 'class') {
+    autoClass.apply(undefined, [fn, args[0], ...args.splice(1)]);
+  } else {
+    return fn.apply(undefined, [...args]);
+  }
+}
+
+function isDescriptor(desc) {
+  if (!desc || !desc.hasOwnProperty) {
+    return false;
+  }
+
+  const keys = ['value', 'initializer', 'get', 'set'];
+
+  for (let i = 0, l = keys.length; i < l; i++) {
+    if (desc.hasOwnProperty(keys[i])) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function hasParameters(target) {
+  return typeof target !== 'function' && !isDescriptor(target);
+}
+
+export default function adaption(fn: <fim_suffix>) {
+  if (typeof fn !== 'function') {
+    new TypeError('params has function');
+  }
+
+  return function (...args) {
+    if (!hasParameters(args[args.length - 1])) {
+      return handleDescriptor(fn, args.length === 1 ? 'class' : 'method', args);
+    } else {
+      return function () {
+        const toArgs = Array.prototype.slice.call(arguments);
+
+        return handleDescriptor(
+          fn,
+          toArgs.length === 1 ? 'class' : 'method',
+          toArgs.concat(args)
+        );
+      };
+    }
+  };
+}
+<fim_middle>",incorrect,830
+string,Id,32fad88cf989fe13e31b63cb2ea82544e40b70b9,"<fim_prefix>type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const actionResolver: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const basicUpdateFunction = (name, index) => `${name} #${index + 1}`
+
+class NFTUtils {
+  static createCollection(id, admin) {
+    return [String(id), { Id: admin }]
+  }
+
+
+  static createNFT(classId: <fim_suffix>, id, owner) {
+    return [String(classId), String(id), { Id: owner }]
+  }
+
+  static getActionParams(selectedAction, classId, id, meta) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [classId, id, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [classId, id]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction) {
+    return actionResolver[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction, meta, currentOwner, delegate) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+<fim_middle>",incorrect,2630
+"string | number) {
+    return this.get(key).exception === undefined",JsonKey,14b6f3ea549b72c43492b5117122ae84aeb1824e,"<fim_prefix>export type JsonValue =
+  | string
+  | number
+  | null
+  | boolean
+  | JsonValue[]
+  | { [property: string]: JsonValue }
+
+export type JsonKey = string | number
+
+export enum JsonError {
+  /// Type is not json encodable
+  unsupportedType,
+
+  /// Out of bound access to list
+  indexOutOfBounds,
+
+  /// Unexpected type
+  wrongType,
+
+  /// Entry does not exists
+  notExist
+}
+
+export class JsonException extends Error {
+  readonly error: JsonError
+
+  constructor (error, reason?, stack?) {
+    super()
+
+    this.error = error
+    this.name = JsonError[error]
+    this.stack = stack
+
+    switch (error) {
+      case JsonError.unsupportedType:
+        reason = reason ?? 'JSON Error: not a valid JSON value'
+        break
+      case JsonError.indexOutOfBounds:
+        reason = reason ?? 'JSON Error: index out of bounds'
+        break
+      case JsonError.wrongType:
+        reason =
+          reason ??
+          'JSON Error: either key is not a index type or value is not indexable'
+        break
+      case JsonError.notExist:
+        reason = reason ?? ""JSON Error: key does't not exists""
+        break
+    }
+  }
+}
+
+export default class TypedJson {
+  readonly rawValue: JsonValue
+
+  readonly exception?: JsonException
+
+  constructor (rawValue, exception?) {
+    this.rawValue = rawValue
+    this.exception = exception
+  }
+
+  static fromString (json) {
+    return new TypedJson(JSON.parse(json))
+  }
+
+  get (keyOrPath) {
+    if (Array.isArray(keyOrPath)) {
+      if (keyOrPath.length == 0) {
+        throw new Error(""Path can't be empty"")
+      }
+
+      return keyOrPath.length > 1
+        ? this.get(keyOrPath[0]).get(keyOrPath.slice(1))
+        : this.get(keyOrPath[0])
+    }
+
+    if (Array.isArray(this.rawValue)) {
+      const array = this.rawValue as JsonValue[]
+      let index: number
+
+      if (typeof keyOrPath === 'string') {
+        index = parseInt(keyOrPath)
+
+        if (isNaN(index)) {
+          return new TypedJson(
+            null,
+            new JsonException(
+              JsonError.wrongType,
+              `JSON Error: index must be a number, string given`
+            )
+          )
+        }
+      } else {
+        index = (keyOrPath as number) | 0 // Ensure integer
+      }
+
+      if (index < 0 || index >= array.length) {
+        return new TypedJson(
+          null,
+          new JsonException(JsonError.indexOutOfBounds)
+        )
+      }
+
+      return new TypedJson(array[index])
+    } else if (typeof this.rawValue === 'object' && this.rawValue !== null) {
+      const map = this.rawValue as { [property: string]: JsonValue }
+      let index: string =
+        typeof keyOrPath === 'string' ? keyOrPath : `${keyOrPath}`
+
+      let result = new TypedJson(map[index])
+      if (!map.hasOwnProperty(index)) {
+        return new TypedJson(
+          null,
+          new JsonException(
+            JsonError.notExist,
+            `JSON Error: key ${index} does not exists`
+          )
+        )
+      }
+
+      return result
+    }
+
+    return new TypedJson(null, new JsonException(JsonError.wrongType))
+  }
+
+  exists (key: <fim_suffix>, notNull = true) {
+    return (
+      this.get(key).exception === undefined &&
+      (!notNull || this.get(key).rawValue !== null)
+    )
+  }
+
+  string () {
+    return typeof this.rawValue === 'string' ? this.rawValue : undefined
+  }
+
+  stringValue () {
+    if (typeof this.rawValue === 'string') {
+      return this.rawValue
+    } else if (['boolean', 'number'].indexOf(typeof this.rawValue) >= 0) {
+      return `${this.rawValue}`
+    }
+
+    return ''
+  }
+
+  boolean () {
+    return typeof this.rawValue === 'boolean' ? this.rawValue : undefined
+  }
+
+  booleanValue () {
+    if (typeof this.rawValue === 'boolean') {
+      return this.rawValue
+    } else if (typeof this.rawValue === 'number') {
+      return this.rawValue === 1
+    } else if (typeof this.rawValue === 'string') {
+      return (
+        ['true', 'y', 't', 'yes', '1'].indexOf(this.rawValue.toLowerCase()) >= 0
+      )
+    }
+
+    return false
+  }
+
+  integer () {
+    return typeof this.rawValue === 'number' && Number.isInteger(this.rawValue)
+      ? this.rawValue
+      : undefined
+  }
+
+  integerValue () {
+    if (typeof this.rawValue === 'number') {
+      return Number.isInteger(this.rawValue)
+        ? this.rawValue
+        : Math.round(this.rawValue)
+    } else if (typeof this.rawValue === 'boolean') {
+      return this.rawValue ? 1 : 0
+    } else if (typeof this.rawValue === 'string') {
+      let parsed = parseInt(this.rawValue)
+      return isNaN(parsed) ? 0 : parsed
+    }
+
+    return 0
+  }
+
+  float () {
+    return typeof this.rawValue === 'number' && !Number.isInteger(this.rawValue)
+      ? this.rawValue
+      : undefined
+  }
+
+  floatValue () {
+    if (typeof this.rawValue === 'number') {
+      return this.rawValue
+    } else if (typeof this.rawValue === 'boolean') {
+      return this.rawValue ? 1 : 0
+    } else if (typeof this.rawValue === 'string') {
+      let parsed = parseFloat(this.rawValue)
+      return isNaN(parsed) ? 0 : parsed
+    }
+
+    return 0
+  }
+
+  array () {
+    return Array.isArray(this.rawValue)
+      ? this.rawValue.map(value => new TypedJson(value))
+      : undefined
+  }
+
+  arrayValue () {
+    return this.array() ?? []
+  }
+
+  arrayRaw () {
+    return Array.isArray(this.rawValue) ? this.rawValue : undefined
+  }
+
+  arrayRawValue () {
+    return this.arrayRaw() ?? []
+  }
+
+  object () {
+    if (typeof this.rawValue !== 'object' || Array.isArray(this.rawValue)) {
+      return undefined
+    }
+
+    let obj: any = {}
+    Object.entries(this.rawValue ?? []).forEach(item => {
+      obj[item[0]] = new TypedJson(item[1])
+    })
+
+    return obj
+  }
+
+  objectValue () {
+    return this.object() ?? {}
+  }
+
+  objectRaw () {
+    return this.rawValue !== null &&
+      typeof this.rawValue === 'object' &&
+      !Array.isArray(this.rawValue)
+      ? this.rawValue
+      : undefined
+  }
+
+  objectRawValue () {
+    return this.objectRaw() ?? {}
+  }
+}
+<fim_middle>",incorrect,520
+"Record<string, unknown>,
+  postMessageType: string",Metadata,8dd4eba467cc4f8c283713bdfc23d3b71e87f31d,"<fim_prefix>export type BasePostMessageCallbackProps<T> = {
+  onMessage?: (message) => void
+  onInvalidMessageError?: (message, error) => void
+}
+
+// This is an internal error. Thrown when we are decoding a post message's
+// metadata and we encourntered a missing field or an invalid value. This
+// likely means there has been a change to the definition of a post message
+// that we do not know about.
+export class PostMessageFieldDecodeError extends Error {
+  public messageType: string
+  public field: string
+  public expectedType: TypeDef
+  public gotValue: unknown
+
+  constructor(messageType, field, expectedType, gotValue) {
+    super(`Unable to decode '${field}' from '${messageType}'`)
+
+    this.messageType = messageType
+    this.field = field
+    this.expectedType = expectedType
+    this.gotValue = gotValue
+
+    Object.setPrototypeOf(this, PostMessageFieldDecodeError.prototype)
+  }
+}
+
+// This is an internal error. Thrown when we get a post message we don't konw
+// about. This likely means there is a new post message that this package needs
+// to define.
+export class PostMessageUnknownTypeError extends Error {
+  public postMessageType: string
+
+  constructor(postMessageType) {
+    super(`Unknown post message: ${postMessageType}`)
+
+    this.postMessageType = postMessageType
+
+    Object.setPrototypeOf(this, PostMessageUnknownTypeError.prototype)
+  }
+}
+
+export type MessageEventData = {
+  mx?: boolean
+  metadata?: Metadata
+  type?: string
+}
+
+export type Value = string | number
+export type NestedValue = Record<string, Value>
+export type TypeDef = string | Array<string> | Record<string, string>
+export type Metadata = Record<string, Value | NestedValue>
+
+export function assertMessageProp(
+  container: <fim_suffix>,
+  postMessageType,
+  field,
+  expectedType,
+) {
+  const value = container[field]
+
+  const valueIsDefined = typeof value !== ""undefined""
+  const valueIsString = typeof value === ""string""
+  const valueIsNumber = typeof value === ""number""
+  const valueIsObject = typeof value === ""object"" && !Array.isArray(value)
+
+  const typeIsString = expectedType === ""string""
+  const typeIsNumber = expectedType === ""number""
+  const typeIsArray = expectedType instanceof Array
+  const typeIsObject = typeof expectedType === ""object"" && !Array.isArray(expectedType)
+
+  if (!valueIsDefined) {
+    throw new PostMessageFieldDecodeError(postMessageType, field, expectedType, value)
+  } else if (typeIsString && !valueIsString) {
+    throw new PostMessageFieldDecodeError(postMessageType, field, expectedType, value)
+  } else if (typeIsNumber && !valueIsNumber) {
+    throw new PostMessageFieldDecodeError(postMessageType, field, expectedType, value)
+  } else if (typeIsArray && !(valueIsString && expectedType.includes(value))) {
+    throw new PostMessageFieldDecodeError(postMessageType, field, expectedType, value)
+  } else if (typeIsObject && !valueIsObject) {
+    throw new PostMessageFieldDecodeError(postMessageType, field, expectedType, value)
+  } else if (typeIsObject && valueIsObject) {
+    Object.keys(expectedType).forEach((field) => {
+      assertMessageProp(value, postMessageType, field, expectedType[field])
+    })
+  }
+}
+<fim_middle>",incorrect,2988
+any,Object,d7288789b6e870c947d9b5d2c8fe51bb8de33ca3,"<fim_prefix>export type HttpResponse = {
+  statusCode: number;
+  body: any;
+};
+
+export function ok<T>(dto?) {
+  return {
+    statusCode: 200,
+    body: dto,
+  };
+}
+
+export function created(body?) {
+  return {
+    statusCode: 201,
+    body: body !== undefined ? body : undefined,
+  };
+}
+
+export function noContent(body?: <fim_suffix>) {
+  return {
+    statusCode: 204,
+    body: body !== undefined ? body : undefined,
+  };
+}
+
+export function clientError(error) {
+  return {
+    statusCode: 400,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function unauthorized(error) {
+  return {
+    statusCode: 401,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function forbidden(error) {
+  return {
+    statusCode: 403,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function notFound(error) {
+  return {
+    statusCode: 404,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function notAcceptable(error) {
+  return {
+    statusCode: 406,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function conflict(error) {
+  return {
+    statusCode: 409,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function tooMany(error) {
+  return {
+    statusCode: 429,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function fail(error) {
+  return {
+    statusCode: 500,
+    body: {
+      error: error.message,
+    },
+  };
+}
+<fim_middle>",incorrect,1160
+any,Options,e8163c19af6d0400d21846442a54c5e20ba9eac3,"<fim_prefix>export enum LongOption {
+  NUMBER = 'number',
+  LONG = 'long',
+  STRING = 'string',
+}
+
+export enum DateOption {
+  DATE = 'date',
+  STRING = 'string',
+  TIMESTAMP = 'timestamp',
+}
+
+export enum EnvOption {
+  NODE = 'node',
+  BROWSER = 'browser',
+  BOTH = 'both',
+}
+
+export enum OneofOption {
+  PROPERTIES = 'properties',
+  UNIONS = 'unions',
+}
+
+export enum ServiceOption {
+  GRPC = 'grpc-js',
+  GENERIC = 'generic-definitions',
+  DEFAULT = 'default',
+  NONE = 'none',
+}
+
+export type Options = {
+  context: boolean;
+  snakeToCamel: Array<'json' | 'keys'>;
+  forceLong: LongOption;
+  useOptionals: boolean | 'none' | 'messages' | 'all'; // boolean is deprecated
+  useDate: DateOption;
+  oneof: OneofOption;
+  esModuleInterop: boolean;
+  fileSuffix: string;
+  outputEncodeMethods: boolean;
+  outputJsonMethods: boolean;
+  outputPartialMethods: boolean;
+  outputTypeRegistry: boolean;
+  stringEnums: boolean;
+  constEnums: boolean;
+  enumsAsLiterals: boolean;
+  outputClientImpl: boolean | 'grpc-web';
+  outputServices: ServiceOption;
+  addGrpcMetadata: boolean;
+  addNestjsRestParameter: boolean;
+  returnObservable: boolean;
+  lowerCaseServiceMethods: boolean;
+  nestJs: boolean;
+  env: EnvOption;
+  unrecognizedEnum: boolean;
+  exportCommonSymbols: boolean;
+  outputSchema: boolean;
+  // An alias of !output
+  onlyTypes: boolean;
+  emitImportedFiles: boolean;
+  useExactTypes: boolean;
+  delimitedMethods: boolean;
+};
+
+export function defaultOptions() {
+  return {
+    context: false,
+    snakeToCamel: ['json', 'keys'],
+    forceLong: LongOption.NUMBER,
+    useOptionals: 'none',
+    useDate: DateOption.DATE,
+    oneof: OneofOption.PROPERTIES,
+    esModuleInterop: false,
+    fileSuffix: '',
+    lowerCaseServiceMethods: false,
+    outputEncodeMethods: true,
+    outputJsonMethods: true,
+    outputPartialMethods: true,
+    outputTypeRegistry: false,
+    stringEnums: false,
+    constEnums: false,
+    enumsAsLiterals: false,
+    outputClientImpl: true,
+    outputServices: ServiceOption.DEFAULT,
+    returnObservable: false,
+    addGrpcMetadata: false,
+    addNestjsRestParameter: false,
+    nestJs: false,
+    env: EnvOption.BOTH,
+    unrecognizedEnum: true,
+    exportCommonSymbols: true,
+    outputSchema: false,
+    onlyTypes: false,
+    emitImportedFiles: true,
+    useExactTypes: true,
+    delimitedMethods: false,
+  };
+}
+
+const nestJsOptions: Partial<Options> = {
+  lowerCaseServiceMethods: true,
+  outputEncodeMethods: false,
+  outputJsonMethods: false,
+  outputPartialMethods: false,
+  outputClientImpl: false,
+  useDate: DateOption.TIMESTAMP,
+};
+
+export function optionsFromParameter(parameter) {
+  const options = defaultOptions();
+  if (parameter) {
+    const parsed = parseParameter(parameter);
+    if (parsed.nestJs) {
+      Object.assign(options, nestJsOptions);
+    }
+    Object.assign(options, parsed);
+  }
+  // We should promote onlyTypes to its own documented flag, but just an alias for now
+  if (!options.outputJsonMethods && !options.outputEncodeMethods && !options.outputClientImpl && !options.nestJs) {
+    options.onlyTypes = true;
+  }
+
+  // Treat forceLong=true as LONG
+  if ((options.forceLong as any) === true) {
+    options.forceLong = LongOption.LONG;
+  }
+
+  // Treat outputServices=false as NONE
+  if ((options.outputServices as any) === false) {
+    options.outputServices = ServiceOption.NONE;
+  }
+
+  if ((options.useDate as any) === true) {
+    // Treat useDate=true as DATE
+    options.useDate = DateOption.DATE;
+  } else if ((options.useDate as any) === false) {
+    // Treat useDate=false as TIMESTAMP
+    options.useDate = DateOption.TIMESTAMP;
+  }
+
+  if ((options.snakeToCamel as any) === false) {
+    options.snakeToCamel = [];
+  } else if ((options.snakeToCamel as any) === true) {
+    options.snakeToCamel = ['keys', 'json'];
+  }
+
+  return options;
+}
+
+// A very naive parse function, eventually could/should use iots/runtypes
+function parseParameter(parameter): <fim_suffix> {
+  const options = {} as any;
+  const pairs = parameter.split(',').map((s) => s.split('='));
+  pairs.forEach(([key, value]) => {
+    options[key] = value === 'true' ? true : value === 'false' ? false : value;
+  });
+  return options;
+}
+
+export function getTsPoetOpts(options) {
+  if (options.esModuleInterop) {
+    return { forceDefaultImport: ['protobufjs/minimal'] };
+  } else {
+    return {};
+  }
+}
+<fim_middle>",incorrect,3849
+number,Pitch,4e77d6fefc465d02bbfde5576d003dda41ab6508,"<fim_prefix>export type Pitch = number;
+
+export const C = 0 as Pitch;
+export const CIS = 1 as Pitch;
+export const D = 2 as Pitch;
+export const DIS = 3 as Pitch;
+export const E = 4 as Pitch;
+export const F = 5 as Pitch;
+export const FIS = 6 as Pitch;
+export const G = 7 as Pitch;
+export const GIS = 8 as Pitch;
+export const A = 9 as Pitch;
+export const AIS = 10 as Pitch;
+export const B = 11 as Pitch;
+
+export const NUM_PITCHES = 12;
+export const PITCHES = Array.from(Array(NUM_PITCHES).keys()) as Pitch[];
+
+export function getPitchWithOctave(index: <fim_suffix>, octave) {
+    const pitch = getPitch(index);
+    const octaveFixed = octave + (index / NUM_PITCHES);
+    return pitch + octaveFixed;
+}
+
+export function getPitch(index) {
+    switch (index % NUM_PITCHES) {
+        case C:
+            return ""C"";
+        case CIS:
+            return ""C#"";
+        case D:
+            return ""D"";
+        case DIS:
+            return ""D#"";
+        case E:
+            return ""E"";
+        case F:
+            return ""F"";
+        case FIS:
+            return ""F#"";
+        case G:
+            return ""G"";
+        case GIS:
+            return ""G#"";
+        case A:
+            return ""A"";
+        case AIS:
+            return ""A#"";
+        case B:
+            return ""B"";
+        default:
+            throw new Error(""Invalid pitch"");
+    }
+}
+
+export function isBlack(index) {
+    return [CIS, DIS, FIS, GIS, AIS].includes(index % NUM_PITCHES);
+}
+
+<fim_middle>",incorrect,3785
+"(state: Position, instruction: Instruction) => Position,
+        initialState: Position",Position,bd5fedd15b33868f0983320e9179fbd4b6751d7e,"<fim_prefix>export default class Day2 {
+    public static calculatePart1(input)  {
+        const reducer = (state, i)  =>
+        {
+            switch (i.direction) {
+                case Direction.Forward:
+                    return { horizontal: state.horizontal + i.distance, depth: state.depth };
+                case Direction.Down:
+                    return { horizontal: state.horizontal, depth: state.depth + i.distance };
+                case Direction.Up:
+                    return { horizontal: state.horizontal, depth: state.depth - i.distance };
+            }
+        };
+        
+        return Day2.calculate(input, reducer, { horizontal: 0, depth: 0 });
+    }
+
+    public static calculatePart2(input)  {
+        const reducer = (state, i)  =>
+        {
+            const aim = state.aim ?? 0;
+
+            switch (i.direction) {
+                case Direction.Forward:
+                    return { horizontal: state.horizontal + i.distance, 
+                             depth: state.depth + (aim * i.distance), 
+                             aim: aim };
+                case Direction.Down:
+                    return { horizontal: state.horizontal, depth: state.depth, aim: aim + i.distance };
+                case Direction.Up:
+                    return { horizontal: state.horizontal, depth: state.depth, aim: aim - i.distance };
+            }
+        };
+        
+        return Day2.calculate(input, reducer, { horizontal: 0, depth: 0, aim: 0 });
+    }
+
+    private static calculate(
+        input, 
+        reducertialState: <fim_suffix>)  {
+        const position = input
+            .map(Day2.parse)
+            .reduce(reducer, initialState);
+
+        return position.horizontal * position.depth;
+    }
+
+    private static parse(input)  {
+        const parts = input.split(' ');
+        return {
+            direction: parts[0] as Direction,
+            distance: parseInt(parts[1], 10)
+        };
+    }
+}
+
+enum Direction {
+    Forward = ""forward"",
+    Down = ""down"",
+    Up = ""up""
+}
+
+interface Instruction {
+    direction: Direction;
+    distance: number;
+}
+
+interface Position {
+    horizontal: number;
+    depth: number;
+    aim?: number;
+}<fim_middle>",incorrect,295
+StrictQuery<Resolved>,Resolved,23796ef71f89aeadfa7a847ca66d62e557cfdbbb,"<fim_prefix>type RawQuery = string | string[] | undefined
+
+function normalizeToString<T extends string = string>(
+  query,
+) {
+  const param = Array.isArray(query) ? query[0] : query
+  return param !== undefined ? (param as T) : undefined
+}
+
+function normalizeToArray<T extends string = string>(query) {
+  if (Array.isArray(query)) {
+    return query as T[]
+  }
+  if (query !== undefined) {
+    return [query as T]
+  }
+  return []
+}
+
+/**
+ * query의 value가 undefined이거나 false일 때 false.
+ * 그 외의 value를 가지고 있으면 모두 true
+ * @param query
+ */
+function normalizeToBoolean(query) {
+  return !(
+    query === undefined || (Array.isArray(query) ? query[0] : query) === 'false'
+  )
+}
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+class StrictQuery<Resolved = {}> {
+  private raw: { [key: string]: RawQuery }
+
+  private resolved: Resolved
+
+  public constructor(raw, resolved?) {
+    this.raw = raw
+    this.resolved = resolved || ({} as Resolved)
+  }
+
+  public use(): <fim_suffix> {
+    return this.resolved
+  }
+
+  public string<Key extends string, Value extends string = string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToString<Value>(value),
+    } as { [key in Key]: Value | undefined }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public number<Key extends string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const stringified = normalizeToString(value)
+    const normalized = {
+      [key]: stringified ? parseFloat(stringified) : undefined,
+    } as { [key in Key]: number | undefined }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public stringArray<Key extends string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToArray(value),
+    } as { [key in Key]: string[] }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public numberArray<Key extends string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToArray(value).map(parseFloat),
+    } as { [key in Key]: number[] }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public boolean<Key extends string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToBoolean(value),
+    } as { [key in Key]: boolean }
+
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+}
+
+export function strictQuery<T extends { [key: string]: RawQuery }>(query) {
+  return new StrictQuery(query)
+}
+<fim_middle>",incorrect,540
+"Answer) {
+  return validOperators(row.operator).includes(row.",Row,30ede5eb6d0f28926363e13b72a9f5cb510cecdc,"<fim_prefix>declare global {
+  interface Window {
+    plausible: (s, p?) => void
+  }
+}
+export interface Row {
+  operandA?: number
+  operator?: Operator
+  operandB?: number
+  result?: number
+}
+export type Equation = Required<Row>
+export type Answer = Required<Row>
+export enum PlayState {
+  Playing = 'playing',
+  Won = 'won',
+  Lost = 'lost',
+}
+export enum Difficulty {
+  Easy = 'easy',
+  Normal = 'normal',
+  Hard = 'hard',
+}
+export type Operator = '+' | '-' | '*' | '/' | '^' | '%'
+export const numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+const easyOperators: Operator[] = ['+', '-', '*', '/']
+const normalOperators: Operator[] = ['^']
+const hardOperators: Operator[] = ['%']
+export const allOperators = easyOperators.concat(normalOperators, hardOperators)
+
+export type Column = 0 | 1 | 2 | 3 | 4 | 5
+export const columns: Column[] = [0, 1, 2, 3, 4, 5]
+export const rowCount: number = 6
+
+export enum CellStatus {
+  Green = 'green',
+  Yellow = 'yellow',
+  Gray = 'gray',
+  Unguessed = 'unguessed',
+}
+export function validOperators(difficulty) {
+  switch (difficulty) {
+    case Difficulty.Easy:
+      return easyOperators
+    case Difficulty.Normal:
+      return easyOperators.concat(normalOperators)
+    case Difficulty.Hard:
+      return allOperators
+  }
+}
+
+export function nextCharIsAnOperator(row) {
+  return row && row.operandA !== undefined && row.operator === undefined
+}
+
+export function backspace(row) {
+  if (row.result != null) {
+    if (row.result >= 10) {
+      row.result = Math.floor(row.result / 10)
+    } else {
+      row.result = undefined
+    }
+  } else if (row.operandB != null) {
+    row.operandB = undefined
+  } else if (row.operator) {
+    row.operator = undefined
+  } else if (row.operandA != null) {
+    row.operandA = undefined
+  }
+}
+
+export function addCharacter(row, character) {
+  if (row.operandA == null) {
+    row.operandA = parseInt(character)
+  } else if (row.operator == null) {
+    //TODO: avoid cast?
+    row.operator = character as Operator
+  } else if (row.operandB == null) {
+    row.operandB = parseInt(character)
+  } else if (row.result == null) {
+    row.result = parseInt(character)
+  } else if (row.result < 10) {
+    row.result = row.result * 10 + parseInt(character)
+  }
+}
+
+export function rowCharacter(row, col) {
+  switch (col) {
+    case 0:
+      return row.operandA?.toString() || ''
+    case 1:
+      return row.operator || ''
+    case 2:
+      return row.operandB?.toString() || ''
+    case 3:
+      return '='
+    case 4:
+      return row.result?.toString()[0] || ''
+    case 5:
+      return row.result?.toString()[1] || ''
+  }
+}
+
+export function rowCharacters(row) {
+  return columns.map((col) => {
+    return rowCharacter(row, col)
+  })
+}
+export function rowToString(row) {
+  return rowCharacters(row).join('')
+}
+
+export function getRandomAnswer(difficulty) {
+  const operator = getRandomOperator(difficulty)
+
+  while (true) {
+    const operandA = getRandomDigit()
+    const operandB = getRandomDigit()
+    const potentialAnswer: Answer = {
+      operandA,
+      operator: operator,
+      operandB,
+      result: getResult(operandA, operator, operandB),
+    }
+    if (validEquation(potentialAnswer) && isFunAnswer(potentialAnswer)) {
+      return potentialAnswer
+    }
+  }
+}
+
+const getRandomDigit = () => {
+  return Math.floor(Math.random() * 10)
+}
+
+const getRandomOperator = (difficulty) => {
+  const ops = validOperators(difficulty)
+  const randomOperatorIndex = Math.floor(Math.random() * ops.length)
+  return ops[randomOperatorIndex]
+}
+
+function getResult(operandA, operator, operandB) {
+  switch (operator) {
+    case '+':
+      return operandA + operandB
+    case '-':
+      return operandA - operandB
+    case '*':
+      return operandA * operandB
+    case '/':
+      return operandA / operandB
+    case '^':
+      return Math.pow(operandA, operandB)
+    case '%':
+      return operandA % operandB
+  }
+}
+
+export function validEquation(row: <fim_suffix>) {
+  if (row.operandA !== undefined && row.operator !== undefined && row.operandB !== undefined) {
+    const correctResult = getResult(row.operandA, row.operator, row.operandB)
+    return (
+      correctResult >= 0 &&
+      correctResult < 100 &&
+      Number.isInteger(correctResult) &&
+      correctResult === row.result
+    )
+  } else {
+    return false
+  }
+}
+
+export function isFunAnswer(row) {
+  switch (row.operator) {
+    case '+':
+      return row.operandA !== 0 && row.operandB !== 0
+    case '-':
+      return row.operandB !== 0
+    case '*':
+      return row.operandA > 1 && row.operandB > 1
+    case '/':
+      if (row.operandA === row.operandB) {
+        return false
+      }
+      return row.operandA !== 0 && row.operandB !== 1
+    case '^':
+      return row.operandA > 1 && row.operandB > 1
+    case '%':
+      return row.operandA !== 0 && row.operandB !== 1
+  }
+}
+
+export function newCellStatuses(
+  prev,
+  rowNumber,
+  row,
+  answer
+) {
+  const newCellStatuses = [...prev]
+  newCellStatuses[rowNumber] = [...prev[rowNumber]]
+  const rowLength = rowCharacters(row).length
+  const answerChars: string[] = rowCharacters(answer)
+
+  // set all to gray
+  for (let i = 0; i < rowLength; i++) {
+    newCellStatuses[rowNumber][i] = CellStatus.Gray
+  }
+
+  // check greens
+  for (let col of [...columns].reverse()) {
+    if (isCellCorrect(row, col, answer)) {
+      newCellStatuses[rowNumber][col] = CellStatus.Green
+      answerChars.splice(col, 1)
+    }
+  }
+
+  // check yellows
+  // yellow if all:
+  //   - answer contains this digit in a place that this row hasn't guessed correctly
+  //   - answer doesn't contain this digit in this column
+  for (let col of columns) {
+    if (
+      answerChars.includes(rowCharacter(row, col)) &&
+      newCellStatuses[rowNumber][col] !== CellStatus.Green
+    ) {
+      newCellStatuses[rowNumber][col] = CellStatus.Yellow
+    }
+  }
+
+  return newCellStatuses
+}
+
+function isCellCorrect(row, col, answer) {
+  return rowCharacter(row, col) === rowCharacter(answer, col)
+}
+<fim_middle>",incorrect,4706
+any,State,9eb078d7d68852e0860617c539c62b7d3a9f0a9a,"<fim_prefix>/**
+ * Ported to TypeScript from https://github.com/final-form/final-form/blob/ad1997b70de21df336331da466523534b5bdb63c/src/structure/toPath.js
+ * https://github.com/final-form/final-form/blob/ad1997b70de21df336331da466523534b5bdb63c/LICENSE
+ * Copyright (c) 2017 Erik Rasmussen
+ * Copyright JS Foundation and other contributors <https://js.foundation/>
+ * Based on Underscore.js, copyright Jeremy Ashkenas,
+ *
+ * Structure Tester
+ * https://8ypq7n41z0.codesandbox.io/
+ */
+
+type State = any;
+
+const charCodeOfDot = ""."".charCodeAt(0);
+const reEscapeChar = /\\(\\)?/g;
+const rePropName = RegExp(
+    // Match anything that isn't a dot or bracket.
+    ""[^.[\\]]+"" +
+        ""|"" +
+        // Or match property names within brackets.
+        ""\\[(?:"" +
+        // Match a non-string expression.
+        ""([^\""'][^[]*)"" +
+        ""|"" +
+        // Or match strings (supports escaping characters).
+        ""([\""'])((?:(?!\\2)[^\\\\]|\\\\.)*?)\\2"" +
+        "")\\]"" +
+        ""|"" +
+        // Or match """" as the space between consecutive dots or empty brackets.
+        ""(?=(?:\\.|\\[\\])(?:\\.|\\[\\]|$))"",
+    ""g"",
+);
+
+/**
+ * Converts `string` to a property path array.
+ *
+ * @private
+ * @param {string} string The string to convert.
+ * @returns {Array} Returns the property path array.
+ */
+const stringToPath = (string) => {
+    const result = [];
+    if (string.charCodeAt(0) === charCodeOfDot) {
+        result.push("""");
+    }
+    string.replace(rePropName, (match, expression, quote, subString) => {
+        let key = match;
+        if (quote) {
+            key = subString.replace(reEscapeChar, ""$1"");
+        } else if (expression) {
+            key = expression.trim();
+        }
+        result.push(key);
+
+        return """";
+    });
+    return result;
+};
+
+const keysCache: { [key: string]: string[] } = {};
+
+const toPath = (key) => {
+    if (key === null || key === undefined || !key.length) {
+        return [];
+    }
+    if (typeof key !== ""string"") {
+        throw new Error(""toPath() expects a string"");
+    }
+
+    if (keysCache[key] == null) {
+        keysCache[key] = stringToPath(key);
+    }
+    return keysCache[key]!;
+};
+
+const setInRecursor = (
+    current,
+    index,
+    path,
+    value,
+    destroyArrays,
+): <fim_suffix> => {
+    if (index >= path.length) {
+        // end of recursion
+        return value;
+    }
+    const key = path[index]!;
+
+    // determine type of key
+    if (isNaN(key as any)) {
+        // object set
+        if (current === undefined || current === null) {
+            // recurse
+            const result = setInRecursor(
+                undefined,
+                index + 1,
+                path,
+                value,
+                destroyArrays,
+            );
+
+            // delete or create an object
+            return result === undefined ? undefined : { [key]: result };
+        }
+        if (Array.isArray(current)) {
+            throw new Error(""Cannot set a non-numeric property on an array"");
+        }
+        // current exists, so make a copy of all its values, and add/update the new one
+        const result = setInRecursor(
+            current[key],
+            index + 1,
+            path,
+            value,
+            destroyArrays,
+        );
+        if (result === undefined) {
+            const numKeys = Object.keys(current).length;
+            if (current[key] === undefined && numKeys === 0) {
+                // object was already empty
+                return undefined;
+            }
+            if (current[key] !== undefined && numKeys <= 1) {
+                // only key we had was the one we are deleting
+                if (!isNaN(path[index - 1] as any) && !destroyArrays) {
+                    // we are in an array, so return an empty object
+                    return {};
+                } else {
+                    return undefined;
+                }
+            }
+            const { [key]: _removed, ...final } = current;
+            return final;
+        }
+        // set result in key
+        return {
+            ...current,
+            [key]: result,
+        };
+    }
+    // array set
+    const numericKey = Number(key);
+    if (current === undefined || current === null) {
+        // recurse
+        const result = setInRecursor(
+            undefined,
+            index + 1,
+            path,
+            value,
+            destroyArrays,
+        );
+
+        // if nothing returned, delete it
+        if (result === undefined) {
+            return undefined;
+        }
+
+        // create an array
+        const array = [];
+        array[numericKey] = result;
+        return array as any[];
+    }
+    if (!Array.isArray(current)) {
+        throw new Error(""Cannot set a numeric property on an object"");
+    }
+    // recurse
+    const existingValue = current[numericKey];
+    const result = setInRecursor(
+        existingValue,
+        index + 1,
+        path,
+        value,
+        destroyArrays,
+    );
+
+    // current exists, so make a copy of all its values, and add/update the new one
+    const array = [...current];
+    if (destroyArrays && result === undefined) {
+        array.splice(numericKey, 1);
+        if (array.length === 0) {
+            return undefined;
+        }
+    } else {
+        array[numericKey] = result;
+    }
+    return array;
+};
+
+export const setIn = (state, key, value) => {
+    if (state === undefined || state === null) {
+        throw new Error(`Cannot call setIn() with ${String(state)} state`);
+    }
+    if (key === undefined || key === null) {
+        throw new Error(`Cannot call setIn() with ${String(key)} key`);
+    }
+    // Recursive function needs to accept and return State, but public API should
+    // only deal with Objects
+    return setInRecursor(state, 0, toPath(key), value, false) as any;
+};
+<fim_middle>",incorrect,2056
+"Constructor, args) {
+    this.add(className, args);
+    this",T,53b6ef015e8c8793036ec97b599fa436cd131b3f,"<fim_prefix>export type Constructor<T = any> = { new (...args): T };
+export type ServiceRegistry = WeakMap<Constructor, any[]>;
+
+export class Container {
+  private registry: ServiceRegistry;
+  private instances: WeakMap<Constructor, any>;
+
+  constructor() {
+    this.registry = new WeakMap();
+    this.instances = new WeakMap();
+  }
+
+  /**
+   * Adds a class and its constructor arguments to the container. Each time `get()` is called,
+   * a new instance of the class will be returned.
+   * @param newClass The class to add to the container.
+   * @param args The arguments to pass to the class's constructor. Can be a primitive or
+   * another class. If a class is used, the container will create an instance of it and
+   * pass it to the constructor.
+   * @returns The container object returns itself, allowing chaining multiple calls to `add()`.
+   */
+  add<T extends Constructor>(newClass, ...args) {
+    this.registry.set(newClass, args);
+    return this;
+  }
+
+  /**
+   * Adds a static instance of a class to the container. Instead of creating a new instance
+   * each time `get()` is called, that single instance will be returned instead.
+   * @param className The class to add to the container.
+   * @param args The arguments to pass to the class's constructor. Can be a primitive or
+   * another class. If a class is used, the container will create an instance of it and
+   * pass it to the constructor.
+   * @returns The container object returns itself, allowing chaining multiple calls to `add()`.
+   */
+  addStatic<T extends Constructor>(className: <fim_suffix>, ...args) {
+    const instance = new className(...args);
+    this.instances.set(className, instance);
+    return this;
+  }
+
+  /**
+   * Appends arguments to a class's existing arguments array.
+   * @param className The class to modify.
+   * @param newArgs The new arguments to append to the existing arguments array.
+   */
+  appendArgs(className, ...newArgs) {
+    if (!this.has(className)) {
+      throw new ContainerError(
+        `${className.name} is not registered in container.`
+      );
+    }
+
+    const args = this.registry.get(className) as any[]; // can never be undefined in `add()`
+    args.push(...newArgs);
+    this.registry.set(className, args);
+  }
+
+  /**
+   * Reurns an instance of a class from the container. If the class was registered using
+   * `addStatic()`, a singleton instance will be returned with each call to `get()`.
+   *
+   * If a class depends on another class added to the container, it will build an instance
+   * of it using the stored arguments and inject it as a dependency. If a class was registered
+   * using `addStatic()`, the container will inject a singleton instance of that class.
+   * @param className The class to retrieve.
+   * @returns An instance of the provided `className`.
+   */
+  get<T>(className) {
+    // Check for an existing static instance and return it.
+    const existing = this.instances.get(className) as T;
+    if (existing) {
+      return existing;
+    }
+
+    // Otherwise, build a brand new instance.
+    const args = this.registry.get(className);
+    if (!args) {
+      throw new ContainerError(
+        `${className.name} is not registered in container.`
+      );
+    }
+
+    const preparedArgs = args.map((arg) => {
+      if (typeof arg != ""function"") {
+        return arg;
+      }
+
+      // Try: is the function a constructor? If not, a TypeError will be thrown.
+      try {
+        new arg();
+      } catch (error) {
+        // In that case, return it as a callback argument.
+        return arg;
+      }
+
+      // Otherwise, try to retrieve it from the container.
+      const maybeConstructor = arg as Constructor;
+      const registered = this.get(maybeConstructor);
+      return registered;
+    });
+
+    return new className(...preparedArgs);
+  }
+
+  /**
+   * Removes a class from the container.
+   * @param className The class to remove.
+   */
+  delete(className) {
+    if (!this.has(className)) {
+      throw new ContainerError(
+        `${className.name} is not registered in container.`
+      );
+    }
+    this.registry.delete(className);
+  }
+
+  /**
+   * Removes a static instance from the container.
+   * @param className The class to remove.
+   */
+  deleteStatic(className) {
+    if (!this.hasStatic(className)) {
+      throw new ContainerError(
+        `${className.name} is not registered in container.`
+      );
+    }
+    this.instances.delete(className);
+  }
+
+  /**
+   * Checks for the presence of a class in the registry.
+   * @param className The class to look for.
+   * @returns `true` if found, `false` if not.
+   */
+  has(className) {
+    return this.registry.has(className);
+  }
+
+  /**
+   * Checks for the presence of a static instance in the container.
+   * @param className The class to look for.
+   * @returns `true` if found, `false` if not.
+   */
+  hasStatic(className) {
+    return this.instances.has(className);
+  }
+}
+
+export class ContainerError extends Error {
+  name = ""ContainerError"";
+
+  constructor(public message) {
+    super();
+  }
+}
+<fim_middle>",incorrect,996
+type,TKey,7dd6b62e84ab1daa79934e50b59d91cb5cc3ea92,"<fim_prefix>export type Type = string | number | symbol;
+
+export type Constructor<T> = new (...args) => T;
+
+export type Factory<T> = (...args) => T;
+
+export enum BindingType {
+    value = 'value',
+    constructor = 'constructor',
+    factory = 'factory',
+}
+
+export type ConstructorBinding<T> = {
+    type: BindingType.constructor | `${BindingType.constructor}`;
+    value: Constructor<T>;
+    singleton?: boolean;
+};
+
+export type FactoryBinding<T> = {
+    type: BindingType.factory | `${BindingType.factory}`;
+    value: Factory<T>;
+    singleton?: boolean;
+};
+
+export type ValueBinding<T> = {
+    type?: BindingType.value | `${BindingType.value}`;
+    value: T;
+};
+
+export type InjectionBinding<T> =
+    | ConstructorBinding<T>
+    | FactoryBinding<T>
+    | ValueBinding<T>;
+
+export type InjectionType<T> = T extends ConstructorBinding<infer U>
+    ? U
+    : T extends FactoryBinding<infer U>
+    ? U
+    : T extends ValueBinding<infer U>
+    ? U
+    : never;
+
+export type InjectionParams<T extends InjectionBinding<any>> =
+    T extends ConstructorBinding<any>
+        ? ConstructorParameters<T['value']>
+        : T extends FactoryBinding<any>
+        ? Parameters<T['value']>
+        : T extends ValueBinding<any>
+        ? never
+        : never;
+
+export type InjectionValue<T extends InjectionBinding<any>> = T['value'];
+
+export interface DefaultBindings {
+    [index: string]: InjectionBinding<any>;
+}
+
+/**
+ * An Inversion of Control Container.
+ *
+ * Values, constructors, and factories can be bound to a Type.
+ *
+ * Then, given a Type, they can be retrieved later.
+ */
+export class Container<
+    T extends {
+        [index: string]: InjectionBinding<any>;
+    } = {
+        [index: string]: InjectionBinding<any>;
+    },
+> {
+    bindings: T = {} as any;
+    protected instances: Record<keyof T, any> = {} as any;
+
+    constructor(bindings = {} as any) {
+        this.bindings = bindings;
+    }
+
+    /**
+     * Binds a value to a Type
+     * @param type - a Type to bind
+     * @param value - a value to bind
+     */
+    bindValue<TKey extends keyof T, TValue extends InjectionType<T[TKey]>>(
+        type,
+        value,
+    ) {
+        this.bindings[type] = {
+            type: BindingType.value,
+            value,
+        } as any;
+    }
+
+    /**
+     * Binds a constructor to a Type
+     * @param type - a Type to bind
+     * @param constructor - a constructor to bind
+     */
+    bindConstructor<
+        TKey extends keyof T,
+        TConstructor extends Constructor<InjectionType<T[TKey]>>,
+    >(type, constructor, singleton?) {
+        this.bindings[type] = {
+            type: BindingType.constructor,
+            value: constructor,
+            singleton,
+        } as any;
+    }
+
+    /**
+     * Binds a factory to a Type
+     * @param type - a Type to bind
+     * @param factory - a factory to bind
+     */
+    bindFactory<
+        TKey extends keyof T,
+        TFactory extends Factory<InjectionType<T[TKey]>>,
+    >(type: <fim_suffix>, factory, singleton?) {
+        this.bindings[type] = {
+            type: BindingType.factory,
+            value: factory,
+            singleton,
+        } as any;
+    }
+
+    /**
+     * Gets a value for a given Type.
+     *
+     * If the value is a value, it is returned.
+     * If the value is a constructor, a new object is created.
+     * If the value is a factory, the factory is run.
+     *
+     * Args are passed to constructors and factories.
+     *
+     * This can be used as a default parameter value for other functions.
+     *
+     * @param type - a bound Type
+     * @param args - zero or more args to pass if the bound value is a function or constructor
+     */
+    get<TKey extends keyof T>(
+        type,
+        ...args
+    ) {
+        let binding = this.bindings[type];
+        if (!binding) {
+            throw `No binding associated with: ${type.toString()}`;
+        }
+        const value: InjectionValue<T[TKey]> = binding.value;
+        switch (binding.type) {
+            case BindingType.constructor:
+            case 'constructor':
+                if (binding.singleton) {
+                    const instance = this.instances[type];
+                    if (instance) {
+                        return instance;
+                    } else {
+                        // @ts-ignore TODO: Fix this
+                        const instance = new value(...args);
+                        this.instances[type] = instance;
+                        return instance;
+                    }
+                } else {
+                    // @ts-ignore TODO: Fix this
+                    return new value(...args);
+                }
+            case BindingType.factory:
+            case 'factory':
+                if (binding.singleton) {
+                    const instance = this.instances[type];
+                    if (instance) {
+                        return instance;
+                    } else {
+                        // @ts-ignore TODO: Fix this
+                        const instance = value(...args);
+                        this.instances[type] = instance;
+                        return instance;
+                    }
+                } else {
+                    // @ts-ignore TODO: Fix this
+                    return value(...args);
+                }
+            case BindingType.value:
+            case 'value':
+            default:
+                return binding.value;
+        }
+    }
+
+    private static default: Container<DefaultBindings> | undefined;
+
+    /**
+     * Gets the default Container
+     */
+    static getDefault() {
+        let container = this.default;
+        if (!container) {
+            container = new Container();
+            this.default = container;
+        }
+        return container;
+    }
+
+    /**
+     * Sets the default Container
+     * @param container - a Container object
+     */
+    static setDefault<TContainer extends Container<DefaultBindings>>(
+        container,
+    ) {
+        Container.default = container;
+    }
+}
+
+/**
+ * Gets a value fron a specified Container by Type
+ *
+ * This can be used as a default parameter value for other functions.
+ *
+ * @param type - a bound Type
+ * @param container - a Container to use
+ * @param args - zero or more args to pass if the bound value is a function or constructor
+ */
+export function inject<
+    TContainer extends Container,
+    TKey extends keyof TContainer['bindings'],
+>(
+    container,
+    type,
+    ...args
+);
+
+/**
+ * Gets a value fron the default Container by Type
+ *
+ * This can be used as a default parameter value for other functions.
+ *
+ * @param type - a bound Type
+ * @param [args] - zero or more args to pass if the bound value is a function or constructor
+ */
+export function inject<TKey extends keyof DefaultBindings>(
+    type,
+    ...args
+);
+
+export function inject<T>(a, b, ...args) {
+    if (a instanceof Container) {
+        // @ts-ignore TODO: Fix this
+        return a.get(b, ...args);
+    } else {
+        const container = Container.getDefault();
+        return container.get(a, ...[b, ...args]);
+    }
+}
+<fim_middle>",incorrect,1718
+string,ValueType,251dc8a6bd0853f15cfeabfb12becc4052d3fe54,"<fim_prefix>type ValueType = string | number;
+
+const isE = (number) => {
+  const str = String(number);
+
+  return !Number.isNaN(Number(str)) && str.includes('e');
+};
+
+export const trimNumber = (numStr) => {
+  let str = numStr.trim();
+
+  if (str === '' || str === '0') {
+    return {
+      negative: false,
+      negativeStr: '',
+      trimStr: '',
+      integerStr: '0',
+      decimalStr: '',
+      fullStr: str,
+    };
+  }
+
+  let negative = str.startsWith('-');
+
+  if (negative) {
+    str = str.slice(1);
+  }
+
+  str = str
+    // Remove decimal 0. `1.000` => `1.`, `1.100` => `1.1`
+    .replace(/(\.\d*[^0])0*$/, '$1')
+    // Remove useless decimal. `1.` => `1`
+    .replace(/\.0*$/, '')
+    // Remove integer 0. `0001` => `1`, 000.1' => `.1`
+    .replace(/^0+/, '');
+
+  if (str.startsWith('.')) {
+    str = `0${str}`;
+  }
+
+  const trimStr = str || '0';
+  const splitNumber = trimStr.split('.');
+
+  const integerStr = splitNumber[0] || '0';
+  const decimalStr = splitNumber[1] || '0';
+
+  if (integerStr === '0' && decimalStr === '0') {
+    negative = false;
+  }
+
+  const negativeStr = negative ? '-' : '';
+
+  return {
+    negative,
+    negativeStr,
+    trimStr,
+    integerStr,
+    decimalStr,
+    fullStr: `${negativeStr}${trimStr}`,
+  };
+};
+
+const validateNumber = (num) => {
+  if (typeof num === 'number') {
+    return !Number.isNaN(num);
+  }
+
+  // Empty
+  if (!num) {
+    return false;
+  }
+
+  return (
+    // Normal type: 11.28
+    /^\s*-?\d+(\.\d+)?\s*$/.test(num) ||
+    // Pre-number: 1.
+    /^\s*-?\d+\.\s*$/.test(num) ||
+    // Post-number: .1
+    /^\s*-?\.\d+\s*$/.test(num)
+  );
+};
+
+const getNumberPrecision = (number) => {
+  const numStr = String(number);
+
+  if (isE(number)) {
+    let precision = Number(numStr.slice(numStr.indexOf('e-') + 2));
+
+    const decimalMatch = numStr.match(/\.(\d+)/);
+    if (decimalMatch?.[1]) {
+      precision += decimalMatch[1].length;
+    }
+    return precision;
+  }
+
+  return numStr.includes('.') && validateNumber(numStr)
+    ? numStr.length - numStr.indexOf('.') - 1
+    : 0;
+};
+
+const maxPrecision = (pre, cur) =>
+  Math.max(getNumberPrecision(pre), getNumberPrecision(cur));
+
+const add = (pre, cur) => {
+  const preValue = Number(pre);
+  const curValue = Number(cur);
+
+  const totalValue = preValue + curValue;
+  if (totalValue > Number.MAX_SAFE_INTEGER || totalValue < Number.MIN_SAFE_INTEGER) {
+    return bigIntDecimalAdd(pre, cur);
+  }
+  return totalValue.toFixed(maxPrecision(pre, cur));
+};
+
+const makeBigIntDecimal = (value) => {
+  // We need convert back to Number since it require `toFixed` to handle this
+  if (isE(value)) {
+    value = Number(value);
+  }
+
+  value = typeof value === 'string' ? value : num2str(value);
+
+  if (validateNumber(value)) {
+    const trimRet = trimNumber(value);
+    const numbers = trimRet.trimStr.split('.');
+    const decimalStr = numbers[1] || '0';
+
+    return {
+      value: value,
+      negative: trimRet.negative,
+      integer: BigInt(numbers[0]),
+      decimal: BigInt(decimalStr),
+      decimalLen: decimalStr.length,
+    };
+  }
+  return null;
+};
+
+type BigIntDecimalType = {
+  value: string;
+  negative: boolean;
+  integer: BigInt;
+  decimal: BigInt;
+  decimalLen: number;
+};
+
+const bigIntDecimalAdd = (pre, cur: <fim_suffix>) => {
+  const preValue = makeBigIntDecimal(pre) as BigIntDecimalType;
+  const curValue = makeBigIntDecimal(cur) as BigIntDecimalType;
+
+  if (!preValue || !curValue) return '';
+
+  const maxDecimalLength = Math.max(
+    preValue.decimal.toString().padStart(preValue.decimalLen, '0').length,
+    curValue.decimal.toString().padStart(curValue.decimalLen, '0').length,
+  );
+  const preDecimal = BigInt(
+    `${preValue.negative ? '-' : ''}${preValue.integer.toString()}${preValue.decimal
+      .toString()
+      .padStart(preValue.decimalLen, '0')
+      .padEnd(maxDecimalLength, '0')}`,
+  );
+  const curDecimal = BigInt(
+    `${curValue.negative ? '-' : ''}${curValue.integer.toString()}${curValue.decimal
+      .toString()
+      .padStart(curValue.decimalLen, '0')
+      .padEnd(maxDecimalLength, '0')}`,
+  );
+
+  const valueStr = (preDecimal + curDecimal).toString();
+
+  // We need fill string length back to `maxDecimalLength` to avoid parser failed
+  const { negativeStr, trimStr } = trimNumber(valueStr);
+  const hydrateValueStr = `${negativeStr}${trimStr.padStart(maxDecimalLength + 1, '0')}`;
+
+  return trimNumber(
+    `${hydrateValueStr.slice(0, -maxDecimalLength)}.${hydrateValueStr.slice(-maxDecimalLength)}`,
+  ).fullStr;
+};
+
+export const num2str = (value) => {
+  let numIn = value.toString();
+  if (value < Number.MAX_SAFE_INTEGER && value > Number.MIN_SAFE_INTEGER) return numIn;
+  let sign = ''; // To remember the number sign
+  if (numIn.charAt(0) === '-') {
+    numIn = numIn.substring(1);
+    sign = '-';
+  }
+  let str = numIn.split(/[eE]/g); // Split numberic string at e or E
+
+  if (str.length < 2) return sign + numIn; // Not an Exponent Number? Exit with orginal Num back
+
+  const power = Number(str[1]); // Get Exponent (Power) (could be + or -)
+  if (!power || power === 0) return sign + str[0]; // If 0 exponents (i.e. 0|-0|+0) then That's any easy one
+
+  const deciSp = (1.1).toLocaleString().substring(1, 2); // Get Deciaml Separator
+  str = str[0].split(deciSp); // Split the Base Number into LH and RH at the decimal point
+
+  let baseRH = str[1] || ''; // RH Base part. Make sure we have a RH fraction else """"
+  let baseLH = str[0]; // LH base part.
+
+  if (power > 0) {
+    // ------- Positive Exponents (Process the RH Base Part)
+    if (power > baseRH.length) baseRH += '0'.repeat(power - baseRH.length); // Pad with ""0"" at RH
+    baseRH = baseRH.slice(0, power) + deciSp + baseRH.slice(power); // Insert decSep at the correct place into RH base
+    if (baseRH.charAt(baseRH.length - 1) === deciSp) baseRH = baseRH.slice(0, -1); // If decSep at RH end? => remove it
+  } else {
+    // ------- Negative Exponents (Process the LH Base Part)
+    const num = Math.abs(power) - baseLH.length; // Delta necessary 0's
+    if (num > 0) baseLH = '0'.repeat(num) + baseLH; // Pad with ""0"" at LH
+    baseLH = baseLH.slice(0, power) + deciSp + baseLH.slice(power); // Insert ""."" at the correct place into LH base
+    if (baseLH.charAt(0) === deciSp) baseLH = '0' + baseLH; // If decSep at LH most? => add ""0""
+  }
+  return sign + baseLH + baseRH; // Return the long number (with sign)
+};
+
+export default add;
+<fim_middle>",incorrect,4633
+"{
+  const dx = vertex2.x - vertex1.x;",Vector,2eea3cdf17dad8f71b37165f9ddfdf85c5088bdf,"<fim_prefix>// TODO check these comments:
+// Assuming that polygon vertices are in clockwise order
+
+type Vector = {
+  x: number;
+  y: number;
+};
+
+type Edge = {
+  index: number;
+  inwardNormal: Vector;
+  outwardNormal: Vector;
+  vertex1: Vector;
+  vertex2: Vector;
+};
+
+type OffsetEdge = {
+  vertex1: Vector;
+  vertex2: Vector;
+};
+
+type Polygon = {
+  edges: Edge[];
+  offsetEdges?: OffsetEdge[];
+  maxX: number;
+  maxY: number;
+  minX: number;
+  minY: number;
+  vertices: Vector[];
+};
+
+const TWO_PI = Math.PI * 2;
+
+// See http://paulbourke.net/geometry/pointlineplane/
+function inwardEdgeNormal(vertex1, vertex2): <fim_suffix> {
+  // Assuming that polygon vertices are in clockwise order
+  const dx = vertex2.x - vertex1.x;
+  const dy = vertex2.y - vertex1.y;
+  const edgeLength = Math.sqrt(dx * dx + dy * dy);
+
+  return {
+    x: -dy / edgeLength,
+    y: dx / edgeLength,
+  };
+}
+
+function outwardEdgeNormal(vertex1, vertex2) {
+  var n = inwardEdgeNormal(vertex1, vertex2);
+
+  return {
+    x: -n.x,
+    y: -n.y,
+  };
+}
+
+function createPolygon(vertices) {
+  const edges: Edge[] = [];
+  let minX = vertices.length > 0 ? vertices[0].x : undefined;
+  let minY = vertices.length > 0 ? vertices[0].y : undefined;
+  let maxX = minX;
+  let maxY = minY;
+
+  for (let i = 0; i < vertices.length; i++) {
+    const vertex1 = vertices[i];
+    const vertex2 = vertices[(i + 1) % vertices.length];
+
+    const outwardNormal = outwardEdgeNormal(vertex1, vertex2);
+
+    const inwardNormal = inwardEdgeNormal(vertex1, vertex2);
+
+    const edge: Edge = {
+      vertex1,
+      vertex2,
+      index: i,
+      outwardNormal,
+      inwardNormal,
+    };
+
+    edges.push(edge);
+
+    const x = vertices[i].x;
+    const y = vertices[i].y;
+    minX = Math.min(x, minX);
+    minY = Math.min(y, minY);
+    maxX = Math.max(x, maxX);
+    maxY = Math.max(y, maxY);
+  }
+
+  const polygon: Polygon = {
+    vertices,
+    edges,
+    minX,
+    minY,
+    maxX,
+    maxY,
+  };
+
+  return polygon;
+}
+
+// based on http://local.wasp.uwa.edu.au/~pbourke/geometry/lineline2d/, edgeA => ""line a"", edgeB => ""line b""
+
+function edgesIntersection(edgeA, edgeB) {
+  const den =
+    (edgeB.vertex2.y - edgeB.vertex1.y) * (edgeA.vertex2.x - edgeA.vertex1.x) -
+    (edgeB.vertex2.x - edgeB.vertex1.x) * (edgeA.vertex2.y - edgeA.vertex1.y);
+
+  if (den == 0) {
+    return null; // lines are parallel or coincident
+  }
+
+  const ua =
+    ((edgeB.vertex2.x - edgeB.vertex1.x) * (edgeA.vertex1.y - edgeB.vertex1.y) -
+      (edgeB.vertex2.y - edgeB.vertex1.y) *
+        (edgeA.vertex1.x - edgeB.vertex1.x)) /
+    den;
+
+  const ub =
+    ((edgeA.vertex2.x - edgeA.vertex1.x) * (edgeA.vertex1.y - edgeB.vertex1.y) -
+      (edgeA.vertex2.y - edgeA.vertex1.y) *
+        (edgeA.vertex1.x - edgeB.vertex1.x)) /
+    den;
+
+  // Edges are not intersecting but the lines defined by them are
+  const isIntersectionOutside = ua < 0 || ub < 0 || ua > 1 || ub > 1;
+
+  return {
+    x: edgeA.vertex1.x + ua * (edgeA.vertex2.x - edgeA.vertex1.x),
+    y: edgeA.vertex1.y + ua * (edgeA.vertex2.y - edgeA.vertex1.y),
+    isIntersectionOutside,
+  };
+}
+
+function appendArc(
+  arcSegments,
+  vertices,
+  center,
+  radius,
+  startVertex,
+  endVertex,
+  isPaddingBoundary
+) {
+  var startAngle = Math.atan2(
+    startVertex.y - center.y,
+    startVertex.x - center.x
+  );
+  var endAngle = Math.atan2(endVertex.y - center.y, endVertex.x - center.x);
+
+  if (startAngle < 0) {
+    startAngle += TWO_PI;
+  }
+
+  if (endAngle < 0) {
+    endAngle += TWO_PI;
+  }
+
+  const angle =
+    startAngle > endAngle
+      ? startAngle - endAngle
+      : startAngle + TWO_PI - endAngle;
+  const angleStep = (isPaddingBoundary ? -angle : TWO_PI - angle) / arcSegments;
+
+  vertices.push(startVertex);
+
+  for (let i = 1; i < arcSegments; ++i) {
+    const angle = startAngle + angleStep * i;
+
+    const vertex = {
+      x: center.x + Math.cos(angle) * radius,
+      y: center.y + Math.sin(angle) * radius,
+    };
+
+    vertices.push(vertex);
+  }
+
+  vertices.push(endVertex);
+}
+
+function createOffsetEdge(edge, dx, dy) {
+  return {
+    vertex1: {
+      x: edge.vertex1.x + dx,
+      y: edge.vertex1.y + dy,
+    },
+    vertex2: {
+      x: edge.vertex2.x + dx,
+      y: edge.vertex2.y + dy,
+    },
+  };
+}
+
+function createMarginPolygon(
+  polygon,
+  offset,
+  arcSegments
+) {
+  const offsetEdges: OffsetEdge[] = [];
+
+  for (let i = 0; i < polygon.edges.length; i++) {
+    const edge = polygon.edges[i];
+    const dx = edge.outwardNormal.x * offset;
+    const dy = edge.outwardNormal.y * offset;
+    offsetEdges.push(createOffsetEdge(edge, dx, dy));
+  }
+
+  const vertices: Vector[] = [];
+
+  for (let i = 0; i < offsetEdges.length; i++) {
+    const thisEdge = offsetEdges[i];
+    const prevEdge =
+      offsetEdges[(i + offsetEdges.length - 1) % offsetEdges.length];
+    const vertex = edgesIntersection(prevEdge, thisEdge);
+
+    if (vertex && (!vertex.isIntersectionOutside || arcSegments < 1)) {
+      vertices.push({
+        x: vertex.x,
+        y: vertex.y,
+      });
+    } else {
+      const arcCenter = polygon.edges[i].vertex1;
+
+      appendArc(
+        arcSegments,
+        vertices,
+        arcCenter,
+        offset,
+        prevEdge.vertex2,
+        thisEdge.vertex1,
+        false
+      );
+    }
+  }
+
+  const marginPolygon = createPolygon(vertices);
+
+  marginPolygon.offsetEdges = offsetEdges;
+
+  return marginPolygon;
+}
+
+function createPaddingPolygon(
+  polygon,
+  offset,
+  arcSegments
+) {
+  const offsetEdges: OffsetEdge[] = [];
+
+  for (let i = 0; i < polygon.edges.length; i++) {
+    const edge = polygon.edges[i];
+    const dx = edge.inwardNormal.x * offset;
+    const dy = edge.inwardNormal.y * offset;
+    offsetEdges.push(createOffsetEdge(edge, dx, dy));
+  }
+
+  const vertices: Vector[] = [];
+
+  for (let i = 0; i < offsetEdges.length; i++) {
+    const thisEdge = offsetEdges[i];
+    const prevEdge =
+      offsetEdges[(i + offsetEdges.length - 1) % offsetEdges.length];
+    const vertex = edgesIntersection(prevEdge, thisEdge);
+    if (vertex && (!vertex.isIntersectionOutside || arcSegments < 1)) {
+      vertices.push({
+        x: vertex.x,
+        y: vertex.y,
+      });
+    } else {
+      const arcCenter = polygon.edges[i].vertex1;
+
+      appendArc(
+        arcSegments,
+        vertices,
+        arcCenter,
+        offset,
+        prevEdge.vertex2,
+        thisEdge.vertex1,
+        true
+      );
+    }
+  }
+
+  const paddingPolygon = createPolygon(vertices);
+
+  paddingPolygon.offsetEdges = offsetEdges;
+
+  return paddingPolygon;
+}
+
+export default function offsetPolygon(
+  vertices,
+  offset,
+  arcSegments = 0
+) {
+  const polygon = createPolygon(vertices);
+
+  if (offset > 0) {
+    return createMarginPolygon(polygon, offset, arcSegments).vertices;
+  } else {
+    return createPaddingPolygon(polygon, -offset, arcSegments).vertices;
+  }
+}
+<fim_middle>",incorrect,3406
+"string,
+) {
+  const distances = vertices.reduce((acc, curr",Vertex,eaa92966cbe116f28e1b5c9c0f4b724a32bab041,"<fim_prefix>type Vertex = string;
+type Weight = number;
+type Graph = Record<string, Record<string, Weight>>;
+
+/**
+ * If a target is not provided, finds the single-source shortest path distance from the source vertex with positive or negative edge weights
+ * (but with no negative weight cycles).
+ * Else, it returns the shortest path as well as its distance from source vertex to target vertex.
+ * In the case of negative weight cycles, if target is defined, then negative infinity and empty array path will be returned,
+ * else, all distances from A will be returned with negative infinity.
+ *
+ * @param {Graph} graph Vertex with its fields being the neighboring vertices and value being the weight from vertex to neighboring vertices
+ * @param {Vertex} source Starting vertex in graph
+ * @param {Vertex} target Ending vertex in graph
+ * @return {Record<string, number> | [number, Array<Vertex>]} An object mapping of the distance from the source vertex or an array containing the distance
+ * and an array containing the path from source to target vertex
+ */
+function bellmanFord(
+  graph,
+  source,
+  target?,
+) {
+  const vertices = Object.keys(graph);
+  // if graph is empty, immediately return
+  if (vertices.length === 0) {
+    return target ? [0, []] : {};
+  }
+
+  if (!vertices.includes(source) || (target && !vertices.includes(target))) {
+    return target ? [-Infinity, []] : {};
+  }
+
+  const distances = getDistances(vertices, source);
+  const predecessor = getPredecessor(vertices);
+
+  // requires only n - 1 iteration
+  for (let i = 0; i < vertices.length - 1; i++) {
+    for (let startVertex of vertices) {
+      const neighbors = graph[startVertex];
+      for (let endVertex in neighbors) {
+        const weight = graph[startVertex][endVertex];
+        // relaxation
+        if (distances[startVertex] + weight < distances[endVertex]) {
+          distances[endVertex] = distances[startVertex] + weight;
+          predecessor[endVertex] = startVertex;
+        }
+      }
+    }
+  }
+
+  // checks for any negative weight cycles. If true returns all distances as -Infinity as a sign negative weight cycles
+  for (let startVertex of vertices) {
+    const neighbors = graph[startVertex];
+    for (let endVertex in neighbors) {
+      const weight = graph[startVertex][endVertex];
+      // if relaxation occurs here, negative weight cycles detected
+      if (distances[startVertex] + weight < distances[endVertex]) {
+        return target ? [-Infinity, []] : negativeWeightCycles(vertices);
+      }
+    }
+  }
+
+  if (!target) {
+    return distances;
+  }
+
+  const shortestDistance = distances[target];
+  const path = getPath(predecessor, source, target);
+  return [shortestDistance, path];
+}
+
+/**
+ * Returns an Object mapping of nodes to distance with values all being negative infinity to represent a negative weight cycle being present.
+ *
+ * @param {Array<Vertex>} vertices An array of all vertices in the graph
+ * @return {Record<string, number>} An object mapping of nodes with values being negative infinity
+ */
+function negativeWeightCycles(vertices) {
+  return vertices.reduce((acc, curr) => {
+    acc[curr] = -Infinity;
+    return acc;
+  }, {} as Record<string, number>);
+}
+
+/**
+ * Initializes the distance mapping from source to rest of the vertices.
+ *
+ * @param {Array<Vertex>} vertices An array of all vertices in the graph
+ * @param {Vertex} source Starting vertex in graph
+ * @return {Record<string, number>} An object mapping of source to rest of vertices
+ */
+function getDistances(
+  vertices,
+  source: <fim_suffix>,
+) {
+  const distances = vertices.reduce((acc, curr) => {
+    acc[curr] = Infinity;
+    return acc;
+  }, {} as Record<string, number>);
+  distances[source] = 0;
+  return distances;
+}
+
+/**
+ * Returns an array denoting the path from start vertex to end vertex.
+ *
+ * @param {Object} predecessor Mapping of child vertex pointing to parent vertex
+ * @param {Vertex} source Starting vertex in graph
+ * @param {Vertex} target End vertex in graph
+ * @return {Array<String>} An array containing the path from source to target vertex
+ */
+function getPath(
+  predecessor,
+  source,
+  target,
+) {
+  const path = [target];
+  while (target && target !== source) {
+    const next = predecessor[target];
+    target = next ?? source; // if next is undefined, it reaches source
+    path.push(target);
+  }
+  return path.reverse();
+}
+
+/**
+ * Generates a default object mapping of child vertex pointing to parent vertex which will be defaulted to undefined initially.
+ *
+ * @param {Array<Vertex>} vertices An array of all vertices in the graph
+ * @return {Record<string, Vertex | undefined>} An object mapping of child vertex pointing to parent vertex
+ */
+function getPredecessor(
+  vertices,
+) {
+  const predecessor = {} as Record<string, Vertex | undefined>;
+  for (let vertex of vertices) {
+    predecessor[vertex] = undefined;
+  }
+  return predecessor;
+}
+
+export default bellmanFord;
+<fim_middle>",incorrect,4130
+"string[] {
+  const esComponentsFolder = '@element-ultra/components",any,56adb91b1ef4948b08a70815c7446daa4083f9e4,"<fim_prefix>export interface ElementUltraResolverOptions {
+  /**
+   * use commonjs lib & source css or scss for ssr
+   */
+  ssr?: boolean
+
+  /**
+   * auto import for directives
+   *
+   * @default true
+   */
+  directives?: boolean
+
+  /**
+   * exclude component name, if match do not resolve the name
+   */
+  exclude?: RegExp
+}
+
+type ElementUltraResolverOptionsResolved = Required<
+  Omit<ElementUltraResolverOptions, 'exclude'>
+> &
+  Pick<ElementUltraResolverOptions, 'exclude'>
+
+function getSideEffects(dirName): <fim_suffix> {
+  const esComponentsFolder = '@element-ultra/components'
+  return `${esComponentsFolder}/${dirName}/style/index`
+}
+
+function kebabCase(key) {
+  const result = key.replace(/([A-Z])/g, ' $1').trim()
+  return result.split(' ').join('-').toLowerCase()
+}
+
+function resolveComponent(name) {
+  if (!name.match(/^El[A-Z]/)) return
+
+  const partialName = kebabCase(name.slice(2)) // ElTableColumn -> table-column
+
+  return {
+    importName: name,
+    path: `element-ultra`,
+    sideEffects: getSideEffects(partialName),
+  }
+}
+
+function resolveDirective(
+  name,
+  options
+) {
+  if (!options.directives) return
+
+  const directives: Record<string, { importName: string; styleName: string }> =
+    {
+      Loading: { importName: 'ElLoadingDirective', styleName: 'loading' },
+      Popover: { importName: 'ElPopoverDirective', styleName: 'popover' },
+      InfiniteScroll: {
+        importName: 'ElInfiniteScroll',
+        styleName: 'infinite-scroll',
+      },
+    }
+
+  const directive = directives[name]
+  if (!directive) return
+
+  return {
+    importName: directive.importName,
+    path: `element-ultra`,
+    sideEffects: getSideEffects(directive.styleName),
+  }
+}
+
+export function ElementUltraResolver(
+  options = {}
+) {
+  let optionsResolved: ElementUltraResolverOptionsResolved
+
+  async function resolveOptions() {
+    if (optionsResolved) return optionsResolved
+    optionsResolved = {
+      ssr: false,
+      directives: true,
+      exclude: undefined,
+      ...options,
+    }
+    return optionsResolved
+  }
+
+  return [
+    {
+      type: 'component',
+      resolve: async (name) => {
+        return resolveComponent(name)
+      },
+    },
+    {
+      type: 'directive',
+      resolve: async (name) => {
+        return resolveDirective(name, await resolveOptions())
+      },
+    },
+  ]
+}
+<fim_middle>",incorrect,32
+x is string,boolean,cb14c7a279f215293358730312da69fac60347a7,"<fim_prefix>const isNull =
+	(val): val is null =>
+		val === null
+
+const isString =
+	(val): val is string =>
+		typeof val === ""string""
+
+const isBoolean =
+	(val): val is boolean =>
+		typeof val === ""boolean""
+
+const isUndefined =
+	(val): val is undefined =>
+		val === undefined
+
+const isUpperCase =
+	(x): <fim_suffix> =>
+		x === x.toUpperCase()
+
+const isEmpty =
+	(val) =>
+		val.length === 0
+
+const normalizeInput =
+	(classNames) =>
+		classNames
+			.map(
+				className => {
+					if (isBoolean(className) || isNull(className) || isUndefined(className)) {
+						return { className: """", remove: true }
+					} else if (isString(className)) {
+						if (isEmpty(className)) {
+							return { className }
+						} else if (isUpperCase(className.charAt(0))) {
+							return { className, ignore: true }
+						} else {
+							return { className }
+						}
+					} else {
+						return className
+					}
+				},
+			)
+
+const filterRemove =
+	(classNames) =>
+		classNames.filter(({ remove }) => !remove)
+
+const mapBEMValues =
+	(classNames, componentName) =>
+		classNames.map(
+			({ ignore, className }) => {
+				if (ignore) {
+					return className
+				} else if (isEmpty(componentName)) {
+					return className
+				} else if (isEmpty(className)) {
+					return componentName
+				} else {
+					return `${componentName}__${className}`
+				}
+			},
+		)
+
+const joinToString =
+	(classNames) => (
+		isEmpty(classNames) ?
+			undefined :
+			classNames.join("" "")
+	)
+
+export const createBEM =
+	(componentName) =>
+		(...classNames) =>
+			joinToString(
+				mapBEMValues(
+					filterRemove(
+						normalizeInput(classNames),
+					),
+					componentName,
+				),
+			)
+
+export interface BEMClassType {
+	remove?: boolean,
+	ignore?: boolean,
+	className: string,
+}
+
+export type BEMInput =
+	BEMClassType | string | boolean | undefined | null<fim_middle>",incorrect,726
+"0 | 1 | 2,
+    limit
+) {
+    let list",number,56013b675d2c5276fca785f74daf84664803de98,"<fim_prefix>/*
+ * @Author: your name
+ * @Date: 2022-04-24 10:11:23
+ * @LastEditTime: 2022-04-24 16:14:52
+ * @LastEditors: Please set LastEditors
+ * @Description: 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ * @FilePath: /tinkerbell-ui-react/src/packages/DaysPicker/date/interface.ts
+ */
+//  props 天
+export interface dayProps {
+    year: number;
+    month: number;
+    active: number;
+    change: Function;
+    visible: boolean;
+    monthRef: any;
+    show: boolean;
+    limit: boolean;
+}
+//  props 月
+export interface monthProps {
+    visible: boolean;
+    active: number;
+    change: Function;
+    year: number;
+    plateChange: Function;
+    limit: boolean;
+}
+//  props 年
+export interface yearProps {
+    visible: boolean;
+    active: number;
+    change: Function;
+    plateChange: Function;
+    limit: boolean;
+}
+
+// pageday-item type
+export type dayItem = {
+    label: string;
+    value: number;
+    disabled: boolean; //禁用
+    prev: boolean; // 是否属于上一月份
+    next: boolean; // 是否属于上一月份
+    week: number; // 星期下标
+    weekLabel: string; // 星期明文
+};
+
+// pageMonth-item type
+export type monthItem = {
+    value: number;
+    label: string;
+    disabled: boolean;
+};
+
+// 年份
+export function getYearList(year, limit) {
+    let list: Array<monthItem> = [];
+
+    let newYear = new Date().getFullYear();
+    let maxYear = year + 9;
+    for (let i = year - 3; i < maxYear; i++) {
+        list.push({
+            value: i,
+            label: `${i}`,
+            disabled: i < newYear && limit,
+        });
+    }
+    return list;
+}
+
+// 月份
+export function getMonthList(year, limit) {
+    let list: Array<monthItem> = [];
+    for (let i = 1; i < 13; i++) {
+        list.push({
+            value: i,
+            label: `${i}月`,
+            disabled: checkDisabledMonth(year, i) && limit,
+        });
+    }
+    return list;
+}
+// 月-禁用判定
+function checkDisabledMonth(prevYear, prevMonth) {
+    const prevTime = new Date(`${prevYear}/${prevMonth}/01`).getTime();
+    const newDate = new Date();
+    const year: number = newDate.getFullYear();
+    let month: number = newDate.getMonth() + 1;
+    const newTime = new Date(`${year}/${month}/01`).getTime();
+    return prevTime < newTime;
+}
+
+// 日期对照月份表
+const monthAsDay = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; //月份
+
+// 星期列表
+export const weekList = [""一"", ""二"", ""三"", ""四"", ""五"", ""六"", ""日""];
+
+// 日-数据列表生成type:0当前月份，1上一月，2下一月
+export function getDayList(
+    year,
+    month,
+    type: <fim_suffix>,
+    limit
+) {
+    let list: Array<dayItem> = [];
+    let max: number = year % 4 === 0 && month === 2 ? 1 : 0; // 闰年判定
+    max = monthAsDay[month - 1] + max; // 定位月份
+
+    for (let i = 0; i < max; i++) {
+        let value = i + 1;
+        let weekParam = checkWeek(year, month, value);
+        list.push({
+            label: value.toString(),
+            value: value,
+            disabled: checkDisabled(year, month, value) && limit,
+            prev: type === 1,
+            next: type === 2,
+            week: weekParam.value,
+            weekLabel: weekParam.label,
+        });
+    }
+    if (type !== 0) {
+        return list;
+    } else {
+        return dayListSupply(list, year, month, limit);
+    }
+}
+// 日-数据按周补充
+function dayListSupply(
+    arr,
+    year,
+    month,
+    limit
+) {
+    let prevList = getDayList(
+        month === 1 ? year - 1 : year,
+        month === 1 ? 12 : month - 1,
+        1,
+        limit
+    );
+    let nextList = getDayList(
+        month === 12 ? year + 1 : year,
+        month === 12 ? 1 : month + 1,
+        2,
+        limit
+    );
+    // 上月
+    for (let i = prevList.length - 1; i > 0; i--) {
+        if (prevList[i].week === 7) {
+            break;
+        }
+        arr.unshift(prevList[i]);
+    }
+    // 下月
+    for (let i = 0; i < nextList.length - 1; i++) {
+        if (arr.length === 42) {
+            break;
+        }
+        arr.push(nextList[i]);
+    }
+    return arr;
+}
+
+// 日-禁用判定
+export function checkDisabled(
+    prevYear,
+    prevMonth,
+    prevDay
+) {
+    const prevTime = new Date(`${prevYear}/${prevMonth}/${prevDay}`).getTime();
+    const newDate = new Date();
+    const year: number = newDate.getFullYear();
+    let month: number = newDate.getMonth() + 1;
+    let day: number = newDate.getDate();
+    const newTime = new Date(`${year}/${month}/${day}`).getTime();
+    return prevTime < newTime;
+}
+
+// 周期-判定星期几
+function checkWeek(year, month, day) {
+    let weekday = [
+        ""星期日"",
+        ""星期一"",
+        ""星期二"",
+        ""星期三"",
+        ""星期四"",
+        ""星期五"",
+        ""星期六"",
+    ];
+    let newDate = new Date(`${year}/${month}/${day}`);
+    let mark = newDate.getDay();
+
+    return {
+        value: mark === 0 ? 7 : mark,
+        label: weekday[mark],
+    };
+}
+<fim_middle>",incorrect,11
+"any) {
+    var keys = [];
+    for (var key in obj)",object,ac2f2620a73cd8792597b3c5d3baa98411d6543c,"<fim_prefix>function keys(obj:: <fim_suffix> hasKeyvar keys = [];
+    for (var key in obj) {
+        if (hasKey(obj, key)) {
+            keys.push(key);
+        }
+    }
+    return keys.concat(
+        (Object.getOwnPropertySymbols(obj) as Array<any>).filter(
+            symbol =>
+                (Object.getOwnPropertyDescriptor(obj, symbol) as PropertyDescriptor)
+                    .enumerable,
+        ),
+    );
+}
+
+function hasKey(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function hasDefinedKey(obj, key) {
+    return hasKey(obj, key) && obj[key] !== undefined;
+}
+
+
+function isDomNode(obj) {
+    return (
+        obj !== null &&
+        typeof obj === 'object' &&
+        typeof obj.nodeType === 'number' &&
+        typeof obj.nodeName === 'string' &&
+        typeof obj.isEqualNode === 'function'
+    );
+}
+
+
+function isA(typeName, value) {
+    return Object.prototype.toString.apply(value) === '[object ' + typeName + ']';
+}
+
+function isAsymmetric(obj) {
+    return !!obj && isA('Function', obj.asymmetricMatch);
+}
+
+function asymmetricMatch(a, b) {
+    var asymmetricA = isAsymmetric(a),
+        asymmetricB = isAsymmetric(b);
+
+    if (asymmetricA && asymmetricB) {
+        return undefined;
+    }
+
+    if (asymmetricA) {
+        return a.asymmetricMatch(b);
+    }
+
+    if (asymmetricB) {
+        return b.asymmetricMatch(a);
+    }
+}
+
+
+type Tester = (a, b) => boolean | undefined;
+
+
+/**
+ * 深比對物件
+ * @param a
+ * @param b
+ * @param aStack
+ * @param bStack
+ * @param customTesters
+ * @param hasKey
+ */
+const eq = (
+    a,
+    b,
+    aStack,
+    bStack,
+    customTesters,
+    hasKey,
+) => {
+
+    customTesters = customTesters || [];
+
+    var result = true;
+
+    var asymmetricResult = asymmetricMatch(a, b);
+    if (asymmetricResult !== undefined) {
+        return asymmetricResult;
+    }
+
+    for (var i = 0; i < customTesters.length; i++) {
+        var customTesterResult = customTesters[i](a, b);
+        if (customTesterResult !== undefined) {
+            return customTesterResult;
+        }
+    }
+
+    if (a instanceof Error && b instanceof Error) {
+        return a.message == b.message;
+    }
+
+    if (Object.is(a, b)) {
+        return true;
+    }
+    // A strict comparison is necessary because `null == undefined`.
+    if (a === null || b === null) {
+        return a === b;
+    }
+    var className = Object.prototype.toString.call(a);
+    if (className != Object.prototype.toString.call(b)) {
+        return false;
+    }
+    switch (className) {
+        case '[object Boolean]':
+        case '[object String]':
+        case '[object Number]':
+            if (typeof a !== typeof b) {
+                // One is a primitive, one a `new Primitive()`
+                return false;
+            } else if (typeof a !== 'object' && typeof b !== 'object') {
+                // both are proper primitives
+                return Object.is(a, b);
+            } else {
+                // both are `new Primitive()`s
+                return Object.is(a.valueOf(), b.valueOf());
+            }
+        case '[object Date]':
+            // Coerce dates to numeric primitive values. Dates are compared by their
+            // millisecond representations. Note that invalid dates with millisecond representations
+            // of `NaN` are not equivalent.
+            return +a == +b;
+        // RegExps are compared by their source patterns and flags.
+        case '[object RegExp]':
+            return a.source === b.source && a.flags === b.flags;
+    }
+    if (typeof a !== 'object' || typeof b !== 'object') {
+        return false;
+    }
+
+    // Use DOM3 method isEqualNode (IE>=9)
+    if (isDomNode(a) && isDomNode(b)) {
+        return a.isEqualNode(b);
+    }
+
+    // Used to detect circular references.
+    var length = aStack.length;
+    while (length--) {
+        // Linear search. Performance is inversely proportional to the number of
+        // unique nested structures.
+        // circular references at same depth are equal
+        // circular reference is not equal to non-circular one
+        if (aStack[length] === a) {
+            return bStack[length] === b;
+        } else if (bStack[length] === b) {
+            return false;
+        }
+    }
+    // Add the first object to the stack of traversed objects.
+    aStack.push(a);
+    bStack.push(b);
+    // Recursively compare objects and arrays.
+    // Compare array lengths to determine if a deep comparison is necessary.
+    if (className == '[object Array]' && a.length !== b.length) {
+        return false;
+    }
+
+    // Deep compare objects.
+    var aKeys = keys(a, hasKey),
+        key;
+    var size = aKeys.length;
+
+    // Ensure that both objects contain the same number of properties before comparing deep equality.
+    if (keys(b, hasKey).length !== size) {
+        return false;
+    }
+
+    while (size--) {
+        key = aKeys[size];
+
+        // Deep compare each member
+        result =
+            hasKey(b, key) &&
+            eq(a[key], b[key], aStack, bStack, customTesters, hasKey);
+
+        if (!result) {
+            return false;
+        }
+    }
+    // Remove the first object from the stack of traversed objects.
+    aStack.pop();
+    bStack.pop();
+
+    return result;
+
+};
+
+
+/**
+ * 深度比較 (toStrictEqual)
+ * @param a
+ * @param b
+ * @param isStrictCheck 嚴格(default: false, 開啟則會檢查不可為將物件中的 undefined 視為不同)
+ * @param options
+ */
+function deepCompare(
+    a,
+    b,
+    isStrictCheck?,
+    options?,
+) {
+    const customTesters = options?.customTesters || [];
+    return eq(a, b, [], [], customTesters, isStrictCheck ? hasKey : hasDefinedKey);
+}
+
+export default deepCompare;
+<fim_middle>",incorrect,1054
+"number | string;
+    };
+  type ObjectCoercibleNotSymbol = primitive",primitive,54795a90e2bd17f0016b0a39e21d9821b144d333,"<fim_prefix>/// <reference no-default-lib=""true""/>
+/// <reference lib=""es6"" />
+
+(function () {
+  type primitiveObject = boolean | number | string;
+  type primitive = primitiveObject | null | undefined;
+  type ObjectCoercible = primitiveObject | {
+      toString ();
+    } | {
+      valueOf (): <fim_suffix>;
+    };
+  type anyNotSymbol = ObjectCoercible | null | undefined;
+  interface StandardString {
+    endsWith? (this, searchString, pos?);
+    endsWith? (this, searchString?, pos?);
+    includes? (this, searchString, pos?);
+    includes? (this, searchString?, pos?);
+    startsWith? (this, searchString, pos?);
+    startsWith? (this, searchString?, pos?);
+  }
+
+  const symMatch = typeof Symbol === ""function"" && typeof Symbol.match === ""symbol"" &&
+                    (Symbol.match as symbol | string as ""Symbol(Symbol.match)""),
+  // eslint-disable-next-line id-denylist
+  StrCls = String as StringConstructor & { readonly prototype: StandardString }, TECls = TypeError,
+  StrProto = StrCls.prototype,
+  toStr = Object.prototype.toString;
+
+  """".startsWith || (
+  StrProto.startsWith = function startsWith(this, searchString) {
+    const err = check(this, searchString), a = this != null && err !== 1 ? StrCls(this) : """";
+    if (err !== 0) {
+      if (err === 1 || err === 2) { return !((err < 2 ? this : searchString) + """"); }
+      throw new TECls(err.replace(""${func}"", ""startsWith""));
+    }
+    let b = StrCls(searchString), args = arguments, c = args.length > 1 ? +args[1] : 0;
+    c = c > 0 ? c | 0 : 0;
+    c > a.length && (c = a.length);
+    return a.lastIndexOf(b, c) === c;
+  });
+
+  """".endsWith || (
+  StrProto.endsWith = function endsWith(this, searchString) {
+    const err = check(this, searchString), a = this != null && err !== 1 ? StrCls(this) : """";
+    if (err !== 0) {
+      if (err === 1 || err === 2) { return !((err < 2 ? this : searchString) + """"); }
+      throw new TECls(err.replace(""${func}"", ""endsWith""));
+    }
+    let b = StrCls(searchString), args = arguments, u: undefined, c: number
+      , p: primitive | object = args.length > 1 ? args[1] : u, l = a.length;
+    c = (p === u ? l : (c = +<number | string> p) > 0 ? c | 0 : 0) - b.length;
+    c > l && (c = l);
+    return c >= 0 && a.indexOf(b, c) === c;
+  });
+
+  """".includes || (
+  StrProto.includes = function includes(this, searchString) {
+    const err = check(this, searchString), a = this != null && err !== 1 ? StrCls(this) : """";
+    if (err !== 0) {
+      if (err === 1 || err === 2) { return !((err < 2 ? this : searchString) + """"); }
+      throw new TECls(err.replace(""${func}"", ""includes""));
+    }
+    let b = StrCls(searchString), args = arguments, c = args.length > 1 ? +args[1] : 0;
+    c = c > 0 ? c | 0 : 0;
+    c > a.length && (c = a.length);
+    // eslint-disable-next-line @typescript-eslint/prefer-includes
+    return a.indexOf(b, c) >= 0;
+  });
+
+  function check(a, b) {
+    /** note: should never call `valueOf` or `toString` on a / b */
+    if (a == null) { return ""String.prototype.${func} called on null or undefined""; }
+    if (!b) { return 0; }
+    let t: 0 | 1 | 2 = typeof a === ""symbol"" ? 1 : typeof b === ""symbol"" ? 2 : 0;
+    if (t) { return t; }
+    interface PossibleTypeOfB {
+      [key: string]: ((this, re) => boolean) | primitive;
+    }
+    let f: PossibleTypeOfB[string], u: undefined
+      , i = symMatch && (f = (b as PossibleTypeOfB)[symMatch]) !== u ? f
+          : toStr.call(b) === ""[object RegExp]"";
+    return i ? ""First argument to String.prototype.${func} must not be a regular expression"" : 0;
+  }
+})();
+<fim_middle>",incorrect,4609
+JSX.Element,string,5ee8da532cd90e4925e467deb8769a2f6b51a942,"<fim_prefix>type TimeCalculatorPropsType = {
+  createdAt: Date
+}
+
+const TimeCalculator = ({ createdAt }): <fim_suffix> => {
+  const createdDate: Date = new Date(createdAt)
+  const nowDate: Date = new Date()
+
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
+  ]
+
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  const milisecond: number = nowDate.valueOf() - createdDate.valueOf()
+  const second = milisecond / 1000
+  const minute = second / 60
+  const hour = minute / 60
+  const day = hour / 24
+
+  if (second < 1) {
+    return 'now'
+  }
+
+  if (
+    Math.floor(minute) === 0 &&
+    Math.floor(hour) === 0 &&
+    Math.floor(day) === 0
+  ) {
+    return Math.round(second) === 1
+      ? `${Math.round(second)} second ago`
+      : `${Math.round(second)} seconds ago`
+  }
+
+  if (Math.floor(day) === 0 && Math.floor(hour) === 0) {
+    return Math.round(minute) === 1
+      ? `${Math.round(minute)} minute ago`
+      : `${Math.round(minute)} minutes ago`
+  }
+
+  if (Math.floor(day) === 0) {
+    return Math.round(hour) === 1
+      ? `${Math.round(hour)} hour ago`
+      : `${Math.round(hour)} hours ago`
+  }
+
+  if (Math.round(day) < 7) {
+    return Math.round(day) === 1
+      ? `${Math.round(day)} day ago`
+      : `${Math.round(day)} days ago`
+  }
+
+  const dayName = days[createdDate.getDay()]
+  const date = createdDate.getDate()
+  const monthName = months[createdDate.getMonth()]
+  const createdYear =
+    createdDate.getFullYear() === nowDate.getFullYear()
+      ? ''
+      : createdDate.getFullYear()
+  const createdTime = createdDate.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+
+  return `${createdTime} · ${dayName}, ${date} ${monthName} ${createdYear}`
+}
+
+export default TimeCalculator
+<fim_middle>",incorrect,48
+"PropertyKey,
+    type?,
+    newVal?
+) {
+    if (!active",symbol,be6ce21d863494461463ab50a0cb4150d8233268,"<fim_prefix>export type EffectOptions = {
+    scheduler?: (fn) => void;
+    lazy?: boolean;
+};
+export type EffectFunction<T> = {
+    ();
+    deps: Set<Function>[];
+    options?: EffectOptions;
+};
+export type TriggerType = ""ADD"" | ""SET"" | ""DELETE"";
+export type TriggrtFunction = (
+    target,
+    key,
+    ITERATE_KEY?,
+    MAP_KEY_ITERATE_KEY?,
+    type?,
+    newVal?
+) => void;
+
+let activeEffect: undefined | EffectFunction<any>;
+const bucket = new WeakMap<any, Map<PropertyKey, Set<EffectFunction<any>>>>();
+const effectStack: EffectFunction<any>[] = [];
+
+export function effect<T>(fn, options?) {
+    const effectFn: EffectFunction<T> = () => {
+        // 清除之前的effect
+        cleanup(effectFn);
+        activeEffect = effectFn;
+        // 压入栈中
+        effectStack.push(effectFn);
+        const res = fn();
+        effectStack.pop();
+        activeEffect = effectStack[effectStack.length - 1];
+        return res;
+    };
+    effectFn.deps = [] as Set<Function>[];
+    effectFn.options = options;
+    if (!options?.lazy) {
+        effectFn();
+    }
+    return effectFn;
+}
+
+/**
+ * 清除之前的绑定，用于刷新绑定effect
+ * 可解决分支切换问题、比如三元
+ * @param effectFn
+ */
+function cleanup<T>(effectFn) {
+    for (let index = 0; index < effectFn.deps.length; index++) {
+        const deps = effectFn.deps[index];
+        deps.delete(effectFn);
+    }
+    effectFn.deps.length = 0;
+}
+
+export function track(target, key) {
+    if (!activeEffect) return;
+    // data or props
+    let depsMap = bucket.get(target);
+    if (!depsMap) {
+        bucket.set(target, (depsMap = new Map()));
+    }
+    // 属性值对应的set，set里可能存在多个effect函数
+    let deps: Set<EffectFunction<any>> | undefined = depsMap.get(key);
+    if (!deps) {
+        depsMap.set(key, (deps = new Set()));
+    }
+    // 属性对应的effect函数、effect可能存在多个、同个则覆盖
+    deps.add(activeEffect);
+    // 将当前effect添加依赖的effect
+    activeEffect.deps.push(deps);
+}
+
+export function trigger(
+    target,
+    key,
+    ITERATE_KEY?,
+    MAP_KEY_ITERATE_KEY?: <fim_suffix>,
+    type?,
+    newVal?
+) {
+    const depsMap = bucket.get(target);
+    if (!depsMap) return;
+    // 获取对应值的所有 effects
+    const effects: Set<EffectFunction<any>> | undefined = depsMap.get(key);
+
+    // 取得与ITERATE_KEY关联的副作用函数
+    let iterateEffects: Set<EffectFunction<any>> | undefined;
+    if (ITERATE_KEY) {
+        iterateEffects = depsMap.get(ITERATE_KEY);
+    }
+
+    let mapKeyIterateEffects: Set<EffectFunction<any>> | undefined;
+    if (MAP_KEY_ITERATE_KEY) {
+        mapKeyIterateEffects = depsMap.get(MAP_KEY_ITERATE_KEY);
+    }
+
+    // 分支--防止无限循环
+    const effectsToRun = new Set<EffectFunction<any>>();
+
+    effects &&
+        effects.forEach(effectFn => {
+            if (activeEffect !== effectFn) {
+                effectsToRun.add(effectFn);
+            }
+        });
+
+    // set
+    if (
+        target instanceof Set &&
+        (type === ""SET"" || type === ""ADD"" || type === ""DELETE"")
+    ) {
+        ITERATE_KEY &&
+            (iterateEffects = depsMap.get(ITERATE_KEY)) &&
+            iterateEffects.forEach(effectFn => {
+                if (activeEffect !== effectFn) {
+                    effectsToRun.add(effectFn);
+                }
+            });
+    }
+
+    // map
+    if (
+        target instanceof Map &&
+        (type === ""SET"" || type === ""ADD"" || type === ""DELETE"")
+    ) {
+        ITERATE_KEY &&
+            (iterateEffects = depsMap.get(ITERATE_KEY)) &&
+            iterateEffects.forEach(effectFn => {
+                if (activeEffect !== effectFn) {
+                    effectsToRun.add(effectFn);
+                }
+            });
+    }
+
+    if (
+        target instanceof Map &&
+        (type === ""ADD"" || type === ""DELETE"")
+    ) {
+        MAP_KEY_ITERATE_KEY &&
+            (mapKeyIterateEffects = depsMap.get(MAP_KEY_ITERATE_KEY)) &&
+            mapKeyIterateEffects.forEach(effectFn => {
+                if (activeEffect !== effectFn) {
+                    effectsToRun.add(effectFn);
+                }
+            });
+    }
+
+    // array
+    if (type === ""ADD"" && Array.isArray(target)) {
+        const lengthEffects = depsMap.get(""length"");
+        lengthEffects &&
+            lengthEffects.forEach(effectFn => {
+                if (activeEffect !== effectFn) {
+                    effectsToRun.add(effectFn);
+                }
+            });
+    }
+    if (Array.isArray(target) && key === ""length"") {
+        depsMap.forEach((effects, key) => {
+            if ((key as number) >= (newVal as number)) {
+                effects.forEach(effectFn => {
+                    if (activeEffect !== effectFn) {
+                        effectsToRun.add(effectFn);
+                    }
+                });
+            }
+        });
+    }
+
+    // object
+    (type === ""ADD"" || type === ""DELETE"") &&
+        iterateEffects &&
+        iterateEffects.forEach(effectFn => {
+            if (activeEffect !== effectFn) {
+                effectsToRun.add(effectFn);
+            }
+        });
+
+    effectsToRun.forEach(effectFn => {
+        // 调度器执行
+        if (effectFn?.options?.scheduler) {
+            effectFn?.options.scheduler(effectFn);
+        } else {
+            effectFn();
+        }
+    });
+}
+<fim_middle>",incorrect,4804
+void,undefined,26077dd04ed537e87974d0ea6dd3e9721b850057,"<fim_prefix>//https://dev.to/shinshin86/a-mock-of-localstorage-written-in-typescript-2680
+type Store = any;
+
+export class LocalStorageMock {
+    store: Store;
+    length: number;
+
+    constructor() {
+        this.store = {};
+        this.length = 0;
+    }
+
+    key(n) {
+        if (typeof n === 'undefined') {
+            throw new Error(
+                'Uncaught TypeError: Failed to execute ""key"" on ""Storage"": 1 argument required, but only 0 present.',
+            );
+        }
+
+        if (n >= Object.keys(this.store).length) {
+            return null;
+        }
+
+        return Object.keys(this.store)[n];
+    }
+
+    getItem(key) {
+        if (!Object.keys(this.store).includes(key)) {
+            return null;
+        }
+
+        return this.store[key];
+    }
+
+    setItem(key, value) {
+        if (typeof key === 'undefined' && typeof value === 'undefined') {
+            throw new Error(
+                'Uncaught TypeError: Failed to execute ""setItem"" on ""Storage"": 2 arguments required, but only 0 present.',
+            );
+        }
+
+        if (typeof value === 'undefined') {
+            throw new Error(
+                'Uncaught TypeError: Failed to execute ""setItem"" on ""Storage"": 2 arguments required, but only 1 present.',
+            );
+        }
+
+        if (!key) return undefined;
+
+        this.store[key] = value.toString() || '';
+        this.length = Object.keys(this.store).length;
+
+        return undefined;
+    }
+
+    removeItem(key) {
+        if (typeof key === 'undefined') {
+            throw new Error(
+                'Uncaught TypeError: Failed to execute ""removeItem"" on ""Storage"": 1 argument required, but only 0 present.',
+            );
+        }
+
+        delete this.store[key];
+        this.length = Object.keys(this.store).length;
+        return undefined;
+    }
+
+    clear(): <fim_suffix> {
+        this.store = {};
+        this.length = 0;
+
+        return undefined;
+    }
+}
+
+export const getLocalStorageMock = () => {
+    return new LocalStorageMock();
+};
+<fim_middle>",incorrect,4733
+IResponseAuthorization,unknown,1d39ec473347edb072e37f629ad2a9736fad5a7a,"<fim_prefix>export const Kind = 'Core#ResponseAuthorization';
+
+export interface IResponseAuthorization {
+  kind: typeof Kind;
+  /**
+   * The requested by the authorization server authentication method
+   */
+  method: string;
+  /**
+   * The current state if the authorization process. This is used by NTLM authorization helper.
+   */
+  state?: number;
+  /**
+   * The headers association with the response.
+   */
+  headers?: string;
+  /**
+   * When returned by the server, the value of the challenge.
+   */
+  challengeHeader?: string;
+}
+
+export class ResponseAuthorization {
+  kind = Kind;
+  /**
+   * The requested by the authorization server authentication method
+   */
+  method = 'unknown';
+  /**
+   * The current state if the authorization process. This is used by NTLM authorization helper.
+   */
+  state?: number;
+  /**
+   * The headers association with the response.
+   */
+  headers?: string;
+  /**
+   * When returned by the server, the value of the challenge.
+   */
+  challengeHeader?: string;
+
+  /**
+   * @param input The response authorization definition used to restore the state.
+   */
+  constructor(input?) {
+    let init: IResponseAuthorization;
+    if (typeof input === 'string') {
+      init = JSON.parse(input);
+    } else if (typeof input === 'object') {
+      init = input;
+    } else {
+      init = {
+        kind: Kind,
+        method: 'unknown',
+      };
+    }
+    this.new(init);
+  }
+
+  /**
+   * Creates a new response authorization clearing anything that is so far defined.
+   * 
+   * Note, this throws an error when the object is not a response authorization.
+   */
+  new(init) {
+    if (!ResponseAuthorization.isResponseAuthorization(init)) {
+      throw new Error(`Not a response authorization.`);
+    }
+    const { method, state, headers, challengeHeader } = init;
+    this.kind = Kind;
+    this.method = method;
+    this.state = state;
+    this.headers = headers;
+    this.challengeHeader = challengeHeader;
+  }
+
+  /**
+   * Checks whether the input is a definition of a response authorization.
+   */
+  static isResponseAuthorization(input: <fim_suffix>) {
+    const typed = input as IResponseAuthorization;
+    if (!input || !typed.method) {
+      return false;
+    }
+    return true;
+  }
+
+  toJSON() {
+    const result: IResponseAuthorization = {
+      kind: Kind,
+      method: this.method,
+    };
+    if (typeof this.state === 'number') {
+      result.state = this.state;
+    }
+    if (this.headers) {
+      result.headers = this.headers;
+    }
+    if (this.challengeHeader) {
+      result.challengeHeader = this.challengeHeader;
+    }
+    return result;
+  }
+}
+<fim_middle>",incorrect,76
+Promise<any>,void,35b6c6d6cf43374159e7f7c86517b7faf952db91,"<fim_prefix>/* eslint-disable max-len */
+// Send, Receive, Deposit, Withdrawal, Income
+export interface Transaction {
+    id: string;
+    timestamp: Date;
+    type: string;
+    baseCurrency: string;
+    baseQuantity: number;
+    baseUsdPrice: number;
+    feeCurrency: string;
+    feeQuantity: number;
+    feeUsdPrice: number;
+    feeTotal: number;
+    subTotal: number;
+    total: number;
+}
+
+// Buy, Sell, Swap
+export interface Order {
+    id: string;
+    timestamp: Date;
+    type: string;
+    baseCurrency: string;
+    baseQuantity: number;
+    baseUsdPrice: number;
+    quoteCurrency: string;
+    quoteQuantity: number;
+    quotePrice: number;
+    quoteUsdPrice: number;
+    feeCurrency: string;
+    feeQuantity: number;
+    feeUsdPrice: number;
+    feeTotal: number;
+    subTotal: number;
+    total: number;
+}
+
+/**
+ * A base class to support general connection operations
+ */
+export default class BaseConnection {
+    name: string;
+    type: string;
+    connection: any;
+    credentials?: any;
+    balances: any;
+    symbols: Array<any>;
+    initialized: boolean;
+    requireSymbols: boolean;
+    requireUsdValuation: boolean;
+    stableCoins: Array<string> = [""USDC"", ""USDT""];
+    fiatCurrencies: Array<string> = [""USD""];
+    stableCurrencies: Array<string> = [""USD"", ""USDC"", ""USDT""];
+
+    /**
+     * Create BaseConnection instance
+     * @param {string} name - Name of connection (Ex: coinbase)
+     * @param {string} type - Type of connection (Ex: api)
+     * @param {any} params - (Optional) Additional paramaters
+     */
+    constructor(name, type, params = {}) {
+        this.name = name;
+        this.type = type;
+        this.connection = null;
+        this.initialized = false;
+        this.symbols = [];
+        this.requireSymbols = params.requireSymbols
+            ? params.requireSymbols
+            : false;
+        this.requireUsdValuation = params.requireUsdValuation
+            ? params.requireUsdValuation
+            : true;
+    }
+
+    /**
+     * JSON object representing connection
+     * @return {any}
+     */
+    toJSON() {
+        const baseJSON = {
+            name: this.name,
+            type: this.type,
+            params: {},
+        };
+        if (this.credentials) {
+            const updatedParams: any = baseJSON.params;
+            updatedParams.credentials = this.credentials;
+            baseJSON.params = updatedParams;
+        }
+        return baseJSON;
+    }
+
+    /**
+     * HELPER: Convert buy/sell to swap if no fiat is involved in order
+     *
+     * @param {any} order - Order instance
+     * @return {Order} Reformatted Order
+     */
+    _attemptedSwapConversion(order) {
+        if (!this.fiatCurrencies.includes(order.quoteCurrency)) {
+            if (order.type === ""sell"") {
+                const tempBC = order.baseCurrency;
+                const tempBQ = order.baseQuantity;
+                const tempBP = order.baseUsdPrice;
+                order.baseCurrency = order.quoteCurrency;
+                order.baseQuantity = order.quoteQuantity;
+                order.baseUsdPrice = order.quoteUsdPrice;
+                order.quoteCurrency = tempBC;
+                order.quoteQuantity = tempBQ;
+                order.quoteUsdPrice = tempBP;
+                order.quotePrice = order.baseUsdPrice / order.quoteUsdPrice;
+            }
+            order.type = ""swap"";
+        }
+        return order;
+    }
+
+    /**
+     * Initialize exchange by fetching balances and loading markets
+     * @return {void}
+     */
+    initialize() {
+        throw Error(
+            `NotImplementedError: ${this.name}.initialize() has not been implemented.`
+        );
+    }
+
+    /**
+     * Fetch Account Balances
+     * @return {void}
+     */
+    getBalances() {
+        throw Error(
+            `NotImplementedError: ${this.name}.getBalances() has not been implemented.`
+        );
+    }
+
+    /**
+     * Fetch Account Withdrawals
+     * @return {void}
+     */
+    getWithdrawals() {
+        throw Error(
+            `NotImplementedError: ${this.name}.getWithdrawals() has not been implemented.`
+        );
+    }
+
+    /**
+     * Fetch Account Deposits
+     * @return {void}
+     */
+    getDeposits() {
+        throw Error(
+            `NotImplementedError: ${this.name}.getDeposits() has not been implemented.`
+        );
+    }
+
+    /**
+     * Fetch Account Orders
+     * @return {void}
+     */
+    getOrders() {
+        throw Error(
+            `NotImplementedError: ${this.name}.getOrders() has not been implemented.`
+        );
+    }
+
+    /**
+     * Fetch all account ledger (withdrawals, deposits, and orders)
+     * @return {void}
+     */
+    getLedger() {
+        throw Error(
+            `NotImplementedError: ${this.name}.getLedger() has not been implemented.`
+        );
+    }
+
+    /**
+     * Fetch account transactions (withdrawals, deposits, and orders)
+     * @return {void}
+     */
+    getTransactions() {
+        throw Error(
+            `NotImplementedError: ${this.name}.getTransactions() has not been implemented.`
+        );
+    }
+
+    /**
+     * Fetch all account transactions (withdrawals, deposits, and orders)
+     * @return {void}
+     */
+    getAllTransactions() {
+        throw Error(
+            `NotImplementedError: ${this.name}.getAllTransactions() has not been implemented.`
+        );
+    }
+
+    /**
+     * Fetch all account transactions (withdrawals, deposits, and orders)
+     * @return {void}
+     */
+    getTxUsdVal(): <fim_suffix> {
+        throw Error(
+            `NotImplementedError: ${this.name}.getTxUsdVal() has not been implemented.`
+        );
+    }
+}
+<fim_middle>",incorrect,59

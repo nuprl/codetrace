@@ -129,7 +129,8 @@ def collect_hidden_states(model : LanguageModel,
 def collect_hidden_states_at_tokens(model : LanguageModel,
                                     prompts : List[str] | str,
                                     token_idx : List[int] | int | List[str] | str,
-                                    layers : List[int] = None) -> torch.Tensor:
+                                    layers : List[int] = None,
+                                    debug = False) -> torch.Tensor:
     """
     Collect hidden states for each prompt. 
     Optionally, collect hidden states at specific layers and tokens.
@@ -152,10 +153,15 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
             # for each prompt find the index of token_idx
             target_idx = np.concatenate([np.where((i  == t)) for t in token_idx for i in indices], axis=0).reshape(indices.shape[0], -1)
             
-            hidden_states = torch.stack([
+            hidden_states = [
                     model.transformer.h[layer_idx].output[0]
                     for layer_idx in layers
-                ],dim=0).save()
+                ]
+            
+            if debug:
+                hidden_states = [decode(x) for x in hidden_states]
+                
+            hidden_states = torch.stack(hidden_states, dim=0).save()
             
     hidden_states = util.apply(hidden_states, lambda x: x.value.cpu(), Proxy)
     
@@ -172,6 +178,7 @@ def collect_attention_output(model : LanguageModel,
     Collect attention output for each prompt at each layer.
     Note output will be padded to max sequence length
     """
+    raise NotImplementedError("Not tested")
     prompts = arg_to_list(prompts)
     if layers is None:
         layers = list(range(len(model.transformer.h)))
@@ -196,6 +203,7 @@ def insert_attn_patch(model : LanguageModel,
     Note that prompts will be padded to match the patch. If prompts are
     larger than patch, this will result in a mismatch.
     """
+    raise NotImplementedError("Not tested")
     prompts, layers_to_patch = arg_to_list(prompts), arg_to_list(layers_to_patch)
     if patch.shape[0] != len(model.transformer.h):
         assert patch.shape[0] == len(layers_to_patch), f"Patch shape {patch.shape[0]} != len(layers_to_patch) {len(layers_to_patch)}"
@@ -249,9 +257,9 @@ def insert_patch(model : LanguageModel,
     """
     prompts, tokens_to_patch, layers_to_patch = map(arg_to_list, [prompts, tokens_to_patch, layers_to_patch])
     if patch.shape[0] != len(model.transformer.h):
-        assert patch.shape[0] == len(layers_to_patch), f"Patch shape {patch.shape[0]} != len(layers_to_patch) {len(layers_to_patch)}"
+        assert patch.shape[0] == len(layers_to_patch), f"Patch shape 0 {patch.shape} != len(layers_to_patch) {len(layers_to_patch)}"
     if patch.shape[2] != len(tokens_to_patch):
-        assert patch.shape[2] == len(tokens_to_patch), f"Patch shape {patch.shape[2]} != len(tokens_to_patch) {len(tokens_to_patch)}"
+        assert patch.shape[2] == len(tokens_to_patch), f"Patch shape 2 {patch.shape} != len(tokens_to_patch) {len(tokens_to_patch)}"
     if isinstance(tokens_to_patch[0], str):
         tokens_to_patch = [model.tokenizer.encode(t)[0] for t in tokens_to_patch]
     if patch_mode not in ["sub", "add", "subst"]:
@@ -264,10 +272,10 @@ def insert_patch(model : LanguageModel,
         with runner.invoke(prompts) as invoker:
             
             indices = invoker.input["input_ids"].numpy()
-    
+
             # for each prompt find the index of token_idx
-            target_idx = np.concatenate([np.where((i  == t)) for t in tokens_to_patch for i in indices], axis=0).reshape(indices.shape[0], -1)
-            
+            target_idx = np.concatenate([np.where((i  == t)) for i in indices for t in tokens_to_patch], axis=0).reshape((len(prompts),len(tokens_to_patch)))
+
             # apply patch to hidden states at target_idx for each prompt
             for layer in range(len(model.transformer.h)):
                 if layer in layers_to_patch: # don't touch
