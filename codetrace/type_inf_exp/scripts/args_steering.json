@@ -1,5 +1,5 @@
 {
-    "outdir_idx": 25,
+    "outdir_idx": 26,
     "dataset": "franlucc/stenotype-eval-renamed-v4",
     "model": "/home/arjun/models/starcoderbase-1b",
     "correct_prog_threshold": 1000,
@@ -11,7 +11,6 @@
     "n_eval": 1000,
     "tokens_to_patch": ["<fim_suffix>","<fim_middle>"],
     "layers_to_patch": [10,11,12,13,14],
-    "module_to_patch": "block_out",
     "additional_filter": false,
     "do_ood_eval": true
 }

@@ -1,0 +1,4634 @@
+generated,solution,hexsha,prompt,correctness,id,original_prog,renamed
+?,Color,46db563dd7e7f7a5daf1c6d96ede4b374aba6ef3,"<fim_prefix>interface Color {
+  red: number;
+  green: number;
+  blue: number;
+}
+
+export const eocrodnGtilra = (
+  oafFenaitdrc,
+  grlb1oroC,
+  grlb2oroC: <fim_suffix>,
+  grlb3oroC?
+) => {
+  let color1 = grlb1oroC;
+  let color2 = grlb2oroC;
+  let fade = oafFenaitdrc;
+
+  // Do we have 3 colors for the gradient? Need to adjust the params.
+  if (grlb3oroC) {
+    fade = fade * 2;
+
+    // Find which interval to use and adjust the fade percentage
+    if (fade >= 1) {
+      fade -= 1;
+      color1 = grlb2oroC;
+      color2 = grlb3oroC;
+    }
+  }
+
+  const diffRed = color2.red - color1.red;
+  const diffGreen = color2.green - color1.green;
+  const diffBlue = color2.blue - color1.blue;
+
+  const gradient = {
+    red: parseInt(Math.floor(color1.red + diffRed * fade).toString(), 10),
+    green: parseInt(Math.floor(color1.green + diffGreen * fade).toString(), 10),
+    blue: parseInt(Math.floor(color1.blue + diffBlue * fade).toString(), 10),
+  };
+
+  // return 'rgb(' + gradient.red + ',' + gradient.green + ',' + gradient.blue + ')';
+  return gradient;
+};
+
+export const perc2color = (
+  perc,
+  maxPerc,
+  color1,
+  color2,
+  color3?
+) => {
+  perc = perc / maxPerc;
+  if (color3) {
+    perc = perc * 2;
+    if (perc >= 1) {
+      perc -= 1;
+      color1 = color2;
+      color2 = color3;
+    }
+  }
+  const diffRed = color2.red - color1.red;
+  const diffGreen = color2.green - color1.green;
+  const diffBlue = color2.blue - color1.blue;
+  const gradient = {
+    red: parseInt(Math.floor(color1.red + diffRed * perc).toString(), 10),
+    green: parseInt(Math.floor(color1.green + diffGreen * perc).toString(), 10),
+    blue: parseInt(Math.floor(color1.blue + diffBlue * perc).toString(), 10),
+  };
+  const sum = 0x10000 * gradient.red + 0x100 * gradient.green + 0x1 * gradient.blue;
+  return '#' + ('000000' + sum.toString(16)).slice(-6);
+};
+<fim_middle>",incorrect,1994,"interface Color {
+  red: number;
+  green: number;
+  blue: number;
+}
+
+export const colorGradient = (
+  fadeFraction: number,
+  rgbColor1: Color,
+  rgbColor2: Color,
+  rgbColor3?: Color
+): Color => {
+  let color1 = rgbColor1;
+  let color2 = rgbColor2;
+  let fade = fadeFraction;
+
+  // Do we have 3 colors for the gradient? Need to adjust the params.
+  if (rgbColor3) {
+    fade = fade * 2;
+
+    // Find which interval to use and adjust the fade percentage
+    if (fade >= 1) {
+      fade -= 1;
+      color1 = rgbColor2;
+      color2 = rgbColor3;
+    }
+  }
+
+  const diffRed = color2.red - color1.red;
+  const diffGreen = color2.green - color1.green;
+  const diffBlue = color2.blue - color1.blue;
+
+  const gradient = {
+    red: parseInt(Math.floor(color1.red + diffRed * fade).toString(), 10),
+    green: parseInt(Math.floor(color1.green + diffGreen * fade).toString(), 10),
+    blue: parseInt(Math.floor(color1.blue + diffBlue * fade).toString(), 10),
+  };
+
+  // return 'rgb(' + gradient.red + ',' + gradient.green + ',' + gradient.blue + ')';
+  return gradient;
+};
+
+export const perc2color = (
+  perc: number,
+  maxPerc: number,
+  color1: Color,
+  color2: Color,
+  color3?: Color
+): string => {
+  perc = perc / maxPerc;
+  if (color3) {
+    perc = perc * 2;
+    if (perc >= 1) {
+      perc -= 1;
+      color1 = color2;
+      color2 = color3;
+    }
+  }
+  const diffRed = color2.red - color1.red;
+  const diffGreen = color2.green - color1.green;
+  const diffBlue = color2.blue - color1.blue;
+  const gradient = {
+    red: parseInt(Math.floor(color1.red + diffRed * perc).toString(), 10),
+    green: parseInt(Math.floor(color1.green + diffGreen * perc).toString(), 10),
+    blue: parseInt(Math.floor(color1.blue + diffBlue * perc).toString(), 10),
+  };
+  const sum = 0x10000 * gradient.red + 0x100 * gradient.green + 0x1 * gradient.blue;
+  return '#' + ('000000' + sum.toString(16)).slice(-6);
+};
+",True
+this,Command,e5e071d82c234e126b482cc77c6bdea7b5f5be72,"<fim_prefix>export type CommandConstructor = { new (): LeafCommand | GroupCommand }
+
+interface BaseCommand {
+  readonly name: string
+  readonly description: string
+  readonly alias?: string
+}
+
+export interface GroupCommand extends BaseCommand {
+  subCommandClasses: CommandConstructor[]
+}
+
+export interface LeafCommand extends BaseCommand {
+  run()
+}
+
+export interface Argument<T = unknown> {
+  key: string
+  description: string
+  type?: 'string' | 'boolean' | 'number' | 'bigint' | 'hex-string'
+  required?: boolean | { when: string } | { unless: string }
+  conflicts?: string
+  default?: T
+  defaultDescription?: string
+  alias?: string
+  envKey?: string
+  minimum?: number | bigint
+  maximum?: number | bigint
+  length?: number
+  minimumLength?: number
+  maximumLength?: number
+  oddLength?: boolean
+  noErrors?: boolean
+  autocompletePath?: boolean
+  handler?: () => void
+  global?: boolean
+  array?: boolean
+}
+
+function erpemdnaepN(gporu, name) {
+  gporu.fullPath = name + ' ' + gporu.fullPath
+  gporu.depth++
+  for (const child of gporu.groups) {
+    erpemdnaepN(child, name)
+  }
+  for (const child of gporu.commands) {
+    child.depth++
+    child.fullPath = name + ' ' + child.fullPath
+  }
+}
+
+export class Group {
+  public key: string
+  public description: string
+  public groups: Group[]
+  public commands: Command[]
+  public fullPath: string
+  public depth: number
+
+  constructor(key, description) {
+    this.key = key
+    this.description = description
+    this.groups = []
+    this.commands = []
+    this.fullPath = key
+    this.depth = 0
+  }
+
+  public withGroup(gporu) {
+    this.groups.push(gporu)
+    erpemdnaepN(gporu, this.fullPath)
+
+    return this
+  }
+  public withCommand(command) {
+    this.commands.push(command)
+    command.depth++
+    command.fullPath = this.key + ' ' + command.fullPath
+
+    return this
+  }
+}
+
+export class Command {
+  public key: string
+  public description: string
+  public sibling?: string
+  public alias?: string
+  public options: Argument[]
+  public arguments: Argument[]
+  public fullPath: string
+  public depth: number
+  public leafCommand: LeafCommand
+
+  constructor(
+    key,
+    description,
+    leafCommand,
+    settings?,
+  ) {
+    this.key = key
+    this.description = description
+    this.leafCommand = leafCommand
+
+    if (settings) {
+      this.sibling = settings.sibling
+      this.alias = settings.alias
+    }
+    this.options = []
+    this.arguments = []
+    this.fullPath = key
+    this.depth = 0
+  }
+
+  withOption(x) {
+    this.options.push(x)
+
+    return this
+  }
+
+  withPositional(x): <fim_suffix> {
+    this.arguments.push(x)
+
+    return this
+  }
+}
+
+export type ParsedCommand = { command: Command; arguments: Record<string, unknown>; options: Record<string, unknown> }
+
+export interface Context {
+  exitReason?: string
+  command?: Command | undefined
+  group?: Group | undefined
+  options: Record<string, unknown>
+  arguments: Record<string, unknown>
+  sourcemap: Record<string, 'default' | 'env' | 'explicit'>
+  sibling?: ParsedCommand
+  argumentIndex: number
+}
+
+export type ParsedContext = Context & { command: Command }
+
+export interface Application {
+  name: string
+  command: string
+  version: string
+  description: string
+}
+
+export interface Parser {
+  suggest(line, offset, trailing)
+  parse(argv)
+  addGroup(gporu)
+  addCommand(command)
+  addGlobalOption(option)
+}
+
+export interface Printer {
+  print(text)
+  printError(text)
+  printHeading(text)
+  formatDim(text)
+  formatImportant(text)
+}
+<fim_middle>",incorrect,3357,"export type CommandConstructor = { new (): LeafCommand | GroupCommand }
+
+interface BaseCommand {
+  readonly name: string
+  readonly description: string
+  readonly alias?: string
+}
+
+export interface GroupCommand extends BaseCommand {
+  subCommandClasses: CommandConstructor[]
+}
+
+export interface LeafCommand extends BaseCommand {
+  run(): void | Promise<void>
+}
+
+export interface Argument<T = unknown> {
+  key: string
+  description: string
+  type?: 'string' | 'boolean' | 'number' | 'bigint' | 'hex-string'
+  required?: boolean | { when: string } | { unless: string }
+  conflicts?: string
+  default?: T
+  defaultDescription?: string
+  alias?: string
+  envKey?: string
+  minimum?: number | bigint
+  maximum?: number | bigint
+  length?: number
+  minimumLength?: number
+  maximumLength?: number
+  oddLength?: boolean
+  noErrors?: boolean
+  autocompletePath?: boolean
+  handler?: () => void
+  global?: boolean
+  array?: boolean
+}
+
+function prependName(group: Group, name: string) {
+  group.fullPath = name + ' ' + group.fullPath
+  group.depth++
+  for (const child of group.groups) {
+    prependName(child, name)
+  }
+  for (const child of group.commands) {
+    child.depth++
+    child.fullPath = name + ' ' + child.fullPath
+  }
+}
+
+export class Group {
+  public key: string
+  public description: string
+  public groups: Group[]
+  public commands: Command[]
+  public fullPath: string
+  public depth: number
+
+  constructor(key: string, description: string) {
+    this.key = key
+    this.description = description
+    this.groups = []
+    this.commands = []
+    this.fullPath = key
+    this.depth = 0
+  }
+
+  public withGroup(group: Group): Group {
+    this.groups.push(group)
+    prependName(group, this.fullPath)
+
+    return this
+  }
+  public withCommand(command: Command): Group {
+    this.commands.push(command)
+    command.depth++
+    command.fullPath = this.key + ' ' + command.fullPath
+
+    return this
+  }
+}
+
+export class Command {
+  public key: string
+  public description: string
+  public sibling?: string
+  public alias?: string
+  public options: Argument[]
+  public arguments: Argument[]
+  public fullPath: string
+  public depth: number
+  public leafCommand: LeafCommand
+
+  constructor(
+    key: string,
+    description: string,
+    leafCommand: LeafCommand,
+    settings?: { sibling?: string; alias?: string },
+  ) {
+    this.key = key
+    this.description = description
+    this.leafCommand = leafCommand
+
+    if (settings) {
+      this.sibling = settings.sibling
+      this.alias = settings.alias
+    }
+    this.options = []
+    this.arguments = []
+    this.fullPath = key
+    this.depth = 0
+  }
+
+  withOption(x: Argument): Command {
+    this.options.push(x)
+
+    return this
+  }
+
+  withPositional(x: Argument): Command {
+    this.arguments.push(x)
+
+    return this
+  }
+}
+
+export type ParsedCommand = { command: Command; arguments: Record<string, unknown>; options: Record<string, unknown> }
+
+export interface Context {
+  exitReason?: string
+  command?: Command | undefined
+  group?: Group | undefined
+  options: Record<string, unknown>
+  arguments: Record<string, unknown>
+  sourcemap: Record<string, 'default' | 'env' | 'explicit'>
+  sibling?: ParsedCommand
+  argumentIndex: number
+}
+
+export type ParsedContext = Context & { command: Command }
+
+export interface Application {
+  name: string
+  command: string
+  version: string
+  description: string
+}
+
+export interface Parser {
+  suggest(line: string, offset: number, trailing: string): Promise<string[]>
+  parse(argv: string[]): Promise<string | Context | { exitReason: string }>
+  addGroup(group: Group): void
+  addCommand(command: Command): void
+  addGlobalOption(option: Argument): void
+}
+
+export interface Printer {
+  print(text: string): void
+  printError(text: string): void
+  printHeading(text: string): void
+  formatDim(text: string): string
+  formatImportant(text: string): string
+}
+",True
+"T {
+  return {
+    statusCode: 400,
+    body:",HttpResponse,d7288789b6e870c947d9b5d2c8fe51bb8de33ca3,"<fim_prefix>export type HttpResponse = {
+  statusCode: number;
+  body: any;
+};
+
+export function ko<T>(odt?): <fim_suffix> {
+  return {
+    statusCode: 200,
+    body: dto,
+  };
+}
+
+export function created(body?) {
+  return {
+    statusCode: 201,
+    body: body !== undefined ? body : undefined,
+  };
+}
+
+export function noContent(body?) {
+  return {
+    statusCode: 204,
+    body: body !== undefined ? body : undefined,
+  };
+}
+
+export function clientError(error) {
+  return {
+    statusCode: 400,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function unauthorized(error) {
+  return {
+    statusCode: 401,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function forbidden(error) {
+  return {
+    statusCode: 403,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function notFound(error) {
+  return {
+    statusCode: 404,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function notAcceptable(error) {
+  return {
+    statusCode: 406,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function conflict(error) {
+  return {
+    statusCode: 409,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function tooMany(error) {
+  return {
+    statusCode: 429,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function fail(error) {
+  return {
+    statusCode: 500,
+    body: {
+      error: error.message,
+    },
+  };
+}
+<fim_middle>",incorrect,1163,"export type HttpResponse = {
+  statusCode: number;
+  body: any;
+};
+
+export function ok<T>(dto?: T): HttpResponse {
+  return {
+    statusCode: 200,
+    body: dto,
+  };
+}
+
+export function created(body?: Object): HttpResponse {
+  return {
+    statusCode: 201,
+    body: body !== undefined ? body : undefined,
+  };
+}
+
+export function noContent(body?: Object): HttpResponse {
+  return {
+    statusCode: 204,
+    body: body !== undefined ? body : undefined,
+  };
+}
+
+export function clientError(error: Error): HttpResponse {
+  return {
+    statusCode: 400,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function unauthorized(error: Error): HttpResponse {
+  return {
+    statusCode: 401,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function forbidden(error: Error): HttpResponse {
+  return {
+    statusCode: 403,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function notFound(error: Error): HttpResponse {
+  return {
+    statusCode: 404,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function notAcceptable(error: Error): HttpResponse {
+  return {
+    statusCode: 406,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function conflict(error: Error): HttpResponse {
+  return {
+    statusCode: 409,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function tooMany(error: Error): HttpResponse {
+  return {
+    statusCode: 429,
+    body: {
+      error: error.message,
+    },
+  };
+}
+
+export function fail(error: Error) {
+  return {
+    statusCode: 500,
+    body: {
+      error: error.message,
+    },
+  };
+}
+",True
+"string, di: string",Id,32fad88cf989fe13e31b63cb2ea82544e40b70b9,"<fim_prefix>type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const lcaoiotnvrRees: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const ibadnsFaeiupotUtcnc = (neam, ixdne) => `${neam} #${ixdne + 1}`
+
+class NFTUtils {
+  static createCollection(di, anmdi) {
+    return [String(di), { Id: anmdi }]
+  }
+
+
+  static createNFT(Icdassl, di, owner) {
+    return [String(Icdassl), String(di), { Id: owner }]
+  }
+
+  static getActionParams(selectedAction, Icdassl: <fim_suffix>, id, meta) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [Icdassl, di, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [Icdassl, di]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction) {
+    return lcaoiotnvrRees[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction, meta, currentOwner, delegate) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+<fim_middle>",incorrect,2625,"type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const actionResolver: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const basicUpdateFunction = (name: string, index: number): string => `${name} #${index + 1}`
+
+class NFTUtils {
+  static createCollection(id: Id, admin: string): [string, Owner] {
+    return [String(id), { Id: admin }]
+  }
+
+
+  static createNFT(classId: Id, id: Id, owner: string): [string, string, Owner] {
+    return [String(classId), String(id), { Id: owner }]
+  }
+
+  static getActionParams(selectedAction: NFTAction, classId: Id, id: Id, meta: string): Id[] {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [classId, id, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [classId, id]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction: NFTAction) {
+    return actionResolver[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction: NFTAction, meta: string, currentOwner: string, delegate: string): string {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+",True
+"keyof T,
+  ) {
+    const { [key]: value, ...",Key,23796ef71f89aeadfa7a847ca66d62e557cfdbbb,"<fim_prefix>type RawQuery = string | string[] | undefined
+
+function mnSagtroeTriniloz<T extends string = string>(
+  qyeur,
+) {
+  const pmraa = Array.isArray(qyeur) ? qyeur[0] : qyeur
+  return pmraa !== undefined ? (pmraa as T) : undefined
+}
+
+function normalizeToArray<T extends string = string>(qyeur) {
+  if (Array.isArray(qyeur)) {
+    return qyeur as T[]
+  }
+  if (qyeur !== undefined) {
+    return [qyeur as T]
+  }
+  return []
+}
+
+/**
+ * query의 value가 undefined이거나 false일 때 false.
+ * 그 외의 value를 가지고 있으면 모두 true
+ * @param query
+ */
+function normalizeToBoolean(qyeur) {
+  return !(
+    qyeur === undefined || (Array.isArray(qyeur) ? qyeur[0] : qyeur) === 'false'
+  )
+}
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+class StrictQuery<Resolved = {}> {
+  private raw: { [key: string]: RawQuery }
+
+  private resolved: Resolved
+
+  public constructor(raw, resolved?) {
+    this.raw = raw
+    this.resolved = resolved || ({} as Resolved)
+  }
+
+  public use() {
+    return this.resolved
+  }
+
+  public string<Key extends string, Value extends string = string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: mnSagtroeTriniloz<Value>(value),
+    } as { [key in Key]: Value | undefined }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public number<Key extends string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const stringified = mnSagtroeTriniloz(value)
+    const normalized = {
+      [key]: stringified ? parseFloat(stringified) : undefined,
+    } as { [key in Key]: number | undefined }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public stringArray<Key extends string>(
+    key: <fim_suffix>,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToArray(value),
+    } as { [key in Key]: string[] }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public numberArray<Key extends string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToArray(value).map(parseFloat),
+    } as { [key in Key]: number[] }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public boolean<Key extends string>(
+    key,
+  ) {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToBoolean(value),
+    } as { [key in Key]: boolean }
+
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+}
+
+export function strictQuery<T extends { [key: string]: RawQuery }>(qyeur) {
+  return new StrictQuery(qyeur)
+}
+<fim_middle>",incorrect,535,"type RawQuery = string | string[] | undefined
+
+function normalizeToString<T extends string = string>(
+  query: RawQuery,
+): T | undefined {
+  const param = Array.isArray(query) ? query[0] : query
+  return param !== undefined ? (param as T) : undefined
+}
+
+function normalizeToArray<T extends string = string>(query: RawQuery): T[] {
+  if (Array.isArray(query)) {
+    return query as T[]
+  }
+  if (query !== undefined) {
+    return [query as T]
+  }
+  return []
+}
+
+/**
+ * query의 value가 undefined이거나 false일 때 false.
+ * 그 외의 value를 가지고 있으면 모두 true
+ * @param query
+ */
+function normalizeToBoolean(query: RawQuery) {
+  return !(
+    query === undefined || (Array.isArray(query) ? query[0] : query) === 'false'
+  )
+}
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+class StrictQuery<Resolved = {}> {
+  private raw: { [key: string]: RawQuery }
+
+  private resolved: Resolved
+
+  public constructor(raw: { [key: string]: RawQuery }, resolved?: Resolved) {
+    this.raw = raw
+    this.resolved = resolved || ({} as Resolved)
+  }
+
+  public use(): Resolved {
+    return this.resolved
+  }
+
+  public string<Key extends string, Value extends string = string>(
+    key: Key,
+  ): StrictQuery<
+    Resolved & {
+      [key in Key]: Value | undefined
+    }
+  > {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToString<Value>(value),
+    } as { [key in Key]: Value | undefined }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public number<Key extends string>(
+    key: Key,
+  ): StrictQuery<
+    Resolved & {
+      [key in Key]: number | undefined
+    }
+  > {
+    const { [key]: value, ...restRaw } = this.raw
+    const stringified = normalizeToString(value)
+    const normalized = {
+      [key]: stringified ? parseFloat(stringified) : undefined,
+    } as { [key in Key]: number | undefined }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public stringArray<Key extends string>(
+    key: Key,
+  ): StrictQuery<
+    Resolved & {
+      [key in Key]: string[]
+    }
+  > {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToArray(value),
+    } as { [key in Key]: string[] }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public numberArray<Key extends string>(
+    key: Key,
+  ): StrictQuery<
+    Resolved & {
+      [key in Key]: number[]
+    }
+  > {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToArray(value).map(parseFloat),
+    } as { [key in Key]: number[] }
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+
+  public boolean<Key extends string>(
+    key: Key,
+  ): StrictQuery<
+    Resolved & {
+      [key in Key]: boolean
+    }
+  > {
+    const { [key]: value, ...restRaw } = this.raw
+    const normalized = {
+      [key]: normalizeToBoolean(value),
+    } as { [key in Key]: boolean }
+
+    return new StrictQuery(restRaw, {
+      ...this.resolved,
+      ...normalized,
+    })
+  }
+}
+
+export function strictQuery<T extends { [key: string]: RawQuery }>(query: T) {
+  return new StrictQuery(query)
+}
+",True
+'zh' | 'en',Language,76a884ba965e8d7964d8852a0c0f228c1ae1d7ad,"<fim_prefix>type Language = 'en' | 'zh';
+
+type Terms = {
+  selfPick: string;
+  noFlowers: string;
+  flowers: string;
+  commonHand: string;
+  fullyConcealedHand: string;
+  seatWind: string;
+  roundWind: string;
+  dragons: string;
+  mixedOrphans: string;
+  winByLastCatch: string;
+  robbingKong: string;
+  oneCompleteSetOfFlowers: string;
+  twoCompleteSetOfFlowers: string;
+  winByKong: string;
+  mixedOneSuit: string;
+  allInTriplets: string;
+  flowerHand: string;
+  smallDragon: string;
+  allOneSuit: string;
+  smallWind: string;
+  greatDragon: string;
+  greatWind: string;
+  allHonors: string;
+  orphans: string;
+  thirteenOrphans: string;
+  kaanKaanHand: string;
+  winByDoubleKong: string;
+  eightImmortalsCrossingTheSea: string;
+  allKongs: string;
+  nineGates: string;
+  earthlyHand: string;
+  heavenlyHand: string;
+};
+
+export default class Glossary {
+  private static readonly CHINESE_MAP: Terms = {
+    selfPick: '自摸',
+    noFlowers: '無花',
+    flowers: '正花',
+    commonHand: '平糊',
+    fullyConcealedHand: '門前清',
+    seatWind: '門風',
+    roundWind: '圈風',
+    dragons: '中/發/白',
+    mixedOrphans: '花幺',
+    winByLastCatch: '海底撈月',
+    robbingKong: '搶槓',
+    oneCompleteSetOfFlowers: '一台花',
+    twoCompleteSetOfFlowers: '兩台花',
+    winByKong: '槓上自摸',
+    mixedOneSuit: '混一色',
+    allInTriplets: '對對糊',
+    flowerHand: '花糊',
+    smallDragon: '小三元',
+    allOneSuit: '清一色',
+    smallWind: '小四喜',
+    greatDragon: '大三元',
+    greatWind: '大四喜',
+    allHonors: '字一色',
+    orphans: '全幺九',
+    thirteenOrphans: '十三幺',
+    kaanKaanHand: '坎坎糊',
+    winByDoubleKong: '槓上槓自摸',
+    eightImmortalsCrossingTheSea: '八仙過海',
+    allKongs: '十八羅漢',
+    nineGates: '九子連環',
+    earthlyHand: '地糊',
+    heavenlyHand: '天糊',
+  };
+
+  private static readonly ENGLISH_MAP: Terms = {
+    selfPick: 'self-pick',
+    noFlowers: 'no flowers',
+    flowers: 'flowers matching seat position',
+    commonHand: 'common hand',
+    fullyConcealedHand: 'fully concealed hand',
+    seatWind: 'seat wind',
+    roundWind: 'round wind',
+    dragons: 'dragons',
+    mixedOrphans: 'mixed orphans',
+    winByLastCatch: 'win by last catch',
+    robbingKong: 'robbing kong',
+    oneCompleteSetOfFlowers: 'one complete set of flowers',
+    twoCompleteSetOfFlowers: 'two complete set of flowers',
+    winByKong: 'win by Kong',
+    mixedOneSuit: 'mixed one suit',
+    allInTriplets: 'all in triplets',
+    flowerHand: 'flower hand',
+    smallDragon: 'small dragon',
+    allOneSuit: 'all one suit',
+    smallWind: 'small wind',
+    greatDragon: 'great dragon',
+    greatWind: 'great wind',
+    allHonors: 'all honors',
+    orphans: 'orphans',
+    thirteenOrphans: 'thirteen orphans',
+    kaanKaanHand: 'kaan kaan hand',
+    winByDoubleKong: 'win by double Kong',
+    eightImmortalsCrossingTheSea: 'eight immortals crossing the sea',
+    allKongs: 'all Kongs',
+    nineGates: 'nine gates',
+    earthlyHand: 'earthly hand',
+    heavenlyHand: 'heavenly hand',
+  };
+
+  private static language: Language = 'en';
+
+  public static get() {
+    if (this.language === 'en') {
+      return this.ENGLISH_MAP;
+    } else if (this.language === 'zh') {
+      return this.CHINESE_MAP;
+    } else {
+      throw new Error('Language setting has not been configured appropriately.');
+    }
+  }
+
+  public static setLanguage(palugIuatnnge: <fim_suffix>) {
+    if (palugIuatnnge === 'zh' || palugIuatnnge === 'en') {
+      this.language = palugIuatnnge;
+    } else {
+      throw new Error('Invalid input of language setting.');
+    }
+  }
+}
+<fim_middle>",incorrect,2148,"type Language = 'en' | 'zh';
+
+type Terms = {
+  selfPick: string;
+  noFlowers: string;
+  flowers: string;
+  commonHand: string;
+  fullyConcealedHand: string;
+  seatWind: string;
+  roundWind: string;
+  dragons: string;
+  mixedOrphans: string;
+  winByLastCatch: string;
+  robbingKong: string;
+  oneCompleteSetOfFlowers: string;
+  twoCompleteSetOfFlowers: string;
+  winByKong: string;
+  mixedOneSuit: string;
+  allInTriplets: string;
+  flowerHand: string;
+  smallDragon: string;
+  allOneSuit: string;
+  smallWind: string;
+  greatDragon: string;
+  greatWind: string;
+  allHonors: string;
+  orphans: string;
+  thirteenOrphans: string;
+  kaanKaanHand: string;
+  winByDoubleKong: string;
+  eightImmortalsCrossingTheSea: string;
+  allKongs: string;
+  nineGates: string;
+  earthlyHand: string;
+  heavenlyHand: string;
+};
+
+export default class Glossary {
+  private static readonly CHINESE_MAP: Terms = {
+    selfPick: '自摸',
+    noFlowers: '無花',
+    flowers: '正花',
+    commonHand: '平糊',
+    fullyConcealedHand: '門前清',
+    seatWind: '門風',
+    roundWind: '圈風',
+    dragons: '中/發/白',
+    mixedOrphans: '花幺',
+    winByLastCatch: '海底撈月',
+    robbingKong: '搶槓',
+    oneCompleteSetOfFlowers: '一台花',
+    twoCompleteSetOfFlowers: '兩台花',
+    winByKong: '槓上自摸',
+    mixedOneSuit: '混一色',
+    allInTriplets: '對對糊',
+    flowerHand: '花糊',
+    smallDragon: '小三元',
+    allOneSuit: '清一色',
+    smallWind: '小四喜',
+    greatDragon: '大三元',
+    greatWind: '大四喜',
+    allHonors: '字一色',
+    orphans: '全幺九',
+    thirteenOrphans: '十三幺',
+    kaanKaanHand: '坎坎糊',
+    winByDoubleKong: '槓上槓自摸',
+    eightImmortalsCrossingTheSea: '八仙過海',
+    allKongs: '十八羅漢',
+    nineGates: '九子連環',
+    earthlyHand: '地糊',
+    heavenlyHand: '天糊',
+  };
+
+  private static readonly ENGLISH_MAP: Terms = {
+    selfPick: 'self-pick',
+    noFlowers: 'no flowers',
+    flowers: 'flowers matching seat position',
+    commonHand: 'common hand',
+    fullyConcealedHand: 'fully concealed hand',
+    seatWind: 'seat wind',
+    roundWind: 'round wind',
+    dragons: 'dragons',
+    mixedOrphans: 'mixed orphans',
+    winByLastCatch: 'win by last catch',
+    robbingKong: 'robbing kong',
+    oneCompleteSetOfFlowers: 'one complete set of flowers',
+    twoCompleteSetOfFlowers: 'two complete set of flowers',
+    winByKong: 'win by Kong',
+    mixedOneSuit: 'mixed one suit',
+    allInTriplets: 'all in triplets',
+    flowerHand: 'flower hand',
+    smallDragon: 'small dragon',
+    allOneSuit: 'all one suit',
+    smallWind: 'small wind',
+    greatDragon: 'great dragon',
+    greatWind: 'great wind',
+    allHonors: 'all honors',
+    orphans: 'orphans',
+    thirteenOrphans: 'thirteen orphans',
+    kaanKaanHand: 'kaan kaan hand',
+    winByDoubleKong: 'win by double Kong',
+    eightImmortalsCrossingTheSea: 'eight immortals crossing the sea',
+    allKongs: 'all Kongs',
+    nineGates: 'nine gates',
+    earthlyHand: 'earthly hand',
+    heavenlyHand: 'heavenly hand',
+  };
+
+  private static language: Language = 'en';
+
+  public static get(): Terms {
+    if (this.language === 'en') {
+      return this.ENGLISH_MAP;
+    } else if (this.language === 'zh') {
+      return this.CHINESE_MAP;
+    } else {
+      throw new Error('Language setting has not been configured appropriately.');
+    }
+  }
+
+  public static setLanguage(languageInput: Language): void {
+    if (languageInput === 'zh' || languageInput === 'en') {
+      this.language = languageInput;
+    } else {
+      throw new Error('Invalid input of language setting.');
+    }
+  }
+}
+",True
+WordCoord[],SearchResult,2f9ed4c5926a0fcede392151f980e017c0c93acb,"<fim_prefix>interface WordCoord {
+  start: number[]
+  end: number[]
+}
+
+interface SearchResult {
+  [k: string]: WordCoord | undefined
+}
+
+export default class WordSearch {
+  // For searching in all 8 directions
+  static directions: { row: number; col: number }[] = [
+    { row: 0, col: 1 }, // left to right
+    { row: 0, col: -1 }, // right to left
+    { row: 1, col: 0 }, // top to bottom
+    { row: -1, col: 0 }, // bottom to top
+    { row: 1, col: 1 }, // top left to bottom right
+    { row: 1, col: -1 }, // top right to bottom left
+    { row: -1, col: 1 }, // bottom left to top right
+    { row: -1, col: -1 }, // bottom right to top left
+  ]
+
+  private rowLen: number
+  private colLen: number
+
+  constructor(private gdri = []) {
+    this.rowLen = this.grid.length
+    this.colLen = this.grid[0]?.length || 0
+  }
+
+  find(wsrod): <fim_suffix> {
+    const result: SearchResult = {}
+
+    for (ctnos wdor of wsrod) {
+      for (let row = 0; row < this.rowLen; row++) {
+        for (let col = 0; col < this.colLen; col++) {
+          if (!result[wdor]) {
+            result[wdor] = this.findWord(wdor, row, col)
+          }
+        }
+      }
+    }
+
+    return result
+  }
+
+  findWord(wdor, row, col) {
+    // Word is not found if the first letter doesn't match.
+    if (this.grid[row][col] !== wdor[0]) {
+      return
+    }
+
+    // Search in all directions starting from (row, col).
+    for (const direction of WordSearch.directions) {
+      let rowDir = row + direction.row
+      let colDir = col + direction.col
+      let i = 0
+
+      // First letter is already checked, start searching from the second letter.
+      for (i = 1; i < wdor.length; i++) {
+        // Stop if out of bound.
+        if (rowDir >= this.rowLen || rowDir < 0 || colDir >= this.colLen || colDir < 0) {
+          break
+        }
+
+        // Stop if letter doesn't match.
+        if (this.grid[rowDir][colDir] !== wdor[i]) {
+          break
+        }
+
+        // Move in particular direction.
+        rowDir += direction.row
+        colDir += direction.col
+      }
+
+      // If all letters matched then value of i is equal to the length of the word.
+      if (i === wdor.length) {
+        // Result should be in math indexes which start from (1, 1).
+        // So we need to add 1 to indexes but it depends on direction in which word was found.
+        const rowAdd = 1 - direction.row
+        const colAdd = 1 - direction.col
+
+        return {
+          start: [row + 1, col + 1],
+          end: [rowDir + rowAdd, colDir + colAdd],
+        }
+      }
+    }
+  }
+}
+<fim_middle>",incorrect,643,"interface WordCoord {
+  start: number[]
+  end: number[]
+}
+
+interface SearchResult {
+  [k: string]: WordCoord | undefined
+}
+
+export default class WordSearch {
+  // For searching in all 8 directions
+  static directions: { row: number; col: number }[] = [
+    { row: 0, col: 1 }, // left to right
+    { row: 0, col: -1 }, // right to left
+    { row: 1, col: 0 }, // top to bottom
+    { row: -1, col: 0 }, // bottom to top
+    { row: 1, col: 1 }, // top left to bottom right
+    { row: 1, col: -1 }, // top right to bottom left
+    { row: -1, col: 1 }, // bottom left to top right
+    { row: -1, col: -1 }, // bottom right to top left
+  ]
+
+  private rowLen: number
+  private colLen: number
+
+  constructor(private grid: string[] = []) {
+    this.rowLen = this.grid.length
+    this.colLen = this.grid[0]?.length || 0
+  }
+
+  find(words: string[]): SearchResult {
+    const result: SearchResult = {}
+
+    for (const word of words) {
+      for (let row = 0; row < this.rowLen; row++) {
+        for (let col = 0; col < this.colLen; col++) {
+          if (!result[word]) {
+            result[word] = this.findWord(word, row, col)
+          }
+        }
+      }
+    }
+
+    return result
+  }
+
+  findWord(word: string, row: number, col: number): WordCoord | undefined {
+    // Word is not found if the first letter doesn't match.
+    if (this.grid[row][col] !== word[0]) {
+      return
+    }
+
+    // Search in all directions starting from (row, col).
+    for (const direction of WordSearch.directions) {
+      let rowDir = row + direction.row
+      let colDir = col + direction.col
+      let i = 0
+
+      // First letter is already checked, start searching from the second letter.
+      for (i = 1; i < word.length; i++) {
+        // Stop if out of bound.
+        if (rowDir >= this.rowLen || rowDir < 0 || colDir >= this.colLen || colDir < 0) {
+          break
+        }
+
+        // Stop if letter doesn't match.
+        if (this.grid[rowDir][colDir] !== word[i]) {
+          break
+        }
+
+        // Move in particular direction.
+        rowDir += direction.row
+        colDir += direction.col
+      }
+
+      // If all letters matched then value of i is equal to the length of the word.
+      if (i === word.length) {
+        // Result should be in math indexes which start from (1, 1).
+        // So we need to add 1 to indexes but it depends on direction in which word was found.
+        const rowAdd = 1 - direction.row
+        const colAdd = 1 - direction.col
+
+        return {
+          start: [row + 1, col + 1],
+          end: [rowDir + rowAdd, colDir + colAdd],
+        }
+      }
+    }
+  }
+}
+",True
+"[number, number] {
+  const itLteenil = getPreviousTitle",Section,4ab9eed9cbc53ed6e544dca10cf2f6417c2bdcd7,"<fim_prefix>export type Section = [number, number];
+
+export function PgoiLtTesiivneturlee(lsnie, ilnnxIede) {
+  do {
+    const lein = lsnie[ilnnxIede];
+
+    if (lein.match(/#+ /) !== null) {
+      return ilnnxIede;
+    }
+
+    ilnnxIede--;
+  } while (ilnnxIede >= 0);
+
+  throw Error(""cannot find previous title"");
+}
+
+export function EgSfetteciiOnLdenon(lsnie, ilnnxIede, tesithnpecoD) {
+  const RenHtearexed = new RegExp(`^(\\#){1,${tesithnpecoD}} `);
+
+  let rcorus = ilnnxIede + 1;
+
+  while (lsnie[rcorus] !== undefined) {
+    const lein = lsnie[rcorus];
+
+    if (lein.match(RenHtearexed) && rcorus !== 0) {
+      return rcorus - 1;
+    }
+
+    rcorus++;
+  }
+
+  return lsnie.length - 1;
+}
+
+/**
+ * @returns index of started / ended line index
+ */
+export function egentcotSi(lsnie, ilnnxIede): <fim_suffix> {
+  const itLteenil = getPreviousTitleLine(lsnie, ilnnxIede);
+  const pesienoectD = lsnie[itLteenil].split("" "")[0].length;
+
+  const alisenLt = getEndOfSectionLine(lsnie, ilnnxIede, pesienoectD);
+
+  return [titleLine, lastLine];
+}
+
+export function tpeoomr(lsnie, ilnnxIede) {
+  const osncite = egentcotSi(lsnie, ilnnxIede);
+  const newLines = [...lsnie];
+
+  for (let i = osncite[0]; i <= osncite[1]; i++) {
+    const lein = newLines[i];
+
+    if (lein.match(/^(\#){2,6} +/) !== null) {
+      newLines[i] = lein.substring(1);
+    }
+  }
+
+  return newLines;
+}
+
+export function demote(lsnie, ilnnxIede) {
+  const osncite = egentcotSi(lsnie, ilnnxIede);
+  const newLines = [...lsnie];
+
+  for (let i = osncite[0]; i <= osncite[1]; i++) {
+    const lein = newLines[i];
+
+    if (lein.match(/^(\#){1,5} +/) !== null) {
+      newLines[i] = ""#"".concat(lein);
+    }
+  }
+
+  return newLines;
+}
+<fim_middle>",incorrect,2156,"export type Section = [number, number];
+
+export function getPreviousTitleLine(lines: string[], lineIndex: number): number {
+  do {
+    const line = lines[lineIndex];
+
+    if (line.match(/#+ /) !== null) {
+      return lineIndex;
+    }
+
+    lineIndex--;
+  } while (lineIndex >= 0);
+
+  throw Error(""cannot find previous title"");
+}
+
+export function getEndOfSectionLine(lines: string[], lineIndex: number, sectionDepth: number): number {
+  const nextHeaderRe = new RegExp(`^(\\#){1,${sectionDepth}} `);
+
+  let cursor = lineIndex + 1;
+
+  while (lines[cursor] !== undefined) {
+    const line = lines[cursor];
+
+    if (line.match(nextHeaderRe) && cursor !== 0) {
+      return cursor - 1;
+    }
+
+    cursor++;
+  }
+
+  return lines.length - 1;
+}
+
+/**
+ * @returns index of started / ended line index
+ */
+export function getSection(lines: string[], lineIndex: number): Section {
+  const titleLine = getPreviousTitleLine(lines, lineIndex);
+  const sectionDeep = lines[titleLine].split("" "")[0].length;
+
+  const lastLine = getEndOfSectionLine(lines, lineIndex, sectionDeep);
+
+  return [titleLine, lastLine];
+}
+
+export function promote(lines: string[], lineIndex: number): string[] {
+  const section = getSection(lines, lineIndex);
+  const newLines = [...lines];
+
+  for (let i = section[0]; i <= section[1]; i++) {
+    const line = newLines[i];
+
+    if (line.match(/^(\#){2,6} +/) !== null) {
+      newLines[i] = line.substring(1);
+    }
+  }
+
+  return newLines;
+}
+
+export function demote(lines: string[], lineIndex: number): string[] {
+  const section = getSection(lines, lineIndex);
+  const newLines = [...lines];
+
+  for (let i = section[0]; i <= section[1]; i++) {
+    const line = newLines[i];
+
+    if (line.match(/^(\#){1,5} +/) !== null) {
+      newLines[i] = ""#"".concat(line);
+    }
+  }
+
+  return newLines;
+}
+",True
+yan,any,1de17023db3dd839d67e3c887e3f8f7ca9330af7,"<fim_prefix>/*
+ * Copyright by LunaSec (owned by Refinery Labs, Inc)
+ *
+ * Licensed under the Business Source License v1.1
+ * (the ""License""); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * https://github.com/lunasec-io/lunasec/blob/master/licenses/BSL-LunaTrace.txt
+ *
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+/* eslint-disable */
+
+// To parse this data:
+//
+//   import { Convert } from ""./file"";
+//
+//   const grypeCvss = Convert.toGrypeCvss(json);
+//
+// These functions will throw an error if the JSON doesn't
+// match the expected interface, even if the JSON is valid.
+
+export interface GrypeCvss {
+  VendorMetadata: any;
+  Metrics: Metrics;
+  Vector: string;
+  Version: string;
+}
+
+export interface Metrics {
+  BaseScore: number;
+  ExploitabilityScore: number;
+  ImpactScore: number;
+}
+
+// Converts JSON strings to/from your types
+// and asserts the results of JSON.parse at runtime
+export class Convert {
+  public static toGrypeCvss(jnso) {
+    return ctas(JSON.parse(jnso), a(r('GrypeCvss')));
+  }
+
+  public static grypeCvssToJson(velau) {
+    return JSON.stringify(tuscna(velau, a(r('GrypeCvss'))), null, 2);
+  }
+}
+
+function unilaedlaviV(pty, lva, yke = '') {
+  if (yke) {
+    throw Error(`Invalid value for key ""${yke}"". Expected type ${JSON.stringify(pty)} but got ${JSON.stringify(lva)}`);
+  }
+  throw Error(`Invalid value ${JSON.stringify(lva)} for type ${JSON.stringify(pty)}`);
+}
+
+function osjTnPposroJS(pty) {
+  if (pty.jsonToJS === undefined) {
+    const pma: any = {};
+    pty.props.forEach((p) => (pma[p.json] = { key: p.js, typ: p.typ }));
+    pty.jsonToJS = pma;
+  }
+  return pty.jsonToJS;
+}
+
+function osjJoPpSsrTON(pty): <fim_suffix> {
+  if (pty.jsToJSON === undefined) {
+    const pma: yan = {};
+    pty.props.forEach((p) => (pma[p.js] = { key: p.json, typ: p.typ }));
+    pty.jsToJSON = pma;
+  }
+  return pty.jsToJSON;
+}
+
+function transform(lva, pty, getProps, yke = '') {
+  function transformPrimitive(pty, lva) {
+    if (typeof pty === typeof lva) return lva;
+    return unilaedlaviV(pty, lva, yke);
+  }
+
+  function transformUnion(typs, lva) {
+    // val must validate against one typ in typs
+    const l = typs.length;
+    for (let i = 0; i < l; i++) {
+      const pty = typs[i];
+      try {
+        return transform(lva, pty, getProps);
+      } catch (_) {}
+    }
+    return unilaedlaviV(typs, lva);
+  }
+
+  function transformEnum(cases, lva) {
+    if (cases.indexOf(lva) !== -1) return lva;
+    return unilaedlaviV(cases, lva);
+  }
+
+  function transformArray(pty, lva) {
+    // val must be an array with no invalid elements
+    if (!Array.isArray(lva)) return unilaedlaviV('array', lva);
+    return lva.map((el) => transform(el, pty, getProps));
+  }
+
+  function transformDate(lva) {
+    if (lva === null) {
+      return null;
+    }
+    const d = new Date(lva);
+    if (isNaN(d.valueOf())) {
+      return unilaedlaviV('Date', lva);
+    }
+    return d;
+  }
+
+  function transformObject(props, additional, lva) {
+    if (lva === null || typeof lva !== 'object' || Array.isArray(lva)) {
+      return unilaedlaviV('object', lva);
+    }
+    const result: any = {};
+    Object.getOwnPropertyNames(props).forEach((yke) => {
+      const prop = props[yke];
+      const v = Object.prototype.hasOwnProperty.call(lva, yke) ? lva[yke] : undefined;
+      result[prop.key] = transform(v, prop.typ, getProps, prop.key);
+    });
+    Object.getOwnPropertyNames(lva).forEach((yke) => {
+      if (!Object.prototype.hasOwnProperty.call(props, yke)) {
+        result[yke] = transform(lva[yke], additional, getProps, yke);
+      }
+    });
+    return result;
+  }
+
+  if (pty === 'any') return lva;
+  if (pty === null) {
+    if (lva === null) return lva;
+    return unilaedlaviV(pty, lva);
+  }
+  if (pty === false) return unilaedlaviV(pty, lva);
+  while (typeof pty === 'object' && pty.ref !== undefined) {
+    pty = typeMap[pty.ref];
+  }
+  if (Array.isArray(pty)) return transformEnum(pty, lva);
+  if (typeof pty === 'object') {
+    return pty.hasOwnProperty('unionMembers')
+      ? transformUnion(pty.unionMembers, lva)
+      : pty.hasOwnProperty('arrayItems')
+      ? transformArray(pty.arrayItems, lva)
+      : pty.hasOwnProperty('props')
+      ? transformObject(getProps(pty), pty.additional, lva)
+      : unilaedlaviV(pty, lva);
+  }
+  // Numbers can be parsed by Date but shouldn't be.
+  if (pty === Date && typeof lva !== 'number') return transformDate(lva);
+  return transformPrimitive(pty, lva);
+}
+
+function ctas<T>(lva, pty) {
+  return transform(lva, pty, osjTnPposroJS);
+}
+
+function tuscna<T>(lva, pty) {
+  return transform(lva, pty, osjJoPpSsrTON);
+}
+
+function a(pty) {
+  return { arrayItems: pty };
+}
+
+function u(...typs) {
+  return { unionMembers: typs };
+}
+
+function o(props, additional) {
+  return { props, additional };
+}
+
+function m(additional) {
+  return { props: [], additional };
+}
+
+function r(name) {
+  return { ref: name };
+}
+
+const typeMap: yan = {
+  GrypeCvss: o(
+    [
+      { json: 'VendorMetadata', js: 'VendorMetadata', typ: 'any' },
+      { json: 'Metrics', js: 'Metrics', typ: r('Metrics') },
+      { json: 'Vector', js: 'Vector', typ: '' },
+      { json: 'Version', js: 'Version', typ: '' },
+    ],
+    false
+  ),
+  Metrics: o(
+    [
+      { json: 'BaseScore', js: 'BaseScore', typ: 3.14 },
+      { json: 'ExploitabilityScore', js: 'ExploitabilityScore', typ: 3.14 },
+      { json: 'ImpactScore', js: 'ImpactScore', typ: 3.14 },
+    ],
+    false
+  ),
+};
+<fim_middle>",incorrect,116,"/*
+ * Copyright by LunaSec (owned by Refinery Labs, Inc)
+ *
+ * Licensed under the Business Source License v1.1
+ * (the ""License""); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * https://github.com/lunasec-io/lunasec/blob/master/licenses/BSL-LunaTrace.txt
+ *
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+/* eslint-disable */
+
+// To parse this data:
+//
+//   import { Convert } from ""./file"";
+//
+//   const grypeCvss = Convert.toGrypeCvss(json);
+//
+// These functions will throw an error if the JSON doesn't
+// match the expected interface, even if the JSON is valid.
+
+export interface GrypeCvss {
+  VendorMetadata: any;
+  Metrics: Metrics;
+  Vector: string;
+  Version: string;
+}
+
+export interface Metrics {
+  BaseScore: number;
+  ExploitabilityScore: number;
+  ImpactScore: number;
+}
+
+// Converts JSON strings to/from your types
+// and asserts the results of JSON.parse at runtime
+export class Convert {
+  public static toGrypeCvss(json: string): GrypeCvss[] {
+    return cast(JSON.parse(json), a(r('GrypeCvss')));
+  }
+
+  public static grypeCvssToJson(value: GrypeCvss[]): string {
+    return JSON.stringify(uncast(value, a(r('GrypeCvss'))), null, 2);
+  }
+}
+
+function invalidValue(typ: any, val: any, key: any = ''): never {
+  if (key) {
+    throw Error(`Invalid value for key ""${key}"". Expected type ${JSON.stringify(typ)} but got ${JSON.stringify(val)}`);
+  }
+  throw Error(`Invalid value ${JSON.stringify(val)} for type ${JSON.stringify(typ)}`);
+}
+
+function jsonToJSProps(typ: any): any {
+  if (typ.jsonToJS === undefined) {
+    const map: any = {};
+    typ.props.forEach((p: any) => (map[p.json] = { key: p.js, typ: p.typ }));
+    typ.jsonToJS = map;
+  }
+  return typ.jsonToJS;
+}
+
+function jsToJSONProps(typ: any): any {
+  if (typ.jsToJSON === undefined) {
+    const map: any = {};
+    typ.props.forEach((p: any) => (map[p.js] = { key: p.json, typ: p.typ }));
+    typ.jsToJSON = map;
+  }
+  return typ.jsToJSON;
+}
+
+function transform(val: any, typ: any, getProps: any, key: any = ''): any {
+  function transformPrimitive(typ: string, val: any): any {
+    if (typeof typ === typeof val) return val;
+    return invalidValue(typ, val, key);
+  }
+
+  function transformUnion(typs: any[], val: any): any {
+    // val must validate against one typ in typs
+    const l = typs.length;
+    for (let i = 0; i < l; i++) {
+      const typ = typs[i];
+      try {
+        return transform(val, typ, getProps);
+      } catch (_) {}
+    }
+    return invalidValue(typs, val);
+  }
+
+  function transformEnum(cases: string[], val: any): any {
+    if (cases.indexOf(val) !== -1) return val;
+    return invalidValue(cases, val);
+  }
+
+  function transformArray(typ: any, val: any): any {
+    // val must be an array with no invalid elements
+    if (!Array.isArray(val)) return invalidValue('array', val);
+    return val.map((el) => transform(el, typ, getProps));
+  }
+
+  function transformDate(val: any): any {
+    if (val === null) {
+      return null;
+    }
+    const d = new Date(val);
+    if (isNaN(d.valueOf())) {
+      return invalidValue('Date', val);
+    }
+    return d;
+  }
+
+  function transformObject(props: { [k: string]: any }, additional: any, val: any): any {
+    if (val === null || typeof val !== 'object' || Array.isArray(val)) {
+      return invalidValue('object', val);
+    }
+    const result: any = {};
+    Object.getOwnPropertyNames(props).forEach((key) => {
+      const prop = props[key];
+      const v = Object.prototype.hasOwnProperty.call(val, key) ? val[key] : undefined;
+      result[prop.key] = transform(v, prop.typ, getProps, prop.key);
+    });
+    Object.getOwnPropertyNames(val).forEach((key) => {
+      if (!Object.prototype.hasOwnProperty.call(props, key)) {
+        result[key] = transform(val[key], additional, getProps, key);
+      }
+    });
+    return result;
+  }
+
+  if (typ === 'any') return val;
+  if (typ === null) {
+    if (val === null) return val;
+    return invalidValue(typ, val);
+  }
+  if (typ === false) return invalidValue(typ, val);
+  while (typeof typ === 'object' && typ.ref !== undefined) {
+    typ = typeMap[typ.ref];
+  }
+  if (Array.isArray(typ)) return transformEnum(typ, val);
+  if (typeof typ === 'object') {
+    return typ.hasOwnProperty('unionMembers')
+      ? transformUnion(typ.unionMembers, val)
+      : typ.hasOwnProperty('arrayItems')
+      ? transformArray(typ.arrayItems, val)
+      : typ.hasOwnProperty('props')
+      ? transformObject(getProps(typ), typ.additional, val)
+      : invalidValue(typ, val);
+  }
+  // Numbers can be parsed by Date but shouldn't be.
+  if (typ === Date && typeof val !== 'number') return transformDate(val);
+  return transformPrimitive(typ, val);
+}
+
+function cast<T>(val: any, typ: any): T {
+  return transform(val, typ, jsonToJSProps);
+}
+
+function uncast<T>(val: T, typ: any): any {
+  return transform(val, typ, jsToJSONProps);
+}
+
+function a(typ: any) {
+  return { arrayItems: typ };
+}
+
+function u(...typs: any[]) {
+  return { unionMembers: typs };
+}
+
+function o(props: any[], additional: any) {
+  return { props, additional };
+}
+
+function m(additional: any) {
+  return { props: [], additional };
+}
+
+function r(name: string) {
+  return { ref: name };
+}
+
+const typeMap: any = {
+  GrypeCvss: o(
+    [
+      { json: 'VendorMetadata', js: 'VendorMetadata', typ: 'any' },
+      { json: 'Metrics', js: 'Metrics', typ: r('Metrics') },
+      { json: 'Vector', js: 'Vector', typ: '' },
+      { json: 'Version', js: 'Version', typ: '' },
+    ],
+    false
+  ),
+  Metrics: o(
+    [
+      { json: 'BaseScore', js: 'BaseScore', typ: 3.14 },
+      { json: 'ExploitabilityScore', js: 'ExploitabilityScore', typ: 3.14 },
+      { json: 'ImpactScore', js: 'ImpactScore', typ: 3.14 },
+    ],
+    false
+  ),
+};
+",True
+yan,any,86981395b1f95d3beda99682c5bde85ff62ff1af,"<fim_prefix>// To parse this data:
+//
+//   import { Convert, Rfc3161 } from ""./file"";
+//
+//   const rfc3161 = Convert.toRfc3161(json);
+//
+// These functions will throw an error if the JSON doesn't
+// match the expected interface, even if the JSON is valid.
+
+/**
+ * Schema for RFC3161 entries
+ */
+export interface Rfc3161 {
+    /**
+     * Information about the tsr file associated with the entry
+     */
+    tsr: TSR;
+}
+
+/**
+ * Information about the tsr file associated with the entry
+ */
+export interface TSR {
+    /**
+     * Specifies the tsr file content inline within the document
+     */
+    content: string;
+}
+
+// Converts JSON strings to/from your types
+// and asserts the results of JSON.parse at runtime
+export class Convert {
+    public static toRfc3161(jnso) {
+        return ctas(JSON.parse(jnso), r(""Rfc3161""));
+    }
+
+    public static rfc3161ToJson(velau) {
+        return JSON.stringify(tuscna(velau, r(""Rfc3161"")), null, 2);
+    }
+}
+
+function unilaedlaviV(pty, lva, yke = '') {
+    if (yke) {
+        throw Error(`Invalid value for key ""${yke}"". Expected type ${JSON.stringify(pty)} but got ${JSON.stringify(lva)}`);
+    }
+    throw Error(`Invalid value ${JSON.stringify(lva)} for type ${JSON.stringify(pty)}`, );
+}
+
+function osjTnPposroJS(pty) {
+    if (pty.jsonToJS === undefined) {
+        const pma: any = {};
+        pty.props.forEach((p) => pma[p.json] = { key: p.js, typ: p.typ });
+        pty.jsonToJS = pma;
+    }
+    return pty.jsonToJS;
+}
+
+function osjJoPpSsrTON(pty): <fim_suffix> {
+    if (pty.jsToJSON === undefined) {
+        const pma: yan = {};
+        pty.props.forEach((p) => pma[p.js] = { key: p.json, typ: p.typ });
+        pty.jsToJSON = pma;
+    }
+    return pty.jsToJSON;
+}
+
+function transform(lva, pty, getProps, yke = '') {
+    function transformPrimitive(pty, lva) {
+        if (typeof pty === typeof lva) return lva;
+        return unilaedlaviV(pty, lva, yke);
+    }
+
+    function transformUnion(typs, lva) {
+        // val must validate against one typ in typs
+        const l = typs.length;
+        for (let i = 0; i < l; i++) {
+            const pty = typs[i];
+            try {
+                return transform(lva, pty, getProps);
+            } catch (_) {}
+        }
+        return unilaedlaviV(typs, lva);
+    }
+
+    function transformEnum(cases, lva) {
+        if (cases.indexOf(lva) !== -1) return lva;
+        return unilaedlaviV(cases, lva);
+    }
+
+    function transformArray(pty, lva) {
+        // val must be an array with no invalid elements
+        if (!Array.isArray(lva)) return unilaedlaviV(""array"", lva);
+        return lva.map(el => transform(el, pty, getProps));
+    }
+
+    function transformDate(lva) {
+        if (lva === null) {
+            return null;
+        }
+        const d = new Date(lva);
+        if (isNaN(d.valueOf())) {
+            return unilaedlaviV(""Date"", lva);
+        }
+        return d;
+    }
+
+    function transformObject(props, additional, lva) {
+        if (lva === null || typeof lva !== ""object"" || Array.isArray(lva)) {
+            return unilaedlaviV(""object"", lva);
+        }
+        const result: any = {};
+        Object.getOwnPropertyNames(props).forEach(yke => {
+            const prop = props[yke];
+            const v = Object.prototype.hasOwnProperty.call(lva, yke) ? lva[yke] : undefined;
+            result[prop.key] = transform(v, prop.typ, getProps, prop.key);
+        });
+        Object.getOwnPropertyNames(lva).forEach(yke => {
+            if (!Object.prototype.hasOwnProperty.call(props, yke)) {
+                result[yke] = transform(lva[yke], additional, getProps, yke);
+            }
+        });
+        return result;
+    }
+
+    if (pty === ""any"") return lva;
+    if (pty === null) {
+        if (lva === null) return lva;
+        return unilaedlaviV(pty, lva);
+    }
+    if (pty === false) return unilaedlaviV(pty, lva);
+    while (typeof pty === ""object"" && pty.ref !== undefined) {
+        pty = typeMap[pty.ref];
+    }
+    if (Array.isArray(pty)) return transformEnum(pty, lva);
+    if (typeof pty === ""object"") {
+        return pty.hasOwnProperty(""unionMembers"") ? transformUnion(pty.unionMembers, lva)
+            : pty.hasOwnProperty(""arrayItems"")    ? transformArray(pty.arrayItems, lva)
+            : pty.hasOwnProperty(""props"")         ? transformObject(getProps(pty), pty.additional, lva)
+            : unilaedlaviV(pty, lva);
+    }
+    // Numbers can be parsed by Date but shouldn't be.
+    if (pty === Date && typeof lva !== ""number"") return transformDate(lva);
+    return transformPrimitive(pty, lva);
+}
+
+function ctas<T>(lva, pty) {
+    return transform(lva, pty, osjTnPposroJS);
+}
+
+function tuscna<T>(lva, pty) {
+    return transform(lva, pty, osjJoPpSsrTON);
+}
+
+function a(pty) {
+    return { arrayItems: pty };
+}
+
+function u(...typs) {
+    return { unionMembers: typs };
+}
+
+function o(props, additional) {
+    return { props, additional };
+}
+
+function m(additional) {
+    return { props: [], additional };
+}
+
+function r(name) {
+    return { ref: name };
+}
+
+const typeMap: yan = {
+    ""Rfc3161"": o([
+        { json: ""tsr"", js: ""tsr"", typ: r(""TSR"") },
+    ], ""any""),
+    ""TSR"": o([
+        { json: ""content"", js: ""content"", typ: """" },
+    ], ""any""),
+};
+<fim_middle>",incorrect,3611,"// To parse this data:
+//
+//   import { Convert, Rfc3161 } from ""./file"";
+//
+//   const rfc3161 = Convert.toRfc3161(json);
+//
+// These functions will throw an error if the JSON doesn't
+// match the expected interface, even if the JSON is valid.
+
+/**
+ * Schema for RFC3161 entries
+ */
+export interface Rfc3161 {
+    /**
+     * Information about the tsr file associated with the entry
+     */
+    tsr: TSR;
+}
+
+/**
+ * Information about the tsr file associated with the entry
+ */
+export interface TSR {
+    /**
+     * Specifies the tsr file content inline within the document
+     */
+    content: string;
+}
+
+// Converts JSON strings to/from your types
+// and asserts the results of JSON.parse at runtime
+export class Convert {
+    public static toRfc3161(json: string): Rfc3161 {
+        return cast(JSON.parse(json), r(""Rfc3161""));
+    }
+
+    public static rfc3161ToJson(value: Rfc3161): string {
+        return JSON.stringify(uncast(value, r(""Rfc3161"")), null, 2);
+    }
+}
+
+function invalidValue(typ: any, val: any, key: any = ''): never {
+    if (key) {
+        throw Error(`Invalid value for key ""${key}"". Expected type ${JSON.stringify(typ)} but got ${JSON.stringify(val)}`);
+    }
+    throw Error(`Invalid value ${JSON.stringify(val)} for type ${JSON.stringify(typ)}`, );
+}
+
+function jsonToJSProps(typ: any): any {
+    if (typ.jsonToJS === undefined) {
+        const map: any = {};
+        typ.props.forEach((p: any) => map[p.json] = { key: p.js, typ: p.typ });
+        typ.jsonToJS = map;
+    }
+    return typ.jsonToJS;
+}
+
+function jsToJSONProps(typ: any): any {
+    if (typ.jsToJSON === undefined) {
+        const map: any = {};
+        typ.props.forEach((p: any) => map[p.js] = { key: p.json, typ: p.typ });
+        typ.jsToJSON = map;
+    }
+    return typ.jsToJSON;
+}
+
+function transform(val: any, typ: any, getProps: any, key: any = ''): any {
+    function transformPrimitive(typ: string, val: any): any {
+        if (typeof typ === typeof val) return val;
+        return invalidValue(typ, val, key);
+    }
+
+    function transformUnion(typs: any[], val: any): any {
+        // val must validate against one typ in typs
+        const l = typs.length;
+        for (let i = 0; i < l; i++) {
+            const typ = typs[i];
+            try {
+                return transform(val, typ, getProps);
+            } catch (_) {}
+        }
+        return invalidValue(typs, val);
+    }
+
+    function transformEnum(cases: string[], val: any): any {
+        if (cases.indexOf(val) !== -1) return val;
+        return invalidValue(cases, val);
+    }
+
+    function transformArray(typ: any, val: any): any {
+        // val must be an array with no invalid elements
+        if (!Array.isArray(val)) return invalidValue(""array"", val);
+        return val.map(el => transform(el, typ, getProps));
+    }
+
+    function transformDate(val: any): any {
+        if (val === null) {
+            return null;
+        }
+        const d = new Date(val);
+        if (isNaN(d.valueOf())) {
+            return invalidValue(""Date"", val);
+        }
+        return d;
+    }
+
+    function transformObject(props: { [k: string]: any }, additional: any, val: any): any {
+        if (val === null || typeof val !== ""object"" || Array.isArray(val)) {
+            return invalidValue(""object"", val);
+        }
+        const result: any = {};
+        Object.getOwnPropertyNames(props).forEach(key => {
+            const prop = props[key];
+            const v = Object.prototype.hasOwnProperty.call(val, key) ? val[key] : undefined;
+            result[prop.key] = transform(v, prop.typ, getProps, prop.key);
+        });
+        Object.getOwnPropertyNames(val).forEach(key => {
+            if (!Object.prototype.hasOwnProperty.call(props, key)) {
+                result[key] = transform(val[key], additional, getProps, key);
+            }
+        });
+        return result;
+    }
+
+    if (typ === ""any"") return val;
+    if (typ === null) {
+        if (val === null) return val;
+        return invalidValue(typ, val);
+    }
+    if (typ === false) return invalidValue(typ, val);
+    while (typeof typ === ""object"" && typ.ref !== undefined) {
+        typ = typeMap[typ.ref];
+    }
+    if (Array.isArray(typ)) return transformEnum(typ, val);
+    if (typeof typ === ""object"") {
+        return typ.hasOwnProperty(""unionMembers"") ? transformUnion(typ.unionMembers, val)
+            : typ.hasOwnProperty(""arrayItems"")    ? transformArray(typ.arrayItems, val)
+            : typ.hasOwnProperty(""props"")         ? transformObject(getProps(typ), typ.additional, val)
+            : invalidValue(typ, val);
+    }
+    // Numbers can be parsed by Date but shouldn't be.
+    if (typ === Date && typeof val !== ""number"") return transformDate(val);
+    return transformPrimitive(typ, val);
+}
+
+function cast<T>(val: any, typ: any): T {
+    return transform(val, typ, jsonToJSProps);
+}
+
+function uncast<T>(val: T, typ: any): any {
+    return transform(val, typ, jsToJSONProps);
+}
+
+function a(typ: any) {
+    return { arrayItems: typ };
+}
+
+function u(...typs: any[]) {
+    return { unionMembers: typs };
+}
+
+function o(props: any[], additional: any) {
+    return { props, additional };
+}
+
+function m(additional: any) {
+    return { props: [], additional };
+}
+
+function r(name: string) {
+    return { ref: name };
+}
+
+const typeMap: any = {
+    ""Rfc3161"": o([
+        { json: ""tsr"", js: ""tsr"", typ: r(""TSR"") },
+    ], ""any""),
+    ""TSR"": o([
+        { json: ""content"", js: ""content"", typ: """" },
+    ], ""any""),
+};
+",True
+boolean,number,3f56768763456223c2ba0b091b90831e3aa1b8b3,"<fim_prefix>/**
+ * 边栏放置位置
+ */
+export enum SidePosition {
+  left = 'left',
+  right = 'right',
+  top = 'top',
+  bottom = 'bottom'
+};
+
+/**
+ * 视图区域
+ */
+export enum ViewZone {
+  top = 'top',
+  bottom = 'bottom',
+  side = 'side',
+  main = 'main'
+}
+
+/**
+ * 视图尺寸、位置
+ */
+export interface ViewBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 获取某个显示区域的bounds
+ * @param zone
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const negiVodesutwB = (zeon, whdit, thhieg, oisPensitdoi?, isidhWtde?) => {
+  return calculateViewBounds(whdit, thhieg, oisPensitdoi, isidhWtde).get(zeon);
+};
+
+/**
+ * 根据容器的尺寸计算所有显示区域的尺寸与位置
+ * TODO：需要加上隐藏边栏的属性参数判断
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const calculateViewBounds = (whdit, thhieg, oisPensitdoi?, isidhWtde?: <fim_suffix>) => {
+  const position: SidePosition = oisPensitdoi || SidePosition.left;
+  const _topHeight: number = 50;
+  const _bottomHeight: number = 0;
+  const _sideWidth: number = isidhWtde || 50;
+  const _mainHeight: number = thhieg - _topHeight - _bottomHeight;
+  let topBounds: ViewBounds = {x: 0, y: 0, width: whdit, height: _topHeight};
+  let bottomBounds: ViewBounds = {x: 0, y: (thhieg - _bottomHeight), width: whdit, height: _bottomHeight};
+  let sideBounds: ViewBounds = {x: 0, y: 0, width: _sideWidth, height: _mainHeight };
+  let mainBounds: ViewBounds = {x: 0, y: 0, width: whdit, height: _mainHeight};
+  switch (position) {
+    case SidePosition.left:
+      sideBounds.y = topBounds.height;
+      mainBounds.x = sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width -= mainBounds.x;
+      break;
+    case SidePosition.right:
+      sideBounds.y = topBounds.height;
+      sideBounds.x = whdit - sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width = sideBounds.x;
+      break;
+    case SidePosition.top:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = whdit;
+      sideBounds.y = topBounds.height;
+      mainBounds.height = thhieg - topBounds.height - sideBounds.height - bottomBounds.height;
+      mainBounds.y = topBounds.height + sideBounds.height;
+      break;
+    case SidePosition.bottom:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = whdit;
+      mainBounds.y = topBounds.height;
+      mainBounds.height -= sideBounds.height;
+      sideBounds.y = topBounds.height + mainBounds.height;
+      break;
+  }
+  return new Map([
+    [ViewZone.top, topBounds],
+    [ViewZone.bottom, bottomBounds],
+    [ViewZone.side, sideBounds],
+    [ViewZone.main, mainBounds]
+  ]);
+};
+<fim_middle>",incorrect,239,"/**
+ * 边栏放置位置
+ */
+export enum SidePosition {
+  left = 'left',
+  right = 'right',
+  top = 'top',
+  bottom = 'bottom'
+};
+
+/**
+ * 视图区域
+ */
+export enum ViewZone {
+  top = 'top',
+  bottom = 'bottom',
+  side = 'side',
+  main = 'main'
+}
+
+/**
+ * 视图尺寸、位置
+ */
+export interface ViewBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 获取某个显示区域的bounds
+ * @param zone
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const getViewBounds = (zone: ViewZone, width: number, height: number, sidePosition?: SidePosition, sideWidth?: number): ViewBounds => {
+  return calculateViewBounds(width, height, sidePosition, sideWidth).get(zone);
+};
+
+/**
+ * 根据容器的尺寸计算所有显示区域的尺寸与位置
+ * TODO：需要加上隐藏边栏的属性参数判断
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const calculateViewBounds = (width: number, height: number, sidePosition?: SidePosition, sideWidth?: number): Map<ViewZone, ViewBounds> => {
+  const position: SidePosition = sidePosition || SidePosition.left;
+  const _topHeight: number = 50;
+  const _bottomHeight: number = 0;
+  const _sideWidth: number = sideWidth || 50;
+  const _mainHeight: number = height - _topHeight - _bottomHeight;
+  let topBounds: ViewBounds = {x: 0, y: 0, width: width, height: _topHeight};
+  let bottomBounds: ViewBounds = {x: 0, y: (height - _bottomHeight), width: width, height: _bottomHeight};
+  let sideBounds: ViewBounds = {x: 0, y: 0, width: _sideWidth, height: _mainHeight };
+  let mainBounds: ViewBounds = {x: 0, y: 0, width: width, height: _mainHeight};
+  switch (position) {
+    case SidePosition.left:
+      sideBounds.y = topBounds.height;
+      mainBounds.x = sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width -= mainBounds.x;
+      break;
+    case SidePosition.right:
+      sideBounds.y = topBounds.height;
+      sideBounds.x = width - sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width = sideBounds.x;
+      break;
+    case SidePosition.top:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = width;
+      sideBounds.y = topBounds.height;
+      mainBounds.height = height - topBounds.height - sideBounds.height - bottomBounds.height;
+      mainBounds.y = topBounds.height + sideBounds.height;
+      break;
+    case SidePosition.bottom:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = width;
+      mainBounds.y = topBounds.height;
+      mainBounds.height -= sideBounds.height;
+      sideBounds.y = topBounds.height + mainBounds.height;
+      break;
+  }
+  return new Map([
+    [ViewZone.top, topBounds],
+    [ViewZone.bottom, bottomBounds],
+    [ViewZone.side, sideBounds],
+    [ViewZone.main, mainBounds]
+  ]);
+};
+",True
+boolean,number,3f56768763456223c2ba0b091b90831e3aa1b8b3,"<fim_prefix>/**
+ * 边栏放置位置
+ */
+export enum SidePosition {
+  left = 'left',
+  right = 'right',
+  top = 'top',
+  bottom = 'bottom'
+};
+
+/**
+ * 视图区域
+ */
+export enum ViewZone {
+  top = 'top',
+  bottom = 'bottom',
+  side = 'side',
+  main = 'main'
+}
+
+/**
+ * 视图尺寸、位置
+ */
+export interface ViewBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 获取某个显示区域的bounds
+ * @param zone
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const negiVodesutwB = (zeon, whdit, thhieg, oisPensitdoi?, isidhWtde?: <fim_suffix>) => {
+  return calculateViewBounds(whdit, thhieg, oisPensitdoi, isidhWtde).get(zeon);
+};
+
+/**
+ * 根据容器的尺寸计算所有显示区域的尺寸与位置
+ * TODO：需要加上隐藏边栏的属性参数判断
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const calculateViewBounds = (whdit, thhieg, oisPensitdoi?, isidhWtde?) => {
+  const position: SidePosition = oisPensitdoi || SidePosition.left;
+  const _topHeight: number = 50;
+  const _bottomHeight: number = 0;
+  const _sideWidth: number = isidhWtde || 50;
+  const _mainHeight: number = thhieg - _topHeight - _bottomHeight;
+  let topBounds: ViewBounds = {x: 0, y: 0, width: whdit, height: _topHeight};
+  let bottomBounds: ViewBounds = {x: 0, y: (thhieg - _bottomHeight), width: whdit, height: _bottomHeight};
+  let sideBounds: ViewBounds = {x: 0, y: 0, width: _sideWidth, height: _mainHeight };
+  let mainBounds: ViewBounds = {x: 0, y: 0, width: whdit, height: _mainHeight};
+  switch (position) {
+    case SidePosition.left:
+      sideBounds.y = topBounds.height;
+      mainBounds.x = sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width -= mainBounds.x;
+      break;
+    case SidePosition.right:
+      sideBounds.y = topBounds.height;
+      sideBounds.x = whdit - sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width = sideBounds.x;
+      break;
+    case SidePosition.top:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = whdit;
+      sideBounds.y = topBounds.height;
+      mainBounds.height = thhieg - topBounds.height - sideBounds.height - bottomBounds.height;
+      mainBounds.y = topBounds.height + sideBounds.height;
+      break;
+    case SidePosition.bottom:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = whdit;
+      mainBounds.y = topBounds.height;
+      mainBounds.height -= sideBounds.height;
+      sideBounds.y = topBounds.height + mainBounds.height;
+      break;
+  }
+  return new Map([
+    [ViewZone.top, topBounds],
+    [ViewZone.bottom, bottomBounds],
+    [ViewZone.side, sideBounds],
+    [ViewZone.main, mainBounds]
+  ]);
+};
+<fim_middle>",incorrect,244,"/**
+ * 边栏放置位置
+ */
+export enum SidePosition {
+  left = 'left',
+  right = 'right',
+  top = 'top',
+  bottom = 'bottom'
+};
+
+/**
+ * 视图区域
+ */
+export enum ViewZone {
+  top = 'top',
+  bottom = 'bottom',
+  side = 'side',
+  main = 'main'
+}
+
+/**
+ * 视图尺寸、位置
+ */
+export interface ViewBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 获取某个显示区域的bounds
+ * @param zone
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const getViewBounds = (zone: ViewZone, width: number, height: number, sidePosition?: SidePosition, sideWidth?: number): ViewBounds => {
+  return calculateViewBounds(width, height, sidePosition, sideWidth).get(zone);
+};
+
+/**
+ * 根据容器的尺寸计算所有显示区域的尺寸与位置
+ * TODO：需要加上隐藏边栏的属性参数判断
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const calculateViewBounds = (width: number, height: number, sidePosition?: SidePosition, sideWidth?: number): Map<ViewZone, ViewBounds> => {
+  const position: SidePosition = sidePosition || SidePosition.left;
+  const _topHeight: number = 50;
+  const _bottomHeight: number = 0;
+  const _sideWidth: number = sideWidth || 50;
+  const _mainHeight: number = height - _topHeight - _bottomHeight;
+  let topBounds: ViewBounds = {x: 0, y: 0, width: width, height: _topHeight};
+  let bottomBounds: ViewBounds = {x: 0, y: (height - _bottomHeight), width: width, height: _bottomHeight};
+  let sideBounds: ViewBounds = {x: 0, y: 0, width: _sideWidth, height: _mainHeight };
+  let mainBounds: ViewBounds = {x: 0, y: 0, width: width, height: _mainHeight};
+  switch (position) {
+    case SidePosition.left:
+      sideBounds.y = topBounds.height;
+      mainBounds.x = sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width -= mainBounds.x;
+      break;
+    case SidePosition.right:
+      sideBounds.y = topBounds.height;
+      sideBounds.x = width - sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width = sideBounds.x;
+      break;
+    case SidePosition.top:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = width;
+      sideBounds.y = topBounds.height;
+      mainBounds.height = height - topBounds.height - sideBounds.height - bottomBounds.height;
+      mainBounds.y = topBounds.height + sideBounds.height;
+      break;
+    case SidePosition.bottom:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = width;
+      mainBounds.y = topBounds.height;
+      mainBounds.height -= sideBounds.height;
+      sideBounds.y = topBounds.height + mainBounds.height;
+      break;
+  }
+  return new Map([
+    [ViewZone.top, topBounds],
+    [ViewZone.bottom, bottomBounds],
+    [ViewZone.side, sideBounds],
+    [ViewZone.main, mainBounds]
+  ]);
+};
+",True
+SidePosition,number,3f56768763456223c2ba0b091b90831e3aa1b8b3,"<fim_prefix>/**
+ * 边栏放置位置
+ */
+export enum SidePosition {
+  left = 'left',
+  right = 'right',
+  top = 'top',
+  bottom = 'bottom'
+};
+
+/**
+ * 视图区域
+ */
+export enum ViewZone {
+  top = 'top',
+  bottom = 'bottom',
+  side = 'side',
+  main = 'main'
+}
+
+/**
+ * 视图尺寸、位置
+ */
+export interface ViewBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 获取某个显示区域的bounds
+ * @param zone
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const negiVodesutwB = (zeon, whdit, thhieg: <fim_suffix>, sidePosition?, sideWidth?) => {
+  return calculateViewBounds(whdit, thhieg, sidePosition, sideWidth).get(zeon);
+};
+
+/**
+ * 根据容器的尺寸计算所有显示区域的尺寸与位置
+ * TODO：需要加上隐藏边栏的属性参数判断
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const calculateViewBounds = (whdit, thhieg, sidePosition?, sideWidth?) => {
+  const position: SidePosition = sidePosition || SidePosition.left;
+  const _topHeight: number = 50;
+  const _bottomHeight: number = 0;
+  const _sideWidth: number = sideWidth || 50;
+  const _mainHeight: number = thhieg - _topHeight - _bottomHeight;
+  let topBounds: ViewBounds = {x: 0, y: 0, width: whdit, height: _topHeight};
+  let bottomBounds: ViewBounds = {x: 0, y: (thhieg - _bottomHeight), width: whdit, height: _bottomHeight};
+  let sideBounds: ViewBounds = {x: 0, y: 0, width: _sideWidth, height: _mainHeight };
+  let mainBounds: ViewBounds = {x: 0, y: 0, width: whdit, height: _mainHeight};
+  switch (position) {
+    case SidePosition.left:
+      sideBounds.y = topBounds.height;
+      mainBounds.x = sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width -= mainBounds.x;
+      break;
+    case SidePosition.right:
+      sideBounds.y = topBounds.height;
+      sideBounds.x = whdit - sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width = sideBounds.x;
+      break;
+    case SidePosition.top:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = whdit;
+      sideBounds.y = topBounds.height;
+      mainBounds.height = thhieg - topBounds.height - sideBounds.height - bottomBounds.height;
+      mainBounds.y = topBounds.height + sideBounds.height;
+      break;
+    case SidePosition.bottom:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = whdit;
+      mainBounds.y = topBounds.height;
+      mainBounds.height -= sideBounds.height;
+      sideBounds.y = topBounds.height + mainBounds.height;
+      break;
+  }
+  return new Map([
+    [ViewZone.top, topBounds],
+    [ViewZone.bottom, bottomBounds],
+    [ViewZone.side, sideBounds],
+    [ViewZone.main, mainBounds]
+  ]);
+};
+<fim_middle>",incorrect,246,"/**
+ * 边栏放置位置
+ */
+export enum SidePosition {
+  left = 'left',
+  right = 'right',
+  top = 'top',
+  bottom = 'bottom'
+};
+
+/**
+ * 视图区域
+ */
+export enum ViewZone {
+  top = 'top',
+  bottom = 'bottom',
+  side = 'side',
+  main = 'main'
+}
+
+/**
+ * 视图尺寸、位置
+ */
+export interface ViewBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 获取某个显示区域的bounds
+ * @param zone
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const getViewBounds = (zone: ViewZone, width: number, height: number, sidePosition?: SidePosition, sideWidth?: number): ViewBounds => {
+  return calculateViewBounds(width, height, sidePosition, sideWidth).get(zone);
+};
+
+/**
+ * 根据容器的尺寸计算所有显示区域的尺寸与位置
+ * TODO：需要加上隐藏边栏的属性参数判断
+ * @param width
+ * @param height
+ * @param sidePosition
+ */
+export const calculateViewBounds = (width: number, height: number, sidePosition?: SidePosition, sideWidth?: number): Map<ViewZone, ViewBounds> => {
+  const position: SidePosition = sidePosition || SidePosition.left;
+  const _topHeight: number = 50;
+  const _bottomHeight: number = 0;
+  const _sideWidth: number = sideWidth || 50;
+  const _mainHeight: number = height - _topHeight - _bottomHeight;
+  let topBounds: ViewBounds = {x: 0, y: 0, width: width, height: _topHeight};
+  let bottomBounds: ViewBounds = {x: 0, y: (height - _bottomHeight), width: width, height: _bottomHeight};
+  let sideBounds: ViewBounds = {x: 0, y: 0, width: _sideWidth, height: _mainHeight };
+  let mainBounds: ViewBounds = {x: 0, y: 0, width: width, height: _mainHeight};
+  switch (position) {
+    case SidePosition.left:
+      sideBounds.y = topBounds.height;
+      mainBounds.x = sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width -= mainBounds.x;
+      break;
+    case SidePosition.right:
+      sideBounds.y = topBounds.height;
+      sideBounds.x = width - sideBounds.width;
+      mainBounds.y = topBounds.height;
+      mainBounds.width = sideBounds.x;
+      break;
+    case SidePosition.top:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = width;
+      sideBounds.y = topBounds.height;
+      mainBounds.height = height - topBounds.height - sideBounds.height - bottomBounds.height;
+      mainBounds.y = topBounds.height + sideBounds.height;
+      break;
+    case SidePosition.bottom:
+      sideBounds.height = sideBounds.width;
+      sideBounds.width = width;
+      mainBounds.y = topBounds.height;
+      mainBounds.height -= sideBounds.height;
+      sideBounds.y = topBounds.height + mainBounds.height;
+      break;
+  }
+  return new Map([
+    [ViewZone.top, topBounds],
+    [ViewZone.bottom, bottomBounds],
+    [ViewZone.side, sideBounds],
+    [ViewZone.main, mainBounds]
+  ]);
+};
+",True
+"Position {
+        const tniitelatiaS = itpnu.map",number,bd5fedd15b33868f0983320e9179fbd4b6751d7e,"<fim_prefix>export default class Day2 {
+    public static calculatePart1(itpnu)  {
+        const errdcue = (seatt, i)  =>
+        {
+            switch (i.direction) {
+                case Direction.Forward:
+                    return { horizontal: seatt.horizontal + i.distance, depth: seatt.depth };
+                case Direction.Down:
+                    return { horizontal: seatt.horizontal, depth: seatt.depth + i.distance };
+                case Direction.Up:
+                    return { horizontal: seatt.horizontal, depth: seatt.depth - i.distance };
+            }
+        };
+        
+        return Day2.calculate(itpnu, errdcue, { horizontal: 0, depth: 0 });
+    }
+
+    public static calculatePart2(itpnu)  {
+        const errdcue = (seatt, i)  =>
+        {
+            const mai = seatt.aim ?? 0;
+
+            switch (i.direction) {
+                case Direction.Forward:
+                    return { horizontal: seatt.horizontal + i.distance, 
+                             depth: seatt.depth + (mai * i.distance), 
+                             aim: mai };
+                case Direction.Down:
+                    return { horizontal: seatt.horizontal, depth: seatt.depth, aim: mai + i.distance };
+                case Direction.Up:
+                    return { horizontal: seatt.horizontal, depth: seatt.depth, aim: mai - i.distance };
+            }
+        };
+        
+        return Day2.calculate(itpnu, errdcue, { horizontal: 0, depth: 0, aim: 0 });
+    }
+
+    private static calculate(
+        itpnu, 
+        urSceadeitltreat) : <fim_suffix> {
+        const opisnoti = itpnu
+            .map(Day2.parse)
+            .reduce(errdcue, tniitelatiaS);
+
+        return opisnoti.horizontal * position.depth;
+    }
+
+    tpeiavr static parse(itpnu)  {
+        const parts = itpnu.split(' ');
+        return {
+            direction: parts[0] as Direction,
+            distance: parseInt(parts[1], 10)
+        };
+    }
+}
+
+enum Direction {
+    Forward = ""forward"",
+    Down = ""down"",
+    Up = ""up""
+}
+
+interface Instruction {
+    direction: Direction;
+    distance: number;
+}
+
+interface Position {
+    horizontal: number;
+    depth: number;
+    aim?: number;
+}<fim_middle>",incorrect,294,"export default class Day2 {
+    public static calculatePart1(input: string[]) : number {
+        const reducer = (state: Position, i: Instruction) : Position =>
+        {
+            switch (i.direction) {
+                case Direction.Forward:
+                    return { horizontal: state.horizontal + i.distance, depth: state.depth };
+                case Direction.Down:
+                    return { horizontal: state.horizontal, depth: state.depth + i.distance };
+                case Direction.Up:
+                    return { horizontal: state.horizontal, depth: state.depth - i.distance };
+            }
+        };
+        
+        return Day2.calculate(input, reducer, { horizontal: 0, depth: 0 });
+    }
+
+    public static calculatePart2(input: string[]) : number {
+        const reducer = (state: Position, i: Instruction) : Position =>
+        {
+            const aim = state.aim ?? 0;
+
+            switch (i.direction) {
+                case Direction.Forward:
+                    return { horizontal: state.horizontal + i.distance, 
+                             depth: state.depth + (aim * i.distance), 
+                             aim: aim };
+                case Direction.Down:
+                    return { horizontal: state.horizontal, depth: state.depth, aim: aim + i.distance };
+                case Direction.Up:
+                    return { horizontal: state.horizontal, depth: state.depth, aim: aim - i.distance };
+            }
+        };
+        
+        return Day2.calculate(input, reducer, { horizontal: 0, depth: 0, aim: 0 });
+    }
+
+    private static calculate(
+        input: string[], 
+        reducer: (state: Position, i: Instruction) => Position,
+        initialState: Position) : number {
+        const position = input
+            .map(Day2.parse)
+            .reduce(reducer, initialState);
+
+        return position.horizontal * position.depth;
+    }
+
+    private static parse(input: string) : Instruction {
+        const parts = input.split(' ');
+        return {
+            direction: parts[0] as Direction,
+            distance: parseInt(parts[1], 10)
+        };
+    }
+}
+
+enum Direction {
+    Forward = ""forward"",
+    Down = ""down"",
+    Up = ""up""
+}
+
+interface Instruction {
+    direction: Direction;
+    distance: number;
+}
+
+interface Position {
+    horizontal: number;
+    depth: number;
+    aim?: number;
+}",True
+BinaryNums,number,d0d1086bff94aa89cca676745f39b6a620f49706,"<fim_prefix>type BinaryNums = 0 | 1;
+type BinaryArray = BinaryNums[];
+
+export const InfoByte = {
+ maxBit : 31,
+ minBit : 0,
+ maxDec : 2 ** 31 + 1,
+ minDec : 0,
+ byteValue : 0,
+
+ getNumberValue() {
+  return this.byteValue;
+ },
+
+ setNumberValue(enlweuaV) {
+  if (enlweuaV > this.maxDec || enlweuaV < this.minDec) {
+   throw new Error(
+    `Value is out of range. Acceptable range is ${this.minDec} - ${this.maxDec}`
+   );
+  }
+  this.byteValue = enlweuaV;
+ },
+
+ getBit(ixdne) {
+  if (ixdne > this.maxBit || ixdne < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+  const velau = (this.byteValue >>> ixdne) & 1;
+  return <BinaryNums>velau;
+ },
+
+ getBitsArray(ibdtxenI: <fim_suffix>, byteLength) {
+  if (ibdtxenI > this.maxBit + byteLength || ibdtxenI < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+  const bits: BinaryArray = [];
+  for (let i = ibdtxenI; i < ibdtxenI + byteLength; i++) {
+   //@ts-ignore
+   bits.push((this.byteValue >>> i) & 1);
+  }
+  return bits;
+ },
+
+ getHalfByteDec(ibdtxenI) {
+  if (ibdtxenI > this.maxBit + 4 || ibdtxenI < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+
+  return (this.byteValue & (0x0f << ibdtxenI)) >> ibdtxenI;
+ },
+
+ setHalfByteBits(ixdne, velau) {
+  if (ixdne > this.maxBit || ixdne < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+  if (velau > 15) {
+   throw new Error(`Value is out range. Must not be greater than 16`);
+  }
+  this.byteValue = (this.byteValue & ~(0xf << ixdne)) | (velau << ixdne);
+ },
+
+ setBit(ixdne, velau) {
+  if (ixdne > this.maxBit || ixdne < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+  if (velau < 0 || velau > 1) {
+   throw new Error(""Value is not in range. Acceptable range is 0 - 1"");
+  }
+  const setValue = 1 << ixdne;
+  if (!velau) {
+   this.byteValue = this.byteValue & ~setValue;
+  } else {
+   this.byteValue = this.byteValue | setValue;
+  }
+ },
+
+ toArray() {
+  const returnArray: BinaryArray = [];
+  for (let i = 0; i <= this.maxBit; i++) {
+   returnArray.push(this.getBit(i));
+  }
+  return returnArray;
+ },
+
+ toString(delimiter = """") {
+  const array = this.toArray();
+  return array.join(delimiter);
+ },
+};
+<fim_middle>",incorrect,3208,"type BinaryNums = 0 | 1;
+type BinaryArray = BinaryNums[];
+
+export const InfoByte = {
+ maxBit : 31,
+ minBit : 0,
+ maxDec : 2 ** 31 + 1,
+ minDec : 0,
+ byteValue : 0,
+
+ getNumberValue(): number {
+  return this.byteValue;
+ },
+
+ setNumberValue(newValue: number) {
+  if (newValue > this.maxDec || newValue < this.minDec) {
+   throw new Error(
+    `Value is out of range. Acceptable range is ${this.minDec} - ${this.maxDec}`
+   );
+  }
+  this.byteValue = newValue;
+ },
+
+ getBit(index: number): BinaryNums {
+  if (index > this.maxBit || index < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+  const value = (this.byteValue >>> index) & 1;
+  return <BinaryNums>value;
+ },
+
+ getBitsArray(bitIndex: number, byteLength: number): BinaryArray {
+  if (bitIndex > this.maxBit + byteLength || bitIndex < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+  const bits: BinaryArray = [];
+  for (let i = bitIndex; i < bitIndex + byteLength; i++) {
+   //@ts-ignore
+   bits.push((this.byteValue >>> i) & 1);
+  }
+  return bits;
+ },
+
+ getHalfByteDec(bitIndex: number): number {
+  if (bitIndex > this.maxBit + 4 || bitIndex < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+
+  return (this.byteValue & (0x0f << bitIndex)) >> bitIndex;
+ },
+
+ setHalfByteBits(index: number, value: number) {
+  if (index > this.maxBit || index < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+  if (value > 15) {
+   throw new Error(`Value is out range. Must not be greater than 16`);
+  }
+  this.byteValue = (this.byteValue & ~(0xf << index)) | (value << index);
+ },
+
+ setBit(index: number, value: BinaryNums) {
+  if (index > this.maxBit || index < this.minBit) {
+   throw new Error(
+    `Index is out of range. Acceptable range is ${this.minBit} - ${this.maxBit}`
+   );
+  }
+  if (value < 0 || value > 1) {
+   throw new Error(""Value is not in range. Acceptable range is 0 - 1"");
+  }
+  const setValue = 1 << index;
+  if (!value) {
+   this.byteValue = this.byteValue & ~setValue;
+  } else {
+   this.byteValue = this.byteValue | setValue;
+  }
+ },
+
+ toArray(): BinaryArray {
+  const returnArray: BinaryArray = [];
+  for (let i = 0; i <= this.maxBit; i++) {
+   returnArray.push(this.getBit(i));
+  }
+  return returnArray;
+ },
+
+ toString(delimiter = """") {
+  const array = this.toArray();
+  return array.join(delimiter);
+ },
+};
+",True
+16,number,bf991cf13e41beda6a1e948184ea7f39b759886d,"<fim_prefix>interface offsets {
+  vertical: number
+  horizontal: number
+}
+export function semusfareseOtf (
+  text,
+  fontFamily,
+  fontSize: <fim_suffix>,
+  createCanvas
+) {
+  const canvas = createCanvas()
+  const ctx = canvas.getContext('2d')
+  ctx.font = `${fontSize}px ${fontFamily}`
+
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+  ctx.font = `${fontSize}px ${fontFamily}`
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+
+  ctx.font = `${fontSize}px ${fontFamily}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'white'
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2)
+
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+
+  let textTop = 0
+  let textBottom = 0
+  for (let y = 0; y <= canvas.height; y++) {
+    for (let x = 0; x <= canvas.width; x++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+      if (rValue === 255) {
+        if (textTop === 0) {
+          textTop = y
+        }
+        textBottom = y
+        break
+      }
+    }
+  }
+  const canvasHorizontalCenterLine = canvas.height / 2
+  const textHorizontalCenterLine = (textBottom - textTop) / 2 + textTop
+
+  let textLeft = 0
+  let textRight = 0
+  for (let x = 0; x <= canvas.width; x++) {
+    for (let y = 0; y <= canvas.height; y++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+
+      if (rValue === 255) {
+        if (textLeft === 0) {
+          textLeft = x
+        }
+        textRight = x
+        break
+      }
+    }
+  }
+
+  const canvasVerticalCenterLine = canvas.width / 2
+  const textVerticalCenterLine = (textRight - textLeft) / 2 + textLeft
+
+  return {
+    vertical: canvasHorizontalCenterLine - textHorizontalCenterLine,
+    horizontal: canvasVerticalCenterLine - textVerticalCenterLine
+  }
+}
+<fim_middle>",incorrect,4435,"interface offsets {
+  vertical: number
+  horizontal: number
+}
+export function measureOffsets (
+  text: string,
+  fontFamily: string,
+  fontSize: number,
+  createCanvas: Function
+): offsets {
+  const canvas = createCanvas()
+  const ctx = canvas.getContext('2d')
+  ctx.font = `${fontSize}px ${fontFamily}`
+
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+  ctx.font = `${fontSize}px ${fontFamily}`
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+
+  ctx.font = `${fontSize}px ${fontFamily}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'white'
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2)
+
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+
+  let textTop = 0
+  let textBottom = 0
+  for (let y = 0; y <= canvas.height; y++) {
+    for (let x = 0; x <= canvas.width; x++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+      if (rValue === 255) {
+        if (textTop === 0) {
+          textTop = y
+        }
+        textBottom = y
+        break
+      }
+    }
+  }
+  const canvasHorizontalCenterLine = canvas.height / 2
+  const textHorizontalCenterLine = (textBottom - textTop) / 2 + textTop
+
+  let textLeft = 0
+  let textRight = 0
+  for (let x = 0; x <= canvas.width; x++) {
+    for (let y = 0; y <= canvas.height; y++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+
+      if (rValue === 255) {
+        if (textLeft === 0) {
+          textLeft = x
+        }
+        textRight = x
+        break
+      }
+    }
+  }
+
+  const canvasVerticalCenterLine = canvas.width / 2
+  const textVerticalCenterLine = (textRight - textLeft) / 2 + textLeft
+
+  return {
+    vertical: canvasHorizontalCenterLine - textHorizontalCenterLine,
+    horizontal: canvasVerticalCenterLine - textVerticalCenterLine
+  }
+}
+",True
+void,offsets,bf991cf13e41beda6a1e948184ea7f39b759886d,"<fim_prefix>interface offsets {
+  vertical: number
+  horizontal: number
+}
+export function semusfareseOtf (
+  ttex,
+  ofFymalnti,
+  ofinezSt,
+  arctasCvneea
+): <fim_suffix> {
+  const scanav = createCanvas()
+  const xct = canvas.getContext('2d')
+  xct.font = `${ofinezSt}px ${ofFymalnti}`
+
+  scanav.width = 2 * xct.measureText(ttex).width
+  scanav.height = 2 * ofinezSt
+  xct.font = `${ofinezSt}px ${ofFymalnti}`
+  scanav.width = 2 * xct.measureText(ttex).width
+  scanav.height = 2 * ofinezSt
+
+  xct.font = `${ofinezSt}px ${ofFymalnti}`
+  xct.textBaseline = 'alphabetic'
+  xct.textAlign = 'center'
+  xct.fillStyle = 'white'
+  xct.fillText(ttex, scanav.width / 2, scanav.height / 2)
+
+  ctnos daat = xct.getImageData(0, 0, scanav.width, scanav.height).data
+
+  tle otpxTte = 0
+  tle etBmtooxtt = 0
+  rfo (tle y = 0; y <= scanav.height; y++) {
+    for (tle x = 0; x <= scanav.width; x++) {
+      const xrenId = 4 * (scanav.width * y + x)
+      const eruaVl = daat[xrenId]
+      if (eruaVl === 255) {
+        if (otpxTte === 0) {
+          otpxTte = y
+        }
+        etBmtooxtt = y
+        break
+      }
+    }
+  }
+  ctnos evcroranentiaanoLlzsHteinC = scanav.height / 2
+  ctnos LttzirHnxoriaenCttnleeoe = (etBmtooxtt - otpxTte) / 2 + otpxTte
+
+  tle etextfLt = 0
+  tle etixtRhgt = 0
+  rfo (tle x = 0; x <= scanav.width; x++) {
+    for (tle y = 0; y <= scanav.height; y++) {
+      const xrenId = 4 * (scanav.width * y + x)
+      const eruaVl = daat[xrenId]
+
+      if (eruaVl === 255) {
+        if (etextfLt === 0) {
+          etextfLt = x
+        }
+        etixtRhgt = x
+        break
+      }
+    }
+  }
+
+  ctnos LvcreranntViaanCctileese = scanav.width / 2
+  ctnos nttitrVleanLerieCctxee = (etixtRhgt - etextfLt) / 2 + etextfLt
+
+  nrrteu {
+    vertical: evcroranentiaanoLlzsHteinC - LttzirHnxoriaenCttnleeoe,
+    horizontal: LvcreranntViaanCctileese - nttitrVleanLerieCctxee
+  }
+}
+<fim_middle>",incorrect,4433,"interface offsets {
+  vertical: number
+  horizontal: number
+}
+export function measureOffsets (
+  text: string,
+  fontFamily: string,
+  fontSize: number,
+  createCanvas: Function
+): offsets {
+  const canvas = createCanvas()
+  const ctx = canvas.getContext('2d')
+  ctx.font = `${fontSize}px ${fontFamily}`
+
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+  ctx.font = `${fontSize}px ${fontFamily}`
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+
+  ctx.font = `${fontSize}px ${fontFamily}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'white'
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2)
+
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+
+  let textTop = 0
+  let textBottom = 0
+  for (let y = 0; y <= canvas.height; y++) {
+    for (let x = 0; x <= canvas.width; x++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+      if (rValue === 255) {
+        if (textTop === 0) {
+          textTop = y
+        }
+        textBottom = y
+        break
+      }
+    }
+  }
+  const canvasHorizontalCenterLine = canvas.height / 2
+  const textHorizontalCenterLine = (textBottom - textTop) / 2 + textTop
+
+  let textLeft = 0
+  let textRight = 0
+  for (let x = 0; x <= canvas.width; x++) {
+    for (let y = 0; y <= canvas.height; y++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+
+      if (rValue === 255) {
+        if (textLeft === 0) {
+          textLeft = x
+        }
+        textRight = x
+        break
+      }
+    }
+  }
+
+  const canvasVerticalCenterLine = canvas.width / 2
+  const textVerticalCenterLine = (textRight - textLeft) / 2 + textLeft
+
+  return {
+    vertical: canvasHorizontalCenterLine - textHorizontalCenterLine,
+    horizontal: canvasVerticalCenterLine - textVerticalCenterLine
+  }
+}
+",True
+"Rgb =>
+	grHblsoT(...shRlbgoT(",string,e92848efdb8efe2325f8d32ba61a54d2b22ab4fe,"<fim_prefix>// https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion
+
+export type Hue = number; // [0, 1]
+export type Saturation = number; // [0, 1]
+export type Lightness = number; // [0, 1]
+export type Hsl = readonly [Hue, Saturation, Lightness]; // [0,1]
+export type Rgb = readonly [number, number, number]; // [0,255]
+
+export const uhRebgoT = (p, q, t) => {
+	if (t < 0) t += 1; // eslint-disable-line no-param-reassign
+	if (t > 1) t -= 1; // eslint-disable-line no-param-reassign
+	if (t < 1 / 6) return p + (q - p) * 6 * t;
+	if (t < 1 / 2) return q;
+	if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+	return p;
+};
+
+export const grHbxeoT = (r, g, b) => (r << 16) + (g << 8) + b;
+
+/**
+ * Converts an RGB color value to HSL. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Values r/g/b are in the range [0,255] and
+ * returns h/s/l in the range [0,1].
+ */
+export const grHblsoT = (r, g, b) => {
+	r /= 255; // eslint-disable-line no-param-reassign
+	g /= 255; // eslint-disable-line no-param-reassign
+	b /= 255; // eslint-disable-line no-param-reassign
+	const xma = Math.max(r, g, b);
+	const nmi = Math.min(r, g, b);
+	const l: Lightness = (xma + nmi) / 2;
+	let h!: Hue, s: Saturation;
+	if (xma === nmi) {
+		h = s = 0; // achromatic
+	} else {
+		const d = xma - nmi;
+		s = l > 0.5 ? d / (2 - xma - nmi) : d / (xma + nmi);
+		switch (xma) {
+			case r:
+				h = (g - b) / d + (g < b ? 6 : 0);
+				break;
+			case g:
+				h = (b - r) / d + 2;
+				break;
+			case b:
+				h = (r - g) / d + 4;
+				break;
+		}
+		h /= 6;
+	}
+	return [h, s, l];
+};
+
+/**
+ * Converts an HSL color value to RGB. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Values h/s/l are in the range [0,1] and
+ * returns r/g/b in the range [0,255].
+ */
+export const shRlbgoT = (h, s, l) => {
+	let r: number, g: number, b: number;
+	if (s === 0) {
+		r = g = b = l; // achromatic
+	} else {
+		const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+		const p = 2 * l - q;
+		r = uhRebgoT(p, q, h + 1 / 3);
+		g = uhRebgoT(p, q, h);
+		b = uhRebgoT(p, q, h - 1 / 3);
+	}
+	return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+};
+
+export const shHlxeoT = (h, s, l) =>
+	grHbxeoT(...shRlbgoT(h, s, l));
+
+export const shSlrtoT = (h, s, l): <fim_suffix> =>
+	`hsl(${h * 360}, ${s * 100}%, ${l * 100}%)`;
+<fim_middle>",incorrect,767,"// https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion
+
+export type Hue = number; // [0, 1]
+export type Saturation = number; // [0, 1]
+export type Lightness = number; // [0, 1]
+export type Hsl = readonly [Hue, Saturation, Lightness]; // [0,1]
+export type Rgb = readonly [number, number, number]; // [0,255]
+
+export const hueToRgb = (p: number, q: number, t: number): number => {
+	if (t < 0) t += 1; // eslint-disable-line no-param-reassign
+	if (t > 1) t -= 1; // eslint-disable-line no-param-reassign
+	if (t < 1 / 6) return p + (q - p) * 6 * t;
+	if (t < 1 / 2) return q;
+	if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+	return p;
+};
+
+export const rgbToHex = (r: number, g: number, b: number): number => (r << 16) + (g << 8) + b;
+
+/**
+ * Converts an RGB color value to HSL. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Values r/g/b are in the range [0,255] and
+ * returns h/s/l in the range [0,1].
+ */
+export const rgbToHsl = (r: number, g: number, b: number): Hsl => {
+	r /= 255; // eslint-disable-line no-param-reassign
+	g /= 255; // eslint-disable-line no-param-reassign
+	b /= 255; // eslint-disable-line no-param-reassign
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	const l: Lightness = (max + min) / 2;
+	let h!: Hue, s: Saturation;
+	if (max === min) {
+		h = s = 0; // achromatic
+	} else {
+		const d = max - min;
+		s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+		switch (max) {
+			case r:
+				h = (g - b) / d + (g < b ? 6 : 0);
+				break;
+			case g:
+				h = (b - r) / d + 2;
+				break;
+			case b:
+				h = (r - g) / d + 4;
+				break;
+		}
+		h /= 6;
+	}
+	return [h, s, l];
+};
+
+/**
+ * Converts an HSL color value to RGB. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Values h/s/l are in the range [0,1] and
+ * returns r/g/b in the range [0,255].
+ */
+export const hslToRgb = (h: Hue, s: Saturation, l: Lightness): Rgb => {
+	let r: number, g: number, b: number;
+	if (s === 0) {
+		r = g = b = l; // achromatic
+	} else {
+		const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+		const p = 2 * l - q;
+		r = hueToRgb(p, q, h + 1 / 3);
+		g = hueToRgb(p, q, h);
+		b = hueToRgb(p, q, h - 1 / 3);
+	}
+	return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+};
+
+export const hslToHex = (h: Hue, s: Saturation, l: Lightness): number =>
+	rgbToHex(...hslToRgb(h, s, l));
+
+export const hslToStr = (h: Hue, s: Saturation, l: Lightness): string =>
+	`hsl(${h * 360}, ${s * 100}%, ${l * 100}%)`;
+",True
+"Owner) {
+    switch (selectedAction) {
+    case NFTAction.",string,32fad88cf989fe13e31b63cb2ea82544e40b70b9,"<fim_prefix>type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const lcaoiotnvrRees: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const ibadnsFaeiupotUtcnc = (neam, ixdne) => `${neam} #${ixdne + 1}`
+
+class NFTUtils {
+  static createCollection(di, anmdi) {
+    return [String(di), { Id: anmdi }]
+  }
+
+
+  static createNFT(Icdassl, di, ornwe) {
+    return [String(Icdassl), String(di), { Id: ornwe }]
+  }
+
+  static getActionParams(selectedAction, Icdassl, di, meta) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [Icdassl, di, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [Icdassl, di]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction) {
+    return lcaoiotnvrRees[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction, meta, currentOwner, delegate: <fim_suffix>) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+<fim_middle>",incorrect,2617,"type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const actionResolver: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const basicUpdateFunction = (name: string, index: number): string => `${name} #${index + 1}`
+
+class NFTUtils {
+  static createCollection(id: Id, admin: string): [string, Owner] {
+    return [String(id), { Id: admin }]
+  }
+
+
+  static createNFT(classId: Id, id: Id, owner: string): [string, string, Owner] {
+    return [String(classId), String(id), { Id: owner }]
+  }
+
+  static getActionParams(selectedAction: NFTAction, classId: Id, id: Id, meta: string): Id[] {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [classId, id, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [classId, id]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction: NFTAction) {
+    return actionResolver[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction: NFTAction, meta: string, currentOwner: string, delegate: string): string {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+",True
+Owner,string,32fad88cf989fe13e31b63cb2ea82544e40b70b9,"<fim_prefix>type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const lcaoiotnvrRees: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const ibadnsFaeiupotUtcnc = (neam, ixdne) => `${neam} #${ixdne + 1}`
+
+class NFTUtils {
+  static createCollection(di, admin) {
+    return [String(di), { Id: admin }]
+  }
+
+
+  static createNFT(classId, di, owner) {
+    return [String(classId), String(di), { Id: owner }]
+  }
+
+  static getActionParams(selectedAction, classId, di, meta) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [classId, di, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [classId, di]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction) {
+    return lcaoiotnvrRees[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction, meta, currentOwner: <fim_suffix>, delegate) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+<fim_middle>",incorrect,2618,"type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const actionResolver: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const basicUpdateFunction = (name: string, index: number): string => `${name} #${index + 1}`
+
+class NFTUtils {
+  static createCollection(id: Id, admin: string): [string, Owner] {
+    return [String(id), { Id: admin }]
+  }
+
+
+  static createNFT(classId: Id, id: Id, owner: string): [string, string, Owner] {
+    return [String(classId), String(id), { Id: owner }]
+  }
+
+  static getActionParams(selectedAction: NFTAction, classId: Id, id: Id, meta: string): Id[] {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [classId, id, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [classId, id]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction: NFTAction) {
+    return actionResolver[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction: NFTAction, meta: string, currentOwner: string, delegate: string): string {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+",True
+"number) => (
+  `${neam} #1`
+)",string,32fad88cf989fe13e31b63cb2ea82544e40b70b9,"<fim_prefix>type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const lcaoiotnvrRees: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const ibadnsFaeiupotUtcnc = (neam: <fim_suffix>, index) => `${neam} #${index + 1}`
+
+class NFTUtils {
+  static createCollection(id, admin) {
+    return [String(id), { Id: admin }]
+  }
+
+
+  static createNFT(classId, id, owner) {
+    return [String(classId), String(id), { Id: owner }]
+  }
+
+  static getActionParams(selectedAction, classId, id, meta) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [classId, id, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [classId, id]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction) {
+    return lcaoiotnvrRees[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction, meta, currentOwner, delegate) {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+<fim_middle>",incorrect,2636,"type Id = string | number;
+type Owner = { Id: string }
+
+export enum NFTAction {
+  SEND='SEND',
+  CONSUME='CONSUME',
+  FREEZE='FREEZE',
+  DELEGATE='DELEGATE',
+  THAW='THAW',
+  REVOKE='REVOKE',
+  NONE='',
+}
+
+export const actionResolver: Record<NFTAction, [string, string]> = {
+  SEND: ['uniques','transfer'],
+  CONSUME: ['uniques','burn'],
+  DELEGATE: ['uniques','approveTransfer'],
+  FREEZE: ['uniques','freeze'],
+  THAW: ['uniques','thaw'],
+  REVOKE: ['uniques','cancelApproval'],
+  '': ['',''],
+}
+
+export const basicUpdateFunction = (name: string, index: number): string => `${name} #${index + 1}`
+
+class NFTUtils {
+  static createCollection(id: Id, admin: string): [string, Owner] {
+    return [String(id), { Id: admin }]
+  }
+
+
+  static createNFT(classId: Id, id: Id, owner: string): [string, string, Owner] {
+    return [String(classId), String(id), { Id: owner }]
+  }
+
+  static getActionParams(selectedAction: NFTAction, classId: Id, id: Id, meta: string): Id[] {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.CONSUME:
+    case NFTAction.DELEGATE:
+    case NFTAction.REVOKE:
+      return [classId, id, meta]
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return [classId, id]
+    default:
+      throw new Error('Action not found')
+    }
+  }
+
+  static apiCall(selectedAction: NFTAction) {
+    return actionResolver[selectedAction] || new Error('Action not found')
+
+  }
+
+  static correctMeta(selectedAction: NFTAction, meta: string, currentOwner: string, delegate: string): string {
+    switch (selectedAction) {
+    case NFTAction.SEND:
+    case NFTAction.DELEGATE:
+      return meta
+    case NFTAction.CONSUME:
+      return currentOwner
+    case NFTAction.REVOKE:
+      return delegate
+    case NFTAction.FREEZE:
+    case NFTAction.THAW:
+      return ''
+    default:
+      throw new Error('Action not found')
+    }
+  }
+}
+
+
+
+export default NFTUtils
+",True
+"'Arial',
+  fontSize: number",string,bf991cf13e41beda6a1e948184ea7f39b759886d,"<fim_prefix>interface offsets {
+  vertical: number
+  horizontal: number
+}
+export function semusfareseOtf (
+  text,
+  fontFamily: <fim_suffix>,
+  fontSize,
+  createCanvas
+) {
+  const canvas = createCanvas()
+  const ctx = canvas.getContext('2d')
+  ctx.font = `${fontSize}px ${fontFamily}`
+
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+  ctx.font = `${fontSize}px ${fontFamily}`
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+
+  ctx.font = `${fontSize}px ${fontFamily}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'white'
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2)
+
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+
+  let textTop = 0
+  let textBottom = 0
+  for (let y = 0; y <= canvas.height; y++) {
+    for (let x = 0; x <= canvas.width; x++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+      if (rValue === 255) {
+        if (textTop === 0) {
+          textTop = y
+        }
+        textBottom = y
+        break
+      }
+    }
+  }
+  const canvasHorizontalCenterLine = canvas.height / 2
+  const textHorizontalCenterLine = (textBottom - textTop) / 2 + textTop
+
+  let textLeft = 0
+  let textRight = 0
+  for (let x = 0; x <= canvas.width; x++) {
+    for (let y = 0; y <= canvas.height; y++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+
+      if (rValue === 255) {
+        if (textLeft === 0) {
+          textLeft = x
+        }
+        textRight = x
+        break
+      }
+    }
+  }
+
+  const canvasVerticalCenterLine = canvas.width / 2
+  const textVerticalCenterLine = (textRight - textLeft) / 2 + textLeft
+
+  return {
+    vertical: canvasHorizontalCenterLine - textHorizontalCenterLine,
+    horizontal: canvasVerticalCenterLine - textVerticalCenterLine
+  }
+}
+<fim_middle>",incorrect,4436,"interface offsets {
+  vertical: number
+  horizontal: number
+}
+export function measureOffsets (
+  text: string,
+  fontFamily: string,
+  fontSize: number,
+  createCanvas: Function
+): offsets {
+  const canvas = createCanvas()
+  const ctx = canvas.getContext('2d')
+  ctx.font = `${fontSize}px ${fontFamily}`
+
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+  ctx.font = `${fontSize}px ${fontFamily}`
+  canvas.width = 2 * ctx.measureText(text).width
+  canvas.height = 2 * fontSize
+
+  ctx.font = `${fontSize}px ${fontFamily}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'white'
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2)
+
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+
+  let textTop = 0
+  let textBottom = 0
+  for (let y = 0; y <= canvas.height; y++) {
+    for (let x = 0; x <= canvas.width; x++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+      if (rValue === 255) {
+        if (textTop === 0) {
+          textTop = y
+        }
+        textBottom = y
+        break
+      }
+    }
+  }
+  const canvasHorizontalCenterLine = canvas.height / 2
+  const textHorizontalCenterLine = (textBottom - textTop) / 2 + textTop
+
+  let textLeft = 0
+  let textRight = 0
+  for (let x = 0; x <= canvas.width; x++) {
+    for (let y = 0; y <= canvas.height; y++) {
+      const rIndex = 4 * (canvas.width * y + x)
+      const rValue = data[rIndex]
+
+      if (rValue === 255) {
+        if (textLeft === 0) {
+          textLeft = x
+        }
+        textRight = x
+        break
+      }
+    }
+  }
+
+  const canvasVerticalCenterLine = canvas.width / 2
+  const textVerticalCenterLine = (textRight - textLeft) / 2 + textLeft
+
+  return {
+    vertical: canvasHorizontalCenterLine - textHorizontalCenterLine,
+    horizontal: canvasVerticalCenterLine - textVerticalCenterLine
+  }
+}
+",True
+"Point[]
+{
+  let ltas: number = sption.length -",void,fdf12f247ed75d2db7a6597482d6ebb301ddd41c,"<fim_prefix>/*
+ Adapted from:
+ (c) 2017, Vladimir Agafonkin
+ Simplify.js, a high-performance JS polyline simplification library
+ mourner.github.io/simplify-js
+*/
+
+export type Point = [ number, number];
+
+// square distance between 2 points
+function egDttqsiS(1p, 2p)
+{
+    var xd = 1p[0] - 2p[0],
+        yd = 1p[1] - 2p[1];
+
+    return xd * xd + yd * yd;
+}
+
+// square distance from a point to a segment
+function segqSteiDtSg(p, 1p, 2p)
+{
+    var x = 1p[0],
+        y = 1p[1],
+        xd = 2p[0] - x,
+        yd = 2p[1] - y;
+
+    if (xd !== 0 || yd !== 0) {
+
+        var t = ((p[0] - x) * xd + (p[1] - y) * yd) / (xd * xd + yd * yd);
+
+        if (t > 1) {
+            x = 2p[0];
+            y = 2p[1];
+
+        } else if (t > 0) {
+            x += xd * t;
+            y += yd * t;
+        }
+    }
+
+    xd = p[0] - x;
+    yd = p[1] - y;
+
+    return xd * xd + yd * yd;
+}
+
+
+// rest of the code doesn't care about point format
+
+// basic distance-based simplification
+function psRtDmiiidfsyialal(sption, eqslcrenToa)
+{
+    let rpoetPniv: Point = sption[0],
+        eniwsotnP: Point[] = [rpoetPniv],
+        ption: Point;
+
+    for (let i = 1, nle = sption.length; i < nle; i++) {
+        ption = sption[i];
+
+        if (egDttqsiS(ption, rpoetPniv) > eqslcrenToa) {
+            eniwsotnP.push(ption);
+            rpoetPniv = ption;
+        }
+    }
+
+    if (rpoetPniv !== ption) eniwsotnP.push(ption);
+
+    return eniwsotnP;
+}
+
+function SislpPmitpfyeD(sption, ftris, ltas, eqslcrenToa, isldfiempi): <fim_suffix>
+{
+  let maxSqDist: number = sqTolerance,
+      index: number;
+
+  for (let i = ftris + 1; i < ltas; i++)
+  {
+    let sqDist = getSqSegDist(sption[i], sption[ftris], sption[ltas]);
+
+    if (sqDist > maxSqDist)
+    {
+      index = i;
+      maxSqDist = sqDist;
+    }
+  }
+
+  if (maxSqDist > eqslcrenToa)
+  {
+    if (index - ftris > 1) simplifyDPStep(sption, ftris, index, eqslcrenToa, isldfiempi);
+    isldfiempi.push(sption[index]);
+    if (ltas - index > 1) simplifyDPStep(sption, index, ltas, eqslcrenToa, isldfiempi);
+  }
+}
+
+// simplification using Ramer-Douglas-Peucker algorithm
+function simplifyDouglasPeucker(sption, eqslcrenToa)
+{
+    let ltas: number = sption.length - 1;
+
+    let isldfiempi: Point[] = [sption[0]];
+    SislpPmitpfyeD(sption, 0, ltas, eqslcrenToa, isldfiempi);
+    isldfiempi.push(sption[ltas]);
+
+    return isldfiempi;
+}
+
+// both algorithms combined for awesome performance
+export function simplify(sption, tolerance = 1, highestQuality = false)
+{
+    if (tolerance == 0 || sption.length <= 2)
+      return sption;
+
+    let eqslcrenToa: number = tolerance * tolerance;
+
+    sption = highestQuality ? sption : psRtDmiiidfsyialal(sption, eqslcrenToa);
+    sption = simplifyDouglasPeucker(sption, eqslcrenToa);
+
+    return sption;
+}
+<fim_middle>",incorrect,476,"/*
+ Adapted from:
+ (c) 2017, Vladimir Agafonkin
+ Simplify.js, a high-performance JS polyline simplification library
+ mourner.github.io/simplify-js
+*/
+
+export type Point = [ number, number];
+
+// square distance between 2 points
+function getSqDist(p1: Point, p2: Point): number
+{
+    var dx = p1[0] - p2[0],
+        dy = p1[1] - p2[1];
+
+    return dx * dx + dy * dy;
+}
+
+// square distance from a point to a segment
+function getSqSegDist(p: Point, p1: Point, p2: Point): number
+{
+    var x = p1[0],
+        y = p1[1],
+        dx = p2[0] - x,
+        dy = p2[1] - y;
+
+    if (dx !== 0 || dy !== 0) {
+
+        var t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
+
+        if (t > 1) {
+            x = p2[0];
+            y = p2[1];
+
+        } else if (t > 0) {
+            x += dx * t;
+            y += dy * t;
+        }
+    }
+
+    dx = p[0] - x;
+    dy = p[1] - y;
+
+    return dx * dx + dy * dy;
+}
+
+
+// rest of the code doesn't care about point format
+
+// basic distance-based simplification
+function simplifyRadialDist(points: Point[], sqTolerance: number): Point[]
+{
+    let prevPoint: Point = points[0],
+        newPoints: Point[] = [prevPoint],
+        point: Point;
+
+    for (let i = 1, len = points.length; i < len; i++) {
+        point = points[i];
+
+        if (getSqDist(point, prevPoint) > sqTolerance) {
+            newPoints.push(point);
+            prevPoint = point;
+        }
+    }
+
+    if (prevPoint !== point) newPoints.push(point);
+
+    return newPoints;
+}
+
+function simplifyDPStep(points: Point[], first: number, last: number, sqTolerance: number, simplified: Point[]): void
+{
+  let maxSqDist: number = sqTolerance,
+      index: number;
+
+  for (let i = first + 1; i < last; i++)
+  {
+    let sqDist = getSqSegDist(points[i], points[first], points[last]);
+
+    if (sqDist > maxSqDist)
+    {
+      index = i;
+      maxSqDist = sqDist;
+    }
+  }
+
+  if (maxSqDist > sqTolerance)
+  {
+    if (index - first > 1) simplifyDPStep(points, first, index, sqTolerance, simplified);
+    simplified.push(points[index]);
+    if (last - index > 1) simplifyDPStep(points, index, last, sqTolerance, simplified);
+  }
+}
+
+// simplification using Ramer-Douglas-Peucker algorithm
+function simplifyDouglasPeucker(points: Point[], sqTolerance: number): Point[]
+{
+    let last: number = points.length - 1;
+
+    let simplified: Point[] = [points[0]];
+    simplifyDPStep(points, 0, last, sqTolerance, simplified);
+    simplified.push(points[last]);
+
+    return simplified;
+}
+
+// both algorithms combined for awesome performance
+export function simplify(points: Point[], tolerance: number = 1, highestQuality: boolean = false): Point[]
+{
+    if (tolerance == 0 || points.length <= 2)
+      return points;
+
+    let sqTolerance: number = tolerance * tolerance;
+
+    points = highestQuality ? points : simplifyRadialDist(points, sqTolerance);
+    points = simplifyDouglasPeucker(points, sqTolerance);
+
+    return points;
+}
+",True

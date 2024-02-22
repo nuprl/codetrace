@@ -35,7 +35,7 @@ def capture_varnames(program : str) -> dict[str, list[tree_sitter.Node]]:
     for c in captures:
         name = c[0].text
         vars_to_locs[name].append(c[0])
-    return vars_to_locs
+    return {k.decode("utf-8"): v for k,v in vars_to_locs.items()}
 
 
 def rename_variable(program : str,
@@ -61,7 +61,6 @@ def make_new_name(varname : str, var_captures : dict[str, list[tree_sitter.Node]
     """
     # if is not bytes literal, convert to bytes literal
     existing_names = set(var_captures.keys())
-    existing_names = {name.decode("utf-8") for name in existing_names}
     # scramble varname
     random.seed(42)
     new_name = varname
