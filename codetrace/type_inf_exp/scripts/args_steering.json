@@ -1,16 +1,17 @@
 {
-    "outdir_idx": 24,
-    "dataset": "franlucc/starcoderbase-1b-completions_typeinf_analysis",
+    "outdir_idx": 25,
+    "dataset": "franlucc/stenotype-eval-renamed-v4",
     "model": "/home/arjun/models/starcoderbase-1b",
-    "correct_prog_threshold": 1,
-    "correct_type_threshold": 1,
-    "incorrect_prog_threshold": 1,
-    "incorrect_type_threshold": 1,
+    "correct_prog_threshold": 1000,
+    "correct_type_threshold": 1000,
+    "incorrect_prog_threshold": 1000,
+    "incorrect_type_threshold": 1000,
     "batch_size": 2,
     "patch_mode": "add",
-    "n_eval": 25,
+    "n_eval": 1000,
     "tokens_to_patch": ["<fim_suffix>","<fim_middle>"],
     "layers_to_patch": [10,11,12,13,14],
     "module_to_patch": "block_out",
-    "additional_filter": false
+    "additional_filter": false,
+    "do_ood_eval": true
 }

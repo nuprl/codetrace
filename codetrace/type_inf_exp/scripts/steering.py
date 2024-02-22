@@ -23,6 +23,7 @@ else:
     parser.add_argument("--tokens_to_patch", type=str, nargs="+", default=[])
     parser.add_argument("--layers_to_patch", type=int, nargs="+", default=[])
     parser.add_argument("--additional_filter", type=bool, default=False)
+    parser.add_argument("--do_ood_eval", type=bool, default=False)
     # give options: block_out, attn_out
     parser.add_argument("--module_to_patch", type=str, default="block_out", choices=["block_out", "attn_out"])
     args = parser.parse_args()
@@ -39,113 +40,124 @@ if not os.path.exists(f"{exp_dir}/exp_data/v{args.outdir_idx}"):
     os.makedirs(f"{exp_dir}/exp_data/v{args.outdir_idx}")
     
 out_dir = f"{exp_dir}/exp_data/v{args.outdir_idx}"
-# ==========================================================================================
-# PART 1: filter
-# ==========================================================================================
-    
-def _pretty_print(ds) -> str:
-    df = pd.DataFrame(ds)
-    s = ""
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        s += str(df["solution"].value_counts())
-        s += "\n"
-        s += str(df["hexsha"].value_counts())
-        s += "\n"
-        s += str(len(df))
-    return s
-    
-# load if exists
-if os.path.exists(f"{out_dir}/correct_prompts.csv"):
-    correct = pd.read_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
-else:
-    correct = ds.filter(lambda x : x["correctness"] == "correct")
-    correct = filter_prompts(correct, 
-                         single_tokenize=model.tokenizer, 
-                         dedup_prog_threshold=args.correct_prog_threshold, 
-                         dedup_type_threshold=args.correct_type_threshold)
-    
-if os.path.exists(f"{out_dir}/incorrect_prompts.csv"):
-    incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
-else:
-    incorrect = ds.filter(lambda x : x["correctness"] == "incorrect")
-    incorrect = filter_prompts(incorrect,
-                                single_tokenize=model.tokenizer,
-                                dedup_prog_threshold=args.incorrect_prog_threshold,
-                                dedup_type_threshold=args.incorrect_type_threshold)
-
-if args.additional_filter:
-    correct = correct.filter(lambda x : x["solution"] in incorrect["solution"])
-    incorrect = incorrect.filter(lambda x : x["solution"] in correct["solution"])
-    
-# save
-correct.to_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
-incorrect.to_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
-
-sinc = _pretty_print(incorrect)
-scorr = _pretty_print(correct)
-
-with open(f"{out_dir}/data_readme.md", "w") as f:
-    f.write(f"## Correct\n")
-    f.write(scorr)
-    f.write(f"\n## Incorrect\n")
-    f.write(sinc)
-    
-print(sinc)
-print(scorr)
-
 # # ==========================================================================================
-# # PART 2: averages
+# # PART 1: filter
 # # ==========================================================================================
-print(f"...Getting averages for correct and incorrect prompts...")
-
-df_correct = pd.read_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
-df_incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
-
-# if exists, load
-if os.path.exists(f"{out_dir}/{args.module_to_patch}_correct_avg_tensor.pt"):
-    correct_avg_tensor = torch.load(f"{out_dir}/{args.module_to_patch}_correct_avg_tensor.pt")
-else:
-    correct_avg_tensor = batched_get_averages(model, df_correct['prompt'].tolist(), 
-                                              args.tokens_to_patch, 
-                                                batch_size=args.batch_size)
-    # save tensor
-    torch.save(correct_avg_tensor, f"{out_dir}/{args.module_to_patch}_correct_avg_tensor.pt")
     
-if os.path.exists(f"{out_dir}/{args.module_to_patch}_incorrect_avg_tensor.pt"):
-    incorrect_avg_tensor = torch.load(f"{out_dir}/{args.module_to_patch}_incorrect_avg_tensor.pt")
-else:
-    incorrect_avg_tensor = batched_get_averages(model, df_incorrect['prompt'].tolist(), 
-                                                args.tokens_to_patch, 
-                                                batch_size=args.batch_size)
-    # save tensor
-    torch.save(incorrect_avg_tensor, f"{out_dir}/{args.module_to_patch}_incorrect_avg_tensor.pt")
+# def _pretty_print(ds) -> str:
+#     df = pd.DataFrame(ds)
+#     s = ""
+#     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+#         s += str(df["solution"].value_counts())
+#         s += "\n"
+#         s += str(df["hexsha"].value_counts())
+#         s += "\n"
+#         s += str(len(df))
+#     return s
     
-diff_tensor = correct_avg_tensor - incorrect_avg_tensor
+# # load if exists
+# if os.path.exists(f"{out_dir}/correct_prompts.csv"):
+#     correct = pd.read_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
+# else:
+#     correct = ds.filter(lambda x : x["correctness"] == "correct")
+#     correct = filter_prompts(correct, 
+#                          single_tokenize=model.tokenizer, 
+#                          dedup_prog_threshold=args.correct_prog_threshold, 
+#                          dedup_type_threshold=args.correct_type_threshold)
+    
+# if os.path.exists(f"{out_dir}/incorrect_prompts.csv"):
+#     incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
+# else:
+#     incorrect = ds.filter(lambda x : x["correctness"] == "incorrect")
+#     incorrect = filter_prompts(incorrect,
+#                                 single_tokenize=model.tokenizer,
+#                                 dedup_prog_threshold=args.incorrect_prog_threshold,
+#                                 dedup_type_threshold=args.incorrect_type_threshold)
 
-print(f"Diff tensor shape before transform: {diff_tensor.shape}")
-diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
-print(f"Diff tensor shape after transform: {diff_tensor.shape}")
+# if args.additional_filter:
+#     correct = correct.filter(lambda x : x["solution"] in incorrect["solution"])
+#     incorrect = incorrect.filter(lambda x : x["solution"] in correct["solution"])
+    
+# # save
+# correct.to_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
+# incorrect.to_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
 
-torch.save(diff_tensor, f"{out_dir}/{args.module_to_patch}_diff_tensor.pt")
+# sinc = _pretty_print(incorrect)
+# scorr = _pretty_print(correct)
+
+# with open(f"{out_dir}/data_readme.md", "w") as f:
+#     f.write(f"## Correct\n")
+#     f.write(scorr)
+#     f.write(f"\n## Incorrect\n")
+#     f.write(sinc)
+    
+# print(sinc)
+# print(scorr)
+
+# # # ==========================================================================================
+# # # PART 2: averages
+# # # ==========================================================================================
+# print(f"...Getting averages for correct and incorrect prompts...")
+
+# df_correct = pd.read_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
+# df_incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
+
+# # if exists, load
+# if os.path.exists(f"{out_dir}/{args.module_to_patch}_correct_avg_tensor.pt"):
+#     correct_avg_tensor = torch.load(f"{out_dir}/{args.module_to_patch}_correct_avg_tensor.pt")
+# else:
+#     correct_avg_tensor = batched_get_averages(model, df_correct['prompt'].tolist(), 
+#                                               args.tokens_to_patch, 
+#                                                 batch_size=args.batch_size)
+#     # save tensor
+#     torch.save(correct_avg_tensor, f"{out_dir}/{args.module_to_patch}_correct_avg_tensor.pt")
+    
+# if os.path.exists(f"{out_dir}/{args.module_to_patch}_incorrect_avg_tensor.pt"):
+#     incorrect_avg_tensor = torch.load(f"{out_dir}/{args.module_to_patch}_incorrect_avg_tensor.pt")
+# else:
+#     incorrect_avg_tensor = batched_get_averages(model, df_incorrect['prompt'].tolist(), 
+#                                                 args.tokens_to_patch, 
+#                                                 batch_size=args.batch_size)
+#     # save tensor
+#     torch.save(incorrect_avg_tensor, f"{out_dir}/{args.module_to_patch}_incorrect_avg_tensor.pt")
+    
+# diff_tensor = correct_avg_tensor - incorrect_avg_tensor
+
+# print(f"Diff tensor shape before transform: {diff_tensor.shape}")
+# diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
+# print(f"Diff tensor shape after transform: {diff_tensor.shape}")
+
+# torch.save(diff_tensor, f"{out_dir}/{args.module_to_patch}_diff_tensor.pt")
 
 #==========================================================================================
 # PART 3: apply diff tensor to incorrect prompts, record top logit
 #==========================================================================================
 print(f"...Applying patch to incorrect prompts...")
 
+
+def ood_eval() -> datasets.Dataset:
+    ds = datasets.load_dataset("franlucc/ts_bench_starcoder1b_funcfim_incorrect_uniq_v1", split="train")
+    ds = ds.filter(lambda x : "renamed" in x["progdir"])
+    # rename cols generated_text -> generated, fim_sol -> solution
+    ds = ds.rename_columns({"fim_sol": "solution", "generated_text": "generated", "progdir": "id"})
+    return ds
+
 # incorrect = ds.filter(lambda x : x["correctness"] == "incorrect")
 # incorrect = filter_prompts(incorrect,
 #                             single_tokenize=model.tokenizer,
 #                             dedup_prog_threshold=args.incorrect_prog_threshold,
 #                             dedup_type_threshold=args.incorrect_type_threshold)
-# df_incorrect = incorrect.to_pandas()
 
-# # cap it at some size
-# df_incorrect = df_incorrect.sample(args.n_eval, random_state=2)
+if args.do_ood_eval:
+    incorrect = ood_eval()
+else:
+    incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
 
-incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
 args.n_eval = min(args.n_eval, len(incorrect))
-
+print(f"...Doing ood eval: {args.do_ood_eval}, n_eval: {args.n_eval}...")
+df_incorrect = incorrect.to_pandas()
+# # cap it at some size
+df_incorrect = df_incorrect.sample(args.n_eval, random_state=2)
 # print types in incorrect
 print(df_incorrect["solution"].value_counts())
 
@@ -190,15 +202,16 @@ for i,trace_res in tqdm(enumerate(out), desc="Logits"):
                              "generated" : batched_old_generated[i][j],
                             "id" : batched_ids[i][j]
                              })
-    
-with open(f"{out_dir}/{args.module_to_patch}_steering_res_{args.n_eval}.json", "w") as f:
+
+ood_tag = "ood" if args.do_ood_eval else ""
+with open(f"{out_dir}/{args.module_to_patch}_steering_res_{args.n_eval}_{ood_tag}.json", "w") as f:
     json.dump(steering_res, f, indent=4)
     
 # ==========================================================================================
 # # PART 4: plot steering results
 # ==========================================================================================
 
-with open(f"{out_dir}/{args.module_to_patch}_steering_res_{args.n_eval}.json", "r") as f:
+with open(f"{out_dir}/{args.module_to_patch}_steering_res_{args.n_eval}_{ood_tag}.json", "r") as f:
     steering_res = json.load(f)
     
 steering_res = pd.DataFrame(steering_res)
@@ -206,7 +219,7 @@ steering_res = pd.DataFrame(steering_res)
 num_success = steering_res['success'].value_counts()
 print(num_success)
 
-with open(f"{out_dir}/{args.module_to_patch}_readme_{args.n_eval}.md", "w") as f:
+with open(f"{out_dir}/{args.module_to_patch}_readme_{args.n_eval}_{ood_tag}.md", "w") as f:
     f.write(f"## Steering Results\n")
     f.write(num_success.to_string())
     # write arguments of parser
