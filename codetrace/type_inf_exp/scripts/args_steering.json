@@ -1,5 +1,5 @@
 {
-    "outdir_idx": 17,
+    "outdir_idx": 24,
     "dataset": "franlucc/starcoderbase-1b-completions_typeinf_analysis",
     "model": "/home/arjun/models/starcoderbase-1b",
     "correct_prog_threshold": 1,

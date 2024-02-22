@@ -59,8 +59,6 @@ if os.path.exists(f"{out_dir}/correct_prompts.csv"):
     correct = pd.read_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
 else:
     correct = ds.filter(lambda x : x["correctness"] == "correct")
-    if args.additional_filter:
-        correct = correct.filter(lambda x : x["solution"] in incorrect["solution"])
     correct = filter_prompts(correct, 
                          single_tokenize=model.tokenizer, 
                          dedup_prog_threshold=args.correct_prog_threshold, 
@@ -70,13 +68,15 @@ if os.path.exists(f"{out_dir}/incorrect_prompts.csv"):
     incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
 else:
     incorrect = ds.filter(lambda x : x["correctness"] == "incorrect")
-    if args.additional_filter:
-        incorrect = incorrect.filter(lambda x : x["solution"] in correct["solution"])
     incorrect = filter_prompts(incorrect,
                                 single_tokenize=model.tokenizer,
                                 dedup_prog_threshold=args.incorrect_prog_threshold,
                                 dedup_type_threshold=args.incorrect_type_threshold)
 
+if args.additional_filter:
+    correct = correct.filter(lambda x : x["solution"] in incorrect["solution"])
+    incorrect = incorrect.filter(lambda x : x["solution"] in correct["solution"])
+    
 # save
 correct.to_csv(f"{out_dir}/correct_prompts.csv", encoding='utf-8')
 incorrect.to_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
@@ -133,15 +133,19 @@ torch.save(diff_tensor, f"{out_dir}/{args.module_to_patch}_diff_tensor.pt")
 #==========================================================================================
 print(f"...Applying patch to incorrect prompts...")
 
-incorrect = ds.filter(lambda x : x["correctness"] == "incorrect")
-incorrect = filter_prompts(incorrect,
-                            single_tokenize=model.tokenizer,
-                            dedup_prog_threshold=args.incorrect_prog_threshold,
-                            dedup_type_threshold=args.incorrect_type_threshold)
-df_incorrect = incorrect.to_pandas()
+# incorrect = ds.filter(lambda x : x["correctness"] == "incorrect")
+# incorrect = filter_prompts(incorrect,
+#                             single_tokenize=model.tokenizer,
+#                             dedup_prog_threshold=args.incorrect_prog_threshold,
+#                             dedup_type_threshold=args.incorrect_type_threshold)
+# df_incorrect = incorrect.to_pandas()
 
-# cap it at some size
-df_incorrect = df_incorrect.sample(args.n_eval, random_state=2)
+# # cap it at some size
+# df_incorrect = df_incorrect.sample(args.n_eval, random_state=2)
+
+incorrect = pd.read_csv(f"{out_dir}/incorrect_prompts.csv", encoding='utf-8')
+args.n_eval = min(args.n_eval, len(incorrect))
+
 # print types in incorrect
 print(df_incorrect["solution"].value_counts())
 
