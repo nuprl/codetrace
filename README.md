@@ -30,19 +30,12 @@ Main interp and util code is in `codetrace/` toplevel. Experiments are organized
 
 # TODO
 
-[] average tensor with full-prompt tokens, and attention instead of output
-    [] need some way to set token length to be same, maybe set a fixed size padding?
-[] refac
-[] make mutation dataset (using sythetic typescript? - MultiPLT?)
-[] train extra module?
+Refactor code:
 
+[] faster steering dataset generation
 
+ - for each correct prompt, have several transformations
 
+[] modular steering code
 
-## NOTES
-
-datasets:
-- ts-bench [X]
-- stenotype [X]
-- stenotype type-inf (functions) [X] franlucc/stenotype-type-inference-fim
-- stenotype type-inf (functions) evaluated [X] franlucc/stenotype-type-inference-fim-evaluated
+- break up the steering code

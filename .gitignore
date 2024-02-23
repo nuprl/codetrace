@@ -1,4 +1,5 @@
 .ipynb_*/
+exp_data/
 temp.png
 __pycache__/
 build/
