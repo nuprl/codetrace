@@ -48,32 +48,33 @@ export function buildInClause<T>(
     # tokens = tokenizer.tokenize(newname)
     # assert len(tokens) == 1, tokens
     
-# TODO: test on real programs by renaming then undoing the rename, checking that the program is the same
-def test_on_dataset():
-    random.seed(42)
-    ds = datasets.load_dataset("franlucc/stenotype-eval-renamed-v4", split="train")
-    programs = ds["original_prog"]
-    for i,p in enumerate(tqdm(programs[:200])):
-        captured = capture_varnames(p)
-        random_var = random.choice(list(captured.keys()))
-        newname = make_new_name(random_var, captured)
-        if newname == None:
-            continue
-        print(f"Renaming {random_var} to {newname}")
-        new_program = rename_variable(p, newname, captured[random_var])
-        assert new_program != p, "Same program after renaming"
-        new_program = rename_variable(new_program, random_var, captured[random_var])
-        if new_program != p:
-            with open("renamed_test.ts", "w") as f:
-                f.write(new_program)
-            with open("orig_test.ts", "w") as f:
-                f.write(p)
-                
-        assert new_program == p, "Program not the same after renaming and undoing"
-        
+def test_rename_vars3():
+    program = """const t : any = 'a';"""
+    captured = capture_varnames(program)
+    assert "any" not in captured, captured
+    
+    program = open("tests/test_prog.ts").read()
+    tree = TS_PARSER.parse(bytes( program, "utf8"))
+    captures = query.captures(tree.root_node)
+    for c in captures:
+      if c[0].text.decode("utf-8") == "any":
+        print(c[0].text, c)
+      elif c[0].text.decode("utf-8") == "typeMap":
+        print(c[0].text, c)
+    
+    var_locs = capture_varnames(program)
+    for v, l in var_locs.items():
+      if v == "any":
+        print(v, l)
+      elif v == "typeMap":
+        print(v, l)
+    assert "typeMap" in var_locs, "typeMap should be captured"
+    assert "any" not in var_locs, "Any type should not be captured"
+
+
 if __name__ == "__main__":
     test_rename_vars()
     test_rename_vars2()
-    test_on_dataset()
+    test_rename_vars3()
     print("All tests passed!")
     

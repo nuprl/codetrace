@@ -35,3 +35,14 @@ Main interp and util code is in `codetrace/` toplevel. Experiments are organized
 [] refac
 [] make mutation dataset (using sythetic typescript? - MultiPLT?)
 [] train extra module?
+
+
+
+
+## NOTES
+
+datasets:
+- ts-bench [X]
+- stenotype [X]
+- stenotype type-inf (functions) [X] franlucc/stenotype-type-inference-fim
+- stenotype type-inf (functions) evaluated [X] franlucc/stenotype-type-inference-fim-evaluated

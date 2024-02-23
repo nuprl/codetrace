@@ -67,8 +67,7 @@ def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[str, 
     return ts_prog, type_map
 
 """
-The following functions remove all type annotations but one <FILL> fim type, keeping track of the
-position of the index of the <FILL> placeholder
+The following functions remove all type annotations but one <FILL> fim type
 """
 
 def make_typeinf_prompts(dataset : datasets.Dataset, query_str : str = QUERY_ALL_TYPES) -> datasets.Dataset:

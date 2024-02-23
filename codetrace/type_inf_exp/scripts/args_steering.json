@@ -1,6 +1,6 @@
 {
-    "outdir_idx": 26,
-    "dataset": "franlucc/stenotype-eval-renamed-v4",
+    "outdir": 28,
+    "dataset": "franlucc/stenotype-type-inference-renamed-eval",
     "model": "/home/arjun/models/starcoderbase-1b",
     "correct_prog_threshold": 1000,
     "correct_type_threshold": 1000,
@@ -11,6 +11,5 @@
     "n_eval": 1000,
     "tokens_to_patch": ["<fim_suffix>","<fim_middle>"],
     "layers_to_patch": [10,11,12,13,14],
-    "additional_filter": false,
-    "do_ood_eval": true
+    "test_size": 0.2
 }

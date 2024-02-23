@@ -75,22 +75,22 @@ def filter_prompts(dataset : datasets.Dataset,
     Deduplicate prompts by hexsha by some dedup_prog_threshold (max prompts for a program)
     """
     if not single_tokenize is None:
-        dataset = dataset.filter(lambda x : len(single_tokenize.encode(x["solution"])) == 1)
+        dataset = dataset.filter(lambda x : len(single_tokenize.encode(x["fim_type"])) == 1)
     
     # get count of labels
-    labels = dataset["solution"]
+    labels = dataset["fim_type"]
     counter = Counter(labels)
     
     hexsha_count = {h:0 for h in dataset["hexsha"]}
     label_count = {label : 0 for label in labels}
     balanced_prompts = []
     for i,ex in enumerate(dataset):
-        if label_count[ex["solution"]] >= dedup_type_threshold:
+        if label_count[ex["fim_type"]] >= dedup_type_threshold:
             continue
         if hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: # some threshold
             continue
         balanced_prompts.append(ex)
-        label_count[ex["solution"]] += 1
+        label_count[ex["fim_type"]] += 1
         hexsha_count[ex["hexsha"]] += 1
 
     df = pd.DataFrame(balanced_prompts)

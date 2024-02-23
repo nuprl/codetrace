@@ -1,15 +1,8 @@
 """
-Module for renaming a set of variables / types in a tyepscript program
+Module for renaming a set of variables in a tyepscript program
 using tree-sitter
 
-Need to:
-0. start with stenotype FIM prompts for starcoder-1b, get correct ones
-1. capture all varnames + their locations in the program
-2. rename all varnames to a new name
-3. run completions on the new dataset
-
 TODO: make sure not capturing enums properly
-
 """
 import tree_sitter
 from codetrace.utils import *
@@ -20,8 +13,9 @@ import random
 from tqdm import tqdm
 import pandas as pd
 import re
+import sys
 
-IDENTIFIER_QUERY = """((identifier) @name)""" # do not capture enums, classes
+IDENTIFIER_QUERY = """((identifier) @name)""" 
 query = TS_LANGUAGE.query(IDENTIFIER_QUERY)
 
 def capture_varnames(program : str) -> dict[str, list[tree_sitter.Node]]:
@@ -45,7 +39,7 @@ def rename_variable(program : str,
     Rename a variable in program in bottom-up order to maintain location integrity
     """
     # sort locations by start byte descending
-    var_locations.sort(key=lambda x: x.start_byte, reverse=True)
+    # var_locations.sort(key=lambda x: x.start_byte, reverse=True)
     
     # replace each varname with a new name
     for capture in var_locations:
@@ -58,20 +52,23 @@ def make_new_name(varname : str, var_captures : dict[str, list[tree_sitter.Node]
     Given a set of var captures and a variable name, make a new name for the variable that
     is not already in the program.
     Scrambles the varname until it is not in the program.
+    TODO: other strategies for renaming
     """
-    # if is not bytes literal, convert to bytes literal
-    existing_names = set(var_captures.keys())
-    # scramble varname
     random.seed(42)
+    existing_names = set(var_captures.keys())
     new_name = varname
     tries = 0
     while new_name in existing_names:
         tries += 1
-        if tries > 100:
+        if tries > 10:
             return None
-        new_name = "".join(random.sample(new_name, len(new_name)))
+        elif len(new_name) == 1:
+            # for variable names of length 1, just pick a random character
+            new_name = random.choice("abcdefghijklmnopqrstuvwxyz")
+        else:
+            new_name = "".join(random.sample(new_name, len(new_name)))
     return new_name
-    
+        
 
 def _predict(llm: LLM, prompt: str | List[str]) -> List[str]:
     """
@@ -84,30 +81,33 @@ def _predict(llm: LLM, prompt: str | List[str]) -> List[str]:
 def rename_vars_until_break(dataset: datasets.Dataset, 
                             llm: LLM) -> datasets.Dataset:
     """
-    For each example in the dataset, rename all variables until the llm's type prediction
-    for the fim token breaks
+    For each example in the dataset, rename all variables until the llm's type prediction breaks
     """
     new_dataset = []
     for i,ex in enumerate(tqdm(dataset)):
-        program = ex["fim_prog"]
-        solution = ex["solution"]
-        prediction = solution
-        var_locs = capture_varnames(program)
+        fim_program = ex["fim_program"]
+        solution = ex["fim_type"]
+        var_locs = capture_varnames(fim_program)
         for varname, locs in var_locs.items():
-            varname = varname.decode("utf-8")
             new_name = make_new_name(varname, var_locs)
             if new_name is None:
                 continue
             # if varname starts with capital letter, it is an enum identifier
-            if varname[0].isupper():
-                # hacky way of checking that enum identifiers are not renamed
+            # TODO: there's some tree-sitter bug where it's capturing types as vars
+            if varname[0].isupper() or varname == solution:
                 continue
-            program = rename_variable(program, new_name, locs)
+            
+            fim_program = rename_variable(fim_program, new_name, locs)
+            
             # run the llm on the new program
-            prediction = _predict(llm, placeholder_to_std_fmt(program, STARCODER_FIM))[0]
-            prediction = prediction.strip()
+            prediction = _predict(llm, placeholder_to_std_fmt(fim_program, STARCODER_FIM))[0].strip()
             if prediction != solution and not prediction.startswith(solution):
-                ex = {"new_generated": prediction, **ex, "renamed_prog": program}
+                # save old ex
+                new_dataset.append(ex.copy())
+                # save new ex
+                ex["fim_program"] = fim_program
+                ex["generated_text"] = prediction
+                ex["correct"] = False
                 new_dataset.append(ex)
                 break
         
@@ -118,18 +118,10 @@ def _preprocess(dataset : datasets.Dataset) -> datasets.Dataset:
     """
     Preprocess the dataset
     """
-    dataset = dataset.filter(lambda x: x["correctness"] == "correct")
-    dataset = dataset.map(lambda x: {"fim_prog": std_to_placeholder_fmt(x["prompt"], STARCODER_FIM)})
+    dataset = dataset.filter(lambda x: x["correct"] == True)
     
-    # rename / remove:
-    # shorthand_property_identifier
-
-    # remove:
-    # shorthand_property_identifier_pattern
-
-    # ignore:
-    # nested_identifier
-    # statement_identifier
+    # remove examples with:
+    # shorthand_property_identifier, shorthand_property_identifier_pattern
     
     preproc_query = """
     ((shorthand_property_identifier_pattern) @sp)
@@ -142,91 +134,62 @@ def _preprocess(dataset : datasets.Dataset) -> datasets.Dataset:
         captures = preproc_query.captures(tree.root_node)
         return len(captures) > 0
     
-    # TODO remove comments
+    # TODO remove comments?
     
-    dataset = dataset.filter(lambda x: not _has_captures(x["fim_prog"]))
+    dataset = dataset.filter(lambda x: not _has_captures(x["fim_program"]))
     return dataset
     
 def _postprocess(dataset : datasets.Dataset) -> datasets.Dataset:
     """
-    Postprocess the dataset. Make sure new_generated is not the same as solution
+    # TODO: this is hacky
+    Postprocess the dataset. Make sure new_generated is not the same as the solution
     inner type
     """
-    def condition(x):
-        type_declaration = x["solution"] + "="+ x["new_generated"]
+    def not_type_declaration(x):
+        """
+        for example if model generates "a | b" and correct solution
+        is "TYP" where "TYP = a | b", then this is not an example we wish to keep
+        """
+        type_declaration = x["fim_type"] + "="+ x["generated_text"]
         # if the order of non-whitespace and non-alphanumerical characters is the same, then the strings are the same
         matches = re.findall(r"\S", type_declaration)
         type_declaration = "".join(matches)
-        matches_in_prog = re.findall(r"\S", x["original_prog"])
+        matches_in_prog = re.findall(r"\S", x["fim_program"])
         matches_in_prog = "".join(matches_in_prog)
         int_type_declaration = type_declaration.replace("=", "").replace("}", ";}")
         return not type_declaration in matches_in_prog and not int_type_declaration in matches_in_prog
 
-    # todo remove number[] and Array<number>
-    def condition2(x):
-        if "[]" in x["new_generated"] and "Array<" in x["solution"]:
+    def not_array_equivalent(x):
+        """
+        for example if model generates "number[]" and correct solution is
+        "Array<number>", then this is not an example we wish to keep
+        """
+        if "[]" in x["generated_text"] and "Array<" in x["fim_type"]:
             # capture alphanum chars
-            matches = re.findall(r"\w", x["new_generated"])
+            matches = re.findall(r"\w", x["generated_text"])
             new_generated = "".join(matches)
-            matches = re.findall(r"\w", x["solution"])
+            matches = re.findall(r"\w", x["fim_type"])
             solution = "".join(matches).replace("Array", "")
             return new_generated != solution
         return True
     
-    dataset = dataset.filter(lambda x: condition(x) and condition2(x))
+    def _filter(x):
+        if x["correct"]:
+            return True
+        else:
+            return not_type_declaration(x) and not_array_equivalent(x)
+    dataset = dataset.filter(_filter)
     return dataset
 
-def _join_with_original(dataset: datasets.Dataset, original: datasets.Dataset) -> datasets.Dataset:
-    """
-    Join the renamed dataset with the original dataset program
-    """
-    new_ds = []
-    hexsha_to_prog = {x["hexsha"]: x["content"] for x in original}
-    for i,ex in enumerate(tqdm(dataset)):
-        original_ex = hexsha_to_prog[ex["hexsha"]]
-        ex = {**ex, "original_prog": original_ex}
-        new_ds.append(ex)
-    return datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-
-def _reformat(dataset : datasets.Dataset) -> datasets.Dataset:
-    """
-    Reformat the dataset to be in the column format:
-    generated,solution,hexsha,prompt,correctness,id,original_prog
-    """
-    new_ds = []
-    for i,ex in enumerate(tqdm(dataset)):
-        incorrect = {"generated": ex["new_generated"], 
-                     "solution": ex["solution"], 
-                     "hexsha": ex["hexsha"], 
-                     "prompt": placeholder_to_std_fmt(ex["renamed_prog"], STARCODER_FIM), 
-                     "correctness": "incorrect",
-                     "id": ex["id"],
-                     "original_prog": ex["original_prog"],
-                     "renamed" : True}
-        correct = {"generated": ex["generated"], 
-                   "solution": ex["solution"], 
-                   "hexsha": ex["hexsha"], 
-                   "prompt": ex["prompt"], 
-                   "correctness": ex["correctness"],
-                   "id": ex["id"],
-                   "original_prog": ex["original_prog"],
-                   "renamed" : False}
-        new_ds.append(incorrect)
-        new_ds.append(correct)
-    return datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-
+def main():
+    newname = sys.argv[1]
+    ds = datasets.load_dataset("franlucc/stenotype-type-inference-fim-evaluated", split="train")
+    # ds = ds.select(range(300))
+    ds = _preprocess(ds)
+    llm = LLM("/home/arjun/models/starcoderbase-1b")
+    ds = rename_vars_until_break(ds, llm)
+    ds = _postprocess(ds)
+    ds.push_to_hub(newname)
+    
 if __name__ == "__main__":
-    # llm = LLM("/home/arjun/models/starcoderbase-1b")
-    # dataset = datasets.load_dataset("franlucc/starcoderbase-1b-completions_typeinf_analysis_v1", split="train")
-    
-    # # dataset = dataset.select(range(300))
-    # dataset = _preprocess(dataset)
-    # new_dataset = rename_vars_until_break(dataset, llm)
-    # # new_dataset = datasets.load_dataset("franlucc/stenotype-eval-renamed-v1", split="train")
-    # new_dataset = _postprocess(new_dataset)
-    # new_dataset.push_to_hub("franlucc/stenotype-eval-renamed-v3")
-    
-    new_dataset = datasets.load_dataset("franlucc/stenotype-eval-renamed-v3", split="train")
-    new_dataset = _reformat(new_dataset)
-    new_dataset.push_to_hub("franlucc/stenotype-eval-renamed-v4")
-    
+    main()
