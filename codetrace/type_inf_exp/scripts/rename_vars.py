@@ -57,18 +57,14 @@ def make_new_name(varname : str, existing_names : set[str]) -> str | None:
     - `uniq_` prefix
     - permute the order of the characters
     """
-    random.seed(42)
+    letters = "abcdefghijklmnopqrstuvwxyz"*2
     new_name = varname
     tries = 0
     while new_name in existing_names:
         tries += 1
         if tries > 100:
             return None
-        elif len(new_name) == 1:
-            # for variable names of length 1, just pick a random character
-            new_name = random.choice("abcdefghijklmnopqrstuvwxyz")
-        else:
-            new_name = "".join(random.sample(new_name, len(new_name)))
+        new_name = "".join(random.sample(letters, len(new_name)))
     return new_name
         
 
