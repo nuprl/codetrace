@@ -14,6 +14,7 @@ export function buildInClause<T>(
   };
     """
     captured = capture_varnames(program)
+    new_name = make_new_name("items", set(captured.keys()))
     new_program = rename_variable(program, "myvar", captured["items"])
     gold = """
 export function buildInClause<T>(
@@ -39,7 +40,7 @@ export function buildInClause<T>(
   };
     """
     captured = capture_varnames(program)
-    newname = make_new_name("items", captured)
+    newname = make_new_name("items", set(captured.keys()))
     assert newname != "items", newname
     new_program = rename_variable(program, newname, captured["items"])
     gold = program.replace("items", newname)

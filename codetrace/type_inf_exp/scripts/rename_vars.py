@@ -3,6 +3,7 @@ Module for renaming a set of variables in a tyepscript program
 using tree-sitter
 
 TODO: make sure not capturing enums properly
+TODO: enable renaming with "uniq_" by dyanmically updating locations of captures
 """
 import tree_sitter
 from codetrace.utils import *
@@ -39,7 +40,7 @@ def rename_variable(program : str,
     Rename a variable in program in bottom-up order to maintain location integrity
     """
     # sort locations by start byte descending
-    # var_locations.sort(key=lambda x: x.start_byte, reverse=True)
+    var_locations.sort(key=lambda x: x.start_byte, reverse=True)
     
     # replace each varname with a new name
     for capture in var_locations:
@@ -47,20 +48,21 @@ def rename_variable(program : str,
         
     return program
 
-def make_new_name(varname : str, var_captures : dict[str, list[tree_sitter.Node]]) -> str | None:
+def make_new_name(varname : str, existing_names : set[str]) -> str | None:
     """
     Given a set of var captures and a variable name, make a new name for the variable that
     is not already in the program.
     Scrambles the varname until it is not in the program.
     TODO: other strategies for renaming
+    - `uniq_` prefix
+    - permute the order of the characters
     """
     random.seed(42)
-    existing_names = set(var_captures.keys())
     new_name = varname
     tries = 0
     while new_name in existing_names:
         tries += 1
-        if tries > 10:
+        if tries > 100:
             return None
         elif len(new_name) == 1:
             # for variable names of length 1, just pick a random character
@@ -88,8 +90,9 @@ def rename_vars_until_break(dataset: datasets.Dataset,
         fim_program = ex["fim_program"]
         solution = ex["fim_type"]
         var_locs = capture_varnames(fim_program)
+        names = set(var_locs.keys())
         for varname, locs in var_locs.items():
-            new_name = make_new_name(varname, var_locs)
+            new_name = make_new_name(varname, names)
             if new_name is None:
                 continue
             # if varname starts with capital letter, it is an enum identifier
@@ -98,6 +101,7 @@ def rename_vars_until_break(dataset: datasets.Dataset,
                 continue
             
             fim_program = rename_variable(fim_program, new_name, locs)
+            names.add(new_name)
             
             # run the llm on the new program
             prediction = _predict(llm, placeholder_to_std_fmt(fim_program, STARCODER_FIM))[0].strip()
@@ -184,7 +188,6 @@ def _postprocess(dataset : datasets.Dataset) -> datasets.Dataset:
 def main():
     newname = sys.argv[1]
     ds = datasets.load_dataset("franlucc/stenotype-type-inference-fim-evaluated", split="train")
-    # ds = ds.select(range(300))
     ds = _preprocess(ds)
     llm = LLM("/home/arjun/models/starcoderbase-1b")
     ds = rename_vars_until_break(ds, llm)

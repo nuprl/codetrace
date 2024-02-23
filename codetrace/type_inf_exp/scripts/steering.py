@@ -5,9 +5,9 @@ from argparse import ArgumentParser, Namespace
 from collections import Counter
 
 def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
-    correct = dataset.filter(lambda x : x["correct"] == True)
-    incorrect = dataset.filter(lambda x : x["correct"] == False)
-    
+    correct = dataset.filter(lambda x : x["correct"] == True or x["correct"] == "true")
+    incorrect = dataset.filter(lambda x : x["correct"] == False or x["correct"] == "false")
+
     # filter for balance and single token labels
     correct = filter_prompts(correct, 
                              single_tokenize=tokenizer, 
@@ -74,6 +74,20 @@ def main():
 
     exp_dir = "/home/franlucc/projects/codetrace/codetrace/type_inf_exp"
     ds = datasets.load_dataset(args.dataset, split="train")
+    
+    # FOR DEBUG
+    if args.dataset == "franlucc/stenotype-eval-renamed-v4":
+        ds = ds.rename_columns({"prompt" : "fim_program", 
+                                "solution" : "fim_type", 
+                                "generated" : "generated_text",
+                                "correctness" : "correct"})
+
+        ds = ds.filter(lambda x : x["correct"] in ["correct", "incorrect"] and x["generated_text"] != "yan")
+        ds = ds.map(lambda x : {"correct" : x["correct"] == "correct"})
+        ds = ds.map(lambda x : {"fim_program" : std_to_placeholder_fmt(x["fim_program"], STARCODER_FIM)})
+        ds.push_to_hub("franlucc/stenotype-eval-renamed-v5")
+        1/0
+        
     # filter out too large prompts for OOM
     ds = ds.filter(lambda x : len(x["fim_program"]) < 8000)
 
@@ -88,7 +102,7 @@ def main():
     # PART 1: filter
     # ==========================================================================================
     print("...Generating fit test split...")
-
+    
     correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
 
     info_incorrect = _pretty_print(incorrect)
@@ -133,36 +147,52 @@ def main():
 
     args.n_eval = min(args.n_eval, len(incorrect_eval))
     incorrect_eval = datasets.Dataset.from_pandas(pd.DataFrame(incorrect_eval[:args.n_eval]))
-
-    # print types in incorrect
-    counts = Counter(incorrect_eval["fim_type"])
-    print(counts)
-
-    eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect_eval]
-    out = batched_insert_patch(model, 
+    
+    def steer(incorrect_eval,
+              diff_tensor,
+              layers_to_patch,
+              tokens_to_patch,
+              patch_mode,
+              batch_size):
+        eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect_eval]
+        # print types in incorrect
+        counts = Counter(incorrect_eval["fim_type"])
+        print(counts)
+        
+        out = batched_insert_patch(model, 
                     eval_prompts, 
                     diff_tensor, 
-                    args.layers_to_patch,
+                    layers_to_patch,
+                    tokens_to_patch,
+                    patch_mode,
+                    batch_size)
+        steering_results = []
+        for i,trace_res in tqdm(enumerate(out), desc="Logits"):
+            prompt_len = trace_res._logits.shape[1]
+            logits : LogitResult = trace_res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
+
+            for j in list(range(prompt_len)):
+                tok = logits[-1][j][-1].tokens(model.tokenizer)
+                assert len(tok) == 1, tok
+                tok = tok[0].strip()
+                ex = incorrect_eval[(i*args.batch_size)+j]
+                steering_results.append({"steered_generation" : tok, 
+                                "correct_steer" : (tok == ex["fim_type"]),
+                                **ex})
+        steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
+        return steering_ds
+
+    steering_ds = steer(incorrect_eval,
+                        diff_tensor,
+                        args.layers_to_patch,
                         args.tokens_to_patch,
-                    patch_mode = args.patch_mode,
-                    batch_size=args.batch_size)
-
-    steering_results = []
-    for i,trace_res in tqdm(enumerate(out), desc="Logits"):
-        prompt_len = trace_res._logits.shape[1]
-        logits : LogitResult = trace_res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
-
-        for j in list(range(prompt_len)):
-            tok = logits[-1][j][-1].tokens(model.tokenizer)
-            assert len(tok) == 1, tok
-            tok = tok[0].strip()
-            ex = incorrect_eval[(i*args.batch_size)+j]
-            steering_results.append({"steered_generation" : tok, 
-                            "correct_steer" : (tok == ex["fim_type"]),
-                            **ex})
-
-    steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
+                        args.patch_mode,
+                        args.batch_size)
     steering_ds.save_to_disk(f"{out_dir}/steering_results_ds")
+    df = pd.DataFrame(steering_results)
+    df = df[["steered_generation","fim_type","correct_steer","generated_text"]]
+    df.to_csv(f"{out_dir}/steering_results.csv")
+    
     # ==========================================================================================
     # # PART 4: evaluate steering effects
     # ==========================================================================================
@@ -181,5 +211,33 @@ def main():
         f.write("\nEval type distribution\n")
         f.write(str(counts))
         
+    # ==========================================================================================
+    # # PART 5: evaluate ood
+    # ==========================================================================================
+    print(f"...Applying patch to OOD prompts...")
+    ood_ds = datasets.load_dataset("franlucc/stenotype-type-inference-fim-evaluated", split="train")
+    ood_ds = ood_ds.filter(lambda x : x["correct"] == False)
+    
+    steering_ood_ds = steer(ood_ds,
+                        diff_tensor,
+                        args.layers_to_patch,
+                        args.tokens_to_patch,
+                        args.patch_mode,
+                        args.batch_size)
+    
+    correct_steer_ood = steering_ood_ds.filter(lambda x : x["correct_steer"] == True)
+    metric = f"{len(correct_steer_ood)} / {len(steering_ood_ds)} = {len(correct_steer_ood) / len(steering_ood_ds)}"
+    print(metric)
+    with open(f"{out_dir}/ood_eval_readme.md", "w") as f:
+        f.write(f"## Steering Results\n")
+        f.write(metric)
+        # write arguments of parser
+        f.write(f"\n## Arguments\n")
+        parser = vars(args)
+        for k,v in parser.items():
+            f.write(f"{k} : {v}\n")
+        f.write("\nEval type distribution\n")
+        f.write(str(counts))
+    
 if __name__ == "__main__":
     main()

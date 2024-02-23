@@ -1,6 +1,6 @@
 {
-    "outdir": 28,
-    "dataset": "franlucc/stenotype-type-inference-renamed-eval",
+    "outdir": 33,
+    "dataset": "franlucc/stenotype-eval-renamed-v4",
     "model": "/home/arjun/models/starcoderbase-1b",
     "correct_prog_threshold": 1000,
     "correct_type_threshold": 1000,

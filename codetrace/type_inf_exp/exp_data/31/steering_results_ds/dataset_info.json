@@ -1,0 +1,48 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "steered_generation": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "correct_steer": {
+      "dtype": "bool",
+      "_type": "Value"
+    },
+    "generated_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "fim_type": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "hexsha": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "fim_program": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "correct": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "id": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "original_prog": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "renamed": {
+      "dtype": "bool",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}

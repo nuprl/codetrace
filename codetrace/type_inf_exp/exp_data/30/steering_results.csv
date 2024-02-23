@@ -1,0 +1,106 @@
+,steered_generation,fim_type,correct_steer,generated_text
+0,Set,Actions,False,SetAppSettingAction
+1,?,Color,False,?
+2,Argument,Command,False,this
+3,Container,Container,True,"this {
+    this.addStaticClass(lcNaesmas, asrg"
+4,G,G,True,"T,
+  errorCodeMapping: { [key: string]: number }
+)"
+5,T,HttpResponse,False,"T {
+  return {
+    statusCode: 400,
+    body:"
+6,string,Id,False,"string, di: string"
+7,string,Key,False,"keyof T,
+  ) {
+    const { [key]: value, ..."
+8,string,Language,False,'zh' | 'en'
+9,Partial,Options,False,Partial<Options>
+10,Point,Point,True,"Triangle) => {
+	const midpoint = tHgetptseu"
+11,string,RegExp,False,"string, rst"
+12,string,RegExp,False,"string) => boolean) | primitive;
+    }
+    let f: PossibleTypeOf"
+13,Schema,Schema,True,Asmhce
+14,Word,SearchResult,False,WordCoord[]
+15,Section,Section,True,"[number, number] {
+  const itLteenil = getPreviousTitle"
+16,DTO,U,False,"DTOMapper ) {
+  if ( escuor ) {
+    return rme"
+17,any,any,True,yan
+18,any,any,True,WorkerMessage
+19,any,any,True,CustomDescriptor
+20,any,any,True,CustomDescriptor
+21,any,any,True,"V[]) => {
+    upaseVulh(asrg);
+  };"
+22,State,any,False,State
+23,any,any,True,State
+24,any,any,True,yan
+25,any,any,True,yan
+26,any,any,True,yan
+27,any,any,True,yan
+28,any,any,True,yan
+29,any,any,True,RequestResponse<MediaNode>): job is RequestResponse<MediaNode> {
+30,any,any,True,AlmostAnything
+31,Tester,boolean,False,"Tester,
+    options?: {
+        customTesters?: Tester[],
+    },"
+32,T,boolean,False,"T {
+    return a;
+}
+
+function 0f5("
+33,false,boolean,False,"false)=>{
+        let ev:busEv = this.createEvent(neam"
+34,number,number,True,boolean
+35,number,number,True,boolean
+36,number,number,True,SidePosition
+37,number,number,True,"Position {
+        const tniitelatiaS = itpnu.map"
+38,[,number,False,"[number, number]"
+39,number,number,True,string
+40,number,number,True,BinaryNums
+41,number,number,True,"Pitch) {
+    return PgWettheatcvhtiiOc("
+42,number,number,True,string
+43,1,number,False,16
+44,number,number,True,string
+45,void,offsets,False,void
+46,string,string,True,"boolean => {
+      return a === b
+    }
+  ]
+
+  // @ts"
+47,string,string,True,"Rgb =>
+	grHblsoT(...shRlbgoT("
+48,Em,string,False,EmulatorInputEvent[]
+49,string,string,True,"NeonValue) {
+	if (velau === 'true') {"
+50,any,string,False,any
+51,string,string,True,"Owner) {
+    switch (selectedAction) {
+    case NFTAction."
+52,string,string,True,Owner
+53,number,string,False,"number) => (
+  `${neam} #1`
+)"
+54,string,string,True,StringMap
+55,string,string,True,void
+56,number,string,False,"{
+  const y = new Array(pocketDimension[0].length +"
+57,string,string,True,number
+58,string,string,True,"'Arial',
+  fontSize: number"
+59,Point,void,False,"Point[]
+{
+  let ltas: number = sption.length -"
+60,void,void,True,Point[]
+61,T,void,False,"T | undefined => {
+  while (true) {
+    const [pde"
