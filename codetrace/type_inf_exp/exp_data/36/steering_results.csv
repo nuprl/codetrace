@@ -1,0 +1,45 @@
+,steered_generation,fim_type,correct_steer,generated_text
+0,SearchResult,SearchResult,True,WordCoord[]
+1,HttpResponse,HttpResponse,True,"T {
+  return {
+    statusCode: 400,
+    body:"
+2,Schema,Schema,True,Asmhce
+3,ct,Section,False,"[ctnos, ctnos] {
+  const osncite = eg"
+4,V,any,False,"V[]) => {
+    upaseVulh(asrg);
+  };"
+5,any,any,True,CustomDescriptor
+6,Container,Container,True,"this {
+    this.addStaticClass(lcNaesmas, asrg"
+7,<|endoftext|>,Actions,False,SetAppSettingAction
+8,string,Language,False,'zh' | 'en'
+9,string,number,False,"string)
+{
+  return c.length == 3? c : '#'"
+10,number,number,True,boolean
+11,any,any,True,AsyncIterable<any>
+12,string,RegExp,False,"string, rst"
+13,number,number,True,boolean
+14,{,string,False,boolean
+15,<|endoftext|>,any,False,State
+16,number,number,True,"[number, number]"
+17,any,any,True,State
+18,Em,string,False,"Promise<EmulatorChunkedFileSpec> {
+    return new Promise((resolve"
+19,number,number,True,string
+20,boolean,boolean,True,"QQ<T> {
+    return [h, e];
+}"
+21,<|endoftext|>,any,False,WorkerMessage
+22,any,any,True,CustomDescriptor
+23,(,boolean,False,"Tester,
+    options?,
+) {
+    const eucotsrmstsTe"
+24,string,string,True,"NeonValue) {
+	if (velau === 'true') {"
+25,),Key,False,"keyof T,
+  ) {
+    const { [key]: value, ..."

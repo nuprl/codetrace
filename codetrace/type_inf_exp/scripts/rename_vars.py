@@ -90,7 +90,7 @@ def rename_vars_until_break(dataset: datasets.Dataset,
         fim_program = ex["fim_program"]
         solution = ex["fim_type"]
         var_locs = capture_varnames(fim_program)
-        names = set(var_locs.keys())
+        names, newnames = set(var_locs.keys()), set()
         for varname, locs in var_locs.items():
             new_name = make_new_name(varname, names)
             if new_name is None:
@@ -102,6 +102,7 @@ def rename_vars_until_break(dataset: datasets.Dataset,
             
             fim_program = rename_variable(fim_program, new_name, locs)
             names.add(new_name)
+            newnames.add(new_name)
             
             # run the llm on the new program
             prediction = _predict(llm, placeholder_to_std_fmt(fim_program, STARCODER_FIM))[0].strip()
@@ -112,6 +113,7 @@ def rename_vars_until_break(dataset: datasets.Dataset,
                 ex["fim_program"] = fim_program
                 ex["generated_text"] = prediction
                 ex["correct"] = False
+                ex["new_varnames"] = list(newnames)
                 new_dataset.append(ex)
                 break
         

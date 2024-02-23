@@ -1,6 +1,6 @@
 {
-    "outdir": 33,
-    "dataset": "franlucc/stenotype-eval-renamed-v4",
+    "outdir": 37,
+    "dataset": "franlucc/stenotype-type-inference-renamed-eval-v3",
     "model": "/home/arjun/models/starcoderbase-1b",
     "correct_prog_threshold": 1000,
     "correct_type_threshold": 1000,
@@ -8,8 +8,8 @@
     "incorrect_type_threshold": 1000,
     "batch_size": 2,
     "patch_mode": "add",
-    "n_eval": 1000,
+    "n_eval": 30,
     "tokens_to_patch": ["<fim_suffix>","<fim_middle>"],
     "layers_to_patch": [10,11,12,13,14],
-    "test_size": 0.2
+    "test_size": 0
 }
