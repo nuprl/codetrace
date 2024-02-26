@@ -19,12 +19,11 @@ import sys
 IDENTIFIER_QUERY = """((identifier) @name)""" 
 query = TS_LANGUAGE.query(IDENTIFIER_QUERY)
 
-def capture_varnames(program : str) -> dict[str, list[tree_sitter.Node]]:
+def capture_varnames(tree) -> dict[str, list[tree_sitter.Node]]:
     """
     Given a program, capture all the variable names and their locations
     as tree-sitter (start, end) points
     """
-    tree = TS_PARSER.parse(bytes( program, "utf8"))
     captures = query.captures(tree.root_node)
     vars_to_locs = defaultdict(list)
     for c in captures:
@@ -33,20 +32,21 @@ def capture_varnames(program : str) -> dict[str, list[tree_sitter.Node]]:
     return {k.decode("utf-8"): v for k,v in vars_to_locs.items()}
 
 
-def rename_variable(program : str,
+def rename_variable(program : bytes,
                 new_name : str,
                var_locations : list[tree_sitter.Node]) -> str:
     """
     Rename a variable in program in bottom-up order to maintain location integrity
+    NOTE: only works when new_name is same length as varname
     """
     # sort locations by start byte descending
     var_locations.sort(key=lambda x: x.start_byte, reverse=True)
     
     # replace each varname with a new name
     for capture in var_locations:
-        program = replace_between_points(program, capture.start_point, capture.end_point, new_name)
+        program = replace_between_bytes(program, capture.start_byte, capture.end_byte, new_name)
         
-    return program
+    return program.decode("utf-8").strip()
 
 def make_new_name(varname : str, existing_names : set[str]) -> str | None:
     """
@@ -85,7 +85,8 @@ def rename_vars_until_break(dataset: datasets.Dataset,
     for i,ex in enumerate(tqdm(dataset)):
         fim_program = ex["fim_program"]
         solution = ex["fim_type"]
-        var_locs = capture_varnames(fim_program)
+        tree = TS_PARSER.parse(bytes( fim_program, "utf8"))
+        var_locs = capture_varnames(tree)
         names, newnames = set(var_locs.keys()), set()
         for varname, locs in var_locs.items():
             new_name = make_new_name(varname, names)
@@ -96,7 +97,7 @@ def rename_vars_until_break(dataset: datasets.Dataset,
             if varname[0].isupper() or varname == solution:
                 continue
             
-            fim_program = rename_variable(fim_program, new_name, locs)
+            fim_program = rename_variable(tree.text, new_name, locs)
             names.add(new_name)
             newnames.add(new_name)
             
@@ -115,6 +116,18 @@ def rename_vars_until_break(dataset: datasets.Dataset,
         
     new_dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_dataset))
     return new_dataset
+
+def remove_comments(program : str) -> str:
+    comment_query = """((comment) @comment)"""
+    comment_query = TS_LANGUAGE.query(comment_query)
+    tree = TS_PARSER.parse(bytes(program, "utf8"))
+    captures = comment_query.captures(tree.root_node)
+    # sort by start byte descending
+    captures.sort(key=lambda x: x[0].start_byte, reverse=True)
+    program = tree.text
+    for c in captures:
+        program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
+    return program.decode("utf-8").strip()
 
 def _preprocess(dataset : datasets.Dataset) -> datasets.Dataset:
     """
@@ -136,9 +149,11 @@ def _preprocess(dataset : datasets.Dataset) -> datasets.Dataset:
         captures = preproc_query.captures(tree.root_node)
         return len(captures) > 0
     
-    # TODO remove comments?
-    
     dataset = dataset.filter(lambda x: not _has_captures(x["fim_program"]))
+    
+    # remove comments
+    dataset = dataset.map(lambda x: {"fim_program": remove_comments(x["fim_program"])})
+    
     return dataset
     
 def _postprocess(dataset : datasets.Dataset) -> datasets.Dataset:
@@ -186,11 +201,14 @@ def _postprocess(dataset : datasets.Dataset) -> datasets.Dataset:
 def main():
     newname = sys.argv[1]
     ds = datasets.load_dataset("franlucc/stenotype-type-inference-fim-evaluated", split="train")
+    ds = ds.select(range(1))
+    print(ds[0]["fim_program"])
     ds = _preprocess(ds)
-    llm = LLM("/home/arjun/models/starcoderbase-1b")
-    ds = rename_vars_until_break(ds, llm)
-    ds = _postprocess(ds)
-    ds.push_to_hub(newname)
+    print(ds[0]["fim_program"])
+    # llm = LLM("/home/arjun/models/starcoderbase-1b")
+    # ds = rename_vars_until_break(ds, llm)
+    # ds = _postprocess(ds)
+    # ds.push_to_hub(newname)
     
 if __name__ == "__main__":
     main()

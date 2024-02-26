@@ -91,9 +91,10 @@ def fim_prog(prog : str) -> list[str]:
     )
     fim_variations = []
     captures = query.captures(tree.root_node)
+    s = tree.text
     for c in captures:
-        s = replace_between_points(prog, c[0].start_point, c[0].end_point, fim_placeholder)
-        fim_variations.append(s)
+        s = replace_between_bytes(s, c[0].start_byte, c[0].end_end, fim_placeholder)
+        fim_variations.append(s.decode("utf-8"))
     return fim_variations
 
 
@@ -116,10 +117,11 @@ def fim_prog_func(prog : str) -> list[Tuple[str]]:
     )
     fim_variations = []
     captures = query.captures(tree.root_node)
+    s = tree.text
     for c in captures:
         text = c[0].text.decode("utf-8").strip()[1:]
-        s = replace_between_points(prog, c[0].start_point, c[0].end_point, fim_placeholder)
-        fim_variations.append((s, text))
+        s = replace_between_bytes(s, c[0].start_byte, c[0].end_byte, fim_placeholder)
+        fim_variations.append((s.decode("utf-8"), text))
     return fim_variations
 
         
@@ -143,6 +145,20 @@ def replace_between_points(original_string : str,
         original_string[:start_index] + replacement + original_string[end_index:]
     )
     return modified_string
+
+def replace_between_bytes(byte_string : bytes,
+                           start_byte : int, 
+                           end_byte : int,
+                           replacement : str = "") -> bytes:
+    '''
+    Replace tree-sitter interval (start_point, end_point) from a string.
+    Inclusive of start_point and end_point
+    '''
+    byte_replacement = replacement.encode("utf-8")
+    modified_byte_string = (
+        byte_string[:start_byte] + byte_replacement + byte_string[end_byte:]
+    )
+    return modified_byte_string
 
 def point_to_index_loc(point: Tuple[int], original_string: str) -> int:
     """

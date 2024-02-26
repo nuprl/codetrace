@@ -54,7 +54,7 @@ function countPeople(ln: Line): number {
     captures = query.captures(tree.root_node)
     c = captures[0]
     print(c)
-    s = replace_between_points(prog, c[0].start_point, c[0].end_point, fim_placeholder)
+    s = replace_between_bytes(tree.text, c[0].start_byte, c[0].end_byte, fim_placeholder).decode("utf-8")
     with open("out.ts","w") as f:
         f.write(s)
 

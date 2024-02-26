@@ -39,3 +39,11 @@ Refactor code:
 [] modular steering code
 
 - break up the steering code
+
+### Today
+
+[] renaming dataset redo
+    - rename all variables?
+
+[] renaming python experiment
+    - make steering with generation code

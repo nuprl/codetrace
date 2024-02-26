@@ -50,21 +50,22 @@ def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[str, 
     tree = TS_PARSER.parse(bytes( ts_prog, "utf-8"))
     query = TS_LANGUAGE.query(query_str)
     
-    captures = query.captures(tree.root_node)[::-1]
+    captures = query.captures(tree.root_node)[::-1] # walk backwards to preserve idx
     if len(captures) == 0:
         return ts_prog, {}
-    captures = merge_captures(captures)
+    captures = merge_captures(captures) 
     
     type_map = {}
 
+    ts_prog = tree.text
     for c in captures:
         c = c[0]
         captured_type = c.text.decode("utf-8")[1:].strip()
         
-        type_map[(c.start_point, c.end_point)] = captured_type
+        type_map[(c.start_point, c.end_point, c.start_byte, c.end_byte)] = captured_type
 
-        ts_prog = replace_between_points(ts_prog, c.start_point, c.end_point, "")
-    return ts_prog, type_map
+        ts_prog = replace_between_bytes(ts_prog, c.start_byte, c.end_byte, "")
+    return ts_prog.decode("utf-8").strip(), type_map
 
 """
 The following functions remove all type annotations but one <FILL> fim type
@@ -101,6 +102,7 @@ def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tu
     
     prompts = []
     
+    ts_prog = tree.text
     for i in range(len(captures)):
         c = captures[i][0]
         captured_type = c.text.decode("utf-8")[1:].strip()
@@ -108,18 +110,18 @@ def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tu
         stripped = ts_prog
         for j in range(len(captures)):
             if i < j:
-                stripped = replace_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point, "")
+                stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, "")
             elif i == j:
-                stripped = replace_between_points(stripped, captures[j][0].start_point, captures[j][0].end_point, "<FILL>")
+                stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, "<FILL>")
         
-        # for some reason this is necessary, index won't update correctly otherwise
-        with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
-            temp.write(stripped)
-            temp.seek(0)
-            stripped = temp.read()
+        # # for some reason this is necessary, index won't update correctly otherwise
+        # with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
+        #     temp.write(stripped)
+        #     temp.seek(0)
+        #     stripped = temp.read()
             
-        prompts.append((stripped, captured_type))
-        ts_prog = replace_between_points(ts_prog, c.start_point, c.end_point, "")
+        prompts.append((stripped.decode("utf-8").strip(), captured_type))
+        # ts_prog = replace_between_bytes(ts_prog, c.start_byte, c.end_point, "")
         
     return prompts
 
