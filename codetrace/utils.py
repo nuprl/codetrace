@@ -45,6 +45,8 @@ def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
     "<prefix>def func(n : <suffix>)<fim_token>"
     """
     parts = prompt.split(fim.placeholder)
+    if len(parts) != 2:
+        raise ValueError(f"Prompt does not contain a single placeholder: {parts}")
     prompt = fim.prefix + parts[0] + fim.suffix + parts[1] + fim.token
     return prompt
 
@@ -124,6 +126,17 @@ def fim_prog_func(prog : str) -> list[Tuple[str]]:
         fim_variations.append((s.decode("utf-8"), text))
     return fim_variations
 
+def remove_comments(program : str) -> str:
+    comment_query = """((comment) @comment)"""
+    comment_query = TS_LANGUAGE.query(comment_query)
+    tree = TS_PARSER.parse(bytes(program, "utf8"))
+    captures = comment_query.captures(tree.root_node)
+    # sort by start byte descending
+    captures.sort(key=lambda x: x[0].start_byte, reverse=True)
+    program = tree.text
+    for c in captures:
+        program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
+    return program.decode("utf-8").strip()
         
 def replace_between_points(original_string : str,
                            start_point : Tuple[int], 
@@ -155,9 +168,14 @@ def replace_between_bytes(byte_string : bytes,
     Inclusive of start_point and end_point
     '''
     byte_replacement = replacement.encode("utf-8")
-    modified_byte_string = (
-        byte_string[:start_byte] + byte_replacement + byte_string[end_byte:]
-    )
+    if replacement == "":
+        modified_byte_string = (
+            byte_string[:start_byte] + byte_string[end_byte:]
+        )
+    else:
+        modified_byte_string = (
+            byte_string[:start_byte] + byte_replacement + byte_string[end_byte:]
+        )
     return modified_byte_string
 
 def point_to_index_loc(point: Tuple[int], original_string: str) -> int:

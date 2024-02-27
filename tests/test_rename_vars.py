@@ -15,8 +15,8 @@ return {
   """
   tree = TS_PARSER.parse(bytes( program, "utf8"))
   captured = capture_varnames(tree)
-  new_name = make_new_name("items", set(captured.keys()))
-  new_program = rename_variable(tree.text, "myvar", captured["items"]).strip()
+  newname = make_new_name(len(captured["items"][0].text), set(captured.keys()))
+  new_program = rename_variable(tree.text, "myvar", captured["items"]).decode("utf-8").strip()
   gold = """
 export function buildInClause<T>(
 myvar,
@@ -42,9 +42,9 @@ return {
   """
   tree = TS_PARSER.parse(bytes( program, "utf8"))
   captured = capture_varnames(tree)
-  newname = make_new_name("items", set(captured.keys()))
+  newname = make_new_name(len(captured["items"][0].text), set(captured.keys()))
   assert newname != "items", newname
-  new_program = rename_variable(tree.text, newname, captured["items"]).strip()
+  new_program = rename_variable(tree.text, newname, captured["items"]).decode("utf-8").strip()
   gold = program.replace("items", newname).strip()
   assert new_program == gold, new_program
   # tokenizer = AutoTokenizer.from_pretrained("/home/arjun/models/starcoderbase-1b")

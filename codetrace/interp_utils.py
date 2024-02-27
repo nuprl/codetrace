@@ -393,3 +393,29 @@ def patch_clean_to_corrupt(model : LanguageModel,
     logits = torch.stack([logits], dim=0)
     return TraceResult(logits, -1)
     
+    
+def custom_lens(model : LanguageModel,
+                decoder : torch.nn.Module,
+                prompts : List[str] | str,
+                layer : int | List[int],
+                token : str,
+                activations : torch.Tensor = None) -> List[str]:
+    """
+    Apply custom lens to model activations for prompt at (layer, token)
+    """
+    layer = arg_to_list(layer)
+    if activations is None:
+        activations = collect_hidden_states_at_tokens(model,
+                                                    prompts,
+                                                    layers=layer,
+                                                    token_idx=token)
+    activations = activations.detach().cpu()
+    # apply decoder
+    logits = decoder(activations)
+    # softmax
+    logits = logits.softmax(dim=-1)
+    logits = logits.argmax(-1).squeeze(0).squeeze(-1)
+
+    # tokenize
+    predictions = [model.tokenizer.decode(t) for t in logits]
+    return predictions, activations

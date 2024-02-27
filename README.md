@@ -30,20 +30,9 @@ Main interp and util code is in `codetrace/` toplevel. Experiments are organized
 
 # TODO
 
-Refactor code:
+[] show OOD performance
 
-[] faster steering dataset generation
-
- - for each correct prompt, have several transformations
-
-[] modular steering code
-
-- break up the steering code
-
-### Today
-
-[] renaming dataset redo
-    - rename all variables?
+[] one more trick beyond renaming
 
 [] renaming python experiment
     - make steering with generation code

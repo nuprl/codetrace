@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.patches as mpatches
 import matplotlib as mpl
 
+    
 def patched_heatmap_prediction(model : LanguageModel,
                         clean_prompts : List[str] | str, 
                         corrupted_prompts : List[str] | str,

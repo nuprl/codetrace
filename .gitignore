@@ -3,6 +3,8 @@ exp_data/
 temp.png
 __pycache__/
 build/
+main.ipynb/
+models/
 completions/
 node_modules/
 ts-benchmark-dataset/
