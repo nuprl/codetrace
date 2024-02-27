@@ -9,6 +9,7 @@ from ast import literal_eval
 from typing import Tuple
 import re
 import tempfile
+from tqdm import tqdm
 
 QUERY_ALL_TYPES = """((type_annotation) @name)"""
 QUERY_FUNC_TYPES = """
@@ -76,12 +77,12 @@ def make_typeinf_prompts(dataset : datasets.Dataset, query_str : str = QUERY_ALL
     Make a dataset with all type annotations removed and a prompt for each type annotation
     """
     new_ds = []
-    for ex in dataset:
+    for ex in tqdm(dataset):
         prompts = fim_remove_types(ex["content"], query_str)
         for p in prompts:
             ex = ex.copy()
             ex["fim_program"] = p[0]
-            ex["fim_type"] = json.dumps(p[1])
+            ex["fim_type"] = p[1]
             new_ds.append(ex)
 
     dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
@@ -112,16 +113,12 @@ def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tu
             if i < j:
                 stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, "")
             elif i == j:
-                stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, "<FILL>")
-        
-        # # for some reason this is necessary, index won't update correctly otherwise
-        # with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
-        #     temp.write(stripped)
-        #     temp.seek(0)
-        #     stripped = temp.read()
+                stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, ": <FILL>")
             
-        prompts.append((stripped.decode("utf-8").strip(), captured_type))
-        # ts_prog = replace_between_bytes(ts_prog, c.start_byte, c.end_point, "")
+        try:
+            prompts.append((stripped.decode("utf-8").strip(), captured_type))
+        except:
+            prompts.append((tree.text.decode("utf-8").strip(), ""))
         
     return prompts
 

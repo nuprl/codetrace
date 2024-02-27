@@ -85,10 +85,16 @@ def filter_prompts(dataset : datasets.Dataset,
     label_count = {label : 0 for label in labels}
     balanced_prompts = []
     for i,ex in enumerate(dataset):
-        if label_count[ex["fim_type"]] >= dedup_type_threshold:
+        if label_count[ex["fim_type"]] >= dedup_type_threshold and hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: 
+            # if label and hexsha are already at threshold, break
+            break
+        elif label_count[ex["fim_type"]] >= dedup_type_threshold:
+            # if label is at threshold, continue
             continue
-        if hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: # some threshold
+        elif hexsha_count[ex["hexsha"]] >= dedup_prog_threshold:
+            # if hexsha is at threshold, continue
             continue
+        
         balanced_prompts.append(ex)
         label_count[ex["fim_type"]] += 1
         hexsha_count[ex["hexsha"]] += 1

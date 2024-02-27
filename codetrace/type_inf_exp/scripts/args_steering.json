@@ -1,15 +1,12 @@
 {
-    "outdir": 37,
-    "dataset": "franlucc/stenotype-type-inference-renamed-eval-v3",
+    "outdir": 43,
+    "dataset": "franlucc/ts-typeinf-steering",
     "model": "/home/arjun/models/starcoderbase-1b",
-    "correct_prog_threshold": 1000,
-    "correct_type_threshold": 1000,
-    "incorrect_prog_threshold": 1000,
-    "incorrect_type_threshold": 1000,
+    "prog_threshold": 1,
+    "type_threshold": 30,
     "batch_size": 2,
     "patch_mode": "add",
-    "n_eval": 30,
-    "tokens_to_patch": ["<fim_suffix>","<fim_middle>"],
+    "tokens_to_patch": ["<fim_middle>"],
     "layers_to_patch": [10,11,12,13,14],
-    "test_size": 0
+    "test_size": 0.2
 }

@@ -15,7 +15,7 @@ from tqdm import tqdm
 import pandas as pd
 import re
 import sys
-
+from multiprocessing import cpu_count
 IDENTIFIER_QUERY = """((identifier) @name)""" 
 query = TS_LANGUAGE.query(IDENTIFIER_QUERY)
 
@@ -34,7 +34,7 @@ def capture_varnames(tree) -> dict[str, list[tree_sitter.Node]]:
 
 def rename_variable(program : bytes,
                 new_name : str,
-               var_locations : list[tree_sitter.Node]) -> str:
+               var_locations : list[tree_sitter.Node]) -> bytes:
     """
     Rename a variable in program in bottom-up order to maintain location integrity
     NOTE: only works when new_name is same length as varname
@@ -46,9 +46,9 @@ def rename_variable(program : bytes,
     for capture in var_locations:
         program = replace_between_bytes(program, capture.start_byte, capture.end_byte, new_name)
         
-    return program.decode("utf-8").strip()
+    return program
 
-def make_new_name(varname : str, existing_names : set[str]) -> str | None:
+def make_new_name(new_length : int, existing_names : set[str]) -> str | None:
     """
     Given a set of var captures and a variable name, make a new name for the variable that
     is not already in the program.
@@ -57,83 +57,101 @@ def make_new_name(varname : str, existing_names : set[str]) -> str | None:
     - `uniq_` prefix
     - permute the order of the characters
     """
-    letters = "abcdefghijklmnopqrstuvwxyz"*2
-    new_name = varname
+    letters = "abcdefghijklmnopqrstuvwxyz"*10
+    new_name = "".join(random.sample(letters, new_length))
     tries = 0
     while new_name in existing_names:
         tries += 1
-        if tries > 100:
+        if tries > 10000:
             return None
-        new_name = "".join(random.sample(letters, len(new_name)))
+        new_name = "".join(random.sample(letters, new_length))
     return new_name
         
-
 def _predict(llm: LLM, prompt: str | List[str]) -> List[str]:
     """
     Helper function to predict completions
     """
     params = SamplingParams(temperature=0)
     out = llm.generate(prompt, params, use_tqdm=False)
-    return [i.outputs[0].text for i in out]
+    return [i.outputs[0].text.strip() for i in out]
 
-def rename_vars_until_break(dataset: datasets.Dataset, 
-                            llm: LLM) -> datasets.Dataset:
+
+def dataset_rename_vars(dataset: datasets.Dataset) -> datasets.Dataset:
     """
-    For each example in the dataset, rename all variables until the llm's type prediction breaks
+    For each example in the dataset, rename all variables incrementally
     """
     new_dataset = []
+    
     for i,ex in enumerate(tqdm(dataset)):
         fim_program = ex["fim_program"]
         solution = ex["fim_type"]
+        
         tree = TS_PARSER.parse(bytes( fim_program, "utf8"))
         var_locs = capture_varnames(tree)
+        
         names, newnames = set(var_locs.keys()), set()
+        
+        fim_program = tree.text
+        
         for varname, locs in var_locs.items():
-            new_name = make_new_name(varname, names)
-            if new_name is None:
-                continue
-            # if varname starts with capital letter, it is an enum identifier
-            # TODO: there's some tree-sitter bug where it's capturing types as vars
-            if varname[0].isupper() or varname == solution:
+            new_name = make_new_name(len(locs[0].text), names)
+            if new_name is None or varname[0].isupper() or varname == solution:
+                # TODO: there's some tree-sitter bug where it's capturing types as vars
                 continue
             
-            fim_program = rename_variable(tree.text, new_name, locs)
+            fim_program_new = rename_variable(fim_program, new_name, locs)
+            try:
+                fim_program_new.decode("utf-8")
+            except:
+                continue
+            fim_program = fim_program_new
+            
             names.add(new_name)
-            newnames.add(new_name)
+            newnames.add((varname, new_name))
             
-            # run the llm on the new program
-            prediction = _predict(llm, placeholder_to_std_fmt(fim_program, STARCODER_FIM))[0].strip()
-            if prediction != solution and not prediction.startswith(solution):
-                # save old ex
-                new_dataset.append(ex.copy())
-                # save new ex
-                ex["fim_program"] = fim_program
-                ex["generated_text"] = prediction
-                ex["correct"] = False
-                ex["new_varnames"] = list(newnames)
-                new_dataset.append(ex)
-                break
+            # save old ex
+            new_dataset.append({**ex,
+                "renamed_fim_program" : fim_program.decode("utf-8"),
+                "renamed_variables" : list(newnames),
+                "renamed_percent" : len(newnames) / len(var_locs),
+            })
+            
         
     new_dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_dataset))
+    # drop columns "correct" and "overfull"
+    new_dataset = new_dataset.remove_columns(["correct", "overfull"])
     return new_dataset
 
-def remove_comments(program : str) -> str:
-    comment_query = """((comment) @comment)"""
-    comment_query = TS_LANGUAGE.query(comment_query)
-    tree = TS_PARSER.parse(bytes(program, "utf8"))
-    captures = comment_query.captures(tree.root_node)
-    # sort by start byte descending
-    captures.sort(key=lambda x: x[0].start_byte, reverse=True)
-    program = tree.text
-    for c in captures:
-        program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
-    return program.decode("utf-8").strip()
+def _filter_incorrect(ds: datasets.Dataset, llm: LLM) -> datasets.Dataset:
+    """
+    Filter out examples where the model's prediction is incorrect
+    """
+    def is_incorrect(prediction, solution):
+        # make sure prediction did not go overfull and is not the same as the solution
+        return prediction != solution and not prediction.startswith(solution)
+    
+    predictions = []
+    params = SamplingParams(temperature=0)
+    prompts = ds.map(lambda x: {"_":placeholder_to_std_fmt(x["renamed_fim_program"], STARCODER_FIM)}, num_proc=cpu_count())
+    prompts = prompts["_"]
 
-def _preprocess(dataset : datasets.Dataset) -> datasets.Dataset:
+    generations = llm.generate(prompts, params)
+    new_ds = []
+
+    for i,output in enumerate(generations):
+        generated_text = output.outputs[0].text.strip()
+        if is_incorrect(generated_text, ds[i]["fim_type"]):
+            new_ds.append({**ds[i], "renamed_generated_text": generated_text})
+            
+    new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
+    return new_ds
+
+
+def _preprocess(dataset : datasets.Dataset, remove_comments=False) -> datasets.Dataset:
     """
     Preprocess the dataset
     """
-    dataset = dataset.filter(lambda x: x["correct"] == True)
+    dataset = dataset.filter(lambda x: x["correct"] == True and x["overfull"] == False)
     
     # remove examples with:
     # shorthand_property_identifier, shorthand_property_identifier_pattern
@@ -152,7 +170,8 @@ def _preprocess(dataset : datasets.Dataset) -> datasets.Dataset:
     dataset = dataset.filter(lambda x: not _has_captures(x["fim_program"]))
     
     # remove comments
-    dataset = dataset.map(lambda x: {"fim_program": remove_comments(x["fim_program"])})
+    if remove_comments:
+        dataset = dataset.map(lambda x: {"fim_program": remove_comments(x["fim_program"])})
     
     return dataset
     
@@ -191,24 +210,28 @@ def _postprocess(dataset : datasets.Dataset) -> datasets.Dataset:
         return True
     
     def _filter(x):
-        if x["correct"]:
-            return True
-        else:
-            return not_type_declaration(x) and not_array_equivalent(x)
+        return not_type_declaration(x) and not_array_equivalent(x)
     dataset = dataset.filter(_filter)
     return dataset
 
+    
 def main():
     newname = sys.argv[1]
-    ds = datasets.load_dataset("franlucc/stenotype-type-inference-fim-evaluated", split="train")
-    ds = ds.select(range(1))
-    print(ds[0]["fim_program"])
+    ds = datasets.load_dataset("franlucc/ts-typeinf-1tok-completions", split="train")
     ds = _preprocess(ds)
-    print(ds[0]["fim_program"])
-    # llm = LLM("/home/arjun/models/starcoderbase-1b")
-    # ds = rename_vars_until_break(ds, llm)
-    # ds = _postprocess(ds)
-    # ds.push_to_hub(newname)
+    llm = LLM("/home/arjun/models/starcoderbase-1b")
+    ds = dataset_rename_vars(ds)
+    # sample 3000
+    # ds = datasets.Dataset.from_pandas(ds.to_pandas().sample(3000, random_state=42))
+    # filter renamed % above threshold
+    # ds = ds.filter(lambda x: x["renamed_percent"] >= 0.5)
+    print(ds)
+    
+    ds = _filter_incorrect(ds, llm)
+    ds.push_to_hub(newname + "_prefilter")
+    ds = _postprocess(ds)
+    print(ds, len(list(set(ds["hexsha"]))))
+    ds.push_to_hub(newname)
     
 if __name__ == "__main__":
     main()
