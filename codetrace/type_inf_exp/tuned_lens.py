@@ -51,9 +51,9 @@ def train_loop(model, train_ds, val_ds, n_epochs):
                 logger.log({"val_loss": loss.item()})
             
         if epoch % 3 == 0:
-            torch.save(model.state_dict(), f"exp_data/models/model_{epoch}.pt")
+            torch.save(model.state_dict(), f"models/model_{epoch}.pt")
             
-    torch.save(model.state_dict(), "exp_data/models/model_final.pt")
+    torch.save(model.state_dict(), "models/model_final.pt")
     return model
 
 

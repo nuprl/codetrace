@@ -129,3 +129,9 @@ def patched_heatmap_prediction(model : LanguageModel,
     plt.tight_layout()
     plt.savefig(outfile)
     
+    
+"""
+Tuned lens visualizations
+
+- for each token, show at all layers what tuned lens (or any decoder) predicts
+"""

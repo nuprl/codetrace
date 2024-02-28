@@ -399,7 +399,8 @@ def custom_lens(model : LanguageModel,
                 prompts : List[str] | str,
                 layer : int | List[int],
                 token : str,
-                activations : torch.Tensor = None) -> List[str]:
+                activations : torch.Tensor = None,
+                k : int = 1,) -> List[str]:
     """
     Apply custom lens to model activations for prompt at (layer, token)
     """
@@ -414,8 +415,8 @@ def custom_lens(model : LanguageModel,
     logits = decoder(activations)
     # softmax
     logits = logits.softmax(dim=-1)
-    logits = logits.argmax(-1).squeeze(0).squeeze(-1)
+    probs = logits.topk(k, dim=-1)
 
     # tokenize
-    predictions = [model.tokenizer.decode(t) for t in logits]
-    return predictions, activations
+    predictions = [model.tokenizer.decode(t) for t in probs.indices.squeeze(0).squeeze(-1)]
+    return predictions, activations, logits

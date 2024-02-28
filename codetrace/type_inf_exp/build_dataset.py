@@ -110,7 +110,7 @@ def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tu
         
         stripped = ts_prog
         for j in range(len(captures)):
-            if i < j:
+            if i != j:
                 stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, "")
             elif i == j:
                 stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, ": <FILL>")
