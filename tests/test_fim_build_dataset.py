@@ -28,9 +28,9 @@ def test_capture_func_types():
     query = TS_LANGUAGE.query(QUERY_FUNC_TYPES)
     captures = query.captures(tree.root_node)
     assert len(captures) == 2, captures
-    print(fim_remove_types(prog, QUERY_FUNC_TYPES))
+    # print(fim_remove_types(prog, QUERY_FUNC_TYPES))
     text_cap = [c[0].text for c in captures]
-    print(f"Captures: {text_cap}")
+    # print(f"Captures: {text_cap}")
   
 def test_remove_types():
     ts_prog = "function foo(a: number, b: string): number {\n\treturn 1;\n}"

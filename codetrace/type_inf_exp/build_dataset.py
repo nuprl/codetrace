@@ -112,13 +112,13 @@ def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tu
         for j in range(len(captures)):
             if i != j:
                 stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, "")
-            elif i == j:
+            else:
                 stripped = replace_between_bytes(stripped, captures[j][0].start_byte, captures[j][0].end_byte, ": <FILL>")
             
         try:
             prompts.append((stripped.decode("utf-8").strip(), captured_type))
         except:
-            prompts.append((tree.text.decode("utf-8").strip(), ""))
+            prompts.append(("_error_", "_error_"))
         
     return prompts
 

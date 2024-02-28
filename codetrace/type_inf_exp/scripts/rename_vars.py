@@ -16,6 +16,8 @@ import pandas as pd
 import re
 import sys
 from multiprocessing import cpu_count
+from argparse import ArgumentParser
+
 IDENTIFIER_QUERY = """((identifier) @name)""" 
 query = TS_LANGUAGE.query(IDENTIFIER_QUERY)
 
@@ -216,10 +218,15 @@ def _postprocess(dataset : datasets.Dataset) -> datasets.Dataset:
 
     
 def main():
-    newname = sys.argv[1]
-    ds = datasets.load_dataset("franlucc/ts-typeinf-1tok-completions", split="train")
+    parser = ArgumentParser()
+    parser.add_argument("--completions-ds", type=str, required=True)
+    parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
+    parser.add_argument("--new-ds-name", type=str, required=True)
+    args = parser.parse_args()
+    
+    ds = datasets.load_dataset(args.completions_ds, split="train")
     ds = _preprocess(ds)
-    llm = LLM("/home/arjun/models/starcoderbase-1b")
+    llm = LLM(args.model)
     ds = dataset_rename_vars(ds)
     # sample 3000
     # ds = datasets.Dataset.from_pandas(ds.to_pandas().sample(3000, random_state=42))
@@ -228,10 +235,9 @@ def main():
     print(ds)
     
     ds = _filter_incorrect(ds, llm)
-    ds.push_to_hub(newname + "_prefilter")
     ds = _postprocess(ds)
     print(ds, len(list(set(ds["hexsha"]))))
-    ds.push_to_hub(newname)
+    ds.push_to_hub(args.new_ds_name)
     
 if __name__ == "__main__":
     main()

@@ -28,11 +28,11 @@ In jupyer `kernel.json` add env var, then restart vscode.
 
 Main interp and util code is in `codetrace/` toplevel. Experiments are organized in subdirectories. The REPL in each experiment subdirectory is `<exp_subdir>/main.ipynb`. Random notebooks in `notebooks/`. Note that only experiment subdir with `__init__.py` are up to date, all others deprecated.
 
-# TODO
+# TODO today
 
-[] show OOD performance
+[] regenerate steering datasets
+[] steering experiment redo (with ood)
 
-[] one more trick beyond renaming
-
-[] renaming python experiment
-    - make steering with generation code
+[X] typing lens visualization
+[] python generation experiment
+[] brainstorm new transformation like renaming

@@ -6,28 +6,34 @@ import json
 from argparse import ArgumentParser
 import pandas as pd
 from multiprocessing import cpu_count
+from tqdm import tqdm
 
 parser = ArgumentParser()
 parser.add_argument("--model", type=str, required=True)
 parser.add_argument("--prompt-ds", type=str, required=True)
 parser.add_argument("--new-ds-name", type=str, required=True)
-parser.add_argument("--max-size", type=int, default=1000)
+parser.add_argument("--max-size", type=int, default=-1)
 
 args = parser.parse_args()
 dataset = args.prompt_ds
 model = args.model
 new_name = args.new_ds_name
 
+# get model basename
+model_name = model.split("/")[-1]
+print(f"Model: {model_name}")
+
 ds = datasets.load_dataset(dataset, split="train")
 tokenizer = AutoTokenizer.from_pretrained(model)
 
 def _condition(x):
-    single_tok = (len(tokenizer.tokenize(x["fim_type"])) == 1)
-    return len(x["content"]) > 1000 and len(x["content"]) < 8000 and single_tok
+    return len(x["fim_program"]) > 1000 and len(x["fim_program"]) < 8000
 
 ds = ds.filter(_condition, num_proc=cpu_count())
+ds = ds.shuffle(seed=42)
 # sample
-ds = ds.shuffle(seed=42).select(range(args.max_size))
+if args.max_size > -1:
+    ds = ds.select(range(args.max_size))
 
 params = SamplingParams(temperature=0)
 
@@ -36,15 +42,45 @@ tokenizer = AutoTokenizer.from_pretrained(model)
 
 prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in ds]
 
-generations = llm.generate(prompts, params)
-
 completions = []
+if len(prompts) > 10000:
+    print("Doing batch generations")
+    batch_size = 10000
+    # batch generations
+    for i in tqdm(range(0, len(prompts), batch_size), desc="Batch generations"):
+        generations = llm.generate(prompts[i:i+batch_size], params, use_tqdm=False)
 
-for i,output in enumerate(generations):
-    generated_text = output.outputs[0].text.strip()
-    completions.append({**ds[i], "generated_text": generated_text, "correct": generated_text == ds[i]["fim_type"].strip(),
-                        "overfull": len(tokenizer.tokenize(generated_text)) > 1,
-                        "model" : "starcoderbase-1b"})
+        for j,output in enumerate(generations):
+            generated_text = output.outputs[0].text.strip()
+            completions.append({**ds[i+j], "generated_text": generated_text, "correct": generated_text == ds[i+j]["fim_type"].strip(),
+                                "overfull": len(tokenizer.tokenize(generated_text)) > 1,
+                                "model" : model_name})
+        # save every 5 batches:
+        if i % (5*batch_size) == 0:
+            print(f"Saving {i} completions")
+            new_ds = datasets.Dataset.from_pandas(pd.DataFrame(completions))
+            new_ds.push_to_hub(new_name)
+
+else:
+    generations = llm.generate(prompts, params)
+
+    for i,output in enumerate(generations):
+        generated_text = output.outputs[0].text.strip()
+        completions.append({**ds[i], "generated_text": generated_text, "correct": generated_text == ds[i]["fim_type"].strip(),
+                            "overfull": len(tokenizer.tokenize(generated_text)) > 1,
+                            "model" : model_name})
+
     
 new_ds = datasets.Dataset.from_pandas(pd.DataFrame(completions))
 new_ds.push_to_hub(new_name)
+
+
+# count: correct and not overfull
+correct = new_ds.filter(lambda x: x["correct"] and not x["overfull"])
+# count: incorrect and not overfull
+incorrect = new_ds.filter(lambda x: not x["correct"] and not x["overfull"])
+print(f"Correct: {len(correct)}, Incorrect: {len(incorrect)}")
+
+# count overfull
+overfull = new_ds.filter(lambda x: x["overfull"])
+print(f"Overfull: {len(overfull)}")

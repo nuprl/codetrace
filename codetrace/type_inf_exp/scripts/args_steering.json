@@ -1,12 +1,12 @@
 {
-    "outdir": 44,
-    "dataset": "franlucc/ts-typeinf-steering",
+    "outdir": 47,
+    "dataset": "franlucc/stenotype-typeinf-steering",
     "model": "/home/arjun/models/starcoderbase-1b",
     "prog_threshold": 1,
-    "type_threshold": 10,
+    "type_threshold": 100,
     "batch_size": 2,
     "patch_mode": "add",
     "tokens_to_patch": ["<fim_middle>"],
-    "layers_to_patch": [10,11,12,13,14],
+    "layers_to_patch": [16,17,18],
     "test_size": 0.2
 }

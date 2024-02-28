@@ -208,7 +208,7 @@ def main():
     _evaluate(steering_ds, counts, args, out_dir, "eval_readme.md")
         
     # # ==========================================================================================
-    # # # PART 5: steering ood
+    # # # PART 4: steering ood
     # # ==========================================================================================
     if args.test_size > 0:
         print(f"...Applying patch to incorrect prompts...")

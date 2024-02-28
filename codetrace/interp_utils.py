@@ -394,29 +394,54 @@ def patch_clean_to_corrupt(model : LanguageModel,
     return TraceResult(logits, -1)
     
     
+# def custom_lens(model : LanguageModel,
+#                 decoder : torch.nn.Module,
+#                 prompts : List[str] | str,
+#                 layer : int | List[int],
+#                 token : str,
+#                 activations : torch.Tensor = None,
+#                 k : int = 1,) -> List[str]:
+#     """
+#     Apply custom lens to model activations for prompt at (layer, token)
+#     """
+#     layer = arg_to_list(layer)
+#     if activations is None:
+#         activations = collect_hidden_states_at_tokens(model,
+#                                                     prompts,
+#                                                     layers=layer,
+#                                                     token_idx=token)
+#     activations = activations.detach().cpu()
+#     # apply decoder
+#     logits = decoder(activations)
+#     # softmax
+#     logits = logits.softmax(dim=-1)
+#     probs = logits.topk(k, dim=-1)
+
+#     # tokenize
+#     predictions = [model.tokenizer.decode(t) for t in probs.indices.squeeze(0).squeeze(-1)]
+#     return predictions, activations, logits
+
 def custom_lens(model : LanguageModel,
                 decoder : torch.nn.Module,
                 prompts : List[str] | str,
                 layer : int | List[int],
-                token : str,
                 activations : torch.Tensor = None,
                 k : int = 1,) -> List[str]:
     """
     Apply custom lens to model activations for prompt at (layer, token)
     """
     layer = arg_to_list(layer)
+    prompts = arg_to_list(prompts)
     if activations is None:
-        activations = collect_hidden_states_at_tokens(model,
-                                                    prompts,
-                                                    layers=layer,
-                                                    token_idx=token)
+        activations = collect_hidden_states(model,
+                                            prompts,
+                                            layers=layer)
     activations = activations.detach().cpu()
     # apply decoder
     logits = decoder(activations)
     # softmax
     logits = logits.softmax(dim=-1)
-    probs = logits.topk(k, dim=-1)
-
-    # tokenize
-    predictions = [model.tokenizer.decode(t) for t in probs.indices.squeeze(0).squeeze(-1)]
-    return predictions, activations, logits
+    topk= logits.topk(k, dim=-1)
+    # output shape is [layer, prompt, tokens, vocab]
+    
+    return topk, activations, logits
