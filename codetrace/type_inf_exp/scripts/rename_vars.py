@@ -27,6 +27,17 @@ lang_to_id_query = {
     "py" : PY_IDENTIFIER_QUERY
 }
 
+def _get_language(ds: datasets.Dataset) -> str:
+    """
+    Get the language of the dataset
+    """
+    if "lang" in ds.column_names:
+        assert len(set(ds["lang"])) == 1
+        return ds[0]["lang"].lower()
+    else:
+        assert len(set(ds["language"])) == 1
+        return ds[0]["language"].lower()
+    
 def capture_varnames(tree, language : str = "typescript") -> dict[str, list[tree_sitter.Node]]:
     """
     Given a program, capture all the variable names and their locations
@@ -94,7 +105,7 @@ def dataset_rename_vars(dataset: datasets.Dataset) -> datasets.Dataset:
     """
     For each example in the dataset, rename all variables incrementally
     """
-    language = dataset[0]["lang"].lower()
+    language = _get_language(dataset)
     parser = lang_to_parser[language]
     lang = lang_to_builder[language]
     
@@ -169,8 +180,9 @@ def _preprocess(dataset : datasets.Dataset, remove_comments=False) -> datasets.D
     """
     Preprocess the dataset
     """
+    language = _get_language(dataset)
+        
     dataset = dataset.filter(lambda x: x["correct"] == True and x["overfull"] == False)
-    language = dataset[0]["lang"].lower()
     parser = lang_to_parser[language]
     lang = lang_to_builder[language]
     
@@ -237,8 +249,8 @@ def _postprocess(dataset : datasets.Dataset) -> datasets.Dataset:
 
     
 def main(args):
-    ds = datasets.load_dataset(args.completions_ds, split="train")
-    ds = _preprocess(ds)
+    ds = datasets.load_dataset(args.completions_ds, split=args.split)
+    ds = _preprocess(ds, remove_comments=args.remove_comments)
     llm = LLM(args.model)
     ds = dataset_rename_vars(ds)
     ds.push_to_hub(args.new_ds_name + "_unfiltered")
@@ -258,5 +270,8 @@ if __name__ == "__main__":
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
     parser.add_argument("--new-ds-name", type=str, required=True)
+    parser.add_argument("--remove-comments", action="store_true")
+    parser.add_argument("--lang", type=str, default="typescript")
+    parser.add_argument("--split", type=str, default="train")
     args = parser.parse_args()
     main(args)

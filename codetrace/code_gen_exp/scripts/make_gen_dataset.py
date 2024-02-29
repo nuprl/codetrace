@@ -64,3 +64,7 @@ typing = "from typing import *\n"
 for ex in ds:
     with open(f"exp_data/{args.output_ds}/{ex['name']}.py", "w") as f:
         f.write(ex["codegen_prompt"] + "\n\n### Unit tests below ###\n" + ex["tests"])
+
+# also create a jsonl file
+ds = ds.rename_columns({"prompt":"old_prompt","codegen_prompt": "prompt"})
+ds.to_json(f"exp_data/{args.output_ds}.jsonl", orient="records", lines=True)
