@@ -8,7 +8,8 @@ def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
     return ds.remove_columns(columns)
 
-def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
+
+def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
     correct = dataset.filter(lambda x : x["correct"] == True and x["overfull"] == False)
     incorrect = dataset.filter(lambda x : x["correct"] == False and x["overfull"] == False)
     # keep only hexshas in incorrect
@@ -20,26 +21,6 @@ def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
     incorrect = filter_prompts(incorrect,
                                 dedup_prog_threshold=args.prog_threshold, 
                                 dedup_type_threshold=args.type_threshold)
-    if args.test_size > 0:
-        # set aside some incorrect prompts
-        random.seed(4)
-        hexshas = list(incorrect["hexsha"])
-        hexshas = random.sample(hexshas, int(len(hexshas) * args.test_size))
-        incorrect_eval = incorrect.filter(lambda x : x["hexsha"] in hexshas)
-        incorrect = incorrect.filter(lambda x : x["hexsha"] not in hexshas)
-        correct = correct.filter(lambda x : x["hexsha"] not in hexshas)
-        return correct, incorrect, incorrect_eval
-    else:
-        return correct, incorrect, None
-
-def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
-    dataset = filter_prompts(dataset, 
-                             single_tokenize=tokenizer, 
-                             dedup_prog_threshold=args.prog_threshold, 
-                             dedup_type_threshold=args.type_threshold)
-    correct = keep_columns(dataset, ["fim_program", "fim_type", "hexsha"])
-    incorrect = keep_columns(dataset, ["renamed_fim_program","fim_type","hexsha","renamed_generated_text","renamed_variables","renamed_percent"])
-    incorrect = incorrect.rename_columns({"renamed_fim_program": "fim_program", "renamed_generated_text":"generated_text"})
     if args.test_size > 0:
         # set aside some incorrect prompts
         random.seed(4)
@@ -113,6 +94,7 @@ def main():
 
     exp_dir = "/home/franlucc/projects/codetrace/codetrace/type_inf_exp"
     ds = datasets.load_dataset(args.dataset, split="train")
+    ds = datasets.Dataset.from_pandas(ds.to_pandas().sample(5000, random_state=4))
     
     # filter out too large prompts for OOM
     ds = ds.filter(lambda x : len(x["fim_program"]) < 8000 and x["fim_type"] not in ["this","{}"])
@@ -129,10 +111,7 @@ def main():
     # ==========================================================================================
     print("...Generating fit test split...")
     
-    if "completions" in args.dataset:
-        correct, incorrect, incorrect_eval = fit_test_split_completions(ds,model.tokenizer, args)
-    else:
-        correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
+    correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
 
     info_incorrect = _pretty_print(incorrect)
     info_correct = _pretty_print(correct)
@@ -152,31 +131,25 @@ def main():
     # PART 2: averages
     # ==========================================================================================
     print(f"...Getting averages for correct and incorrect prompts...")
-    
-    # load steering tensor if it exists, else create it
-    if os.path.exists(f"{out_dir}/steering_tensor.pt"):
-        print(f"...Loading steering tensor from {out_dir}/steering_tensor.pt...")
-        diff_tensor = torch.load(f"{out_dir}/steering_tensor.pt")
-    else:
-        print(f"...Creating steering tensor...")
-        correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in correct]
-        incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect]
-        correct_avg_tensor = batched_get_averages(model, 
-                                                correct_prompts,
+
+    correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in correct]
+    incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect]
+    correct_avg_tensor = batched_get_averages(model, 
+                                            correct_prompts,
+                                            args.tokens_to_patch,
+                                                batch_size=args.batch_size)
+
+    incorrect_avg_tensor = batched_get_averages(model,
+                                                incorrect_prompts,
                                                 args.tokens_to_patch,
-                                                    batch_size=args.batch_size)
+                                                batch_size=args.batch_size)
+                                            
+    diff_tensor = correct_avg_tensor - incorrect_avg_tensor
+    diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
 
-        incorrect_avg_tensor = batched_get_averages(model,
-                                                    incorrect_prompts,
-                                                    args.tokens_to_patch,
-                                                    batch_size=args.batch_size)
-                                                
-        diff_tensor = correct_avg_tensor - incorrect_avg_tensor
-        diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
+    print(f"Diff tensor shape after transform: {diff_tensor.shape}")
 
-        print(f"Diff tensor shape after transform: {diff_tensor.shape}")
-
-        torch.save(diff_tensor, f"{out_dir}/steering_tensor.pt")
+    torch.save(diff_tensor, f"{out_dir}/steering_tensor.pt")
 
     #==========================================================================================
     # PART 3: steering on train

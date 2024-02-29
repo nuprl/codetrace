@@ -228,6 +228,7 @@ def main():
     ds = _preprocess(ds)
     llm = LLM(args.model)
     ds = dataset_rename_vars(ds)
+    ds.push_to_hub(args.new_ds_name + "_unfiltered")
     # sample 3000
     # ds = datasets.Dataset.from_pandas(ds.to_pandas().sample(3000, random_state=42))
     # filter renamed % above threshold

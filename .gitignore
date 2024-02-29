@@ -3,7 +3,7 @@ exp_data/
 temp.png
 __pycache__/
 build/
-*/*/main.ipynb
+codetrace/type_inf_exp/main.ipynb
 models/
 completions/
 node_modules/
