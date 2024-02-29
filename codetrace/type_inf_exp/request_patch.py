@@ -57,7 +57,7 @@ def batched_insert_patch(model : LanguageModel,
     # batch prompts according to batch size
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     results = []
-    for batch in tqdm(prompt_batches, desc="Batch"):
+    for batch in tqdm(prompt_batches, desc="Insert Patch Batch"):
         res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode)
         results.append(res)
         

@@ -5,16 +5,25 @@ import numpy as np
 import os
 import json
 from tree_sitter import Language, Parser
+import tree_sitter
 import tempfile
+import re
 
 vendor = "/home/franlucc/llm_libs"
 Language.build_library(
     "build/my-languages.so",
-    [f"{vendor}/tree-sitter-typescript/typescript"],
+    [f"{vendor}/tree-sitter-typescript/typescript", f"{vendor}/tree-sitter-python"],
 )
 TS_LANGUAGE = Language("build/my-languages.so", "typescript")
 TS_PARSER = Parser()
 TS_PARSER.set_language(TS_LANGUAGE)
+
+PY_LANGUAGE = Language("build/my-languages.so", "python")
+PY_PARSER = Parser()
+PY_PARSER.set_language(PY_LANGUAGE)
+
+lang_to_parser = {"typescript" : TS_PARSER, "python" : PY_PARSER, "py" : PY_PARSER, "ts" : TS_PARSER}
+lang_to_builder = {"typescript" : TS_LANGUAGE, "python" : PY_LANGUAGE, "py" : PY_LANGUAGE, "ts" : TS_LANGUAGE}
 
 class FimObj:
     def __init__(self,
@@ -36,6 +45,32 @@ class FimObj:
 fim_placeholder = "<FILL>"      
 STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
 
+def get_captures(prompt : str | tree_sitter.Tree, 
+                 query: str, 
+                 ignore_parents : List[str] = [],
+                 language : str = "typescript") -> List[tree_sitter.Node]:
+    """
+    Get captures for a prompt given a query
+    Ignores any captures whose parents are in ignore_parents
+    """
+    parser = lang_to_parser[language]
+    lang = lang_to_builder[language]
+    if isinstance(prompt, str):
+        tree = parser.parse(bytes( prompt, "utf8"))
+    else:
+        tree = prompt
+    query = lang.query(query)
+    captures = query.captures(tree.root_node)
+    
+    def matches_any(s : str, patterns : List[str]) -> bool:
+        for p in patterns:
+            if re.match(p, s):
+                return True
+        return False
+    
+    if len(ignore_parents) > 0:
+        captures = [c for c in captures if not matches_any(c[0].parent.type,ignore_parents)]
+    return captures
 
 def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
     """
@@ -80,13 +115,16 @@ def fim_dataset(hf_dataset):
         fim_examples.append(fim_progs)
     return fim_examples
 
-def fim_prog(prog : str) -> list[str]:
+def fim_prog(prog : str, language : str = "typescript") -> list[str]:
     """
     Given a typescript program, return a list of variations with FIM placeholders
     """
-    tree = TS_PARSER.parse(bytes( prog, "utf8"))
+    parser = lang_to_parser[language]
+    lang = lang_to_builder[language]
     
-    query = TS_LANGUAGE.query(
+    tree = parser.parse(bytes( prog, "utf8"))
+    
+    query = lang.query(
         """
 ((type_annotation) @name)
     """
@@ -100,15 +138,18 @@ def fim_prog(prog : str) -> list[str]:
     return fim_variations
 
 
-def fim_prog_func(prog : str) -> list[Tuple[str]]:
+def fim_prog_func(prog : str, language : str = "typescript") -> list[Tuple[str]]:
     """
     Given a typescript program, return a list of variations with FIM placeholders.
     Only affect type annotations within function signatures
     """
-    tree = TS_PARSER.parse(bytes( prog, "utf8"))
+    parser = lang_to_parser[language]
+    lang = lang_to_builder[language]
+    
+    tree = parser.parse(bytes( prog, "utf8"))
     
     # captures types within functions
-    query = TS_LANGUAGE.query(
+    query = lang.query(
         """
 (required_parameter
       pattern: (_) (type_annotation) @tp)
@@ -126,10 +167,13 @@ def fim_prog_func(prog : str) -> list[Tuple[str]]:
         fim_variations.append((s.decode("utf-8"), text))
     return fim_variations
 
-def remove_comments(program : str) -> str:
+def remove_comments(program : str, language : str = "typescript") -> str:
+    lang = lang_to_builder[language]
+    parser = lang_to_parser[language]
+    
     comment_query = """((comment) @comment)"""
-    comment_query = TS_LANGUAGE.query(comment_query)
-    tree = TS_PARSER.parse(bytes(program, "utf8"))
+    comment_query = lang.query(comment_query)
+    tree = parser.parse(bytes(program, "utf8"))
     captures = comment_query.captures(tree.root_node)
     # sort by start byte descending
     captures.sort(key=lambda x: x[0].start_byte, reverse=True)
@@ -207,3 +251,13 @@ def pass_k(gens : List[str], solution : str, k : int):
     n = len(gens)
     c = len([i for i in gens if (solution == i)])
     return estimator(n, c, k)
+
+def get_builtins_regex(language : str) -> str:
+    """
+    Returns the builtins for a language as a regex pattern
+    """
+    if language in ["python", "py"]:
+        builtins = dir(__builtins__)
+    elif language in ["typescript", "ts"]:
+        raise NotImplementedError("Typescript builtins not implemented")
+    return "(" + "|".join(builtins) + ")"

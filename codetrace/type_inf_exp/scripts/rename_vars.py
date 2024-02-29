@@ -3,7 +3,6 @@ Module for renaming a set of variables in a tyepscript program
 using tree-sitter
 
 TODO: make sure not capturing enums properly
-TODO: enable renaming with "uniq_" by dyanmically updating locations of captures
 """
 import tree_sitter
 from codetrace.utils import *
@@ -18,15 +17,28 @@ import sys
 from multiprocessing import cpu_count
 from argparse import ArgumentParser
 
-IDENTIFIER_QUERY = """((identifier) @name)""" 
-query = TS_LANGUAGE.query(IDENTIFIER_QUERY)
+TS_IDENTIFIER_QUERY = """((identifier) @name)""" 
+PY_IDENTIFIER_QUERY = f"""((identifier) @name (#not-match? @name "{get_builtins_regex('python')}"))"""
 
-def capture_varnames(tree) -> dict[str, list[tree_sitter.Node]]:
+lang_to_id_query = {
+    "typescript" : TS_IDENTIFIER_QUERY,
+    "python" : PY_IDENTIFIER_QUERY,
+    "ts" : TS_IDENTIFIER_QUERY,
+    "py" : PY_IDENTIFIER_QUERY
+}
+
+def capture_varnames(tree, language : str = "typescript") -> dict[str, list[tree_sitter.Node]]:
     """
     Given a program, capture all the variable names and their locations
     as tree-sitter (start, end) points
     """
-    captures = query.captures(tree.root_node)
+    idquery = lang_to_id_query[language]
+    
+    ignore_parents = []
+    if language in ["python", "py"]:
+        ignore_parents = ["dotted_name",r".*type.*"]
+        
+    captures = get_captures(tree, idquery, ignore_parents, language)
     vars_to_locs = defaultdict(list)
     for c in captures:
         name = c[0].text
@@ -82,13 +94,17 @@ def dataset_rename_vars(dataset: datasets.Dataset) -> datasets.Dataset:
     """
     For each example in the dataset, rename all variables incrementally
     """
+    language = dataset[0]["lang"].lower()
+    parser = lang_to_parser[language]
+    lang = lang_to_builder[language]
+    
     new_dataset = []
     
     for i,ex in enumerate(tqdm(dataset)):
         fim_program = ex["fim_program"]
         solution = ex["fim_type"]
         
-        tree = TS_PARSER.parse(bytes( fim_program, "utf8"))
+        tree = parser.parse(bytes( fim_program, "utf8"))
         var_locs = capture_varnames(tree)
         
         names, newnames = set(var_locs.keys()), set()
@@ -154,6 +170,9 @@ def _preprocess(dataset : datasets.Dataset, remove_comments=False) -> datasets.D
     Preprocess the dataset
     """
     dataset = dataset.filter(lambda x: x["correct"] == True and x["overfull"] == False)
+    language = dataset[0]["lang"].lower()
+    parser = lang_to_parser[language]
+    lang = lang_to_builder[language]
     
     # remove examples with:
     # shorthand_property_identifier, shorthand_property_identifier_pattern
@@ -162,10 +181,10 @@ def _preprocess(dataset : datasets.Dataset, remove_comments=False) -> datasets.D
     ((shorthand_property_identifier_pattern) @sp)
     ((shorthand_property_identifier) @si)
     """
-    preproc_query = TS_LANGUAGE.query(preproc_query)
+    preproc_query = lang.query(preproc_query)
     
     def _has_captures(prog: str) -> bool:
-        tree = TS_PARSER.parse(bytes(prog, "utf8"))
+        tree = parser.parse(bytes(prog, "utf8"))
         captures = preproc_query.captures(tree.root_node)
         return len(captures) > 0
     
@@ -217,13 +236,7 @@ def _postprocess(dataset : datasets.Dataset) -> datasets.Dataset:
     return dataset
 
     
-def main():
-    parser = ArgumentParser()
-    parser.add_argument("--completions-ds", type=str, required=True)
-    parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
-    parser.add_argument("--new-ds-name", type=str, required=True)
-    args = parser.parse_args()
-    
+def main(args):
     ds = datasets.load_dataset(args.completions_ds, split="train")
     ds = _preprocess(ds)
     llm = LLM(args.model)
@@ -241,4 +254,9 @@ def main():
     ds.push_to_hub(args.new_ds_name)
     
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser()
+    parser.add_argument("--completions-ds", type=str, required=True)
+    parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
+    parser.add_argument("--new-ds-name", type=str, required=True)
+    args = parser.parse_args()
+    main(args)

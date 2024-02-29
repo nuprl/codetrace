@@ -4,7 +4,7 @@
     "model": "/home/arjun/models/starcoderbase-1b",
     "prog_threshold": 1,
     "type_threshold": 100,
-    "batch_size": 2,
+    "batch_size": 1,
     "patch_mode": "add",
     "tokens_to_patch": ["<fim_middle>"],
     "layers_to_patch": [10,11,12,13,14],

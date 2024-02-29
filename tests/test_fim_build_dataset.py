@@ -1,7 +1,7 @@
 from codetrace.type_inf_exp.build_dataset import *
 
 def test_capture_func_types():
-    prog= """export class ColorSet {
+  prog= """export class ColorSet {
   prmColor;
   secColor;
   secBrdColor;
@@ -24,71 +24,51 @@ def test_capture_func_types():
   algo0(hexa_color: string, diff: number) {
     return this.rgbToHexa(this.subtractMultiply(hexa_color, diff));
   }"""
-    tree = TS_PARSER.parse(bytes(prog, "utf-8"))
-    query = TS_LANGUAGE.query(QUERY_FUNC_TYPES)
-    captures = query.captures(tree.root_node)
-    assert len(captures) == 2, captures
-    # print(fim_remove_types(prog, QUERY_FUNC_TYPES))
-    text_cap = [c[0].text for c in captures]
-    # print(f"Captures: {text_cap}")
+  tree = TS_PARSER.parse(bytes(prog, "utf-8"))
+  query = TS_LANGUAGE.query(QUERY_FUNC_TYPES)
+  captures = query.captures(tree.root_node)
+  assert len(captures) == 2, captures
+  text_cap = [c[0].text for c in captures]
   
 def test_remove_types():
     ts_prog = "function foo(a: number, b: string): number {\n\treturn 1;\n}"
-    new_prog, types = remove_types(ts_prog)
-    new_prog_funcs, types_funcs = remove_types(ts_prog, query_str=QUERY_FUNC_TYPES)
-    gold = "function foo(a, b) {\n\treturn 1;\n}"
+    func_fim_prompts = fim_remove_types(ts_prog, QUERY_FUNC_TYPES)
+    fim_prompts = fim_remove_types(ts_prog, QUERY_ALL_TYPES)
     
-    assert new_prog_funcs == new_prog == gold, f"===OLD===:\n{ts_prog}\n===NEW===:\n{new_prog}"
-    assert types == types_funcs == {((0, 34), (0, 42), 34, 42): "number", 
-                     ((0, 25), (0, 33), 25, 33): "string", 
-                     ((0, 14), (0, 22), 14, 22): "number"}, types
+    gold = [("function foo(a, b): <FILL> {\n\treturn 1;\n}", "number"),
+                  ("function foo(a: <FILL>, b) {\n\treturn 1;\n}", "number"),
+                  ("function foo(a, b: <FILL>) {\n\treturn 1;\n}", "string")]
     
-    prompts = fim_remove_types("\n".join([ts_prog]*10), QUERY_FUNC_TYPES)
-    gold = "function foo(a, b)<FILL> {\n\treturn 1;\n}"
-    assert prompts[0], f"===OLD===:\n{gold}\n===NEW===:\n{new_prog}"
-    
-
+    assert set(func_fim_prompts) == set(gold), f"===GOLD===:\n {gold}\n===GOT===:\n{func_fim_prompts}"
+    assert set(fim_prompts) == set(gold), f"===GOLD===:\n {gold}\n===GOT===:\n{fim_prompts}"
+  
 def test_remove_types_multiline():
-    ts_prog = """
+  ts_prog = """
 class Point {
-  x: number;
-  y: number;
+x: number;
+y: number;
 }
 
 function foo(a: number, b: string): number | string {
-	if (a > 0) {
-        return 1;
-    } else {
-        return b;
-    }
+if (a > 0) {
+      return 1;
+  } else {
+      return b;
+  }
 }
 function foo(a: number, b: string): number {
-    return 1;
+  return 1;
 }
 """
-    ts_prog_new= """
-class Point {
-  x;
-  y;
-}
-
-function foo(a, b) {
-	if (a > 0) {
-        return 1;
-    } else {
-        return b;
-    }
-}
-function foo(a, b) {
-    return 1;
-}
-""".strip()
-    new_prog, types = remove_types(ts_prog)
-    assert new_prog == ts_prog_new, f"===OLD===:\n {ts_prog}\n===NEW===:\n{new_prog}"
+  func_fim_prompts = fim_remove_types(ts_prog, QUERY_FUNC_TYPES)
+  fim_types = [t for p, t in func_fim_prompts]
+  assert fim_types == ["number", "string", "number", "number | string", "string", "number"], fim_types
+  reconstruct = [p.replace("<FILL>", t) for p, t in func_fim_prompts]
+  assert [r == ts_prog for r in reconstruct], f"===GOLD===:\n {ts_prog}\n===GOT===:\n{reconstruct}"
     
     
 def test_remove_types_full():
-    ts_prog = """
+  ts_prog = """
 class Point {
   x: number;
   y: number;
@@ -105,49 +85,16 @@ function greeter(fn: (a: string) => void) {
   fn("Hello, World");
 }
 """
-    ts_prog_new= """
-class Point {
-  x;
-  y;
-}
- 
-function foo(a, b) {
-	if (a > 0) {
-        return 1;
-    } else {
-        return b;
-    }
-}
-function greeter(fn) {
-  fn("Hello, World");
-}
-""".strip()
-    ts_prog_new_only_funcs= """
-class Point {
-  x: number;
-  y: number;
-}
- 
-function foo(a, b) {
-	if (a > 0) {
-        return 1;
-    } else {
-        return b;
-    }
-}
-function greeter(fn) {
-  fn("Hello, World");
-}
-""".strip()
-    new_prog, _ = remove_types(ts_prog)
-    func_new_prog, _ = remove_types(ts_prog, query_str=QUERY_FUNC_TYPES)
-    assert new_prog == ts_prog_new, f"===GOLD===:\n {ts_prog_new}\n===NEW===:\n{new_prog}"
-    assert func_new_prog == ts_prog_new_only_funcs, f"===GOLD===:\n {ts_prog_new_only_funcs}\n===NEW===:\n{func_new_prog}"
+  func_fim_prompts = fim_remove_types(ts_prog, QUERY_FUNC_TYPES)
+  fim_types = [t for p, t in func_fim_prompts]
+  assert fim_types == ["(a: string) => void", "number | string", "string", "number"], fim_types
+  reconstruct = [p.replace("<FILL>", t) for p, t in func_fim_prompts]
+  assert [r == ts_prog for r in reconstruct], f"===GOLD===:\n {ts_prog}\n===GOT===:\n{reconstruct}"
 
     
 if __name__ == "__main__":
-    test_remove_types()
-    test_remove_types_multiline()
-    test_remove_types_full()
-    test_capture_func_types()
-    print("All tests passed!")
+  test_remove_types()
+  test_remove_types_multiline()
+  test_remove_types_full()
+  test_capture_func_types()
+  print("All tests passed!")

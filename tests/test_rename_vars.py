@@ -52,6 +52,9 @@ return {
   # assert len(tokens) == 1, tokens
     
 def test_rename_vars3():
+  """
+  NOTE: bug in tree-sitter captures "any" as a variable id, need workaround
+  """
   program = """const t : any = 'a';"""
   tree = TS_PARSER.parse(bytes( program, "utf8"))
   captured = capture_varnames(tree)
@@ -59,6 +62,8 @@ def test_rename_vars3():
   
   program = open("tests/test_prog.ts").read()
   tree = TS_PARSER.parse(bytes( program, "utf8"))
+  query = lang_to_id_query["ts"]
+  query = TS_LANGUAGE.query(query)
   captures = query.captures(tree.root_node)
   for c in captures:
     if c[0].text.decode("utf-8") == "any":

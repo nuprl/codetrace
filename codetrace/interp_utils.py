@@ -65,7 +65,8 @@ class TraceResult:
     
     Except for dim -1 (n_vocab, n_embd), all other dims are variable
     
-    A concern with this class is OOM errors. temporary solution is to detach and move all tensors to cpu
+    A concern with this class is OOM errors. Temporary solution is to detach and move all tensors to cpu.
+    can cause RAM errors if too many tensors are stored.
     """
     
     def __init__(self, 

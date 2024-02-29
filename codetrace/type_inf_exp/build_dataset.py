@@ -25,6 +25,7 @@ The following functions remove all type annotations, keeping track of their posi
 in a bottom-up incremental way.
 """
 
+@DeprecationWarning
 def filter_types(dataset : datasets.Dataset, query_str : str = QUERY_ALL_TYPES) -> datasets.Dataset:
     """
     remove all type annotations from the dataset. Stores indirect index access
@@ -40,16 +41,19 @@ def filter_types(dataset : datasets.Dataset, query_str : str = QUERY_ALL_TYPES) 
     dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
     return dataset
     
-
-def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> Tuple[str, dict]:
+@DeprecationWarning
+def remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES, language : str = "typescript") -> Tuple[str, dict]:
     """
     remove all type annotations from the program
     
     NOTE: to re-insert types from type map, start at idx 0 and insert types in order
     so index gets updated correctly. Not for direct indexing
     """
-    tree = TS_PARSER.parse(bytes( ts_prog, "utf-8"))
-    query = TS_LANGUAGE.query(query_str)
+    parser = lang_to_parser[language]
+    lang = lang_to_builder[language]
+    
+    tree = parser.parse(bytes( ts_prog, "utf-8"))
+    query = lang.query(query_str)
     
     captures = query.captures(tree.root_node)[::-1] # walk backwards to preserve idx
     if len(captures) == 0:
@@ -88,13 +92,16 @@ def make_typeinf_prompts(dataset : datasets.Dataset, query_str : str = QUERY_ALL
     dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
     return dataset
 
-def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES) -> List[Tuple[str, str]]:
+def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES, language: str = "typescript") -> List[Tuple[str, str]]:
     """
     Make fim prompts for each type annotation in the program, remove all other type annotations
     """
+    parser = lang_to_parser[language]
+    lang = lang_to_builder[language]
+    
     original = ts_prog
-    tree = TS_PARSER.parse(bytes( ts_prog, "utf-8"))
-    query = TS_LANGUAGE.query(query_str)
+    tree = parser.parse(bytes( ts_prog, "utf-8"))
+    query = lang.query(query_str)
     
     captures = query.captures(tree.root_node)
     if len(captures) == 0:
