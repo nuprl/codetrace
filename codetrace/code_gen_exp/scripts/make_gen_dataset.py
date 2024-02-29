@@ -40,31 +40,6 @@ ds.push_to_hub(args.output_ds)
 
 # make new MultiPLE benchmark
 
-'''
-def my_function(a: int, b: int, c: int, k: int) -> int:
-    """
-    Given positive integers a, b, and c, return an integer n > k such that
-    (a ** n) + (b ** n) = (c ** n).
-    """
-    pass
-    
-
-### Unit tests below ###
-def check(candidate):
-    assert candidate(1, 1, 2, 0) == 1
-    assert candidate(3, 4, 5, 0) == 2
-
-def test_check():
-    check(my_function)
-'''
-
-args.output_ds = args.output_ds.split("/")[-1]
-os.makedirs(f"exp_data/{args.output_ds}", exist_ok=True)
-typing = "from typing import *\n"
-for ex in ds:
-    with open(f"exp_data/{args.output_ds}/{ex['name']}.py", "w") as f:
-        f.write(ex["codegen_prompt"] + "\n\n### Unit tests below ###\n" + ex["tests"])
-
 # also create a jsonl file
 ds = ds.rename_columns({"prompt":"old_prompt","codegen_prompt": "prompt"})
 ds.to_json(f"exp_data/{args.output_ds}.jsonl", orient="records", lines=True)

@@ -7,12 +7,12 @@ localize the correct circuit. Also, not using train data for steering.
 
 ### Prelim experiment
 
-- mutate HumanEval/mbpp with renaming [ ]
+- mutate HumanEval/mbpp with renaming [X]
     - cut solutions in half [X]
-- eval script from MultiplE [ ]
+- eval script from MultiplE [X]
+- run completions on renamed, observe lower accuracy [X]
 
-- run completions on renamed, observe lower accuracy
-- steer
+- steer []
 
 ### Full experiment
 

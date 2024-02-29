@@ -1,0 +1,66 @@
+import datasets
+import sys
+import argparse
+import glob
+import gzip
+import json
+import pandas as pd
+
+def renamed_ds_to_jsonl():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output_jsonl", type=str, required=True)
+    parser.add_argument("--input_ds", type=str, required=True)
+    parser.add_argument("--split", type=str, default="train")
+    args = parser.parse_args()
+
+    ds = datasets.load_dataset(args.input_ds, split=args.split)
+
+    # create a jsonl file
+    ds = ds.rename_columns({"prompt":"old_prompt","renamed_program": "prompt", "results": "old_results"})
+    ds = ds.remove_columns(["temperature","top_p","max_tokens"])
+    ds.to_json(f"exp_data/{args.output_jsonl}.jsonl", orient="records", lines=True)
+
+def results_to_ds():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output_ds", type=str, required=True)
+    parser.add_argument("--input_dir", type=str, required=True)
+    parser.add_argument("--split", type=str, default="train")
+    parser.add_argument("--filter", type=str, choices=["correct", "incorrect","none"], required=True)
+    
+    args = parser.parse_args()
+    print("Turning results into a dataset")
+
+    def is_correct(data: dict):
+        if data is None:
+            return None
+        n = len(data["results"])
+        c = len([True for r in data["results"] if r["status"]
+                == "OK" and r["exit_code"] == 0])
+        return c/n == 1
+
+    new_ds = []
+    for f in glob.glob(args.input_dir + "/*.results.json.gz"):
+        with gzip.open(f, "rt") as f:
+            data = json.load(f)
+            correct = is_correct(data)
+            new_ds.append({
+                **data,
+                "correct": correct,
+            })
+            
+    new_ds = pd.DataFrame(new_ds)
+    
+    if args.filter == "correct":
+        new_ds = new_ds[new_ds["correct"]]
+    elif args.filter == "incorrect":
+        new_ds = new_ds[~new_ds["correct"]]
+        
+    print(new_ds["correct"].value_counts())
+
+    new_ds = datasets.Dataset.from_pandas(new_ds)
+    new_ds.push_to_hub(args.output_ds)
+    
+if __name__ == "__main__":
+    results_to_ds()
+    # renamed_ds_to_jsonl()
+    pass

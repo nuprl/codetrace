@@ -257,7 +257,10 @@ def get_builtins_regex(language : str) -> str:
     Returns the builtins for a language as a regex pattern
     """
     if language in ["python", "py"]:
-        builtins = dir(__builtins__)
+        parent_dir = Path(__file__).parent
+        with open(f"{parent_dir}/py_builtins.json","r") as f:
+            builtins = json.load(f)
+        return "(" + "|".join(builtins) + ")"
     elif language in ["typescript", "ts"]:
         raise NotImplementedError("Typescript builtins not implemented")
-    return "(" + "|".join(builtins) + ")"
+    

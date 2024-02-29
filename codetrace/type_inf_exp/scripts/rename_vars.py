@@ -116,7 +116,7 @@ def dataset_rename_vars(dataset: datasets.Dataset) -> datasets.Dataset:
         solution = ex["fim_type"]
         
         tree = parser.parse(bytes( fim_program, "utf8"))
-        var_locs = capture_varnames(tree)
+        var_locs = capture_varnames(tree, language=language)
         
         names, newnames = set(var_locs.keys()), set()
         
