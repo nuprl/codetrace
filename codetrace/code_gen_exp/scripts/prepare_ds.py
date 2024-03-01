@@ -72,7 +72,8 @@ def results_to_ds():
     new_ds = new_ds.rename_columns({"prompt":"renamed_prompt","old_prompt":"original_prompt"})
     new_ds.push_to_hub(args.output_ds)
     
+    
 if __name__ == "__main__":
-    results_to_ds()
+    # results_to_ds()
     # renamed_ds_to_jsonl()
     pass

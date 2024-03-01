@@ -17,14 +17,15 @@ import pickle
 
 def batched_get_averages(model: LanguageModel,
                  prompts : List[str],
-                 tokens : List[str],
+                 tokens : List[str] | List[int],
                  batch_size=5) -> torch.Tensor:
     """
     Get averages of tokens at all layers for all prompts
     
-    NOTE: if tokens aren't unique in the prompts, the first occurence is used.
+    NOTE:
+    - if tokens is string, then first occurence of token is used
+    - if tokens is int, then that token index is used
     """
-    tokens = [model.tokenizer.encode(t)[0] for t in tokens]
     # batch prompts according to batch size
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     hidden_states = []
@@ -37,6 +38,13 @@ def batched_get_averages(model: LanguageModel,
         hidden_states.append(hs_mean)
         
     # save tensor
+    if tokens == []:
+        # this means prompts are different token sizes, can't be stacked
+        raise NotImplementedError("Prompts are different token sizes, need solution")
+        # hidden_states = torch.cat(hidden_states, dim=0)
+        # print(f"Hidden states shape before avg: {hidden_states.shape}")
+        # return hidden_states.mean(dim=1)
+    
     hidden_states = torch.stack(hidden_states, dim=0)
     print(f"Hidden states shape before avg: {hidden_states.shape}")
     return hidden_states.mean(dim=0)

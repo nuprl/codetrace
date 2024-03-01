@@ -8,7 +8,7 @@ from collections import Counter
 def fit_test_split(dataset : datasets.Dataset, args):
     correct = dataset.remove_columns(["renamed_prompt","renamed_variables","renamed_percent","correct"]).rename_column("original_prompt","prompt")
     print(correct)
-    incorrect = dataset.remove_columns(["original_prompt","correct"]).rename_column("renamed_program","prompt")
+    incorrect = dataset.remove_columns(["original_prompt","correct"]).rename_column("renamed_prompt","prompt")
     print(incorrect)
     
     if args.test_size > 0:
@@ -83,7 +83,7 @@ def main():
         args = json.load(f)
     args = Namespace(**args)
 
-    exp_dir = "/home/franlucc/projects/codetrace/codetrace/codegen"
+    exp_dir = "/home/franlucc/projects/codetrace/codetrace/codegen_gen_exp"
     ds = datasets.load_dataset(args.dataset, split="train")
 
     model = LanguageModel(args.model, device_map="cuda")
@@ -98,7 +98,7 @@ def main():
     # ==========================================================================================
     print("...Generating fit test split...")
     
-    correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
+    correct, incorrect, incorrect_eval = fit_test_split(ds, args)
 
     info_incorrect = _pretty_print(incorrect)
     info_correct = _pretty_print(correct)
@@ -116,7 +116,10 @@ def main():
 
     # ==========================================================================================
     # PART 2: averages 
-    #  TODO: get averages for all tokens
+    #  TODO: different ways we can extract avg
+    # - last token [current]
+    # - last token in FIM formulation
+    # - all tokens
     # ==========================================================================================
     print(f"...Getting averages for correct and incorrect prompts...")
     
@@ -130,23 +133,26 @@ def main():
         incorrect_prompts = incorrect["prompt"]
         correct_avg_tensor = batched_get_averages(model, 
                                                 correct_prompts,
-                                                args.tokens_to_patch,
-                                                    batch_size=args.batch_size)
+                                                tokens=[-1],
+                                                batch_size=args.batch_size)
 
         incorrect_avg_tensor = batched_get_averages(model,
                                                     incorrect_prompts,
-                                                    args.tokens_to_patch,
+                                                    tokens=[-1],
                                                     batch_size=args.batch_size)
-                                                
+        
+        print(f"Correct avg tensor shape: {correct_avg_tensor.shape}")
+        print(f"Incorrect avg tensor shape: {incorrect_avg_tensor.shape}")
+
         diff_tensor = correct_avg_tensor - incorrect_avg_tensor
-        diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
+        # diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
 
         print(f"Diff tensor shape after transform: {diff_tensor.shape}")
 
         torch.save(diff_tensor, f"{out_dir}/steering_tensor.pt")
 
     #==========================================================================================
-    # TODO: eval needs to be with MultiPLE
+    # Part 3: steered generations
     #==========================================================================================
     
     # def _evaluate(steering_ds, counts, args, out_dir, outfile):
@@ -185,7 +191,7 @@ def main():
     # _evaluate(steering_ds, counts, args, out_dir, "eval_readme.md")
         
     # # ==========================================================================================
-    # # PART 4: steering ood
+    # # PART 4: steering generation ood
     # # ==========================================================================================
     # if args.test_size > 0:
     #     print(f"...Applying patch to incorrect prompts...")

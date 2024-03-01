@@ -1,6 +1,8 @@
 from codetrace.interp_utils import *
 from codetrace.interp_vis import *
 from nnsight import LanguageModel
+from nnsight import util
+from nnsight.tracing import Proxy
 
 # re-run this
 # NOTE: make sure padding is left side for list of prompts,
@@ -12,7 +14,7 @@ prompts = [
 ]
 
 model = "/home/arjun/models/starcoderbase-1b"
-model = LanguageModel(model, device_map="cuda:0")
+model = LanguageModel(model, device_map="cuda")
 model.tokenizer.padding_side = "left"
 
 def test_logit_pipeline():
@@ -141,20 +143,114 @@ def test_attn_collect():
     # assert tok_a_f == ')', f"{repr(tok_a_f)}"
     # # assert tok_b_f == ')', f"{repr(tok_b_f)}"
     # NOTE: this one is hard to sanity
-
+    
+def test_insert_patch_with_generation():
+    prompt_a = """def is_prime(n):"""
+    prompt_b = """def fib(n):"""
+    patch_a = collect_hidden_states_at_tokens(model, prompt_a, -1, list(range(24)))
+    patch_b = collect_hidden_states_at_tokens(model, prompt_b, -1, list(range(24)))
+    print(patch_a.shape)
+    print(patch_b.shape)
+    
+    normal_out_a = insert_patch_with_generation(model, prompt_a, patch_a, list(range(24)), -1, 128)
+    normal_out_b = insert_patch_with_generation(model, prompt_b, patch_b, list(range(24)), -1, 128)
+    
+    patched_out_b = insert_patch_with_generation(model, prompt_b, patch_a, list(range(24)), -1, 128)
+    
+    def _decode(out):
+        out : LogitResult = out.decode_logits(prompt_idx=[0])
+        generated = []
+        for tok in range(out.size(-1)):
+            generated.append(out[-1][0][tok].tokens(model.tokenizer))
+        print(generated)
+        
+    generated_patched_b = _decode(patched_out_b)
+    generated_normal_b = _decode(normal_out_b)
+    generated_normal_a = _decode(normal_out_a)
+    print("Generated patched b")
+    print(generated_patched_b)
+    print("Generated normal b")
+    print(generated_normal_b)
+    print("Generated normal a")
+    print(generated_normal_a)
+    
+def test_insert_patch_with_generation_multi():
+    raise NotImplementedError("Not implemented")
+    prompt_a = """def is_prime(n):"""
+    prompt_b = """def fib(n):"""
+    patch_a = collect_hidden_states_at_tokens(model, prompt_a, -1, list(range(24)))
+    patch_b = collect_hidden_states_at_tokens(model, prompt_b, -1, list(range(24)))
+    print(patch_a.shape)
+    print(patch_b.shape)
+    
+    normal_out_a = insert_patch_with_generation(model, prompt_a, patch_a, list(range(24)), -1, 128)
+    normal_out_b = insert_patch_with_generation(model, prompt_b, patch_b, list(range(24)), -1, 128)
+    
+    patched_out_b = insert_patch_with_generation(model, prompt_b, patch_a, list(range(24)), -1, 128)
+    
+    def _decode(out):
+        out : LogitResult = out.decode_logits(prompt_idx=[0])
+        generated = []
+        for tok in range(out.size(-1)):
+            generated.append(out[-1][0][tok].tokens(model.tokenizer))
+        print(generated)
+        
+    generated_patched_b = _decode(patched_out_b)
+    generated_normal_b = _decode(normal_out_b)
+    generated_normal_a = _decode(normal_out_a)
+    print("Generated patched b")
+    print(generated_patched_b)
+    print("Generated normal b")
+    print(generated_normal_b)
+    print("Generated normal a")
+    print(generated_normal_a)
+    
+def test_insert_patch_with_generation_str():
+    prompt_a = """def is_prime(n):"""
+    prompt_b = """def fib(n):"""
+    patch_a = collect_hidden_states_at_tokens(model, prompt_a, "def", list(range(24)))
+    patch_b = collect_hidden_states_at_tokens(model, prompt_b, "def", list(range(24)))
+    
+    # _,normal_out_a = insert_patch_with_generation(model, prompt_a, patch_a, list(range(24)), "def", 120)
+    _,normal_out_b = insert_patch_with_generation(model, prompt_b, patch_b, list(range(24)), "def", 36)
+    print([model.tokenizer.decode(x) for x in normal_out_b])
+    # print([model.tokenizer.decode(x) for x in normal_out_a.flatten().tolist()])
+    # print([model.tokenizer.decode(x) for x in normal_out_b.flatten().tolist()])
+    # patched_out_b = insert_patch_with_generation(model, prompt_b, patch_a, list(range(24)), "def", 128)
+    
+    # def _decode(out):
+    #     out : LogitResult = out.decode_logits(prompt_idx=[0])
+    #     generated = []
+    #     for tok in range(out.size(-1)):
+    #         generated.append(out[-1][0][tok].tokens(model.tokenizer))
+    #     print(generated)
+        
+    # generated_patched_b = _decode(patched_out_b)
+    # generated_normal_b = _decode(normal_out_b)
+    # generated_normal_a = _decode(normal_out_a)
+    # print("Generated patched b")
+    # print(generated_patched_b)
+    # print("Generated normal b")
+    # print(generated_normal_b)
+    # print("Generated normal a")
+    # print(generated_normal_a)
+    
 def repeat_test(func, n):
     for i in range(n):
         print(f"Running test {func.__name__} {i+1}/{n}")
         func()
         
 if __name__ == "__main__":
-    repeat_test(test_logit_pipeline, 1)
-    repeat_test(test_patch, 1)
-    repeat_test(test_patch_vis, 1)
-    repeat_test(test_patch_vis_mult, 1)
-    repeat_test(test_logit_generation_match, 1)
-    repeat_test(test_collect_at_token_idx, 1)
-    repeat_test(test_collect_at_token_idx2, 1)
-    repeat_test(test_interp_patch, 10)
-    test_attn_collect()
+    # repeat_test(test_logit_pipeline, 1)
+    # repeat_test(test_patch, 1)
+    # repeat_test(test_patch_vis, 1)
+    # repeat_test(test_patch_vis_mult, 1)
+    # repeat_test(test_logit_generation_match, 1)
+    # repeat_test(test_collect_at_token_idx, 1)
+    # repeat_test(test_collect_at_token_idx2, 1)
+    # repeat_test(test_interp_patch, 10)
+    # test_attn_collect()
+    test_insert_patch_with_generation_str()
+    # test_insert_patch_with_generation_multi()
+    # test_insert_patch_with_generation()
     print("All tests passed!")
