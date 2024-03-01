@@ -24,12 +24,17 @@ def results_to_ds():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_ds", type=str, required=True)
     parser.add_argument("--input_dir", type=str, required=True)
+    parser.add_argument("--unfiltered_jsonl", type=str)
     parser.add_argument("--split", type=str, default="train")
     parser.add_argument("--filter", type=str, choices=["correct", "incorrect","none"], required=True)
     
     args = parser.parse_args()
     print("Turning results into a dataset")
 
+    with open(args.unfiltered_jsonl, "r") as f:
+        unfiltered_jsonl = f.readlines()
+        unfiltered_jsonl = [json.loads(l) for l in unfiltered_jsonl]
+        
     def is_correct(data: dict):
         if data is None:
             return None
@@ -40,12 +45,18 @@ def results_to_ds():
 
     new_ds = []
     for f in glob.glob(args.input_dir + "/*.results.json.gz"):
+            
         with gzip.open(f, "rt") as f:
             data = json.load(f)
             correct = is_correct(data)
+            original_ex = [e for e in unfiltered_jsonl if e["prompt"] == data["prompt"]]
+            assert len(original_ex) == 1
             new_ds.append({
                 **data,
                 "correct": correct,
+                "old_prompt" : original_ex[0]["old_prompt"],
+                "renamed_variables" : original_ex[0]["renamed_variables"],
+                "renamed_percent" : original_ex[0]["renamed_percent"],
             })
             
     new_ds = pd.DataFrame(new_ds)
@@ -58,6 +69,7 @@ def results_to_ds():
     print(new_ds["correct"].value_counts())
 
     new_ds = datasets.Dataset.from_pandas(new_ds)
+    new_ds = new_ds.rename_columns({"prompt":"renamed_prompt","old_prompt":"original_prompt"})
     new_ds.push_to_hub(args.output_ds)
     
 if __name__ == "__main__":
