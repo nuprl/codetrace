@@ -10,15 +10,16 @@ import tempfile
 import re
 
 vendor = "/home/franlucc/llm_libs"
+parent = Path(__file__).parent
 Language.build_library(
-    "build/my-languages.so",
-    [f"{vendor}/tree-sitter-typescript/typescript", f"{vendor}/tree-sitter-python"],
+    f"{parent}/build/my-languages.so",
+    [f"{vendor}/tree-sitter-typescript/typescript",f"{vendor}/tree-sitter-python"],
 )
-TS_LANGUAGE = Language("build/my-languages.so", "typescript")
+TS_LANGUAGE = Language(f"{parent}/build/my-languages.so", "typescript")
 TS_PARSER = Parser()
 TS_PARSER.set_language(TS_LANGUAGE)
 
-PY_LANGUAGE = Language("build/my-languages.so", "python")
+PY_LANGUAGE = Language(f"{parent}/build/my-languages.so", "python")
 PY_PARSER = Parser()
 PY_PARSER.set_language(PY_LANGUAGE)
 
@@ -260,7 +261,7 @@ def get_builtins_regex(language : str) -> str:
         parent_dir = Path(__file__).parent
         with open(f"{parent_dir}/py_builtins.json","r") as f:
             builtins = json.load(f)
-        return "(" + "|".join(builtins) + ")"
+        return "^(" + "|".join(builtins) + ")$"
     elif language in ["typescript", "ts"]:
         raise NotImplementedError("Typescript builtins not implemented")
     

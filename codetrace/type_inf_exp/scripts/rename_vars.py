@@ -47,7 +47,13 @@ def capture_varnames(tree, language : str = "typescript") -> dict[str, list[tree
     
     ignore_parents = []
     if language in ["python", "py"]:
-        ignore_parents = ["dotted_name",r".*type.*"]
+        ignore_parents = [r"\bdotted_name\b",
+                          r"type_.*",
+                          r".*_type",
+                          r"\btype\b", 
+                          r"\bidentifier\b",
+                          r"\battribute\b",
+                          r"\bcall\b"]
         
     captures = get_captures(tree, idquery, ignore_parents, language)
     vars_to_locs = defaultdict(list)

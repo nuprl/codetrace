@@ -1,6 +1,6 @@
 {
-    "outdir": 51,
-    "dataset": "franlucc/ts-typeinf-steering-p0",
+    "outdir": 52,
+    "dataset": "franlucc/stenotype-typeinf-steering",
     "model": "/home/arjun/models/starcoderbase-1b",
     "prog_threshold": 1,
     "type_threshold": 100,

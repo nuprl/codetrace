@@ -95,6 +95,7 @@ def make_typeinf_prompts(dataset : datasets.Dataset, query_str : str = QUERY_ALL
 def fim_remove_types(ts_prog : str, query_str :str = QUERY_ALL_TYPES, language: str = "typescript") -> List[Tuple[str, str]]:
     """
     Make fim prompts for each type annotation in the program, remove all other type annotations
+    TODO: stupid inefficient
     """
     parser = lang_to_parser[language]
     lang = lang_to_builder[language]

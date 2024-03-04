@@ -3,6 +3,7 @@ import datasets
 import pandas as pd
 from tqdm import tqdm
 from argparse import ArgumentParser
+import re
 
 def dataset_rename_vars(dataset: datasets.Dataset) -> datasets.Dataset:
     """
@@ -37,8 +38,17 @@ def dataset_rename_vars(dataset: datasets.Dataset) -> datasets.Dataset:
             names.add(new_name)
             newnames.add((varname, new_name))
             
-            # save old ex
+            def _rename_funcname(tests, newnames):
+                pattern = r"\n\s*?check\((.*?)\)"
+                matches = re.findall(pattern, tests)
+                assert len(matches) == 1, tests
+                for old,renamed in newnames:
+                    if old == matches[0]:
+                        tests = tests.replace(f"check({old})", f"check({renamed})")
+                return tests
+            
             new_dataset.append({**ex,
+                "renamed_tests" : _rename_funcname(ex["tests"], newnames),
                 "renamed_program" : program.decode("utf-8"),
                 "renamed_variables" : list(newnames),
                 "renamed_percent" : len(newnames) / len(var_locs),

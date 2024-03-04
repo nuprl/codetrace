@@ -7,6 +7,10 @@ import json
 import pandas as pd
 
 def renamed_ds_to_jsonl():
+    """
+    Turned unfiltered (renamed) steering ds into MultiPLE jsonl format
+    for completion and eval
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_jsonl", type=str, required=True)
     parser.add_argument("--input_ds", type=str, required=True)
@@ -16,11 +20,21 @@ def renamed_ds_to_jsonl():
     ds = datasets.load_dataset(args.input_ds, split=args.split)
 
     # create a jsonl file
-    ds = ds.rename_columns({"prompt":"old_prompt","renamed_program": "prompt", "results": "old_results"})
+    ds = ds.rename_columns({"prompt":"old_prompt",
+                            "tests": "old_tests",
+                            "renamed_tests": "tests",
+                            "renamed_program": "prompt", 
+                            "results": "old_results"})
+    # add an index to name
+    ds = ds.map(lambda x,i: {**x, "name": x["name"]+f"_{i}"}, with_indices=True)
     ds = ds.remove_columns(["temperature","top_p","max_tokens"])
-    ds.to_json(f"exp_data/{args.output_jsonl}.jsonl", orient="records", lines=True)
+    ds.to_json(f"exp_data/{args.output_jsonl}.jsonl", orient="records", lines=True, index=False)
 
-def results_to_ds():
+def multiple_results_to_ds():
+    """
+    Turn a dir of MultiPLE results into a dataset with optional
+    filtering for correct/incorrect results
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_ds", type=str, required=True)
     parser.add_argument("--input_dir", type=str, required=True)
@@ -74,6 +88,6 @@ def results_to_ds():
     
     
 if __name__ == "__main__":
-    # results_to_ds()
     # renamed_ds_to_jsonl()
+    multiple_results_to_ds()
     pass

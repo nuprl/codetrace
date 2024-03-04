@@ -3,7 +3,11 @@ from codetrace.utils import *
 from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
-
+from baukit.nethook import TraceDict
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from copy import deepcopy
+import json
+import gzip
 
 def fit_test_split(dataset : datasets.Dataset, args):
     correct = dataset.remove_columns(["renamed_prompt","renamed_variables","renamed_percent","correct"]).rename_column("original_prompt","prompt")
@@ -35,44 +39,96 @@ def _pretty_print(ds) -> str:
         s += str(len(df))
     return s
 
+def _truncate_at_stop_tokens(tokens: List[int],
+                             stop_tokens : List[str],
+                            tokenizer : AutoTokenizer) -> List[int]:
+    """
+    Truncate generated at stop tokens AFTER comments
+    """
+    def find_earliest_occurrence(n, subsets):
+        for subset in subsets:
+            subset_tuple = tuple(subset)
+            
+            for i in range(len(n) - len(subset) + 1):
+                if tuple(n[i:i+len(subset)]) == subset_tuple:
+                    return i
+        return len(n)
+
+    stop_tokens = [tokenizer.encode(x) for x in stop_tokens]
+    # find earliest index of a stop token in tokens
+    idx = find_earliest_occurrence(tokens, stop_tokens)
+    return tokens[:idx]
+        
+            
+        
+
+def get_layername(layers : List[int]) -> List[str]:
+    """
+    Get layer names from layer numbers
+    """
+    return [f"transformer.h.{l}" for l in layers]
+
+def get_layeridx(layer: str) -> int:
+    """
+    Get layer numbers from layer names
+    """
+    return int(layer.split(".")[-1])
+
 def steer(
-    model,
-    args,
-    incorrect_eval,
-    diff_tensor,
-    layers_to_patch,
-    tokens_to_patch,
-    patch_mode,
-    batch_size
+    hf_model,
+    tokenizer,
+    prompts : List[str] | str,
+    patch_tensor : torch.Tensor,
+    layers_to_patch : List[int] | int,
+    tokens_to_patch : List[int] | int,
+    patch_mode : str,
+    batch_size : int = 1,
+    max_out : int = 512
 ):
     """
     Need to steer with generation
+    TODO: 
+    - implement batching
+    - implement patch_mode
+    - implement patch token str and not int
     """
-    pass
-    # eval_prompts = ex["prompt"]
-    # # print types in incorrect
+    layers_to_patch, tokens_to_patch, prompts = arg_to_list(layers_to_patch), arg_to_list(tokens_to_patch), arg_to_list(prompts)
+    assert isinstance(tokens_to_patch[0],int)
+    assert patch_mode in ["add"]
+    assert len(prompts) == batch_size == 1, "Batching not implemented yet"
     
-    # out = batched_insert_patch(model, 
-    #             eval_prompts, 
-    #             diff_tensor, 
-    #             layers_to_patch,
-    #             tokens_to_patch,
-    #             patch_mode,
-    #             batch_size)
-    # steering_results = []
-    # for i,trace_res in tqdm(enumerate(out), desc="Logits"):
-    #     prompt_len = trace_res._logits.shape[1]
-    #     logits : LogitResult = trace_res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
+    patch_tensor = patch_tensor.to(hf_model.device)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
+    
+    tokens_to_patch = [arg_to_literal(x, n=len(tokenizer.tokenize(prompts[0]))) for x in tokens_to_patch]
 
-    #     for j in list(range(prompt_len)):
-    #         tok = logits[-1][j][-1].tokens(model.tokenizer)
-    #         assert len(tok) == 1, tok
-    #         tok = tok[0].strip()
-    #         ex = incorrect_eval[(i*args.batch_size)+j]
-    #         steering_results.append({"steered_generation" : tok, 
-    #                         **ex})
-    # steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
-    # return steering_ds
+
+    input_ids = tokenizer(prompts, return_tensors="pt", padding=True, truncation=True).input_ids.to("cuda")
+    layers_to_patch = get_layername(layers_to_patch)
+    
+    def edit_fn(x, layer):
+        # tuple is (out, ?)
+        # shape should be [n_prompts, n_tokens, n_embd]
+        if layer in layers_to_patch:
+            output = x[0]
+            output[:,tokens_to_patch,:] += patch_tensor[get_layeridx(layer),:,:]
+            return (output, None)
+        else:
+            return x
+    
+    generated = []
+    with TraceDict(hf_model, 
+                   layers=get_layername(list(range(hf_model.config.n_layer))),
+                   edit_output=edit_fn
+                   ) as ret:
+        for i in range(max_out):
+            td = hf_model(input_ids)
+            out_tok = td.logits[:,-1,:].softmax(-1).argmax(-1)
+            generated.append(out_tok)
+            input_ids = torch.cat([input_ids, out_tok.unsqueeze(1)], dim=1)
+    
+    return generated
 
 def main():
     # ==========================================================================================
@@ -83,7 +139,7 @@ def main():
         args = json.load(f)
     args = Namespace(**args)
 
-    exp_dir = "/home/franlucc/projects/codetrace/codetrace/codegen_gen_exp"
+    exp_dir = "/home/franlucc/projects/codetrace/codetrace/code_gen_exp"
     ds = datasets.load_dataset(args.dataset, split="train")
 
     model = LanguageModel(args.model, device_map="cuda")
@@ -97,7 +153,7 @@ def main():
     # PART 1: filter
     # ==========================================================================================
     print("...Generating fit test split...")
-    
+
     correct, incorrect, incorrect_eval = fit_test_split(ds, args)
 
     info_incorrect = _pretty_print(incorrect)
@@ -111,9 +167,8 @@ def main():
 
     with open(f"{out_dir}/data_readme.md", "w") as f:
         f.write(info)
-        
+    
     print(info)
-
     # ==========================================================================================
     # PART 2: averages 
     #  TODO: different ways we can extract avg
@@ -145,7 +200,8 @@ def main():
         print(f"Incorrect avg tensor shape: {incorrect_avg_tensor.shape}")
 
         diff_tensor = correct_avg_tensor - incorrect_avg_tensor
-        # diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
+        print(f"Diff tensor shape: {diff_tensor.shape}")
+        diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
 
         print(f"Diff tensor shape after transform: {diff_tensor.shape}")
 
@@ -155,66 +211,61 @@ def main():
     # Part 3: steered generations
     #==========================================================================================
     
-    # def _evaluate(steering_ds, counts, args, out_dir, outfile):
-    #     correct_steer = steering_ds.filter(lambda x : x["correct_steer"] == True)
-    #     metric = f"{len(correct_steer)} / {len(steering_ds)} = {len(correct_steer) / len(steering_ds)}"
-    #     print(metric)
-    #     with open(f"{out_dir}/{outfile}", "w") as f:
-    #         f.write(f"## Steering Results\n")
-    #         f.write(metric)
-    #         # write arguments of parser
-    #         f.write(f"\n## Arguments\n")
-    #         parser = vars(args)
-    #         for k,v in parser.items():
-    #             f.write(f"{k} : {v}\n")
-    #         f.write("\nEval type distribution\n")
-    #         f.write(str(counts))
+    print(f"...Applying patch to incorrect prompts...")
+    incorrect = datasets.Dataset.from_pandas(pd.DataFrame(incorrect))
+    del(model)
+    model = AutoModelForCausalLM.from_pretrained(args.model).to("cuda")
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    generations = []
+    for i,ex in tqdm(enumerate(incorrect), desc="Applying patches"):
+        generated_idx = steer(model, 
+                            tokenizer,
+                            ex["prompt"],
+                            diff_tensor,
+                            args.layers_to_patch,
+                            args.tokens_to_patch,
+                            args.patch_mode)
+        generated_idx = _truncate_at_stop_tokens(generated_idx, ex["stop_tokens"], tokenizer)
+        generated = "".join([tokenizer.decode(x) for x in generated_idx])
+        generations.append({"steered_generation" : generated, **ex})
+        if i % 3 == 0:
+            steering_df = pd.DataFrame(generations)
+            steering_df.to_csv(f"{out_dir}/steering_results.csv")
             
-    # print(f"...Applying patch to incorrect prompts...")
-    # incorrect = datasets.Dataset.from_pandas(pd.DataFrame(incorrect))
-
-    # steering_ds = steer(model, 
-    #                     args,
-    #                     incorrect,
-    #                     diff_tensor,
-    #                     args.layers_to_patch,
-    #                     args.tokens_to_patch,
-    #                     args.patch_mode,
-    #                     args.batch_size)
-    # steering_ds.save_to_disk(f"{out_dir}/steering_results_ds")
+    steering_df = pd.DataFrame(generations)
     
-    # # save in multiple completions format
-    # df = steering_ds.to_pandas()
-    # df = df[["steered_generation","fim_type","correct_steer","generated_text", "hexsha"]]
-    # df.to_csv(f"{out_dir}/steering_results.csv")
+    # save into MultiPLE completions format
+    cut_steering_df = steering_df[["name", "steered_generation","results", "prompt"]]
+    cut_steering_df.to_csv(f"{out_dir}/steering_results.csv")
+    
+    steering_ds = datasets.Dataset.from_pandas(steering_df)
+    steering_ds = steering_ds.rename_columns({"results":"old_results"})
+    steering_ds = steering_ds.map(lambda x : {"completions" : [x["steered_generation"]], 
+                                              "temperature": 0.0,
+                                              'language': 'py',
+                                              'top_p': 0.95,
+                                              'max_tokens': 512,
+                                              })
+    # save as gzip of json
+    json_list = steering_ds.to_list()
+    dirout = f"{out_dir}/steering_completions"
+    os.makedirs(dirout, exist_ok=True)
+    for ex in json_list:
+        with gzip.open(f"{dirout}/{ex['name']}.json.gz", "wt") as f:
+            json.dump(ex, f)
+    
+    # save args
+    with open(f"{out_dir}/eval_readme.md", "w") as f:
+        # write arguments of parser
+        f.write(f"\n## Arguments\n")
+        parser = vars(args)
+        for k,v in parser.items():
+            f.write(f"{k} : {v}\n")
             
-    # _evaluate(steering_ds, counts, args, out_dir, "eval_readme.md")
-        
     # # ==========================================================================================
     # # PART 4: steering generation ood
     # # ==========================================================================================
-    # if args.test_size > 0:
-    #     print(f"...Applying patch to incorrect prompts...")
 
-    #     incorrect_eval = datasets.Dataset.from_pandas(pd.DataFrame(incorrect_eval))
-    #     counts = Counter(incorrect["fim_type"])
-    #     print(counts)
-
-    #     steering_ds = steer(model, 
-    #                         args,
-    #                         incorrect_eval,
-    #                         diff_tensor,
-    #                         args.layers_to_patch,
-    #                         args.tokens_to_patch,
-    #                         args.patch_mode,
-    #                         args.batch_size)
-    #     steering_ds.save_to_disk(f"{out_dir}/steering_results_ood")
-    #     df = steering_ds.to_pandas()
-    #     df = df[["steered_generation","fim_type","correct_steer","generated_text", "hexsha"]]
-    #     df.to_csv(f"{out_dir}/steering_results_ood.csv")
-        
-    #     _evaluate(steering_ds, counts, args, out_dir, "eval_ood_readme.md")
-    
     
 if __name__ == "__main__":
     main()
