@@ -9,17 +9,17 @@ import tree_sitter
 import tempfile
 import re
 
-vendor = "/home/franlucc/llm_libs"
 parent = Path(__file__).parent
+REPO_ROOT = Path(__file__).parent.parent
 Language.build_library(
-    f"{parent}/build/my-languages.so",
-    [f"{vendor}/tree-sitter-typescript/typescript",f"{vendor}/tree-sitter-python"],
+    f"{REPO_ROOT}/build/my-languages.so",
+    [f"{REPO_ROOT}/tree-sitter-typescript/typescript",f"{REPO_ROOT}/tree-sitter-python"],
 )
-TS_LANGUAGE = Language(f"{parent}/build/my-languages.so", "typescript")
+TS_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "typescript")
 TS_PARSER = Parser()
 TS_PARSER.set_language(TS_LANGUAGE)
 
-PY_LANGUAGE = Language(f"{parent}/build/my-languages.so", "python")
+PY_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "python")
 PY_PARSER = Parser()
 PY_PARSER.set_language(PY_LANGUAGE)
 

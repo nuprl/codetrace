@@ -1,16 +1,7 @@
 from tree_sitter import Language, Parser, Node
 from typing import Generator, Set, List
 from dataclasses import dataclass
-
-Language.build_library(
-    "build/my-languages.so",
-    ["tree-sitter-python"],
-)
-
-PY_LANGUAGE = Language("build/my-languages.so", "python")
-
-parser = Parser()
-parser.set_language(PY_LANGUAGE)
+from .utils import PY_LANGUAGE
 
 # This query finds all the identifiers in a file.
 IDENTIFIERS = PY_LANGUAGE.query("""(identifier) @id""")
