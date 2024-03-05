@@ -1,3 +1,31 @@
+"""
+What we actually want to do:
+
+1. For every bound variable X in a program, incrementally rename X to Y, where 
+   Y is not  free in the scope of X.
+
+It is almost impossible to do this for Python, so we instead simplify the
+problem to this:
+
+1. Calculate the set of all variable names bound in a program.
+2. Incrementally rename each variable above to a variable that does not
+   appear in the program text.
+
+So, if X is bound twice, both occurrences will be renamed at once, which
+is harmless.
+
+However, there are a few complications:
+
+1. A name may be bound by both a function and non-function binder. E.g.,
+   import statements, class definitions, and function definitions all bind
+   new names. Renaming an imported name is not semantics preserving. Renaming
+   a function defined in a class (i.e., a method), requires renaming all
+   method calls.
+
+2. A Python program can dynamically modify the set of names in scope.
+
+We assume that these do not occur in reasonable code.
+"""
 from tree_sitter import Node
 from typing import Generator, Set, List
 from dataclasses import dataclass
@@ -85,20 +113,26 @@ NONVAR_STATEMENTS = [
     "class_pattern",
 ]
 
+# There are several other contexts where variables can appear. But, we are being
+# safely lazy. It should be enough to check that we are in one the contexts
+# below and not in the NONVAR_STATEMENTS contexts.
+VAR_CONTEXTS = [
+    "parameters",
+    "function_definition"
+]
+
 def is_var_context(node: Node):
     """
     In a well-designed grammar, it would be obvious whether a name is a variable
-    reference or not. Instead, we look enclosing statement to make that
+    reference or not. Instead, we look at the encoding context to make a
     determination.
     """
-    result = [] 
     while node.parent:
+        if node.type in VAR_CONTEXTS:
+            return True
         if node.type in NONVAR_STATEMENTS:
             return False
-        # print(PY_LANGUAGE.lib.(node.type))
-        result.append(node.type)
         node = node.parent
-    print(result)
     return True
 
 def _rename_var(buffer: bytes, root_node: Node, old_name: str, new_name: str) -> str:
@@ -174,15 +208,10 @@ def get_bound_vars(code: str) -> Set[str]:
     buffer = code.encode("utf-8")
     return _get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node)
 
-def mutations(code: str, skip_var: str) -> Generator[MutationResult, None, None]:
+def mutations(code: str) -> Generator[MutationResult, None, None]:
     """
     Produces all mutations of a file in depth-first order.
-
-    code is the code to mutate.
-    skip_var is the name of the variable to skip when mutating.
     """
     buffer = code.encode("utf-8")
-    bound_vars_set = _get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node)
-    bound_vars_set.remove(skip_var)
-    bound_vars = list(bound_vars_set)
+    bound_vars = list(_get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node))
     yield from _mutations_rec(0, bound_vars, code, buffer)

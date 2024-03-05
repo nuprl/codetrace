@@ -50,6 +50,43 @@ def test_rename_mixin():
     )
 
 
+def test_rename_method_arg():
+    assert (
+        rename_var(
+            """
+        class C:
+            def foo(x):            
+                pass
+        """,
+            "x",
+            "y",
+        )
+        == """
+        class C:
+            def foo(y):            
+                pass
+        """
+    )
+
+
+def test_rename_method_body():
+    assert (
+        rename_var(
+            """
+        class C:
+            def foo():        
+                x = 10
+        """,
+            "x",
+            "y",
+        )
+        == """
+        class C:
+            def foo():
+                y = 10
+        """
+    )
+
 @pytest.mark.xfail
 def test_get_bound_vars_class_ref():
     """
