@@ -1,4 +1,4 @@
-from codetrace.type_inf_exp.scripts.rename_vars import *
+from codetrace.type_inf_exp.rename_vars import *
 from transformers import AutoTokenizer
 import difflib
 

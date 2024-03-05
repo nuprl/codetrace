@@ -23,7 +23,7 @@ new_name = args.new_ds_name
 model_name = model.split("/")[-1]
 print(f"Model: {model_name}")
 
-ds = datasets.load_dataset(dataset, split="train")
+ds = datasets.load_dataset(dataset, split="train", keep_in_memory=True)
 tokenizer = AutoTokenizer.from_pretrained(model)
 
 def _condition(x):
@@ -45,15 +45,17 @@ prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in ds
 completions = []
 if len(prompts) > 10000:
     print("Doing batch generations")
-    batch_size = 10000
-    # batch generations
+    batch_size = 1000
+    # batch generations because of RAM
     for i in tqdm(range(0, len(prompts), batch_size), desc="Batch generations"):
         generations = llm.generate(prompts[i:i+batch_size], params, use_tqdm=False)
 
         for j,output in enumerate(generations):
             generated_text = output.outputs[0].text.strip()
-            completions.append({**ds[i+j], "generated_text": generated_text, "correct": generated_text == ds[i+j]["fim_type"].strip(),
-                                "overfull": len(tokenizer.tokenize(generated_text)) > 1,
+            completions.append({**ds[i+j], 
+                                "generated_text": generated_text, 
+                                "correct": generated_text.startswith(ds[i+j]["fim_type"].strip()),
+                                "overfull": len(tokenizer.tokenize(generated_text)) > len(tokenizer.tokenize(ds[i+j]["fim_type"].strip())),
                                 "model" : model_name})
         # save every 5 batches:
         if i % (5*batch_size) == 0:
@@ -66,8 +68,10 @@ else:
 
     for i,output in enumerate(generations):
         generated_text = output.outputs[0].text.strip()
-        completions.append({**ds[i], "generated_text": generated_text, "correct": generated_text == ds[i]["fim_type"].strip(),
-                            "overfull": len(tokenizer.tokenize(generated_text)) > 1,
+        completions.append({**ds[i], 
+                            "generated_text": generated_text, 
+                            "correct": generated_text.startswith(ds[i]["fim_type"].strip()),
+                            "overfull": len(tokenizer.tokenize(generated_text)) > len(tokenizer.tokenize(ds[i]["fim_type"].strip())),
                             "model" : model_name})
 
     

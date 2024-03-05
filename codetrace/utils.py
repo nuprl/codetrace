@@ -46,32 +46,6 @@ class FimObj:
 fim_placeholder = "<FILL>"      
 STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
 
-def get_captures(prompt : str | tree_sitter.Tree, 
-                 query: str, 
-                 ignore_parents : List[str] = [],
-                 language : str = "typescript") -> List[tree_sitter.Node]:
-    """
-    Get captures for a prompt given a query
-    Ignores any captures whose parents are in ignore_parents
-    """
-    parser = lang_to_parser[language]
-    lang = lang_to_builder[language]
-    if isinstance(prompt, str):
-        tree = parser.parse(bytes( prompt, "utf8"))
-    else:
-        tree = prompt
-    query = lang.query(query)
-    captures = query.captures(tree.root_node)
-    
-    def matches_any(s : str, patterns : List[str]) -> bool:
-        for p in patterns:
-            if re.match(p, s):
-                return True
-        return False
-    
-    if len(ignore_parents) > 0:
-        captures = [c for c in captures if not matches_any(c[0].parent.type,ignore_parents)]
-    return captures
 
 def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
     """
@@ -105,74 +79,51 @@ def unfim(text : str, fim : FimObj) -> str:
     middle = text.split(fim.token)[-1]
     return prefix+middle+suffix
 
-def fim_dataset(hf_dataset):
+def get_captures(prompt : str | tree_sitter.Tree, 
+                 query: str, 
+                 ignore_parents : List[str] = [],
+                 language : str = "typescript") -> List[tree_sitter.Node]:
     """
-    Given a huggingface dataset, for each example
-    return a list of variations with FIM placeholders
-    """
-    fim_examples = []
-    for ex in tqdm(hf_dataset):
-        fim_progs = fim_prog(ex["content"])
-        fim_examples.append(fim_progs)
-    return fim_examples
-
-def fim_prog(prog : str, language : str = "typescript") -> list[str]:
-    """
-    Given a typescript program, return a list of variations with FIM placeholders
+    Get captures for a prompt given a query
+    Ignores any captures whose parents are in ignore_parents
     """
     parser = lang_to_parser[language]
     lang = lang_to_builder[language]
-    
-    tree = parser.parse(bytes( prog, "utf8"))
-    
-    query = lang.query(
-        """
-((type_annotation) @name)
-    """
-    )
-    fim_variations = []
+    if isinstance(prompt, str):
+        tree = parser.parse(bytes( prompt, "utf8"))
+    else:
+        tree = prompt
+    query = lang.query(query)
     captures = query.captures(tree.root_node)
-    s = tree.text
-    for c in captures:
-        s = replace_between_bytes(s, c[0].start_byte, c[0].end_end, fim_placeholder)
-        fim_variations.append(s.decode("utf-8"))
-    return fim_variations
-
-
-def fim_prog_func(prog : str, language : str = "typescript") -> list[Tuple[str]]:
-    """
-    Given a typescript program, return a list of variations with FIM placeholders.
-    Only affect type annotations within function signatures
-    """
-    parser = lang_to_parser[language]
-    lang = lang_to_builder[language]
     
-    tree = parser.parse(bytes( prog, "utf8"))
+    def matches_any(s : str, patterns : List[str]) -> bool:
+        for p in patterns:
+            if re.match(p, s):
+                return True
+        return False
     
-    # captures types within functions
-    query = lang.query(
-        """
-(required_parameter
-      pattern: (_) (type_annotation) @tp)
-  (optional_parameter
-      pattern: (_) (type_annotation) @tp)
-    return_type: (type_annotation) @tp
-    """
-    )
-    fim_variations = []
-    captures = query.captures(tree.root_node)
-    s = tree.text
-    for c in captures:
-        text = c[0].text.decode("utf-8").strip()[1:]
-        s = replace_between_bytes(s, c[0].start_byte, c[0].end_byte, fim_placeholder)
-        fim_variations.append((s.decode("utf-8"), text))
-    return fim_variations
+    if len(ignore_parents) > 0:
+        captures = [c for c in captures if not matches_any(c[0].parent.type,ignore_parents)]
+    return captures
 
-def remove_comments(program : str, language : str = "typescript") -> str:
+def get_builtins_regex(language : str) -> str:
+    """
+    Returns the builtins for a language as a regex pattern
+    """
+    if language in ["python", "py"]:
+        parent_dir = Path(__file__).parent
+        with open(f"{parent_dir}/py_builtins.json","r") as f:
+            builtins = json.load(f)
+        return "^(" + "|".join(builtins) + ")$"
+    elif language in ["typescript", "ts"]:
+        raise NotImplementedError("Typescript builtins not implemented")
+    
+
+def remove_comments(program : str, 
+                    comment_query : str = """((comment) @comment)""",
+                    language : str = "typescript") -> str:
     lang = lang_to_builder[language]
     parser = lang_to_parser[language]
-    
-    comment_query = """((comment) @comment)"""
     comment_query = lang.query(comment_query)
     tree = parser.parse(bytes(program, "utf8"))
     captures = comment_query.captures(tree.root_node)
@@ -182,27 +133,6 @@ def remove_comments(program : str, language : str = "typescript") -> str:
     for c in captures:
         program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
     return program.decode("utf-8").strip()
-        
-def replace_between_points(original_string : str,
-                           start_point : Tuple[int], 
-                           end_point : Tuple[int],
-                           replacement : str = "") -> str:
-    '''
-    Replace tree-sitter interval (start_point, end_point) from a string.
-    Inclusive of start_point and end_point
-    '''
-    with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
-        temp.write(original_string)
-        temp.seek(0)
-        original_string = temp.read()
-
-    start_index = point_to_index_loc(start_point, original_string)
-    end_index = point_to_index_loc(end_point, original_string)
-
-    modified_string = (
-        original_string[:start_index] + replacement + original_string[end_index:]
-    )
-    return modified_string
 
 def replace_between_bytes(byte_string : bytes,
                            start_byte : int, 
@@ -223,45 +153,17 @@ def replace_between_bytes(byte_string : bytes,
         )
     return modified_byte_string
 
-def point_to_index_loc(point: Tuple[int], original_string: str) -> int:
-    """
-    Translate tree-sitter tuple indexing to string int indexing
-    """
-    row = point[0]
-    col = point[1]
-    if row == 0:
-        return col
-    else:
-        return len("\n".join(original_string.splitlines()[:row])) + col+1 # for "\n"
-    
+def find_between_bytes(
+    byte_string : bytes,
+    start_byte : int, 
+    end_byte : int,
+    target : str) -> int:
+    '''
+    Find the first occurence of target between start_byte and end_byte
+    '''
+    target = bytes(target, "utf-8")
+    for i in range(start_byte, end_byte):
+        if byte_string[i:i+len(target)] == target:
+            return i
+    return -1
 
-# from MultiPL-E
-def estimator(n: int, c: int, k: int) -> float:
-    """
-    Calculates 1 - comb(n - c, k) / comb(n, k).
-    """
-    if n - c < k:
-        return 1.0
-    return 1.0 - np.prod(1.0 - k / np.arange(n - c + 1, n + 1))
-
-def pass_k(gens : List[str], solution : str, k : int):
-    """
-    Given a list of generated programs for a prompt, and the gold solution for the prompt,
-    calculate pass@k
-    """
-    n = len(gens)
-    c = len([i for i in gens if (solution == i)])
-    return estimator(n, c, k)
-
-def get_builtins_regex(language : str) -> str:
-    """
-    Returns the builtins for a language as a regex pattern
-    """
-    if language in ["python", "py"]:
-        parent_dir = Path(__file__).parent
-        with open(f"{parent_dir}/py_builtins.json","r") as f:
-            builtins = json.load(f)
-        return "^(" + "|".join(builtins) + ")$"
-    elif language in ["typescript", "ts"]:
-        raise NotImplementedError("Typescript builtins not implemented")
-    

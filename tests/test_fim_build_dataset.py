@@ -25,23 +25,21 @@ def test_capture_func_types():
     return this.rgbToHexa(this.subtractMultiply(hexa_color, diff));
   }"""
   tree = TS_PARSER.parse(bytes(prog, "utf-8"))
-  query = TS_LANGUAGE.query(QUERY_FUNC_TYPES)
+  query = TS_LANGUAGE.query(TS_QUERY_FUNC_TYPES)
   captures = query.captures(tree.root_node)
   assert len(captures) == 2, captures
   text_cap = [c[0].text for c in captures]
   
 def test_remove_types():
     ts_prog = "function foo(a: number, b: string): number {\n\treturn 1;\n}"
-    func_fim_prompts = fim_remove_types(ts_prog, QUERY_FUNC_TYPES)
-    fim_prompts = fim_remove_types(ts_prog, QUERY_ALL_TYPES)
+    func_fim_prompts = fim_remove_types(ts_prog, TS_QUERY_FUNC_TYPES)
     
     gold = [("function foo(a, b): <FILL> {\n\treturn 1;\n}", "number"),
                   ("function foo(a: <FILL>, b) {\n\treturn 1;\n}", "number"),
                   ("function foo(a, b: <FILL>) {\n\treturn 1;\n}", "string")]
     
     assert set(func_fim_prompts) == set(gold), f"===GOLD===:\n {gold}\n===GOT===:\n{func_fim_prompts}"
-    assert set(fim_prompts) == set(gold), f"===GOLD===:\n {gold}\n===GOT===:\n{fim_prompts}"
-  
+    
 def test_remove_types_multiline():
   ts_prog = """
 class Point {
@@ -60,7 +58,7 @@ function foo(a: number, b: string): number {
   return 1;
 }
 """
-  func_fim_prompts = fim_remove_types(ts_prog, QUERY_FUNC_TYPES)
+  func_fim_prompts = fim_remove_types(ts_prog, TS_QUERY_FUNC_TYPES)
   fim_types = [t for p, t in func_fim_prompts]
   assert fim_types == ["number", "string", "number", "number | string", "string", "number"], fim_types
   reconstruct = [p.replace("<FILL>", t) for p, t in func_fim_prompts]
@@ -85,7 +83,7 @@ function greeter(fn: (a: string) => void) {
   fn("Hello, World");
 }
 """
-  func_fim_prompts = fim_remove_types(ts_prog, QUERY_FUNC_TYPES)
+  func_fim_prompts = fim_remove_types(ts_prog, TS_QUERY_FUNC_TYPES)
   fim_types = [t for p, t in func_fim_prompts]
   assert fim_types == ["(a: string) => void", "number | string", "string", "number"], fim_types
   reconstruct = [p.replace("<FILL>", t) for p, t in func_fim_prompts]
