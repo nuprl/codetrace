@@ -1,5 +1,31 @@
-from codetrace.py_mutator import rename_var, get_bound_vars
+from codetrace.py_mutator import rename_var, get_bound_vars, rename_var_with_index
 import pytest
+
+def test_rename_with_index():
+    (new_target_index, new_code) = rename_var_with_index(
+        """
+        def foo(x):
+            return x + 1
+        """,
+        20,
+        "x",
+        "xxx",
+    )
+    assert new_target_index == 20 + 2
+
+
+
+def test_rename_with_index():
+    (new_target_index, new_code) = rename_var_with_index(
+        """
+        def foo(x):
+            return x + 1
+        """,
+        40,
+        "x",
+        "xxx",
+    )
+    assert new_target_index == 40 + 4
 
 
 def test_rename_same_imported_name():
@@ -74,7 +100,7 @@ def test_rename_method_body():
         rename_var(
             """
         class C:
-            def foo():        
+            def foo():
                 x = 10
         """,
             "x",

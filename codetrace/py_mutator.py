@@ -27,7 +27,7 @@ However, there are a few complications:
 We assume that these do not occur in reasonable code.
 """
 from tree_sitter import Node
-from typing import Generator, Set, List
+from typing import Generator, Set, List, Tuple
 from dataclasses import dataclass
 from .utils import PY_LANGUAGE, PY_PARSER
 
@@ -59,6 +59,8 @@ class MutationResult:
     new_code: str
     # The number of mutations applied.
     num_mutations: int
+    # New target index.
+    new_target_index: int
 
     _cut: bool = False
 
@@ -135,7 +137,7 @@ def is_var_context(node: Node):
         node = node.parent
     return True
 
-def _rename_var(buffer: bytes, root_node: Node, old_name: str, new_name: str) -> str:
+def _rename_var(buffer: bytes, target_index: int, root_node: Node, old_name: str, new_name: str) -> Tuple[int, str]:
     """
     Renames all occurrences of the variable old_name to new_name.
 
@@ -144,6 +146,8 @@ def _rename_var(buffer: bytes, root_node: Node, old_name: str, new_name: str) ->
     """
     result: List[str] = []
     last_offset_start = 0
+    target_index_offset = 0
+    name_size_delta = len(new_name) - len(old_name)
     for node, _ in IDENTIFIERS.captures(root_node):
         (id_start, id_end) = node.byte_range
         this_name = buffer[id_start:id_end].decode("utf-8")
@@ -153,19 +157,24 @@ def _rename_var(buffer: bytes, root_node: Node, old_name: str, new_name: str) ->
             continue
         result.append(buffer[last_offset_start:id_start].decode("utf-8"))
         result.append(new_name)
+        if id_start <= target_index:
+            target_index_offset += name_size_delta
         last_offset_start = id_end
     if last_offset_start < len(buffer):
         result.append(buffer[last_offset_start:].decode("utf-8"))
-    return "".join(result)
+    return (target_index + target_index_offset, "".join(result))
 
 
 def _mutations_rec(
-    depth: int, bound_vars: List[str], old_code: str, buffer: bytes
+    depth: int, target_index: int, bound_vars: List[str], old_code: str, buffer: bytes
 ) -> Generator[MutationResult, None, None]:
     """
     A generator that produces all mutations in a file in breath-first order.
 
     depth is the number of mutations applied so far.
+    target_index is an offset into old_code that we are tracking. As variables
+      are renamed, this offset is updated to account for a change in the length
+      of the program.
     bound_vars is the list of variables that may be mutated.
     old_code is the current code prior to mutation.
     buffer is the byte buffer for old_code.
@@ -177,9 +186,10 @@ def _mutations_rec(
 
     for var_ix, var in enumerate(bound_vars):
         new_name = f"__tmp{depth}"
-        new_code = _rename_var(buffer, tree.root_node, var, new_name)
+        new_target_index, new_code = _rename_var(buffer, target_index, tree.root_node, var, new_name)
         result = MutationResult(
-            old_code=old_code, new_code=new_code, num_mutations=depth + 1
+            old_code=old_code, new_code=new_code, num_mutations=depth + 1,
+            new_target_index=new_target_index
         )
         yield result
 
@@ -190,7 +200,7 @@ def _mutations_rec(
             continue
 
         yield from _mutations_rec(
-            depth + 1, bound_vars[var_ix + 1 :], new_code, new_code.encode("utf-8")
+            depth + 1, new_target_index, bound_vars[var_ix + 1 :], new_code, new_code.encode("utf-8")
         )
 
 def rename_var(code: str, old_name: str, new_name: str) -> str:
@@ -199,7 +209,17 @@ def rename_var(code: str, old_name: str, new_name: str) -> str:
     """
     buffer = code.encode("utf-8")
     tree = PY_PARSER.parse(buffer)
-    return _rename_var(buffer, tree.root_node, old_name, new_name)
+    return _rename_var(buffer, 0, tree.root_node, old_name, new_name)[1]
+
+
+def rename_var_with_index(code: str, target_index: int, old_name: str, new_name: str) -> Tuple[int, str]:
+    """
+    Renames all occurrences of the variable old_name to new_name in code.
+    """
+    buffer = code.encode("utf-8")
+    tree = PY_PARSER.parse(buffer)
+    return _rename_var(buffer, target_index, tree.root_node, old_name, new_name)
+
 
 def get_bound_vars(code: str) -> Set[str]:
     """
@@ -208,10 +228,10 @@ def get_bound_vars(code: str) -> Set[str]:
     buffer = code.encode("utf-8")
     return _get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node)
 
-def mutations(code: str) -> Generator[MutationResult, None, None]:
+def mutations(code: str, target_index: int) -> Generator[MutationResult, None, None]:
     """
     Produces all mutations of a file in depth-first order.
     """
     buffer = code.encode("utf-8")
     bound_vars = list(_get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node))
-    yield from _mutations_rec(0, bound_vars, code, buffer)
+    yield from _mutations_rec(0, target_index, bound_vars, code, buffer)
