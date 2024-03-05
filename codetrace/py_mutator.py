@@ -1,7 +1,7 @@
 from tree_sitter import Language, Parser, Node
 from typing import Generator, Set, List
 from dataclasses import dataclass
-from .utils import PY_LANGUAGE
+from .utils import PY_LANGUAGE, PY_PARSER
 
 # This query finds all the identifiers in a file.
 IDENTIFIERS = PY_LANGUAGE.query("""(identifier) @id""")
@@ -89,7 +89,7 @@ def _mutations_rec(
     if len(bound_vars) == 0:
         return
 
-    tree = parser.parse(buffer)
+    tree = PY_PARSER.parse(buffer)
 
     for var_ix, var in enumerate(bound_vars):
         new_name = f"__tmp{depth}"
@@ -109,6 +109,13 @@ def _mutations_rec(
             depth + 1, bound_vars[var_ix + 1 :], new_code, new_code.encode("utf-8")
         )
 
+def rename_var(code: str, old_name: str, new_name: str) -> str:
+    """
+    Renames all occurrences of the variable old_name to new_name in code.
+    """
+    buffer = code.encode("utf-8")
+    tree = PY_PARSER.parse(buffer)
+    return _rename_var(buffer, tree.root_node, old_name, new_name)
 
 def mutations(code: str, skip_var: str) -> Generator[MutationResult, None, None]:
     """
@@ -118,7 +125,7 @@ def mutations(code: str, skip_var: str) -> Generator[MutationResult, None, None]
     skip_var is the name of the variable to skip when mutating.
     """
     buffer = code.encode("utf-8")
-    bound_vars_set = _get_bound_vars(buffer, parser.parse(buffer).root_node)
+    bound_vars_set = _get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node)
     bound_vars_set.remove(skip_var)
     bound_vars = list(bound_vars_set)
     yield from _mutations_rec(0, bound_vars, code, buffer)
