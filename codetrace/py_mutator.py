@@ -1,91 +1,9 @@
-"""
-What we actually want to do:
-
-1. For every bound variable X in a program, incrementally rename X to Y, where 
-   Y is not  free in the scope of X.
-
-It is almost impossible to do this for Python, so we instead simplify the
-problem to this:
-
-1. Calculate the set of all variable names bound in a program.
-2. Incrementally rename each variable above to a variable that does not
-   appear in the program text.
-
-So, if X is bound twice, both occurrences will be renamed at once, which
-is harmless.
-
-However, there are a few complications:
-
-1. A name may be bound by both a function and non-function binder. E.g.,
-   import statements, class definitions, and function definitions all bind
-   new names. Renaming an imported name is not semantics preserving. Renaming
-   a function defined in a class (i.e., a method), requires renaming all
-   method calls.
-
-2. A Python program can dynamically modify the set of names in scope.
-
-We assume that these do not occur in reasonable code.
-"""
 from tree_sitter import Node
 from typing import Generator, Set, List, Tuple
 from dataclasses import dataclass
 from .utils import PY_LANGUAGE, PY_PARSER
-
-# This query finds all the identifiers in a file.
-IDENTIFIERS = PY_LANGUAGE.query("""(identifier) @id""")
-
-# This query finds the parameters of function definitions. It does not do
-# lambdas.
-FUNCTION_PARAMS = PY_LANGUAGE.query(
-    """
-    [
-        (function_definition parameters: 
-            (parameters [ (identifier) @id (typed_parameter (identifier) @id) ]))
-
-    ]
-"""
-)
-
-
-@dataclass
-class MutationResult:
-    """
-    Represents a mutation returned by the mutations generator below.
-    """
-
-    # The code before the last mutation.
-    old_code: str
-    # The fully mutated code.
-    new_code: str
-    # The number of mutations applied.
-    num_mutations: int
-    # New target index.
-    new_target_index: int
-
-    _cut: bool = False
-
-    def cut(self):
-        """
-        The consumer of the mutations generator can call this method to indicate
-        that there is no need to go deeper in the search for mutations.
-        """
-        self._cut = True
-
-
-def _get_bound_vars(buffer: bytes, root_node: Node) -> Set[str]:
-    """
-    Returns the names of the variables bound by function definitions in a file.
-
-    NOTE: We make the assumption that the names bound by functions are not
-    also imported or defined at the top-level. If that is the case, renaming
-    may not be semantics-preserving.
-    """
-    captured_nodes = FUNCTION_PARAMS.captures(root_node)
-    results = []
-    for node, _ in captured_nodes:
-        (start, end) = node.byte_range
-        results.append(buffer[start:end].decode("utf-8"))
-    return set(results)
+from more_itertools import interleave_longest
+import random
 
 
 # There are ~114 types of non-terminals listed in the Python tree-sitter
@@ -110,7 +28,6 @@ NONVAR_STATEMENTS = [
     "future_import_statement",
     "wildcard_import",
     "relative_import",
-    "module", # What is this?
     "class_definition",
     "class_pattern",
 ]
@@ -120,13 +37,86 @@ NONVAR_STATEMENTS = [
 # below and not in the NONVAR_STATEMENTS contexts.
 VAR_CONTEXTS = [
     "parameters",
-    "function_definition"
+    "module",  # Top-level variable I believe
+    "function_definition",
 ]
+
+TYPED_IDENTIFIERS = PY_LANGUAGE.query("""(typed_parameter) @param""")
+
+IDENTIFIERS = PY_LANGUAGE.query("""(identifier) @id""")
+
+# This query finds the parameters of function definitions. It does not do
+# lambdas.
+FUNCTION_PARAMS = PY_LANGUAGE.query(
+    """
+    [
+        (function_definition parameters: 
+            (parameters [ (identifier) @id (typed_parameter (identifier) @id) ]))
+
+    ]
+"""
+)
+
+
+@dataclass
+class Edit:
+    """
+    A convenience class that represents an edit to a buffer. Without this,
+    we would be producing integer triples with no indication of what each
+    number means.
+    """
+
+    start_byte: int
+    old_end_byte: int
+    new_end_byte: int
+
+
+@dataclass
+class EditableNode:
+    """
+    TreeSitter's nodes are immutable, so this is a workaround. We also
+    don't care about tracking nodes' line and column numbers. So this further
+    simplifies the representation to only track their byte position.
+    """
+
+    start_byte: int
+    end_byte: int
+    # We have code that looks at the enclosing context. However, note that that
+    # the positions in the context may get stale, since they are TreeSitter
+    # nodes and not EditableNodes.
+    parent: Node
+    type: str
+
+    def __repr__(self):
+        return f"EditableNode({self.start_byte}, {self.end_byte}, ...)"
+
+    @staticmethod
+    def from_node(node: Node):
+        return EditableNode(node.start_byte, node.end_byte, node.parent, node.type)
+
+    def adjust(self, edit: Edit):
+        if self.start_byte < edit.start_byte:
+            # This node is before the edit, so no need to do anything.
+            return
+        byte_delta = edit.new_end_byte - edit.old_end_byte
+        self.start_byte += byte_delta
+        self.end_byte += byte_delta
+
+    def contains_byte(self, byte: int) -> bool:
+        """Test if the given byte is within the range of this node."""
+        return self.start_byte <= byte < self.end_byte
+
+
+def edit_nodes(edits: List[Edit], other_nodes: List[EditableNode]):
+    for edit in edits:
+        for node in other_nodes:
+            node.adjust(edit)
+
 
 def is_var_context(node: Node):
     """
     In a well-designed grammar, it would be obvious whether a name is a variable
-    reference or not. Instead, we look at the encoding context to make a
+    reference or not. Instead, we look at the enclosing context to make a
     determination.
     """
     while node.parent:
@@ -137,101 +127,112 @@ def is_var_context(node: Node):
         node = node.parent
     return True
 
-def _rename_var(buffer: bytes, target_index: int, root_node: Node, old_name: str, new_name: str) -> Tuple[int, str]:
-    """
-    Renames all occurrences of the variable old_name to new_name.
 
-    root_node must be the root of the whole file.
-    buffer must be the byte buffer for the whole file.
-    """
-    result: List[str] = []
-    last_offset_start = 0
-    target_index_offset = 0
-    name_size_delta = len(new_name) - len(old_name)
-    for node, _ in IDENTIFIERS.captures(root_node):
-        (id_start, id_end) = node.byte_range
-        this_name = buffer[id_start:id_end].decode("utf-8")
-        if this_name != old_name:
+def remove_type_annotion(
+    buffer: bytes, typed_parameter: EditableNode
+) -> Tuple[bytes, List[Edit]]:
+    assert typed_parameter.type == "typed_parameter"
+    text = buffer[typed_parameter.start_byte : typed_parameter.end_byte].decode("utf-8")
+    # The before_colon_text may include the comma
+    before_colon_text = text.split(":", maxsplit=1)[0]
+    var = before_colon_text.encode("utf-8")
+    new_buffer = (
+        buffer[: typed_parameter.start_byte] + var + buffer[typed_parameter.end_byte :]
+    )
+    edit = Edit(
+        start_byte=typed_parameter.start_byte,
+        old_end_byte=typed_parameter.end_byte,
+        new_end_byte=typed_parameter.start_byte + len(var),
+    )
+    return new_buffer, [edit]
+
+
+def rename_var(
+    buffer: bytes, root: Node, old_var: bytes, new_var: bytes
+) -> Tuple[bytes, List[Edit]]:
+    assert root.type == "module"
+    all_vars = [
+        EditableNode.from_node(node) for (node, _) in IDENTIFIERS.captures(root)
+    ]
+    edits = []
+    for ix in range(len(all_vars)):
+        node = all_vars[ix]
+        this_var = buffer[node.start_byte : node.end_byte]
+        if this_var != old_var:
             continue
         if not is_var_context(node):
             continue
-        result.append(buffer[last_offset_start:id_start].decode("utf-8"))
-        result.append(new_name)
-        if id_start <= target_index:
-            target_index_offset += name_size_delta
-        last_offset_start = id_end
-    if last_offset_start < len(buffer):
-        result.append(buffer[last_offset_start:].decode("utf-8"))
-    return (target_index + target_index_offset, "".join(result))
-
-
-def _mutations_rec(
-    depth: int, target_index: int, bound_vars: List[str], old_code: str, buffer: bytes
-) -> Generator[MutationResult, None, None]:
-    """
-    A generator that produces all mutations in a file in breath-first order.
-
-    depth is the number of mutations applied so far.
-    target_index is an offset into old_code that we are tracking. As variables
-      are renamed, this offset is updated to account for a change in the length
-      of the program.
-    bound_vars is the list of variables that may be mutated.
-    old_code is the current code prior to mutation.
-    buffer is the byte buffer for old_code.
-    """
-    if len(bound_vars) == 0:
-        return
-
-    tree = PY_PARSER.parse(buffer)
-
-    for var_ix, var in enumerate(bound_vars):
-        new_name = f"__tmp{depth}"
-        new_target_index, new_code = _rename_var(buffer, target_index, tree.root_node, var, new_name)
-        result = MutationResult(
-            old_code=old_code, new_code=new_code, num_mutations=depth + 1,
-            new_target_index=new_target_index
+        buffer = buffer[: node.start_byte] + new_var + buffer[node.end_byte :]
+        this_edit = Edit(
+            start_byte=node.start_byte,
+            old_end_byte=node.end_byte,
+            new_end_byte=node.start_byte + len(new_var),
         )
-        yield result
-
-        # NOTE(arjun): This is a fascinating hack to cut off the search. The
-        # consumer of this generator can call result.cut() to indicate that the
-        # there is no need to go deeper in the search for mutations.
-        if result._cut:
-            continue
-
-        yield from _mutations_rec(
-            depth + 1, new_target_index, bound_vars[var_ix + 1 :], new_code, new_code.encode("utf-8")
-        )
-
-def rename_var(code: str, old_name: str, new_name: str) -> str:
-    """
-    Renames all occurrences of the variable old_name to new_name in code.
-    """
-    buffer = code.encode("utf-8")
-    tree = PY_PARSER.parse(buffer)
-    return _rename_var(buffer, 0, tree.root_node, old_name, new_name)[1]
+        edits.append(this_edit)
+        edit_nodes([this_edit], all_vars[ix + 1 :])
+    return buffer, edits
 
 
-def rename_var_with_index(code: str, target_index: int, old_name: str, new_name: str) -> Tuple[int, str]:
-    """
-    Renames all occurrences of the variable old_name to new_name in code.
-    """
-    buffer = code.encode("utf-8")
-    tree = PY_PARSER.parse(buffer)
-    return _rename_var(buffer, target_index, tree.root_node, old_name, new_name)
-
-
-def get_bound_vars(code: str) -> Set[str]:
+def _get_bound_vars(buffer: bytes, root_node: Node) -> Set[bytes]:
     """
     Returns the names of the variables bound by function definitions in a file.
-    """
-    buffer = code.encode("utf-8")
-    return _get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node)
 
-def mutations(code: str, target_index: int) -> Generator[MutationResult, None, None]:
+    NOTE: We make the assumption that the names bound by functions are not
+    also imported or defined at the top-level. If that is the case, renaming
+    may not be semantics-preserving.
     """
-    Produces all mutations of a file in depth-first order.
+    captured_nodes = FUNCTION_PARAMS.captures(root_node)
+    results = []
+    for node, _ in captured_nodes:
+        (start, end) = node.byte_range
+        results.append(buffer[start:end])
+    return set(results)
+
+
+def random_mutations(code: str, fixed_type_location: int) -> Generator[Tuple[int, str], None, None]:
+    """
+    Generate a sequence of random mutations to a Python program. Each successive
+    mutation is to the previous mutation. The fixed_type_location is a byte offset
+    to a type annotation that is *not* mutated.
     """
     buffer = code.encode("utf-8")
-    bound_vars = list(_get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node))
-    yield from _mutations_rec(0, target_index, bound_vars, code, buffer)
+    tree = PY_PARSER.parse(buffer)
+    root = tree.root_node
+
+    all_vars = list(_get_bound_vars(buffer, root))
+
+    adjusted_type_location = fixed_type_location
+
+    all_type_annotations = [
+        EditableNode.from_node(item[0]) for item in TYPED_IDENTIFIERS.captures(root)
+    ]
+    all_type_annotations = [
+        node
+        for node in all_type_annotations
+        if not node.contains_byte(fixed_type_location)
+    ]
+
+    random.shuffle(all_vars)
+    random.shuffle(all_type_annotations)
+
+    next_var_index = 0
+    max_mutations = len(all_vars) + len(all_type_annotations)
+    for counter in range(max_mutations):
+        index = random.randint(0, max_mutations - counter - 1)
+        if index < len(all_vars):
+            (buffer, edits) = rename_var(
+                buffer,
+                root,
+                all_vars.pop(),
+                f"__tmp{next_var_index}".encode("utf-8"),
+            )
+            next_var_index += 1
+        else:
+            (buffer, edits) = remove_type_annotion(buffer, all_type_annotations.pop())
+        # Adjust locations
+        edit_nodes(edits, all_type_annotations)
+        for edit in edits:
+            if edit.start_byte < adjusted_type_location:
+                adjusted_type_location += edit.new_end_byte - edit.old_end_byte
+
+        yield (adjusted_type_location, buffer.decode("utf-8"))
