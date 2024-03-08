@@ -192,7 +192,7 @@ def _get_bound_vars(buffer: bytes, root_node: Node) -> Set[bytes]:
     return set(results)
 
 
-def random_mutations(code: str, fixed_type_location: int) -> Generator[Tuple[int, str], None, None]:
+def random_mutations(code: str, fixed_type_location: int, apply_all_mutations: bool) -> Generator[Tuple[int, str], None, None]:
     """
     Generate a sequence of random mutations to a Python program. Each successive
     mutation is to the previous mutation. The fixed_type_location is a byte offset
@@ -238,5 +238,8 @@ def random_mutations(code: str, fixed_type_location: int) -> Generator[Tuple[int
         for edit in edits:
             if edit.start_byte < adjusted_type_location:
                 adjusted_type_location += edit.new_end_byte - edit.old_end_byte
-
+        if not apply_all_mutations:
+            yield (adjusted_type_location, buffer.decode("utf-8"))
+        
+    if apply_all_mutations:
         yield (adjusted_type_location, buffer.decode("utf-8"))
