@@ -1,6 +1,6 @@
 import glob
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Union
 import numpy as np
 import os
 import json
@@ -9,22 +9,22 @@ import tree_sitter
 import tempfile
 import re
 
-parent = Path(__file__).parent
-REPO_ROOT = Path(__file__).parent.parent
-Language.build_library(
-    f"{REPO_ROOT}/build/my-languages.so",
-    [f"{REPO_ROOT}/tree-sitter-typescript/typescript",f"{REPO_ROOT}/tree-sitter-python"],
-)
-TS_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "typescript")
-TS_PARSER = Parser()
-TS_PARSER.set_language(TS_LANGUAGE)
+# parent = Path(__file__).parent
+# REPO_ROOT = Path(__file__).parent.parent
+# Language.build_library(
+#     f"{REPO_ROOT}/build/my-languages.so",
+#     [f"{REPO_ROOT}/tree-sitter-typescript/typescript",f"{REPO_ROOT}/tree-sitter-python"],
+# )
+# TS_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "typescript")
+# TS_PARSER = Parser()
+# TS_PARSER.set_language(TS_LANGUAGE)
 
-PY_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "python")
-PY_PARSER = Parser()
-PY_PARSER.set_language(PY_LANGUAGE)
+# PY_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "python")
+# PY_PARSER = Parser()
+# PY_PARSER.set_language(PY_LANGUAGE)
 
-lang_to_parser = {"typescript" : TS_PARSER, "python" : PY_PARSER, "py" : PY_PARSER, "ts" : TS_PARSER}
-lang_to_builder = {"typescript" : TS_LANGUAGE, "python" : PY_LANGUAGE, "py" : PY_LANGUAGE, "ts" : TS_LANGUAGE}
+# lang_to_parser = {"typescript" : TS_PARSER, "python" : PY_PARSER, "py" : PY_PARSER, "ts" : TS_PARSER}
+# lang_to_builder = {"typescript" : TS_LANGUAGE, "python" : PY_LANGUAGE, "py" : PY_LANGUAGE, "ts" : TS_LANGUAGE}
 
 class FimObj:
     def __init__(self,
@@ -79,7 +79,7 @@ def unfim(text : str, fim : FimObj) -> str:
     middle = text.split(fim.token)[-1]
     return prefix+middle+suffix
 
-def get_captures(prompt : str | tree_sitter.Tree, 
+def get_captures(prompt : Union[str,tree_sitter.Tree], 
                  query: str, 
                  ignore_parents : List[str] = [],
                  language : str = "typescript") -> List[tree_sitter.Node]:

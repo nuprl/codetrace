@@ -77,10 +77,10 @@ def get_layeridx(layer: str) -> int:
 def steer(
     hf_model,
     tokenizer,
-    prompts : List[str] | str,
+    prompts : Union[List[str], str],
     patch_tensor : torch.Tensor,
-    layers_to_patch : List[int] | int,
-    tokens_to_patch : List[int] | int,
+    layers_to_patch : Union[List[int],int],
+    tokens_to_patch : Union[List[int],int],
     patch_mode : str,
     batch_size : int = 1,
     max_out : int = 512

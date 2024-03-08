@@ -17,7 +17,7 @@ import pickle
 
 def batched_get_averages(model: LanguageModel,
                  prompts : List[str],
-                 tokens : List[str] | List[int],
+                 tokens : Union[List[str],List[int]],
                  batch_size=5) -> torch.Tensor:
     """
     Get averages of tokens at all layers for all prompts
@@ -51,10 +51,10 @@ def batched_get_averages(model: LanguageModel,
 
 
 def batched_insert_patch(model : LanguageModel,
-                    prompts : List[str] | str,
+                    prompts : Union[List[str],str],
                     patch : torch.Tensor,
                     layers_to_patch : List[int],
-                    tokens_to_patch : List[str] | List[int] | str | int,
+                    tokens_to_patch : Union[List[str],List[int],str,int],
                     patch_mode : str = "add",
                     batch_size : int = 5) -> List[TraceResult]:
     """
@@ -74,10 +74,10 @@ def batched_insert_patch(model : LanguageModel,
 
 
 def batched_insert_patch_logit(model : LanguageModel,
-                    prompts : List[str] | str,
+                    prompts : Union[List[str],str],
                     patch : torch.Tensor,
                     layers_to_patch : List[int],
-                    tokens_to_patch : List[str] | List[int] | str | int,
+                    tokens_to_patch : Union[List[str],List[int],str,int],
                     patch_mode : str = "add",
                     batch_size : int = 5) -> List[str]:
     """

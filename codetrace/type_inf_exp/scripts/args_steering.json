@@ -1,13 +1,13 @@
 {
-    "outdir": 58,
+    "outdir": "cais_1",
     "dataset": "franlucc/py_steering_v0",
-    "model": "/home/arjun/models/starcoderbase-1b",
-    "prog_threshold": 25,
+    "model": "bigcode/starcoderbase-1b",
+    "prog_threshold": 1,
     "type_threshold": 10,
     "batch_size": 2,
     "patch_mode": "add",
-    "tokens_to_patch": ["<fim_middle>"],
-    "layers_to_patch": [10,11,12,13,14],
+    "tokens_to_patch": ["<fim_middle>", "<fim_suffix>"],
+    "layers_to_patch": [15,16,17,18],
     "test_size": 0.2,
     "fim_placeholder": false
 }

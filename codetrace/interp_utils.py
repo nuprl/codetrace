@@ -71,7 +71,7 @@ class TraceResult:
     
     def __init__(self, 
                  logits : torch.Tensor, 
-                 layer_idxs : List[int] | int,
+                 layer_idxs : Union[List[int],int],
                  hidden_states : torch.Tensor = None):
         self._logits = logits.detach().cpu()
         if hidden_states != None:
@@ -81,9 +81,9 @@ class TraceResult:
         
     def decode_logits(self, 
                     top_k : int = 1,
-                    layers : List[int] | int = -1,
-                    prompt_idx : List[int] | int = 0,
-                    token_idx : List[int] | int = -1,
+                    layers : Union[List[int],int] = -1,
+                    prompt_idx : Union[List[int],int] = 0,
+                    token_idx : Union[List[int],int] = -1,
                     do_log_probs : bool = False) -> LogitResult:
         """
         Decode logits to tokens, after scoring top_k
@@ -106,7 +106,7 @@ class TraceResult:
 
 
 def collect_hidden_states(model : LanguageModel,
-                          prompts : List[str] | str,
+                          prompts : Union[List[str],str],
                           layers : List[int] = None) -> List[torch.Tensor]:
     """
     Collect hidden states for each prompt. 
@@ -128,8 +128,8 @@ def collect_hidden_states(model : LanguageModel,
 
 
 def collect_hidden_states_at_tokens(model : LanguageModel,
-                                    prompts : List[str] | str,
-                                    tokens : List[int] | int | List[str] | str,
+                                    prompts : Union[List[str],str],
+                                    tokens : Union[List[int],int,List[str],str],
                                     layers : List[int] = None,
                                     debug = False) -> torch.Tensor:
     """
@@ -175,7 +175,7 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
     return hidden_states
 
 def collect_attention_output(model : LanguageModel,
-                             prompts : List[str] | str,
+                             prompts : Union[List[str],str],
                              layers : List[int] = None) -> List[torch.Tensor]:
     """
     Collect attention output for each prompt at each layer.
@@ -184,9 +184,9 @@ def collect_attention_output(model : LanguageModel,
     raise NotImplementedError("Not tested")
 
 def insert_attn_patch(model : LanguageModel,
-                 prompts : List[str] | str,
+                 prompts : Union[List[str],str],
                  patch : torch.Tensor,
-                 layers_to_patch : List[int] | int,
+                 layers_to_patch : Union[List[int],int],
                  patch_mode : str = "add") -> TraceResult:
     """
     Insert attn patch at layers. Only supports full-token patch.
@@ -197,10 +197,10 @@ def insert_attn_patch(model : LanguageModel,
 
 
 def insert_patch(model : LanguageModel,
-                 prompts : List[str] | str,
+                 prompts : Union[List[str],str],
                  patch : torch.Tensor,
-                 layers_to_patch : List[int] | int,
-                 tokens_to_patch : List[str] | List[int] | str | int,
+                 layers_to_patch : Union[List[int],int],
+                 tokens_to_patch : Union[List[str],List[int],str,int],
                  patch_mode : str = "add") -> TraceResult:
     """
     Insert patch at layers and tokens
@@ -264,8 +264,8 @@ def insert_patch(model : LanguageModel,
 
             
 def logit_lens(model : LanguageModel,
-               prompts : List[str] | str,
-               layers : List[int] | int = None,
+               prompts : Union[List[str],str],
+               layers : Union[List[int],int] = None,
                apply_norm : bool = True,
                store_hidden_states : bool = False) -> TraceResult:
     """
@@ -301,9 +301,9 @@ def logit_lens(model : LanguageModel,
     
     
 def patch_clean_to_corrupt(model : LanguageModel,
-                        clean_prompt : List[str] | str, 
-                        corrupted_prompt : List[str] | str,
-                        layers_to_patch : List[int] | int,
+                        clean_prompt : Union[List[str],str], 
+                        corrupted_prompt : Union[List[str],str],
+                        layers_to_patch : Union[List[int],int],
                         clean_index : int = -1,
                         corrupted_index : int = -1,
                         apply_norm : bool = True) -> TraceResult:
@@ -352,8 +352,8 @@ def patch_clean_to_corrupt(model : LanguageModel,
 
 def custom_lens(model : LanguageModel,
                 decoder : torch.nn.Module,
-                prompts : List[str] | str,
-                layer : int | List[int],
+                prompts : Union[List[str],str],
+                layer : Union[int,List[int]],
                 activations : torch.Tensor = None,
                 k : int = 1,) -> List[str]:
     """
