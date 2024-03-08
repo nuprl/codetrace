@@ -15,11 +15,11 @@ class SteeringCandidate:
     generator: Generator[str, None, None]
     last_positive_prompt: str
 
-    def __init__(self, item):
+    def __init__(self, item, apply_all_mutations):
         self.target = item["middle"]
         pos_context = item["prefix"] + item["middle"] + item["suffix"]
         prefix_length = len(item["prefix"])
-        self.generator = py_mutator.random_mutations(pos_context, prefix_length)
+        self.generator = py_mutator.random_mutations(pos_context, prefix_length, apply_all_mutations)
         self.last_positive_prompt = f"<fim_prefix>{item['prefix']}<fim_suffix>{item['suffix']}<fim_middle>"
 
     def candidate_neg_prompt(self):
@@ -83,7 +83,7 @@ def filter_immediate_mispredictions(model, tokenizer, batch_size, code_dataset):
     return results
 
 
-def generate_steering_pairs(model, tokenizer, batch_size, code_dataset):
+def generate_steering_pairs(model, tokenizer, batch_size, code_dataset, apply_all_mutations):
     # In case we are working with a tiny dataset.
     if len(code_dataset) < batch_size:
         batch_size = len(code_dataset)
@@ -99,7 +99,7 @@ def generate_steering_pairs(model, tokenizer, batch_size, code_dataset):
 
     # (2/3) The positive prompts, where the model predicts item.middle as the
     # most likely next token.
-    candidates = [ SteeringCandidate(item) for item in code_items ]
+    candidates = [ SteeringCandidate(item, apply_all_mutations) for item in code_items ]
 
     while True:
         # (3/3) A batch of mutations to each positive prompt.
@@ -144,7 +144,7 @@ def generate_steering_pairs(model, tokenizer, batch_size, code_dataset):
         new_candidates = filter_immediate_mispredictions(model, tokenizer, batch_size, new_candidates)
         # (3/3). We convert the new candidates to SteeringCandidates.
         for item in new_candidates:
-            candidates.append(SteeringCandidate(item))
+            candidates.append(SteeringCandidate(item, apply_all_mutations))
 
         # We may yield [ ], but there may still be more to yield later.
         yield results
@@ -159,12 +159,13 @@ def main():
     args.add_argument("--model", type=str, required=True)
     args.add_argument("--output", type=Path, required=True)
     args.add_argument("--batch-size", type=int, default=50)
+    args.add_argument("--all-mutations", action="store_true")
     args = args.parse_args()
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
         torch_dtype=torch.bfloat16,
-        device_map="cuda:3",
+        device_map="cuda",
         use_cache=True,
         attn_implementation="flash_attention_2"
     )
@@ -176,7 +177,7 @@ def main():
     ds = datasets.load_dataset("nuprl/manytypes4py", split="train")
     ds = ds.filter(lambda item: (len(item["contents"]) < 2048 * 3) and len(item["type_annotations"]) > 0)
 
-    gen = generate_steering_pairs(model, tokenizer, args.batch_size, ds)    
+    gen = generate_steering_pairs(model, tokenizer, args.batch_size, ds, args.all_mutations)    
 
     with open(args.output, "w") as f:
         counter = 0
