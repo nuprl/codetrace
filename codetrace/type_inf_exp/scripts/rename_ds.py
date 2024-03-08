@@ -6,24 +6,27 @@ import argparse
 from multiprocessing import Pool, cpu_count
 from transformers import AutoTokenizer
 import torch
+import json
+from codetrace.py_mutator import dataset_rename_vars as py_dataset_rename_vars
+import hashlib
 
-def _filter_incorrect(ds: datasets.Dataset, llm: LLM, tokenizer) -> datasets.Dataset:
+def _filter_incorrect(ds: datasets.Dataset, 
+                      llm: LLM,
+                      new_ds_name) -> datasets.Dataset:
     """
     Filter out examples where the model's prediction is incorrect. Truncate generation and
     solution at 1 token
     """
+    tokenizer = llm.get_tokenizer().tokenizer
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
-    batch_size = 1000
-    
-    ds = ds.map(lambda x: {"solution":tokenizer.convert_tokens_to_string(tokenizer.tokenize(x["fim_type"])[:1]),
-                        "prompt": placeholder_to_std_fmt(x["fim_program"], STARCODER_FIM)}, 
-                        num_proc=cpu_count(), keep_in_memory=True)
-    print(ds)
+    batch_size = 10000
+    ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["renamed_fim_program"], STARCODER_FIM),
+                            "solution":tokenizer.convert_tokens_to_string(tokenizer.tokenize(x["fim_type"])[:1])})
     prompts = ds["prompt"]
-    
     # batch generations because of RAM
     for i in tqdm(range(0, len(ds), batch_size), desc="Batch generations"):
+        
         generations = llm.generate(prompts[i:i+batch_size], params, use_tqdm=False)
 
         for j,output in enumerate(generations):
@@ -31,12 +34,13 @@ def _filter_incorrect(ds: datasets.Dataset, llm: LLM, tokenizer) -> datasets.Dat
             if generated_text != ds[i+j]["solution"]:
                 new_ds.append({**ds[i+j],"renamed_generated_text": generated_text})
                 
-        if len(new_ds) >0 and len(new_ds) % 100 == 0:
-            print(f"Saving {len(new_ds)} completions")
-            new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-            new_ds.save_to_disk(f"temp_{i}")
+        if i % 10000 == 0:
+            print(f"Len new_ds: {len(new_ds)}")
+            new_ds_hf = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
+            new_ds_hf.push_to_hub(new_ds_name)
     
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
+    new_ds.push_to_hub(new_ds_name)
     new_ds = new_ds.remove_columns(["prompt", "solution"])
     return new_ds
 
@@ -119,15 +123,19 @@ def _postprocess(dataset : datasets.Dataset, language : str) -> datasets.Dataset
 def main(args):
     ds = datasets.load_dataset(args.completions_ds, split=args.split)
     ds = _preprocess(ds, language=args.lang, remove_comments=args.remove_comments)
-    ds = dataset_rename_vars(ds, language=args.lang)
+    if args.lang in ["python","py"]:
+        ds = py_dataset_rename_vars(ds)
+    else:
+        ds = dataset_rename_vars(ds)
     ds.push_to_hub(args.new_ds_name + "_unfiltered")
     print(ds)
     
     # ds = datasets.load_dataset(args.new_ds_name + "_unfiltered", split=args.split)
-    llm = LLM(args.model, tensor_parallel_size=torch.cuda.device_count())
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
-    ds = _filter_incorrect(ds, llm, tokenizer)
+    llm = LLM(args.model)
+    ds = _filter_incorrect(ds, llm, args.new_ds_name)
     ds = _postprocess(ds, language=args.lang)
+    if "hexsha" not in ds.column_names:
+        ds = ds.add_column("hexsha", [hashlib.sha256(bytes(x["zip"]+x["filename"],"utf-8")).hexdigest() for x in ds])
     ds.push_to_hub(args.new_ds_name)
     
 if __name__ == "__main__":

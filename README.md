@@ -28,7 +28,8 @@ In jupyer `kernel.json` add env var, then restart vscode.
 
 Main interp and util code is in `codetrace/` toplevel. Experiments are organized in subdirectories. The REPL in each experiment subdirectory is `<exp_subdir>/main.ipynb`. Random notebooks in `notebooks/`. Note that only experiment subdir with `__init__.py` are up to date, all others deprecated.
 
-## TODO
+# TODO
 
-- fix renaming, especially python query
-- make renaming script (filtering) faster, eg. stop at 1tok
+large steering experiments
+- finalize py typeinf steering [X]
+- finalize ts typeinf steering []

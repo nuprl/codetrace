@@ -30,6 +30,12 @@ from tree_sitter import Node
 from typing import Generator, Set, List
 from dataclasses import dataclass
 from .utils import PY_LANGUAGE, PY_PARSER
+import datasets
+import os
+import glob
+import pandas as pd
+import random
+from multiprocessing import cpu_count
 
 # This query finds all the identifiers in a file.
 IDENTIFIERS = PY_LANGUAGE.query("""(identifier) @id""")
@@ -158,6 +164,10 @@ def _rename_var(buffer: bytes, root_node: Node, old_name: str, new_name: str) ->
         result.append(buffer[last_offset_start:].decode("utf-8"))
     return "".join(result)
 
+def make_new_name(new_length : int) -> str:
+    letters = "abcdefghijklmnopqrstuvwxyz"*10
+    new_name = "".join(random.sample(letters, new_length))
+    return new_name
 
 def _mutations_rec(
     depth: int, bound_vars: List[str], old_code: str, buffer: bytes
@@ -176,7 +186,7 @@ def _mutations_rec(
     tree = PY_PARSER.parse(buffer)
 
     for var_ix, var in enumerate(bound_vars):
-        new_name = f"__tmp{depth}"
+        new_name = make_new_name(len(var))
         new_code = _rename_var(buffer, tree.root_node, var, new_name)
         result = MutationResult(
             old_code=old_code, new_code=new_code, num_mutations=depth + 1
@@ -215,3 +225,46 @@ def mutations(code: str) -> Generator[MutationResult, None, None]:
     buffer = code.encode("utf-8")
     bound_vars = list(_get_bound_vars(buffer, PY_PARSER.parse(buffer).root_node))
     yield from _mutations_rec(0, bound_vars, code, buffer)
+    
+def dataset_rename_vars(dataset: datasets.Dataset) -> datasets.Dataset:
+    """
+    For each example in the dataset, rename all variables incrementally
+    """
+    new_dataset = []
+    
+    os.makedirs("temp", exist_ok=True)
+    
+    def _mutate(x):
+        new_dataset =[]
+        for r in mutations(x["fim_program"]):
+            if r.num_mutations > 10:
+                r.cut()
+            new_ex = x.copy()
+            new_ex["renamed_fim_program"] = r.new_code
+            new_ex["renamed_num"] = r.num_mutations
+            new_dataset.append(new_ex)
+        return {**x, "mutation_results": new_dataset}
+    
+    # shard ds and batch
+    batch_size = 20
+    start_idx = 240
+    num_shards = len(dataset) // batch_size
+    print(f"Sharding into {num_shards} shards")
+    for i in range(start_idx, len(dataset), batch_size):
+        shard = dataset.shard(num_shards=num_shards, index=i)
+        shard = shard.map(_mutate, num_proc=batch_size)
+        # save
+        shard.save_to_disk(f"temp/temp_{i}")
+    
+    new_ds = []
+    for f in glob.glob("temp/temp_*"):
+        new_ds.append(datasets.load_from_disk(f))
+    new_ds = datasets.concatenate_datasets(new_ds)
+    print(new_ds)
+    # unroll ds
+    for ex in new_ds:
+        for result in ex["mutation_results"]:
+            new_dataset.append(result)
+            
+    new_dataset = datasets.Dataset.from_pandas(pd.DataFrame(new_dataset))
+    return new_dataset

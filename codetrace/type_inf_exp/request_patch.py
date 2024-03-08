@@ -65,12 +65,39 @@ def batched_insert_patch(model : LanguageModel,
     # batch prompts according to batch size
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     results = []
-    for batch in tqdm(prompt_batches, desc="Insert Patch Batch"):
+    for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
         res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode)
         results.append(res)
+           
         
     return results
-    
+
+
+def batched_insert_patch_logit(model : LanguageModel,
+                    prompts : List[str] | str,
+                    patch : torch.Tensor,
+                    layers_to_patch : List[int],
+                    tokens_to_patch : List[str] | List[int] | str | int,
+                    patch_mode : str = "add",
+                    batch_size : int = 5) -> List[str]:
+    """
+    batched insert patch
+    """
+    if tokens_to_patch == []:
+        tokens_to_patch = list(range(patch.shape[1]))
+    # batch prompts according to batch size
+    prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
+    predictions =[]
+    for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
+        res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode)
+        prompt_len = res._logits.shape[1]
+        logits : LogitResult = res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
+        for j in range(prompt_len):
+            tok = logits[-1][j][-1].tokens(model.tokenizer)
+            tok = tok[0].strip()
+            predictions.append(tok)
+           
+    return predictions
 
 def filter_prompts(dataset : datasets.Dataset,
                    single_tokenize : PreTrainedTokenizer = None,
@@ -96,10 +123,7 @@ def filter_prompts(dataset : datasets.Dataset,
         if label_count[ex["fim_type"]] >= dedup_type_threshold and hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: 
             # if label and hexsha are already at threshold, break
             break
-        elif label_count[ex["fim_type"]] >= dedup_type_threshold:
-            # if label is at threshold, continue
-            continue
-        elif hexsha_count[ex["hexsha"]] >= dedup_prog_threshold:
+        elif label_count[ex["fim_type"]] >= dedup_type_threshold or hexsha_count[ex["hexsha"]] >= dedup_prog_threshold:
             # if hexsha is at threshold, continue
             continue
         

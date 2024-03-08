@@ -26,13 +26,13 @@ print(f"Model: {model_name}")
 ds = datasets.load_dataset(dataset, split="train", keep_in_memory=True)
 tokenizer = AutoTokenizer.from_pretrained(model)
 
-def _condition(x):
-    return len(x["fim_program"]) > 1000 and len(x["fim_program"]) < 8000
+# def _condition(x):
+#     return len(x["fim_program"]) > 1000 and len(x["fim_program"]) < 8000
 
-ds = ds.filter(_condition, num_proc=cpu_count())
-ds = ds.shuffle(seed=42)
+# ds = ds.filter(_condition, num_proc=cpu_count())
 # sample
 if args.max_size > -1:
+    ds = ds.shuffle(seed=42)
     ds = ds.select(range(args.max_size))
 
 params = SamplingParams(temperature=0)

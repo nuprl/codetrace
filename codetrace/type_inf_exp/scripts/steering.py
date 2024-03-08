@@ -3,43 +3,26 @@ from codetrace.utils import *
 from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
+import hashlib
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
     return ds.remove_columns(columns)
 
-def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
-    correct = dataset.filter(lambda x : x["correct"] == True and x["overfull"] == False)
-    incorrect = dataset.filter(lambda x : x["correct"] == False and x["overfull"] == False)
-    # keep only hexshas in incorrect
-    correct = dataset.filter(lambda x : x["hexsha"] in set(incorrect["hexsha"]))
-    assert set(correct["hexsha"]) == set(incorrect["hexsha"])
-    correct = filter_prompts(correct,
-                                dedup_prog_threshold=args.prog_threshold, 
-                                dedup_type_threshold=args.type_threshold)
-    incorrect = filter_prompts(incorrect,
-                                dedup_prog_threshold=args.prog_threshold, 
-                                dedup_type_threshold=args.type_threshold)
-    if args.test_size > 0:
-        # set aside some incorrect prompts
-        random.seed(4)
-        hexshas = list(incorrect["hexsha"])
-        hexshas = random.sample(hexshas, int(len(hexshas) * args.test_size))
-        incorrect_eval = incorrect.filter(lambda x : x["hexsha"] in hexshas)
-        incorrect = incorrect.filter(lambda x : x["hexsha"] not in hexshas)
-        correct = correct.filter(lambda x : x["hexsha"] not in hexshas)
-        return correct, incorrect, incorrect_eval
-    else:
-        return correct, incorrect, None
-
 def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
+    # if "hexsha" not in dataset.column_names:
+    #     dataset = dataset.add_column("hexsha", [hashlib.sha256(bytes(x["zip"]+x["filename"],"utf-8")).hexdigest() for x in dataset])
     dataset = filter_prompts(dataset, 
                              single_tokenize=tokenizer, 
                              dedup_prog_threshold=args.prog_threshold, 
                              dedup_type_threshold=args.type_threshold)
     correct = keep_columns(dataset, ["fim_program", "fim_type", "hexsha"])
-    incorrect = keep_columns(dataset, ["renamed_fim_program","fim_type","hexsha","renamed_generated_text","renamed_variables","renamed_percent"])
-    incorrect = incorrect.rename_columns({"renamed_fim_program": "fim_program", "renamed_generated_text":"generated_text"})
+    incorrect = keep_columns(dataset, ["renamed_fim_program","fim_type","hexsha"])
+    # correct = keep_columns(dataset, ["fim_program", "fim_type", "hexsha"])
+    # incorrect = keep_columns(dataset, ["renamed_fim_program","fim_type","hexsha","renamed_generated_text",
+    #                                    "renamed_variables","renamed_percent","renamed_num"])
+    incorrect = incorrect.rename_columns({"renamed_fim_program": "fim_program"})
+    # incorrect = incorrect.rename_columns({"renamed_fim_program": "fim_program", "renamed_generated_text":"generated_text"})
     if args.test_size > 0:
         # set aside some incorrect prompts
         random.seed(4)
@@ -76,29 +59,29 @@ def steer(
     patch_mode,
     batch_size
 ):
-    eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect_eval]
+    if args.fim_placeholder:
+        eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect_eval]
+    else:
+        eval_prompts = [ex["fim_program"] for ex in incorrect_eval]
     # print types in incorrect
     
-    out = batched_insert_patch(model, 
+    predictions = batched_insert_patch_logit(model, 
                 eval_prompts, 
                 diff_tensor, 
                 layers_to_patch,
                 tokens_to_patch,
                 patch_mode,
                 batch_size)
+    with open(f"steering_results.txt", "w") as f:
+        f.write(str(predictions))
     steering_results = []
-    for i,trace_res in tqdm(enumerate(out), desc="Logits"):
-        prompt_len = trace_res._logits.shape[1]
-        logits : LogitResult = trace_res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
-
-        for j in list(range(prompt_len)):
-            tok = logits[-1][j][-1].tokens(model.tokenizer)
-            assert len(tok) == 1, tok
-            tok = tok[0].strip()
-            ex = incorrect_eval[(i*args.batch_size)+j]
-            steering_results.append({"steered_generation" : tok, 
-                            "correct_steer" : (tok == ex["fim_type"]),
+    for i,tok in enumerate(predictions):
+        ex = incorrect_eval[i]
+        steering_results.append({"steered_generation" : tok, 
+                            "correct_steer" : (ex["fim_type"].startswith(tok)),
                             **ex})
+            
+         
     steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
     return steering_ds
 
@@ -113,9 +96,10 @@ def main():
 
     exp_dir = "/home/franlucc/projects/codetrace/codetrace/type_inf_exp"
     ds = datasets.load_dataset(args.dataset, split="train")
-    
+
+    print(ds)
     # filter out too large prompts for OOM
-    ds = ds.filter(lambda x : len(x["fim_program"]) < 8000 and x["fim_type"] not in ["this","{}"])
+    ds = ds.filter(lambda x : len(x["fim_program"]) < 8000)
 
     model = LanguageModel(args.model, device_map="cuda")
 
@@ -159,8 +143,12 @@ def main():
         diff_tensor = torch.load(f"{out_dir}/steering_tensor.pt")
     else:
         print(f"...Creating steering tensor...")
-        correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in correct]
-        incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect]
+        if args.fim_placeholder:
+            correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in correct]
+            incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect]
+        else:
+            correct_prompts = [ex["fim_program"] for ex in correct]
+            incorrect_prompts = [ex["fim_program"] for ex in incorrect]
         correct_avg_tensor = batched_get_averages(model, 
                                                 correct_prompts,
                                                 args.tokens_to_patch,
@@ -212,7 +200,7 @@ def main():
                         args.batch_size)
     steering_ds.save_to_disk(f"{out_dir}/steering_results_ds")
     df = steering_ds.to_pandas()
-    df = df[["steered_generation","fim_type","correct_steer","generated_text", "hexsha"]]
+    df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
     df.to_csv(f"{out_dir}/steering_results.csv")
             
     _evaluate(steering_ds, counts, args, out_dir, "eval_readme.md")
@@ -237,7 +225,7 @@ def main():
                             args.batch_size)
         steering_ds.save_to_disk(f"{out_dir}/steering_results_ood")
         df = steering_ds.to_pandas()
-        df = df[["steered_generation","fim_type","correct_steer","generated_text", "hexsha"]]
+        df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
         df.to_csv(f"{out_dir}/steering_results_ood.csv")
         
         _evaluate(steering_ds, counts, args, out_dir, "eval_ood_readme.md")

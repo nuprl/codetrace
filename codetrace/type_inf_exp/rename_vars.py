@@ -18,35 +18,13 @@ from multiprocessing import cpu_count
 from argparse import ArgumentParser
 
 TS_IDENTIFIER_QUERY = """((identifier) @name)""" 
-PY_IDENTIFIER_QUERY = f"""((identifier) @name (#not-match? @name "{get_builtins_regex('python')}"))"""
-
-lang_to_id_query = {
-    "typescript" : TS_IDENTIFIER_QUERY,
-    "python" : PY_IDENTIFIER_QUERY,
-    "ts" : TS_IDENTIFIER_QUERY,
-    "py" : PY_IDENTIFIER_QUERY
-}
     
-def capture_varnames(tree, language : str = "typescript") -> dict[str, list[tree_sitter.Node]]:
+def capture_varnames(tree) -> dict[str, list[tree_sitter.Node]]:
     """
     Given a program, capture all the variable names and their locations
     as tree-sitter (start, end) points
     """
-    idquery = lang_to_id_query[language]
-    
-    ignore_parents = []
-    if language in ["python", "py"]:
-        # TODO: fix this
-        ignore_parents = [r"\bdotted_name\b",
-                          r"type_.*",
-                          r"\bfunction_definition\b",
-                          r"\bdecorator\b"
-                          r".*_type",
-                          r"\btype\b", 
-                          r"\battribute\b",
-                          r"\bcall\b"]
-        
-    captures = get_captures(tree, idquery, ignore_parents, language)
+    captures = get_captures(tree, TS_IDENTIFIER_QUERY, language="ts")
     vars_to_locs = defaultdict(list)
     for c in captures:
         name = c[0].text
@@ -84,21 +62,18 @@ def make_new_name(new_length : int, existing_names : set[str]) -> str | None:
     return new_name
 
 
-def dataset_rename_vars(dataset: datasets.Dataset, language: str) -> datasets.Dataset:
+def dataset_rename_vars(dataset: datasets.Dataset) -> datasets.Dataset:
     """
     For each example in the dataset, rename all variables incrementally
     """
-    parser = lang_to_parser[language]
-    lang = lang_to_builder[language]
-    
     new_dataset = []
     
     for i,ex in enumerate(tqdm(dataset)):
         fim_program = ex["fim_program"]
         solution = ex["fim_type"]
         
-        tree = parser.parse(bytes( fim_program, "utf8"))
-        var_locs = capture_varnames(tree, language=language)
+        tree = TS_PARSER.parse(bytes( fim_program, "utf8"))
+        var_locs = capture_varnames(tree)
         
         names, newnames = set(var_locs.keys()), set()
         

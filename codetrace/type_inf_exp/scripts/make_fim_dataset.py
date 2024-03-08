@@ -12,8 +12,6 @@ parser.add_argument("--tokenizer", type=str, default="/home/arjun/models/starcod
 args = parser.parse_args()
 
 ds = datasets.load_dataset(args.input_ds, split="train")
-
-ds = ds.filter(lambda x: len(x["content"]) > 500 and len(x["content"]) < 10000, num_proc=cpu_count())
 ds = ds.map(lambda x: {"content": remove_comments(x["content"])}, num_proc=cpu_count())
 
 ds = make_typeinf_prompts(ds, QUERY_FUNC_TYPES)

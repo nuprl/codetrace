@@ -1,0 +1,615 @@
+Dataset({
+    features: ['fim_type', 'fim_program', 'renamed_fim_program', 'hexsha'],
+    num_rows: 1887
+})
+...Generating fit test split...
+Filter:   0%|          | 0/157 [00:00<?, ? examples/s]Filter: 100%|██████████| 157/157 [00:00<00:00, 57972.16 examples/s]
+Filter:   0%|          | 0/157 [00:00<?, ? examples/s]Filter: 100%|██████████| 157/157 [00:00<00:00, 80798.25 examples/s]
+Filter:   0%|          | 0/157 [00:00<?, ? examples/s]Filter: 100%|██████████| 157/157 [00:00<00:00, 82643.79 examples/s]
+Correct
+fim_type
+bool             1
+Figure           1
+JSON             1
+Definitions      1
+Replica          1
+Uploader         1
+Transformer      1
+FileManager      1
+Dependency       1
+Set              1
+Mention          1
+Paragraph        1
+Table            1
+Section          1
+Document         1
+Extension        1
+RequestId        1
+Flask            1
+type             1
+Field            1
+time             1
+Session          1
+Branch           1
+Board            1
+Population       1
+Column           1
+Listener         1
+Reference        1
+MP               1
+Token            1
+ServiceName      1
+Credential       1
+Node             1
+Trace            1
+Grid             1
+Cell             1
+Authorization    1
+Platform         1
+Style            1
+Data             1
+Caption          1
+Letter           1
+Site             1
+Config           1
+Article          1
+Options          1
+Breadcrumb       1
+Formula          1
+Route            1
+Payment          1
+Numeric          1
+Frame            1
+Format           1
+LogEntry         1
+UserId           1
+Msg              1
+Measurement      1
+Metric           1
+Notification     1
+TestCase         1
+Entity           1
+Report           1
+Word             1
+L                1
+Sequence         1
+object           1
+Tracer           1
+Exception        1
+timedelta        1
+decimal          1
+any              1
+PID              1
+Circuit          1
+DataFrame        1
+Bot              1
+Update           1
+Dict             1
+Callable         1
+float            1
+Mock             1
+Sign             1
+None             1
+dict             1
+Path             1
+HttpRequest      1
+bytes            1
+Element          1
+Realm            1
+UserProfile      1
+datetime         1
+list             1
+Title            1
+Props            1
+Any              1
+Span             1
+Lookup           1
+List             1
+Host             1
+A                1
+Database         1
+LineNumber       1
+Scope            1
+Cache            1
+Response         1
+tuple            1
+Text             1
+Mapping          1
+set              1
+Env              1
+Bool             1
+T                1
+Account          1
+Base             1
+Digest           1
+Dot              1
+Person           1
+Message          1
+Context          1
+Type             1
+Result           1
+Iterable         1
+Container        1
+Component        1
+date             1
+User             1
+Key              1
+Name: count, dtype: int64
+hexsha
+7723c68c170c007574f3d5318977e302829e1cd1635893d52c4c1a3265723ba1    1
+3cb9d515bf148f57e3051f3a841254808ac5c83d2e1cb598763c942d234bab45    1
+17002147b66cf8d55201be7c236f64ce828ee6732ad59795bc5fcef0cb8d7a5d    1
+f177bc1ca69966e25246ae1b41bf450ec33e65538f709008ac7ae000a573054b    1
+45afb103726ad40833db2b250ef2fd1f4b43887a83b33d81c26c4eb9a63547ed    1
+ec7e78a91eac85f8a41102d942327392f240a349c8f028f1b86efec314f31944    1
+d9c6cc301910533e71898c4feeb401e2b50386fec1d8779d143147854213fe66    1
+effaa835d093b1d7addda790043bff9bc4172a47a9383cb3d95821dc365da03a    1
+2fa3dd24473a51a656a1f8771fb7a26947bfb88bae6ff27ad31b1f528854b1cb    1
+8a1dd96c05212d185d9f0d639ff339fbc7e0ce6d735eba01606eb3264a87989b    1
+f568550489b43ab874fc408b28f8a5c971985aa081cc1b17ecef3ee89a283469    1
+eb22bd67fc2c85ebc787b51314a8a7ea1eb1e1f0a875a8b4d6a8bf24f65dcab6    1
+1fd2a4ff9d5009ddfc68f81bd43a0fac52aea035fc81b692838c3c665c18ff33    1
+0947e2c69957704b08738b22cf8be1984480e87b19360bf456bede218ff4e6d0    1
+b5b3948797739ca805b8d4c93ed89d3c5bfcf3111405c7437b2450c23d5ea465    1
+c25d013c18fbac9a97c086940a690049204e1653de7b91849167bdd34553e4c9    1
+1d6730739c7440b1948e889528d10d30a1e62258cc32c1448a79ab0184824735    1
+1fa6d5237cddfca745e2f81cb64d925d17ca88b19c58f6fbfca6edb0bed3a66c    1
+c9bb75bdec8905b83c1ce1c4028eb1bf53457af581ee8449e5f84d59482e215f    1
+c45927d4ecae10e3e3282ce9ddc870d565f44d71325a29a1671cde528f879d3c    1
+dcf39b2943261fb3933bc3b5df0fe9995871b8ed04bd097decd959db3b9ddf81    1
+b12921eaa0f379c0e6d6fcb71723fcec4f4fecb8db6aa8343186e0c40da62fa4    1
+5a6af818fa1cb7b2c557d439ee7ac0fc084bfe90049f148c40f73978ce9fbbac    1
+f2828d251b580b950ff39953512e8b6e9b7f501177d6263c3ccd8f6bbf644b11    1
+59a266095574d944d9ec2a0fc2658d8c585b1d8b5fdd1fd6fadff55f0451a781    1
+775411d7398ef269e6c7fb47782783d27f76eca4f063f78031e3b2463cd95280    1
+b06016199390704114a6d75b8777525e30d553266c5bc750af24ecce7c5011bc    1
+ee0dc34348b168f9653e69845714d317dc83d37c1461d199affe0cc9d9fefb12    1
+7443a665b176aa7a264a1b4631ba62650955d443f78d7fc83eb8000ca0ffb841    1
+92361786fc09178e12b01a65105eabb9d3ec3506a31adb5300d206582a58d222    1
+9fae29d999abe26918354c5d1eb7f9e428abd2d4750258e02abed451149c88c2    1
+f62c3b5d76f3de489ef672f233a8edd4d0cb67172a67dea54a21428f77d701fc    1
+89ea8579826cf20b093c5b892efbd2fa740840817ab1e41de2d8f616176ef3b7    1
+132404e5323faa3198888baeb919cb95da0798400971d39a04792cbb073d71db    1
+4ddba955a4b761e79e60c1cd2360480fc637272afc76b676540ec4198dafe410    1
+48dd18570f060ea97ef8cd65302adf95dc4cd7b89c0daebee9575833e7d3d545    1
+640c4bc7a1e2f8b46f7665e36533f31362b76f2db24f19c32d41b47b33822a2d    1
+e00739182cc6fddd2466697f8071e5d738aeb470c73afb0e730879906f3669b1    1
+9fcfd32263a56939be7a7b480afaa63680959273ba7c04474d018a67ce4170ac    1
+f6da47f197909f6682f94f4b58fbab9ee1c9575045f62021493aebcda7a1412e    1
+2ebf1989d6a409e0ef265a668eabe14a199eec12e0e1aa2e0d86affc58b4ff4e    1
+d246f85249905b89b9a515ba0b0b51a9ef0bd3107e7ed1deab3e39c27a50fa05    1
+4cb280d2c883335a099b859758a6f5179c8e23cce7ac94459bf4eca5efa596fa    1
+843517a54adf93555a092c95fbe634df93d6411890e1c030271f91c0d5bbce44    1
+92dbb06daf7ead2f4ca4da2b2cb233f1cd891ae6d65cd21c06b200a549bb77ca    1
+271d7c22987b7dd993d79aa8a9d36af319acf648e2c17b51f7bb6bc2ea81dfd3    1
+1dbe63bca665a27bed8e27c849d03b66bef608759e9e9ebfa9a1a6c57bc85f72    1
+2ede0eed8a914c8c20d021338c59711c418582c193c6c8daaede98469ce337c8    1
+0d6e99df4bec33a6629cdee78fff9f640c324573cf985c22e4241b202ce22600    1
+f1102a52d8f8dcddec9f513f201f108996c07dcd7811c8bb9d8a3a736fcde51d    1
+60bb71d12ea652c5a9ae3322b38716632d76e5ea8490f6f25490694848badded    1
+efae5bde3aaf67fc31768e0e6b8f369bbd3a75e8d9ae4819ea2eda49e332884b    1
+326ad7c2b3f67b1ab733a0d5648a16f4db1152eb9d8603742fe450c93e46cf0c    1
+54038aa4452e41cc3fde43459829f04e8b15868223a0e074c4599c5e14ec89b0    1
+ac33528b29cba4890fd21905f0fad22ee28c0fa10f2816a825c205d2a8196e27    1
+f696a60cb52860913974baa573e4f529fbca7fb34006991fdecd2f0ad0f5341a    1
+432a9aef640966576bb546e9f81a3b8726ade87d32ed21560cd31fbbe7b8d579    1
+f9998f198a6c8df1df507d7a824e272d1de12dabe5a3c00d51c1a4945ae64389    1
+a4dc898af6b6e7e17f2bea63654c46791fac117b88c2b809909b167fea453aa7    1
+e909fa18a1edcc799519c28b5879e79c5db0c2f2015ba52b0399afd1757fad46    1
+bd9771f011214919689fc8f5cc36cfd79eb90ad72efa011626f33ba185665d7f    1
+b6817bf8939ac5962654af21b6a11c67d76b4fda19857575d4d81d48f779db26    1
+f08af9dee69107b6cb6e1190035a36ce447fe377a596763cb2c04f1dab429bf0    1
+6c6e19b9d3f53a879d4d06066287db7e34b35e414f956e7488ce44548ee3a080    1
+7b51e45e843fe79bd47232a9b6ab5cd7a5be7809d453c1a0852f987bc3b134c6    1
+e06e5f4fa3c20ef70edff8c54d22802c19998ca2ec3e8fdc9d3eca51fd6ef60f    1
+80b141c033b88ab04bfb47c5245cf28085c4ea6892ad5f62503e8ce7e05a058b    1
+7438e54c831e199c09443a79093dde79b80163a7524bec929db5a5d5bb33031a    1
+df3c3115c2728f399d978fcef5d9b933d1c17acebb66bb5e490a3a8d25c6ba17    1
+08662368ab8c55fcbe7f99bff18e61340de14ecf6311c38107b623750dfc1dff    1
+f1b5b91edbca8d568b7dbba5fcd358bf28cb9ba0c90132d12ecc7dfc9e51d427    1
+01a5bb659585c82f5f5241729c7b6e6073c7b85b778ae1e91df08f4c01acba7b    1
+bb3d5f1d066fc3c490460f25a851f5431f0e6a12e056f62405384780690388f5    1
+ea0f90894ea8039d78b249b782f35528adc7765b2731b32067905c0024d235c4    1
+8db42f8ff45cdab1427eab558f62b355985b0d86b5e08dfb7243963aedb1720b    1
+520a098f55422cd717566eefc8fb20eae036ab4cb7dde0f20c869f7dfbef9e73    1
+2c9ad1f474c25eed3c21ff63d708d2d83645d3e0c02fd9594ddced62ba03a932    1
+5f741d5a590a8de24ea5e14161d506e163f7003c0772a5235963f597ebdc702a    1
+aa0f64b4b21ecbe1be6ab073c9209c66c0769ee5b854c53a46be393217d11149    1
+a1fafafff979621a3963cb97d2472f87bfb4bed81c18b5256e46d8c333c78752    1
+87aaaca4339e2aa02826548fae199f27e523a1c71b63b8cdad208efeb8718ab8    1
+42de7750029bec0a4345ffbae2414e1aac64f37fd4d14e1e2cbcbc12708785cd    1
+077223753991af295bfef4994ea638018122644af96c99e84423c81120194801    1
+4fc5c11b228bab46971b6a5ff12d0a8bf350fb3baaa03c7fc03b4309a9e40f2a    1
+400ff8ca2859ff319dfa1635456dd8f7c1335f76e55d9d50e11473e6b3e54369    1
+ca1cb8a00667a6d368e4c9397370d554962cb2c59b8395effa53f56bf03cb042    1
+5a58243e78adffed59739940bc27dbf8e7b354c99cb3af52a6e720f5e4c500ee    1
+1c9569f3b55c50f8d1124980992f812a8951b6ba9f24eb6df0f5c3d632186419    1
+ca640aa65c952588ce37072aed678a7fb07e36ecdb27911248b05d4ebf552a2b    1
+94af3a3c50fdbc6a7b536672c6b564d99310fdc2cee6b0023eeee94c9006a175    1
+186f4ff82dc65c348a884df965ea066459d2d4aa98a534b3335958e64e018e9d    1
+71b74229dfc237ba553dfce3d319aa6be8a77f87efee231d91c6ff9e21c47a43    1
+faa7508638ac5f191b53421ba80aa4c02da7efb7196d390eb24ce108f65a33cb    1
+2fa3c752de680447004124eadb880a176fb128f4239c66ef0ec155b68c009227    1
+83d0a5adfedf645f81012ce06844ff55574f3fa745e85c24cc2cb29c2f1cd5fe    1
+1304858089a995be9348e78d616ce1d917435b75c75caf57a684327f14751ddc    1
+ef9b8e61a44d917417307bc104ba6fc81c4164e3a8c58da5fdada4c87846fd5b    1
+06745bcc484b90f32c1a591899203aa61d43429d671aa7cc4660bc116b419467    1
+b9d1f08d8e8d06274ef035e050d3ec27440699e4524fefe3755fac069c04cb64    1
+8f4c0b90bd7a09f7e5046376b77e8a743d65e48e1a7cb3f44dae643906dc2669    1
+e37920909a7ce489e41f23ac3d906c18e1b90d2e6c5ff13fe82500711eece76f    1
+0de4b629c0b99109342283b179b0f28fc10c372210cf0d9b5829b4d296c793f7    1
+cf35e429320f9e47c01d8632adf4608b635fea8f9a79594574a79c57461c1fa2    1
+e61a57640f608df1b51af4f13e47218b167d0260a43010efc7eb4d60ab4db3b0    1
+f4eb51f96759cc79da2227896399492d2c82045efef7a4b3fce48d2d818f4a71    1
+fb4428de9067630850ae8477dfd630c7887887e83a4064025cda199924f158eb    1
+52da9dbe8ee20b724396193fc67158a72db95b96573ead0ba2c6b29fa19e9ade    1
+6c26379a3e79885c67c47485971fe228d0141bcd60f04057e8094f9b0df9d4a3    1
+d19aa0058d0bfe93b3f47412a5d011b07c3a3836a78c92d0b4916730f0f58be8    1
+26981642227042d456e6677a06bd4eb4ce6e4729de32b50e0ae3104f8feaffc6    1
+f0db398c45693aacd43b3007a6df7589dc39a409600dabe1238d69a58d2ef9e0    1
+7751329b0241a3d4fac9cc68f68ed61171c099ae9dd60e5427c4e13e65317a04    1
+bf8801f8fc8bed2d9b40bdf71f5efcb1083b4d37deb16835cf80a95877b03b56    1
+5d12900a3cacfdee01dc631fa88ccccbd9d2b151e788bedf311a8c6af5f17f97    1
+db446bd127743fffe6358825506ed3d623b151ed77fb5f7f7654c07ff6aab6c6    1
+2ca46ea91d059c6def4ae5391c1ced493e20b486e690600a862526f973722f59    1
+62ebb6c943f134dbd1f7c9236678ac5a967dc3f0c786187d864790b8ff84439b    1
+a61e0ac59d864d9d84ec59d6376bfbe889809ba968dea415fd68929f495acd81    1
+cff198a5ec94a285549fb8aba113a70e1e12de6e6584202c1b1bda6a24c62371    1
+0b194f958ca2226a5781a6cb57e43909479bb492011fad4e589c06a53f56791d    1
+4b5a8c0d6d9901f1de8454ef1fc1b8fd2f84b218b2776c563f922270da5cf845    1
+d22bb597ab59480ebbe0c22633dc7bed2db1d7a7d0200825663a67a1138bd9a7    1
+8f560d916b13b546574109de4092f8834018eeb2d0881c4f732e6f7ab628c2a5    1
+7eaaf5c251b0a6c8e4af11066d04397ca2381b8a2270b0febdfe74dd3c64d8fb    1
+c4f9640a94099855d3e08c6c5233c1461f950b6dec106b2332fb4191b819b608    1
+302f2ff8a11c6241f83f1e6675695640ade3cb8572143e84cd704409f4c000c2    1
+Name: count, dtype: int64
+126
+
+Incorrect
+fim_type
+bool             1
+Figure           1
+JSON             1
+Definitions      1
+Replica          1
+Uploader         1
+Transformer      1
+FileManager      1
+Dependency       1
+Set              1
+Mention          1
+Paragraph        1
+Table            1
+Section          1
+Document         1
+Extension        1
+RequestId        1
+Flask            1
+type             1
+Field            1
+time             1
+Session          1
+Branch           1
+Board            1
+Population       1
+Column           1
+Listener         1
+Reference        1
+MP               1
+Token            1
+ServiceName      1
+Credential       1
+Node             1
+Trace            1
+Grid             1
+Cell             1
+Authorization    1
+Platform         1
+Style            1
+Data             1
+Caption          1
+Letter           1
+Site             1
+Config           1
+Article          1
+Options          1
+Breadcrumb       1
+Formula          1
+Route            1
+Payment          1
+Numeric          1
+Frame            1
+Format           1
+LogEntry         1
+UserId           1
+Msg              1
+Measurement      1
+Metric           1
+Notification     1
+TestCase         1
+Entity           1
+Report           1
+Word             1
+L                1
+Sequence         1
+object           1
+Tracer           1
+Exception        1
+timedelta        1
+decimal          1
+any              1
+PID              1
+Circuit          1
+DataFrame        1
+Bot              1
+Update           1
+Dict             1
+Callable         1
+float            1
+Mock             1
+Sign             1
+None             1
+dict             1
+Path             1
+HttpRequest      1
+bytes            1
+Element          1
+Realm            1
+UserProfile      1
+datetime         1
+list             1
+Title            1
+Props            1
+Any              1
+Span             1
+Lookup           1
+List             1
+Host             1
+A                1
+Database         1
+LineNumber       1
+Scope            1
+Cache            1
+Response         1
+tuple            1
+Text             1
+Mapping          1
+set              1
+Env              1
+Bool             1
+T                1
+Account          1
+Base             1
+Digest           1
+Dot              1
+Person           1
+Message          1
+Context          1
+Type             1
+Result           1
+Iterable         1
+Container        1
+Component        1
+date             1
+User             1
+Key              1
+Name: count, dtype: int64
+hexsha
+7723c68c170c007574f3d5318977e302829e1cd1635893d52c4c1a3265723ba1    1
+3cb9d515bf148f57e3051f3a841254808ac5c83d2e1cb598763c942d234bab45    1
+17002147b66cf8d55201be7c236f64ce828ee6732ad59795bc5fcef0cb8d7a5d    1
+f177bc1ca69966e25246ae1b41bf450ec33e65538f709008ac7ae000a573054b    1
+45afb103726ad40833db2b250ef2fd1f4b43887a83b33d81c26c4eb9a63547ed    1
+ec7e78a91eac85f8a41102d942327392f240a349c8f028f1b86efec314f31944    1
+d9c6cc301910533e71898c4feeb401e2b50386fec1d8779d143147854213fe66    1
+effaa835d093b1d7addda790043bff9bc4172a47a9383cb3d95821dc365da03a    1
+2fa3dd24473a51a656a1f8771fb7a26947bfb88bae6ff27ad31b1f528854b1cb    1
+8a1dd96c05212d185d9f0d639ff339fbc7e0ce6d735eba01606eb3264a87989b    1
+f568550489b43ab874fc408b28f8a5c971985aa081cc1b17ecef3ee89a283469    1
+eb22bd67fc2c85ebc787b51314a8a7ea1eb1e1f0a875a8b4d6a8bf24f65dcab6    1
+1fd2a4ff9d5009ddfc68f81bd43a0fac52aea035fc81b692838c3c665c18ff33    1
+0947e2c69957704b08738b22cf8be1984480e87b19360bf456bede218ff4e6d0    1
+b5b3948797739ca805b8d4c93ed89d3c5bfcf3111405c7437b2450c23d5ea465    1
+c25d013c18fbac9a97c086940a690049204e1653de7b91849167bdd34553e4c9    1
+1d6730739c7440b1948e889528d10d30a1e62258cc32c1448a79ab0184824735    1
+1fa6d5237cddfca745e2f81cb64d925d17ca88b19c58f6fbfca6edb0bed3a66c    1
+c9bb75bdec8905b83c1ce1c4028eb1bf53457af581ee8449e5f84d59482e215f    1
+c45927d4ecae10e3e3282ce9ddc870d565f44d71325a29a1671cde528f879d3c    1
+dcf39b2943261fb3933bc3b5df0fe9995871b8ed04bd097decd959db3b9ddf81    1
+b12921eaa0f379c0e6d6fcb71723fcec4f4fecb8db6aa8343186e0c40da62fa4    1
+5a6af818fa1cb7b2c557d439ee7ac0fc084bfe90049f148c40f73978ce9fbbac    1
+f2828d251b580b950ff39953512e8b6e9b7f501177d6263c3ccd8f6bbf644b11    1
+59a266095574d944d9ec2a0fc2658d8c585b1d8b5fdd1fd6fadff55f0451a781    1
+775411d7398ef269e6c7fb47782783d27f76eca4f063f78031e3b2463cd95280    1
+b06016199390704114a6d75b8777525e30d553266c5bc750af24ecce7c5011bc    1
+ee0dc34348b168f9653e69845714d317dc83d37c1461d199affe0cc9d9fefb12    1
+7443a665b176aa7a264a1b4631ba62650955d443f78d7fc83eb8000ca0ffb841    1
+92361786fc09178e12b01a65105eabb9d3ec3506a31adb5300d206582a58d222    1
+9fae29d999abe26918354c5d1eb7f9e428abd2d4750258e02abed451149c88c2    1
+f62c3b5d76f3de489ef672f233a8edd4d0cb67172a67dea54a21428f77d701fc    1
+89ea8579826cf20b093c5b892efbd2fa740840817ab1e41de2d8f616176ef3b7    1
+132404e5323faa3198888baeb919cb95da0798400971d39a04792cbb073d71db    1
+4ddba955a4b761e79e60c1cd2360480fc637272afc76b676540ec4198dafe410    1
+48dd18570f060ea97ef8cd65302adf95dc4cd7b89c0daebee9575833e7d3d545    1
+640c4bc7a1e2f8b46f7665e36533f31362b76f2db24f19c32d41b47b33822a2d    1
+e00739182cc6fddd2466697f8071e5d738aeb470c73afb0e730879906f3669b1    1
+9fcfd32263a56939be7a7b480afaa63680959273ba7c04474d018a67ce4170ac    1
+f6da47f197909f6682f94f4b58fbab9ee1c9575045f62021493aebcda7a1412e    1
+2ebf1989d6a409e0ef265a668eabe14a199eec12e0e1aa2e0d86affc58b4ff4e    1
+d246f85249905b89b9a515ba0b0b51a9ef0bd3107e7ed1deab3e39c27a50fa05    1
+4cb280d2c883335a099b859758a6f5179c8e23cce7ac94459bf4eca5efa596fa    1
+843517a54adf93555a092c95fbe634df93d6411890e1c030271f91c0d5bbce44    1
+92dbb06daf7ead2f4ca4da2b2cb233f1cd891ae6d65cd21c06b200a549bb77ca    1
+271d7c22987b7dd993d79aa8a9d36af319acf648e2c17b51f7bb6bc2ea81dfd3    1
+1dbe63bca665a27bed8e27c849d03b66bef608759e9e9ebfa9a1a6c57bc85f72    1
+2ede0eed8a914c8c20d021338c59711c418582c193c6c8daaede98469ce337c8    1
+0d6e99df4bec33a6629cdee78fff9f640c324573cf985c22e4241b202ce22600    1
+f1102a52d8f8dcddec9f513f201f108996c07dcd7811c8bb9d8a3a736fcde51d    1
+60bb71d12ea652c5a9ae3322b38716632d76e5ea8490f6f25490694848badded    1
+efae5bde3aaf67fc31768e0e6b8f369bbd3a75e8d9ae4819ea2eda49e332884b    1
+326ad7c2b3f67b1ab733a0d5648a16f4db1152eb9d8603742fe450c93e46cf0c    1
+54038aa4452e41cc3fde43459829f04e8b15868223a0e074c4599c5e14ec89b0    1
+ac33528b29cba4890fd21905f0fad22ee28c0fa10f2816a825c205d2a8196e27    1
+f696a60cb52860913974baa573e4f529fbca7fb34006991fdecd2f0ad0f5341a    1
+432a9aef640966576bb546e9f81a3b8726ade87d32ed21560cd31fbbe7b8d579    1
+f9998f198a6c8df1df507d7a824e272d1de12dabe5a3c00d51c1a4945ae64389    1
+a4dc898af6b6e7e17f2bea63654c46791fac117b88c2b809909b167fea453aa7    1
+e909fa18a1edcc799519c28b5879e79c5db0c2f2015ba52b0399afd1757fad46    1
+bd9771f011214919689fc8f5cc36cfd79eb90ad72efa011626f33ba185665d7f    1
+b6817bf8939ac5962654af21b6a11c67d76b4fda19857575d4d81d48f779db26    1
+f08af9dee69107b6cb6e1190035a36ce447fe377a596763cb2c04f1dab429bf0    1
+6c6e19b9d3f53a879d4d06066287db7e34b35e414f956e7488ce44548ee3a080    1
+7b51e45e843fe79bd47232a9b6ab5cd7a5be7809d453c1a0852f987bc3b134c6    1
+e06e5f4fa3c20ef70edff8c54d22802c19998ca2ec3e8fdc9d3eca51fd6ef60f    1
+80b141c033b88ab04bfb47c5245cf28085c4ea6892ad5f62503e8ce7e05a058b    1
+7438e54c831e199c09443a79093dde79b80163a7524bec929db5a5d5bb33031a    1
+df3c3115c2728f399d978fcef5d9b933d1c17acebb66bb5e490a3a8d25c6ba17    1
+08662368ab8c55fcbe7f99bff18e61340de14ecf6311c38107b623750dfc1dff    1
+f1b5b91edbca8d568b7dbba5fcd358bf28cb9ba0c90132d12ecc7dfc9e51d427    1
+01a5bb659585c82f5f5241729c7b6e6073c7b85b778ae1e91df08f4c01acba7b    1
+bb3d5f1d066fc3c490460f25a851f5431f0e6a12e056f62405384780690388f5    1
+ea0f90894ea8039d78b249b782f35528adc7765b2731b32067905c0024d235c4    1
+8db42f8ff45cdab1427eab558f62b355985b0d86b5e08dfb7243963aedb1720b    1
+520a098f55422cd717566eefc8fb20eae036ab4cb7dde0f20c869f7dfbef9e73    1
+2c9ad1f474c25eed3c21ff63d708d2d83645d3e0c02fd9594ddced62ba03a932    1
+5f741d5a590a8de24ea5e14161d506e163f7003c0772a5235963f597ebdc702a    1
+aa0f64b4b21ecbe1be6ab073c9209c66c0769ee5b854c53a46be393217d11149    1
+a1fafafff979621a3963cb97d2472f87bfb4bed81c18b5256e46d8c333c78752    1
+87aaaca4339e2aa02826548fae199f27e523a1c71b63b8cdad208efeb8718ab8    1
+42de7750029bec0a4345ffbae2414e1aac64f37fd4d14e1e2cbcbc12708785cd    1
+077223753991af295bfef4994ea638018122644af96c99e84423c81120194801    1
+4fc5c11b228bab46971b6a5ff12d0a8bf350fb3baaa03c7fc03b4309a9e40f2a    1
+400ff8ca2859ff319dfa1635456dd8f7c1335f76e55d9d50e11473e6b3e54369    1
+ca1cb8a00667a6d368e4c9397370d554962cb2c59b8395effa53f56bf03cb042    1
+5a58243e78adffed59739940bc27dbf8e7b354c99cb3af52a6e720f5e4c500ee    1
+1c9569f3b55c50f8d1124980992f812a8951b6ba9f24eb6df0f5c3d632186419    1
+ca640aa65c952588ce37072aed678a7fb07e36ecdb27911248b05d4ebf552a2b    1
+94af3a3c50fdbc6a7b536672c6b564d99310fdc2cee6b0023eeee94c9006a175    1
+186f4ff82dc65c348a884df965ea066459d2d4aa98a534b3335958e64e018e9d    1
+71b74229dfc237ba553dfce3d319aa6be8a77f87efee231d91c6ff9e21c47a43    1
+faa7508638ac5f191b53421ba80aa4c02da7efb7196d390eb24ce108f65a33cb    1
+2fa3c752de680447004124eadb880a176fb128f4239c66ef0ec155b68c009227    1
+83d0a5adfedf645f81012ce06844ff55574f3fa745e85c24cc2cb29c2f1cd5fe    1
+1304858089a995be9348e78d616ce1d917435b75c75caf57a684327f14751ddc    1
+ef9b8e61a44d917417307bc104ba6fc81c4164e3a8c58da5fdada4c87846fd5b    1
+06745bcc484b90f32c1a591899203aa61d43429d671aa7cc4660bc116b419467    1
+b9d1f08d8e8d06274ef035e050d3ec27440699e4524fefe3755fac069c04cb64    1
+8f4c0b90bd7a09f7e5046376b77e8a743d65e48e1a7cb3f44dae643906dc2669    1
+e37920909a7ce489e41f23ac3d906c18e1b90d2e6c5ff13fe82500711eece76f    1
+0de4b629c0b99109342283b179b0f28fc10c372210cf0d9b5829b4d296c793f7    1
+cf35e429320f9e47c01d8632adf4608b635fea8f9a79594574a79c57461c1fa2    1
+e61a57640f608df1b51af4f13e47218b167d0260a43010efc7eb4d60ab4db3b0    1
+f4eb51f96759cc79da2227896399492d2c82045efef7a4b3fce48d2d818f4a71    1
+fb4428de9067630850ae8477dfd630c7887887e83a4064025cda199924f158eb    1
+52da9dbe8ee20b724396193fc67158a72db95b96573ead0ba2c6b29fa19e9ade    1
+6c26379a3e79885c67c47485971fe228d0141bcd60f04057e8094f9b0df9d4a3    1
+d19aa0058d0bfe93b3f47412a5d011b07c3a3836a78c92d0b4916730f0f58be8    1
+26981642227042d456e6677a06bd4eb4ce6e4729de32b50e0ae3104f8feaffc6    1
+f0db398c45693aacd43b3007a6df7589dc39a409600dabe1238d69a58d2ef9e0    1
+7751329b0241a3d4fac9cc68f68ed61171c099ae9dd60e5427c4e13e65317a04    1
+bf8801f8fc8bed2d9b40bdf71f5efcb1083b4d37deb16835cf80a95877b03b56    1
+5d12900a3cacfdee01dc631fa88ccccbd9d2b151e788bedf311a8c6af5f17f97    1
+db446bd127743fffe6358825506ed3d623b151ed77fb5f7f7654c07ff6aab6c6    1
+2ca46ea91d059c6def4ae5391c1ced493e20b486e690600a862526f973722f59    1
+62ebb6c943f134dbd1f7c9236678ac5a967dc3f0c786187d864790b8ff84439b    1
+a61e0ac59d864d9d84ec59d6376bfbe889809ba968dea415fd68929f495acd81    1
+cff198a5ec94a285549fb8aba113a70e1e12de6e6584202c1b1bda6a24c62371    1
+0b194f958ca2226a5781a6cb57e43909479bb492011fad4e589c06a53f56791d    1
+4b5a8c0d6d9901f1de8454ef1fc1b8fd2f84b218b2776c563f922270da5cf845    1
+d22bb597ab59480ebbe0c22633dc7bed2db1d7a7d0200825663a67a1138bd9a7    1
+8f560d916b13b546574109de4092f8834018eeb2d0881c4f732e6f7ab628c2a5    1
+7eaaf5c251b0a6c8e4af11066d04397ca2381b8a2270b0febdfe74dd3c64d8fb    1
+c4f9640a94099855d3e08c6c5233c1461f950b6dec106b2332fb4191b819b608    1
+302f2ff8a11c6241f83f1e6675695640ade3cb8572143e84cd704409f4c000c2    1
+Name: count, dtype: int64
+126
+
+Incorrect Eval
+fim_type
+array         1
+Instance      1
+Point         1
+Money         1
+Storage       1
+Func          1
+Params        1
+Piece         1
+Remote        1
+Decimal       1
+Language      1
+Stage         1
+Fragment      1
+Line          1
+Chapter       1
+Schema        1
+int           1
+Model         1
+Client        1
+Expression    1
+URL           1
+Book          1
+Mol           1
+Request       1
+Project       1
+Logger        1
+Segment       1
+ValueType     1
+Buckets       1
+str           1
+Api           1
+Name: count, dtype: int64
+hexsha
+d36f8a68bae6ec8175c92218ed973daf4412a424b999494154c96131882f1533    1
+a189f6d4b443a979b7b6c9e4c9f8d7103076ebe3a78a66f536c440b8efdde7a4    1
+595516ea0a7fe231291433445b6e2c56d93ab0f2d49efb196db9a047789d5ff9    1
+15ef7c56b7ea25c22f70c60c43c78172794a26a3014736de425d263abf157b9a    1
+76a7994948853e5d90008005331b799b1ac5e2dead664c9d5f0a04b348d9f959    1
+3918b645e24c247784cc5f040106494beb390205d8e07ce6b634815171c8d102    1
+b7b0d257f65ec6b37ef6a7b18d4567f3dfedb247923ed4d1917b8ee0ca7cf5cf    1
+880e5f70b02bf131ba5239cdbc0d5ca9c9f4c94bb99a516d01b32f46ee2a1569    1
+cf7203fa0ecfd2b5628f2250e702714f3cd8ddac93dd9d8708829fd9336161dd    1
+2c7405f05f2db3cb14e4bdfd556e11f93249c85b955d837316f3049e79797584    1
+5f18c8d4f58af354a9644ba986a0e4498d8dae35654080f341d4e0d040f8eaa6    1
+d6ca3c1ffc40ffa6c55c261988c3fd0df17343620e0310023d4209a2017b516d    1
+1364d1f75184a3f8682de6d7f7199d5b2d83c58b2b6c5c28c396df7e1ee02118    1
+27d210ba7f9722695a168e7092c85fbd29f4ab213836f25d41f8ee02931e5dfa    1
+1c2ad8e172cb1ea496700b811fc77a8d43df59b71f6fcb192f6a0f8b1326a6c4    1
+92e5f94bacc92ab81f81a22d303c7f6ddd75e14207fd99708d2164c1a7466d60    1
+f5321abe9dd65346ee84f3d4d6c4a7ab561765802f49dfb614a701bc5eb9a62f    1
+47df5712d692eee9b0e6169a3eac28e24608f0935f4022c257cbe5453a6bd8a8    1
+05f62241b7bcd3462cf767972206b050fb0509f7ff331c1b40b447f6efff9f9d    1
+5ca3d69c65ed9041bb7b73810af4a2604ee02d90b2b599724a56ecf94f3a1571    1
+e452bd6351a4924b3e7a2c93b3f7b67816fa86c389f7113743302db6d34f9dac    1
+691ffd9306a9a21b88e0f7278c15d88b940a10035568944c149674b80a890fde    1
+4025626ab0bf40c18142863f589dc35b24b92d5e7efcdf3533c738978ef8e131    1
+b3811a4aded0fa0ba8c2f944249a40fe06c13288b7184ec8cb270f55109176f1    1
+26ab95bc275e3894ba80ca81e3ad78c7a281774663c48c8abc53d099e382e20f    1
+45bf933bcd114a78620da233a63d8aa689a338fee6d6aade453bf6bc9d27697e    1
+ad8ee5e022b9dd762d3c07106e73609c5a420950ef1203700b6045725171a34d    1
+fdfb678659ac2f7c31f37bbbfe9346cb3c84077e118706e40f93e07a615fe6e1    1
+8b044b95e9892518c2eeacab8eb8a7891e0af66e8438f29cc19116839d498aa5    1
+61415461ae42c800a1763bfc34419914c7fa7302e80e5e7e799558d88ba05572    1
+33c89709d9815bb97f563edda376efcc308ee0edaff6553f4bd4da5a6953a45f    1
+Name: count, dtype: int64
+31
+
+...Getting averages for correct and incorrect prompts...
+...Creating steering tensor...
+Batch:   0%|          | 0/63 [00:00<?, ?it/s]You're using a GPT2TokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
+Batch:   2%|▏         | 1/63 [00:02<02:06,  2.03s/it]Batch:   3%|▎         | 2/63 [00:02<00:59,  1.02it/s]Batch:   5%|▍         | 3/63 [00:03<00:53,  1.12it/s]Batch:   6%|▋         | 4/63 [00:03<00:47,  1.25it/s]Batch:   8%|▊         | 5/63 [00:04<00:43,  1.34it/s]Batch:  10%|▉         | 6/63 [00:05<00:43,  1.32it/s]Batch:  11%|█         | 7/63 [00:05<00:34,  1.61it/s]Batch:  13%|█▎        | 8/63 [00:05<00:29,  1.89it/s]Batch:  14%|█▍        | 9/63 [00:06<00:29,  1.81it/s]Batch:  16%|█▌        | 10/63 [00:07<00:31,  1.68it/s]Batch:  17%|█▋        | 11/63 [00:07<00:30,  1.71it/s]Batch:  19%|█▉        | 12/63 [00:08<00:25,  1.98it/s]Batch:  21%|██        | 13/63 [00:08<00:21,  2.35it/s]Batch:  22%|██▏       | 14/63 [00:08<00:25,  1.95it/s]Batch:  24%|██▍       | 15/63 [00:09<00:20,  2.31it/s]Batch:  25%|██▌       | 16/63 [00:09<00:23,  1.99it/s]Batch:  27%|██▋       | 17/63 [00:10<00:26,  1.74it/s]Batch:  29%|██▊       | 18/63 [00:11<00:27,  1.66it/s]Batch:  30%|███       | 19/63 [00:12<00:28,  1.55it/s]Batch:  32%|███▏      | 20/63 [00:12<00:27,  1.57it/s]Batch:  33%|███▎      | 21/63 [00:12<00:23,  1.81it/s]Batch:  35%|███▍      | 22/63 [00:13<00:25,  1.63it/s]Batch:  37%|███▋      | 23/63 [00:14<00:25,  1.59it/s]Batch:  38%|███▊      | 24/63 [00:14<00:21,  1.81it/s]Batch:  40%|███▉      | 25/63 [00:15<00:20,  1.81it/s]Batch:  41%|████▏     | 26/63 [00:15<00:20,  1.77it/s]Batch:  43%|████▎     | 27/63 [00:16<00:20,  1.76it/s]Batch:  44%|████▍     | 28/63 [00:17<00:19,  1.76it/s]Batch:  46%|████▌     | 29/63 [00:17<00:17,  1.93it/s]Batch:  48%|████▊     | 30/63 [00:17<00:15,  2.07it/s]Batch:  49%|████▉     | 31/63 [00:18<00:13,  2.40it/s]Batch:  51%|█████     | 32/63 [00:18<00:11,  2.68it/s]Batch:  52%|█████▏    | 33/63 [00:19<00:14,  2.03it/s]Batch:  54%|█████▍    | 34/63 [00:19<00:15,  1.82it/s]Batch:  56%|█████▌    | 35/63 [00:20<00:12,  2.17it/s]Batch:  57%|█████▋    | 36/63 [00:20<00:13,  1.94it/s]Batch:  59%|█████▊    | 37/63 [00:21<00:13,  1.99it/s]Batch:  60%|██████    | 38/63 [00:21<00:12,  1.98it/s]Batch:  62%|██████▏   | 39/63 [00:22<00:11,  2.02it/s]Batch:  63%|██████▎   | 40/63 [00:22<00:11,  1.98it/s]Batch:  65%|██████▌   | 41/63 [00:23<00:10,  2.04it/s]Batch:  67%|██████▋   | 42/63 [00:23<00:10,  2.05it/s]Batch:  68%|██████▊   | 43/63 [00:24<00:10,  1.82it/s]Batch:  70%|██████▉   | 44/63 [00:24<00:09,  1.95it/s]Batch:  71%|███████▏  | 45/63 [00:25<00:08,  2.08it/s]Batch:  73%|███████▎  | 46/63 [00:25<00:09,  1.83it/s]Batch:  75%|███████▍  | 47/63 [00:26<00:09,  1.67it/s]Batch:  76%|███████▌  | 48/63 [00:27<00:09,  1.59it/s]Batch:  78%|███████▊  | 49/63 [00:27<00:08,  1.74it/s]Batch:  79%|███████▉  | 50/63 [00:28<00:07,  1.68it/s]Batch:  81%|████████  | 51/63 [00:28<00:06,  1.87it/s]Batch:  83%|████████▎ | 52/63 [00:29<00:05,  1.85it/s]Batch:  84%|████████▍ | 53/63 [00:29<00:05,  1.95it/s]Batch:  86%|████████▌ | 54/63 [00:30<00:04,  1.80it/s]Batch:  87%|████████▋ | 55/63 [00:31<00:04,  1.83it/s]Batch:  89%|████████▉ | 56/63 [00:31<00:04,  1.72it/s]Batch:  90%|█████████ | 57/63 [00:32<00:03,  1.57it/s]Batch:  92%|█████████▏| 58/63 [00:32<00:02,  1.71it/s]Batch:  94%|█████████▎| 59/63 [00:33<00:02,  1.71it/s]Batch:  95%|█████████▌| 60/63 [00:34<00:01,  1.54it/s]Batch:  97%|█████████▋| 61/63 [00:34<00:01,  1.73it/s]Batch:  98%|█████████▊| 62/63 [00:34<00:00,  2.07it/s]Batch: 100%|██████████| 63/63 [00:35<00:00,  2.02it/s]Batch: 100%|██████████| 63/63 [00:35<00:00,  1.78it/s]
+Hidden states shape before avg: torch.Size([63, 24, 1, 2048])
+Batch:   0%|          | 0/63 [00:00<?, ?it/s]Batch:   2%|▏         | 1/63 [00:00<00:16,  3.75it/s]Batch:   3%|▎         | 2/63 [00:00<00:15,  3.89it/s]Batch:   5%|▍         | 3/63 [00:01<00:29,  2.01it/s]Batch:   6%|▋         | 4/63 [00:01<00:32,  1.81it/s]Batch:   8%|▊         | 5/63 [00:02<00:34,  1.70it/s]Batch:  10%|▉         | 6/63 [00:03<00:37,  1.54it/s]Batch:  11%|█         | 7/63 [00:03<00:29,  1.92it/s]Batch:  13%|█▎        | 8/63 [00:03<00:25,  2.16it/s]Batch:  14%|█▍        | 9/63 [00:04<00:27,  1.98it/s]Batch:  16%|█▌        | 10/63 [00:05<00:29,  1.78it/s]Batch:  17%|█▋        | 11/63 [00:05<00:29,  1.79it/s]Batch:  19%|█▉        | 12/63 [00:06<00:27,  1.88it/s]Batch:  21%|██        | 13/63 [00:06<00:22,  2.23it/s]Batch:  22%|██▏       | 14/63 [00:07<00:25,  1.90it/s]Batch:  24%|██▍       | 15/63 [00:07<00:21,  2.23it/s]Batch:  25%|██▌       | 16/63 [00:08<00:24,  1.95it/s]Batch:  27%|██▋       | 17/63 [00:08<00:26,  1.73it/s]Batch:  29%|██▊       | 18/63 [00:09<00:27,  1.66it/s]Batch:  30%|███       | 19/63 [00:10<00:28,  1.56it/s]Batch:  32%|███▏      | 20/63 [00:10<00:27,  1.58it/s]Batch:  33%|███▎      | 21/63 [00:11<00:21,  1.91it/s]Batch:  35%|███▍      | 22/63 [00:11<00:24,  1.66it/s]Batch:  37%|███▋      | 23/63 [00:12<00:24,  1.61it/s]Batch:  38%|███▊      | 24/63 [00:12<00:20,  1.94it/s]Batch:  40%|███▉      | 25/63 [00:13<00:19,  1.90it/s]Batch:  41%|████▏     | 26/63 [00:14<00:20,  1.83it/s]Batch:  43%|████▎     | 27/63 [00:14<00:19,  1.81it/s]Batch:  44%|████▍     | 28/63 [00:15<00:19,  1.80it/s]Batch:  46%|████▌     | 29/63 [00:15<00:17,  1.96it/s]Batch:  48%|████▊     | 30/63 [00:15<00:15,  2.10it/s]Batch:  49%|████▉     | 31/63 [00:16<00:12,  2.46it/s]Batch:  51%|█████     | 32/63 [00:16<00:11,  2.80it/s]Batch:  52%|█████▏    | 33/63 [00:17<00:14,  2.08it/s]Batch:  54%|█████▍    | 34/63 [00:17<00:15,  1.84it/s]Batch:  56%|█████▌    | 35/63 [00:18<00:12,  2.18it/s]Batch:  57%|█████▋    | 36/63 [00:18<00:13,  1.95it/s]Batch:  59%|█████▊    | 37/63 [00:19<00:13,  2.00it/s]Batch:  60%|██████    | 38/63 [00:19<00:12,  1.99it/s]Batch:  62%|██████▏   | 39/63 [00:20<00:11,  2.03it/s]Batch:  63%|██████▎   | 40/63 [00:20<00:11,  1.98it/s]Batch:  65%|██████▌   | 41/63 [00:21<00:10,  2.04it/s]Batch:  67%|██████▋   | 42/63 [00:21<00:10,  2.06it/s]Batch:  68%|██████▊   | 43/63 [00:22<00:10,  1.83it/s]Batch:  70%|██████▉   | 44/63 [00:22<00:09,  1.96it/s]Batch:  71%|███████▏  | 45/63 [00:23<00:08,  2.08it/s]Batch:  73%|███████▎  | 46/63 [00:23<00:09,  1.82it/s]Batch:  75%|███████▍  | 47/63 [00:24<00:09,  1.66it/s]Batch:  76%|███████▌  | 48/63 [00:25<00:09,  1.57it/s]Batch:  78%|███████▊  | 49/63 [00:25<00:08,  1.72it/s]Batch:  79%|███████▉  | 50/63 [00:26<00:07,  1.66it/s]Batch:  81%|████████  | 51/63 [00:26<00:06,  1.85it/s]Batch:  83%|████████▎ | 52/63 [00:27<00:06,  1.82it/s]Batch:  84%|████████▍ | 53/63 [00:27<00:05,  1.92it/s]Batch:  86%|████████▌ | 54/63 [00:28<00:05,  1.78it/s]Batch:  87%|████████▋ | 55/63 [00:29<00:04,  1.81it/s]Batch:  89%|████████▉ | 56/63 [00:29<00:04,  1.70it/s]Batch:  90%|█████████ | 57/63 [00:30<00:03,  1.55it/s]Batch:  92%|█████████▏| 58/63 [00:31<00:02,  1.70it/s]Batch:  94%|█████████▎| 59/63 [00:31<00:02,  1.70it/s]Batch:  95%|█████████▌| 60/63 [00:32<00:01,  1.55it/s]Batch:  97%|█████████▋| 61/63 [00:32<00:01,  1.73it/s]Batch:  98%|█████████▊| 62/63 [00:33<00:00,  2.07it/s]Batch: 100%|██████████| 63/63 [00:33<00:00,  2.02it/s]Batch: 100%|██████████| 63/63 [00:33<00:00,  1.88it/s]
+Hidden states shape before avg: torch.Size([63, 24, 1, 2048])
+Diff tensor shape after transform: torch.Size([24, 1, 1, 2048])
+...Applying patch to incorrect prompts...
+Counter({'bool': 1, 'Node': 1, 'Any': 1, 'Props': 1, 'Title': 1, 'list': 1, 'datetime': 1, 'UserProfile': 1, 'Realm': 1, 'Element': 1, 'bytes': 1, 'HttpRequest': 1, 'Path': 1, 'dict': 1, 'None': 1, 'Mock': 1, 'object': 1, 'float': 1, 'Callable': 1, 'Dict': 1, 'Update': 1, 'Bot': 1, 'DataFrame': 1, 'Circuit': 1, 'PID': 1, 'any': 1, 'decimal': 1, 'timedelta': 1, 'Exception': 1, 'Tracer': 1, 'Span': 1, 'Lookup': 1, 'List': 1, 'Host': 1, 'User': 1, 'date': 1, 'Component': 1, 'Container': 1, 'Iterable': 1, 'Result': 1, 'Type': 1, 'Context': 1, 'Message': 1, 'Person': 1, 'Dot': 1, 'Digest': 1, 'Base': 1, 'Account': 1, 'T': 1, 'Bool': 1, 'Env': 1, 'set': 1, 'Mapping': 1, 'Text': 1, 'tuple': 1, 'Response': 1, 'Cache': 1, 'Scope': 1, 'LineNumber': 1, 'Database': 1, 'A': 1, 'Sign': 1, 'Sequence': 1, 'L': 1, 'Word': 1, 'Token': 1, 'MP': 1, 'Reference': 1, 'Listener': 1, 'Column': 1, 'Population': 1, 'Board': 1, 'Branch': 1, 'Session': 1, 'time': 1, 'Field': 1, 'type': 1, 'Flask': 1, 'Extension': 1, 'Figure': 1, 'Document': 1, 'Section': 1, 'Table': 1, 'Paragraph': 1, 'Mention': 1, 'Set': 1, 'Dependency': 1, 'FileManager': 1, 'Transformer': 1, 'Uploader': 1, 'Replica': 1, 'Definitions': 1, 'JSON': 1, 'ServiceName': 1, 'RequestId': 1, 'Credential': 1, 'Route': 1, 'Report': 1, 'Entity': 1, 'TestCase': 1, 'Notification': 1, 'Metric': 1, 'Measurement': 1, 'Msg': 1, 'UserId': 1, 'LogEntry': 1, 'Format': 1, 'Frame': 1, 'Numeric': 1, 'Payment': 1, 'Formula': 1, 'Trace': 1, 'Breadcrumb': 1, 'Options': 1, 'Article': 1, 'Config': 1, 'Site': 1, 'Letter': 1, 'Caption': 1, 'Data': 1, 'Style': 1, 'Platform': 1, 'Authorization': 1, 'Cell': 1, 'Grid': 1, 'Key': 1})
+Insert Patch Batch:   0%|          | 0/63 [00:00<?, ?it/s]Insert Patch Batch:   2%|▏         | 1/63 [00:01<01:57,  1.90s/it]Insert Patch Batch:   3%|▎         | 2/63 [00:03<01:36,  1.58s/it]Insert Patch Batch:   5%|▍         | 3/63 [00:11<04:35,  4.60s/it]Insert Patch Batch:   6%|▋         | 4/63 [00:18<05:25,  5.52s/it]Insert Patch Batch:   8%|▊         | 5/63 [00:25<05:50,  6.03s/it]Insert Patch Batch:  10%|▉         | 6/63 [00:34<06:36,  6.96s/it]Insert Patch Batch:  11%|█         | 7/63 [00:36<05:15,  5.64s/it]Insert Patch Batch:  13%|█▎        | 8/63 [00:39<04:21,  4.75s/it]Insert Patch Batch:  14%|█▍        | 9/63 [00:45<04:40,  5.19s/it]Insert Patch Batch:  16%|█▌        | 10/63 [00:53<05:11,  5.87s/it]Insert Patch Batch:  17%|█▋        | 11/63 [00:59<05:04,  5.85s/it]Insert Patch Batch:  19%|█▉        | 12/63 [01:04<04:44,  5.58s/it]Insert Patch Batch:  21%|██        | 13/63 [01:06<03:50,  4.62s/it]Insert Patch Batch:  22%|██▏       | 14/63 [01:14<04:29,  5.50s/it]Insert Patch Batch:  24%|██▍       | 15/63 [01:16<03:36,  4.51s/it]Insert Patch Batch:  25%|██▌       | 16/63 [01:23<04:05,  5.23s/it]Insert Patch Batch:  27%|██▋       | 17/63 [01:31<04:39,  6.08s/it]Insert Patch Batch:  29%|██▊       | 18/63 [01:38<04:47,  6.39s/it]Insert Patch Batch:  30%|███       | 19/63 [01:46<05:03,  6.90s/it]Insert Patch Batch:  32%|███▏      | 20/63 [01:53<04:53,  6.83s/it]Insert Patch Batch:  33%|███▎      | 21/63 [01:56<03:58,  5.69s/it]Insert Patch Batch:  35%|███▍      | 22/63 [02:04<04:24,  6.45s/it]Insert Patch Batch:  37%|███▋      | 23/63 [02:11<04:27,  6.70s/it]Insert Patch Batch:  38%|███▊      | 24/63 [02:14<03:39,  5.62s/it]Insert Patch Batch:  40%|███▉      | 25/63 [02:20<03:32,  5.59s/it]Insert Patch Batch:  41%|████▏     | 26/63 [02:26<03:33,  5.76s/it]Insert Patch Batch:  43%|████▎     | 27/63 [02:32<03:29,  5.82s/it]Insert Patch Batch:  44%|████▍     | 28/63 [02:38<03:24,  5.85s/it]Insert Patch Batch:  46%|████▌     | 29/63 [02:42<02:58,  5.26s/it]Insert Patch Batch:  48%|████▊     | 30/63 [02:45<02:38,  4.80s/it]Insert Patch Batch:  49%|████▉     | 31/63 [02:47<02:05,  3.93s/it]Insert Patch Batch:  51%|█████     | 32/63 [02:50<01:49,  3.53s/it]Insert Patch Batch:  52%|█████▏    | 33/63 [02:59<02:31,  5.04s/it]Insert Patch Batch:  54%|█████▍    | 34/63 [03:06<02:47,  5.76s/it]Insert Patch Batch:  56%|█████▌    | 35/63 [03:07<02:04,  4.45s/it]Insert Patch Batch:  57%|█████▋    | 36/63 [03:14<02:17,  5.09s/it]Insert Patch Batch:  59%|█████▊    | 37/63 [03:19<02:11,  5.06s/it]Insert Patch Batch:  60%|██████    | 38/63 [03:24<02:06,  5.07s/it]Insert Patch Batch:  62%|██████▏   | 39/63 [03:29<01:59,  4.99s/it]Insert Patch Batch:  63%|██████▎   | 40/63 [03:34<01:57,  5.12s/it]Insert Patch Batch:  65%|██████▌   | 41/63 [03:39<01:49,  4.99s/it]Insert Patch Batch:  67%|██████▋   | 42/63 [03:44<01:44,  4.96s/it]Insert Patch Batch:  68%|██████▊   | 43/63 [03:51<01:53,  5.66s/it]Insert Patch Batch:  70%|██████▉   | 44/63 [03:56<01:40,  5.28s/it]Insert Patch Batch:  71%|███████▏  | 45/63 [03:59<01:27,  4.87s/it]Insert Patch Batch:  73%|███████▎  | 46/63 [04:07<01:36,  5.70s/it]Insert Patch Batch:  75%|███████▍  | 47/63 [04:15<01:42,  6.38s/it]Insert Patch Batch:  76%|███████▌  | 48/63 [04:23<01:42,  6.81s/it]Insert Patch Batch:  78%|███████▊  | 49/63 [04:28<01:26,  6.20s/it]Insert Patch Batch:  79%|███████▉  | 50/63 [04:34<01:22,  6.37s/it]Insert Patch Batch:  81%|████████  | 51/63 [04:38<01:07,  5.61s/it]Insert Patch Batch:  83%|████████▎ | 52/63 [04:44<01:02,  5.67s/it]Insert Patch Batch:  84%|████████▍ | 53/63 [04:49<00:53,  5.35s/it]Insert Patch Batch:  86%|████████▌ | 54/63 [04:56<00:52,  5.81s/it]Insert Patch Batch:  87%|████████▋ | 55/63 [05:01<00:45,  5.70s/it]Insert Patch Batch:  89%|████████▉ | 56/63 [05:08<00:43,  6.16s/it]Insert Patch Batch:  90%|█████████ | 57/63 [05:17<00:41,  6.93s/it]Insert Patch Batch:  92%|█████████▏| 58/63 [05:22<00:31,  6.32s/it]Insert Patch Batch:  94%|█████████▎| 59/63 [05:28<00:24,  6.21s/it]Insert Patch Batch:  95%|█████████▌| 60/63 [05:36<00:20,  6.96s/it]Insert Patch Batch:  97%|█████████▋| 61/63 [05:41<00:12,  6.17s/it]Insert Patch Batch:  98%|█████████▊| 62/63 [05:43<00:04,  4.87s/it]Insert Patch Batch: 100%|██████████| 63/63 [05:48<00:00,  4.93s/it]Insert Patch Batch: 100%|██████████| 63/63 [05:48<00:00,  5.53s/it]
+Saving the dataset (0/1 shards):   0%|          | 0/126 [00:00<?, ? examples/s]Saving the dataset (1/1 shards): 100%|██████████| 126/126 [00:00<00:00, 47228.09 examples/s]Saving the dataset (1/1 shards): 100%|██████████| 126/126 [00:00<00:00, 45208.07 examples/s]
+Filter:   0%|          | 0/126 [00:00<?, ? examples/s]Filter: 100%|██████████| 126/126 [00:00<00:00, 52444.41 examples/s]
+62 / 126 = 0.49206349206349204
+...Applying patch to incorrect prompts...
+Counter({'bool': 1, 'Node': 1, 'Any': 1, 'Props': 1, 'Title': 1, 'list': 1, 'datetime': 1, 'UserProfile': 1, 'Realm': 1, 'Element': 1, 'bytes': 1, 'HttpRequest': 1, 'Path': 1, 'dict': 1, 'None': 1, 'Mock': 1, 'object': 1, 'float': 1, 'Callable': 1, 'Dict': 1, 'Update': 1, 'Bot': 1, 'DataFrame': 1, 'Circuit': 1, 'PID': 1, 'any': 1, 'decimal': 1, 'timedelta': 1, 'Exception': 1, 'Tracer': 1, 'Span': 1, 'Lookup': 1, 'List': 1, 'Host': 1, 'User': 1, 'date': 1, 'Component': 1, 'Container': 1, 'Iterable': 1, 'Result': 1, 'Type': 1, 'Context': 1, 'Message': 1, 'Person': 1, 'Dot': 1, 'Digest': 1, 'Base': 1, 'Account': 1, 'T': 1, 'Bool': 1, 'Env': 1, 'set': 1, 'Mapping': 1, 'Text': 1, 'tuple': 1, 'Response': 1, 'Cache': 1, 'Scope': 1, 'LineNumber': 1, 'Database': 1, 'A': 1, 'Sign': 1, 'Sequence': 1, 'L': 1, 'Word': 1, 'Token': 1, 'MP': 1, 'Reference': 1, 'Listener': 1, 'Column': 1, 'Population': 1, 'Board': 1, 'Branch': 1, 'Session': 1, 'time': 1, 'Field': 1, 'type': 1, 'Flask': 1, 'Extension': 1, 'Figure': 1, 'Document': 1, 'Section': 1, 'Table': 1, 'Paragraph': 1, 'Mention': 1, 'Set': 1, 'Dependency': 1, 'FileManager': 1, 'Transformer': 1, 'Uploader': 1, 'Replica': 1, 'Definitions': 1, 'JSON': 1, 'ServiceName': 1, 'RequestId': 1, 'Credential': 1, 'Route': 1, 'Report': 1, 'Entity': 1, 'TestCase': 1, 'Notification': 1, 'Metric': 1, 'Measurement': 1, 'Msg': 1, 'UserId': 1, 'LogEntry': 1, 'Format': 1, 'Frame': 1, 'Numeric': 1, 'Payment': 1, 'Formula': 1, 'Trace': 1, 'Breadcrumb': 1, 'Options': 1, 'Article': 1, 'Config': 1, 'Site': 1, 'Letter': 1, 'Caption': 1, 'Data': 1, 'Style': 1, 'Platform': 1, 'Authorization': 1, 'Cell': 1, 'Grid': 1, 'Key': 1})
+Insert Patch Batch:   0%|          | 0/16 [00:00<?, ?it/s]Insert Patch Batch:   6%|▋         | 1/16 [00:04<01:06,  4.41s/it]Insert Patch Batch:  12%|█▎        | 2/16 [00:11<01:23,  5.98s/it]Insert Patch Batch:  19%|█▉        | 3/16 [00:14<01:00,  4.62s/it]Insert Patch Batch:  25%|██▌       | 4/16 [00:18<00:53,  4.43s/it]Insert Patch Batch:  31%|███▏      | 5/16 [00:24<00:55,  5.07s/it]Insert Patch Batch:  38%|███▊      | 6/16 [00:30<00:54,  5.41s/it]Insert Patch Batch:  44%|████▍     | 7/16 [00:38<00:55,  6.15s/it]Insert Patch Batch:  50%|█████     | 8/16 [00:40<00:37,  4.71s/it]Insert Patch Batch:  56%|█████▋    | 9/16 [00:43<00:29,  4.26s/it]Insert Patch Batch:  62%|██████▎   | 10/16 [00:47<00:25,  4.31s/it]Insert Patch Batch:  69%|██████▉   | 11/16 [00:51<00:20,  4.17s/it]Insert Patch Batch:  75%|███████▌  | 12/16 [00:56<00:17,  4.32s/it]Insert Patch Batch:  81%|████████▏ | 13/16 [01:01<00:13,  4.41s/it]Insert Patch Batch:  88%|████████▊ | 14/16 [01:05<00:09,  4.55s/it]Insert Patch Batch:  94%|█████████▍| 15/16 [01:11<00:04,  4.94s/it]Insert Patch Batch: 100%|██████████| 16/16 [01:13<00:00,  4.12s/it]Insert Patch Batch: 100%|██████████| 16/16 [01:13<00:00,  4.62s/it]
+Saving the dataset (0/1 shards):   0%|          | 0/31 [00:00<?, ? examples/s]Saving the dataset (1/1 shards): 100%|██████████| 31/31 [00:00<00:00, 15521.48 examples/s]Saving the dataset (1/1 shards): 100%|██████████| 31/31 [00:00<00:00, 14670.36 examples/s]
+Filter:   0%|          | 0/31 [00:00<?, ? examples/s]Filter: 100%|██████████| 31/31 [00:00<00:00, 18574.77 examples/s]
+17 / 31 = 0.5483870967741935
