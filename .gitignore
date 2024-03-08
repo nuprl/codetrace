@@ -1,4 +1,5 @@
 .ipynb_*/
+**/*.out
 exp_data/
 temp.png
 __pycache__/

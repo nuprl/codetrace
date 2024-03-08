@@ -21,15 +21,15 @@ def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
     if args.test_size > 0:
         # set aside some incorrect prompts
         hexsha_counts = Counter(incorrect["hexsha"])
-        sorted_hexshas = sorted(hexsha_counts.keys(), key= lambda x : hexsha_counts[x])
-        # print(sorted_hexsha_counts)
         # accumulate hexshas from the least count until threshold test_size is achieved
+        sorted_hexshas = sorted(hexsha_counts.keys(), key= lambda x : hexsha_counts[x])
         test_len = int(len(incorrect) * args.test_size)
-        print(test_len)
         ood_hexshas = []
+        count = 0
         for hexsha in sorted_hexshas:
             ood_hexshas.append(hexsha)
-            if len(ood_hexshas) > test_len:
+            count += hexsha_counts[hexsha]
+            if count > test_len:
                 break
         incorrect_ood = incorrect.filter(lambda x : x["hexsha"] in ood_hexshas)
         incorrect = incorrect.filter(lambda x : x["hexsha"] not in ood_hexshas)
