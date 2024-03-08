@@ -10,6 +10,30 @@ import pytest
 from codetrace.utils import PY_LANGUAGE, PY_PARSER
 
 
+def test_rename_class_longer():
+    input_buffer = b"""
+    class Foo:
+        pass
+    
+    x = Foo()
+    def f(y: Foo):
+        pass
+    """
+    input_tree = PY_PARSER.parse(input_buffer)
+    output_buffer, _ = rename_var(input_buffer, input_tree.root_node, b"Foo", b"Barr")
+    assert (
+        output_buffer
+        == b"""
+    class Barr:
+        pass
+    
+    x = Barr()
+    def f(y: Barr):
+        pass
+    """
+    )
+
+
 def test_rename_var_longer():
     input_buffer = b"""
     def foo(x):

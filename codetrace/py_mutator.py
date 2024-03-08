@@ -28,8 +28,8 @@ NONVAR_STATEMENTS = [
     "future_import_statement",
     "wildcard_import",
     "relative_import",
-    "class_definition",
-    "class_pattern",
+    # "class_definition",
+    # "class_pattern",
 ]
 
 # There are several other contexts where variables can appear. But, we are being
@@ -56,6 +56,8 @@ FUNCTION_PARAMS = PY_LANGUAGE.query(
     ]
 """
 )
+
+CLASS_NAMES = PY_LANGUAGE.query("""(class_definition name: (identifier) @id)""")
 
 
 @dataclass
@@ -182,6 +184,7 @@ def _get_bound_vars(buffer: bytes, root_node: Node) -> Set[bytes]:
     may not be semantics-preserving.
     """
     captured_nodes = FUNCTION_PARAMS.captures(root_node)
+    captured_nodes.extend(CLASS_NAMES.captures(root_node))
     results = []
     for node, _ in captured_nodes:
         (start, end) = node.byte_range
@@ -189,7 +192,7 @@ def _get_bound_vars(buffer: bytes, root_node: Node) -> Set[bytes]:
     return set(results)
 
 
-def random_mutations(code: str, fixed_type_location: int) -> Generator[Tuple[int, str], None, None]:
+def random_mutations(code: str, fixed_type_location: int, apply_all_mutations: bool) -> Generator[Tuple[int, str], None, None]:
     """
     Generate a sequence of random mutations to a Python program. Each successive
     mutation is to the previous mutation. The fixed_type_location is a byte offset
@@ -206,6 +209,7 @@ def random_mutations(code: str, fixed_type_location: int) -> Generator[Tuple[int
     all_type_annotations = [
         EditableNode.from_node(item[0]) for item in TYPED_IDENTIFIERS.captures(root)
     ]
+
     all_type_annotations = [
         node
         for node in all_type_annotations
@@ -234,5 +238,8 @@ def random_mutations(code: str, fixed_type_location: int) -> Generator[Tuple[int
         for edit in edits:
             if edit.start_byte < adjusted_type_location:
                 adjusted_type_location += edit.new_end_byte - edit.old_end_byte
-
+        if not apply_all_mutations:
+            yield (adjusted_type_location, buffer.decode("utf-8"))
+        
+    if apply_all_mutations:
         yield (adjusted_type_location, buffer.decode("utf-8"))
