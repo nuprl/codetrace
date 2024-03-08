@@ -1,5 +1,5 @@
 {
-    "outdir": "cais_1",
+    "outdir": "cais_2",
     "dataset": "franlucc/py_steering_v0",
     "model": "bigcode/starcoderbase-1b",
     "prog_threshold": 1,
@@ -7,7 +7,7 @@
     "batch_size": 2,
     "patch_mode": "add",
     "tokens_to_patch": ["<fim_middle>", "<fim_suffix>"],
-    "layers_to_patch": [15,16,17,18],
+    "layers_to_patch": [14,15,16,17],
     "test_size": 0.2,
     "fim_placeholder": false
 }

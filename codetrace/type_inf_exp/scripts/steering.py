@@ -94,7 +94,11 @@ def main():
         args = json.load(f)
     args = Namespace(**args)
 
-    exp_dir = "/home/franlucc/projects/codetrace/codetrace/type_inf_exp"
+    # parent dir
+    exp_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    out_dir = f"{exp_dir}/exp_data/{args.outdir}"
+    os.makedirs(out_dir, exist_ok=True)
+    
     ds = datasets.load_dataset(args.dataset, split="train")
 
     print(ds)
@@ -102,11 +106,6 @@ def main():
     ds = ds.filter(lambda x : len(x["fim_program"]) < 8000)
 
     model = LanguageModel(args.model, device_map="cuda")
-
-    out_dir = f"{exp_dir}/exp_data/{args.outdir}"
-
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
 
     # ==========================================================================================
     # PART 1: filter

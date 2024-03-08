@@ -19,13 +19,13 @@ import matplotlib as mpl
 import os
     
 def patched_heatmap_prediction(model : LanguageModel,
-                        clean_prompts : List[str] | str, 
-                        corrupted_prompts : List[str] | str,
+                        clean_prompts : Union[List[str],str], 
+                        corrupted_prompts : Union[List[str],str],
                         patched_final_logits : List[TraceResult],
                         layers_patched : List[int],
                         clean_token_idx : int = -1,
                         corrupted_token_idx : int = -1, 
-                        annotations : List[Tuple[str,str]] | None = None,
+                        annotations : Union[List[Tuple[str,str]],None] = None,
                         figsize : Tuple[int,int] = (10,10),
                         bbox_to_anchor : Tuple[int,int] = (1.6, 1.0),
                         figtitle : str = "Patch Logit-Prediction Heatmap",
