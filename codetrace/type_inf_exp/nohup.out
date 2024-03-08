@@ -1,0 +1,198 @@
+Model: starcoderbase-1b
+INFO 03-08 19:52:28 llm_engine.py:87] Initializing an LLM engine with config: model='bigcode/starcoderbase-1b', tokenizer='bigcode/starcoderbase-1b', tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.float16, max_seq_len=8192, download_dir=None, load_format=auto, tensor_parallel_size=1, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, kv_cache_dtype=auto, device_config=cuda, seed=0)
+INFO 03-08 19:52:31 weight_utils.py:163] Using model weights format ['*.safetensors']
+INFO 03-08 19:52:33 llm_engine.py:357] # GPU blocks: 372248, # CPU blocks: 21845
+INFO 03-08 19:52:34 model_runner.py:684] Capturing the model for CUDA graphs. This may lead to unexpected consequences if the model is not static. To run the model in eager mode, set 'enforce_eager=True' or use '--enforce-eager' in the CLI.
+INFO 03-08 19:52:34 model_runner.py:688] CUDA graphs can take additional 1~3 GiB memory per GPU. If you are running out of memory, consider decreasing `gpu_memory_utilization` or enforcing eager mode. You can also reduce the `max_num_seqs` as needed to decrease memory usage.
+INFO 03-08 19:52:37 model_runner.py:756] Graph capturing finished in 3 secs.
+Doing batch generations
+Batch generations: 0it [00:00, ?it/s]Batch generations: 1it [00:15, 15.79s/it]Batch generations: 2it [00:27, 13.40s/it]Batch generations: 3it [00:42, 14.18s/it]Batch generations: 4it [01:03, 16.66s/it]Batch generations: 5it [01:27, 19.52s/it]Batch generations: 6it [01:56, 22.58s/it]Batch generations: 7it [02:08, 19.24s/it]Batch generations: 8it [02:21, 17.31s/it]Batch generations: 9it [02:39, 17.59s/it]Batch generations: 10it [02:56, 17.16s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/11 [00:00<?, ?ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 11/11 [00:00<00:00, 163.47ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:00<00:00,  3.83it/s][AUploading the dataset shards: 100%|██████████| 1/1 [00:00<00:00,  3.81it/s]
+Batch generations: 11it [03:15, 17.88s/it]Batch generations: 12it [03:31, 17.17s/it]Batch generations: 13it [04:06, 22.59s/it]Batch generations: 14it [04:26, 21.91s/it]Batch generations: 15it [04:40, 19.64s/it]Batch generations: 16it [04:57, 18.69s/it]Batch generations: 17it [05:18, 19.41s/it]Batch generations: 18it [05:35, 18.55s/it]Batch generations: 19it [05:52, 18.31s/it]Batch generations: 20it [06:10, 17.99s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/21 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  81%|████████  | 17/21 [00:00<00:00, 165.34ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 21/21 [00:00<00:00, 167.47ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:00<00:00,  3.20it/s][AUploading the dataset shards: 100%|██████████| 1/1 [00:00<00:00,  3.19it/s]
+Batch generations: 21it [06:25, 17.33s/it]Batch generations: 22it [06:51, 19.86s/it]Batch generations: 23it [07:14, 20.66s/it]Batch generations: 24it [07:32, 19.93s/it]Batch generations: 25it [07:45, 17.86s/it]Batch generations: 26it [08:08, 19.44s/it]Batch generations: 27it [08:22, 17.65s/it]Batch generations: 28it [08:39, 17.61s/it]Batch generations: 29it [08:57, 17.77s/it]Batch generations: 30it [09:16, 18.16s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/31 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  55%|█████▍    | 17/31 [00:00<00:00, 163.08ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 31/31 [00:00<00:00, 168.52ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:01<00:00,  1.24s/it][AUploading the dataset shards: 100%|██████████| 1/1 [00:01<00:00,  1.24s/it]
+Batch generations: 31it [09:37, 18.89s/it]Batch generations: 32it [09:51, 17.39s/it]Batch generations: 33it [10:09, 17.55s/it]Batch generations: 34it [10:25, 17.23s/it]Batch generations: 35it [10:46, 18.21s/it]Batch generations: 36it [11:02, 17.69s/it]Batch generations: 37it [11:19, 17.48s/it]Batch generations: 38it [11:36, 17.32s/it]Batch generations: 39it [11:51, 16.48s/it]Batch generations: 40it [12:04, 15.43s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/41 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  39%|███▉      | 16/41 [00:00<00:00, 154.28ba/s][A[A
+
+Creating parquet from Arrow format:  85%|████████▌ | 35/41 [00:00<00:00, 174.08ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 41/41 [00:00<00:00, 174.05ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:01<00:00,  1.51s/it][AUploading the dataset shards: 100%|██████████| 1/1 [00:01<00:00,  1.51s/it]
+Batch generations: 41it [12:25, 17.35s/it]Batch generations: 42it [12:43, 17.53s/it]Batch generations: 43it [12:58, 16.65s/it]Batch generations: 44it [13:18, 17.54s/it]Batch generations: 45it [13:37, 18.25s/it]Batch generations: 46it [13:52, 17.24s/it]Batch generations: 47it [14:07, 16.39s/it]Batch generations: 48it [14:23, 16.31s/it]Batch generations: 49it [14:45, 18.19s/it]Batch generations: 50it [15:00, 17.19s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/51 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  33%|███▎      | 17/51 [00:00<00:00, 163.76ba/s][A[A
+
+Creating parquet from Arrow format:  71%|███████   | 36/51 [00:00<00:00, 175.90ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 51/51 [00:00<00:00, 177.23ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:01<00:00,  1.44s/it][AUploading the dataset shards: 100%|██████████| 1/1 [00:01<00:00,  1.44s/it]
+Batch generations: 51it [15:19, 17.57s/it]Batch generations: 52it [15:42, 19.34s/it]Batch generations: 53it [15:57, 17.86s/it]Batch generations: 54it [16:15, 18.11s/it]Batch generations: 55it [16:34, 18.39s/it]Batch generations: 56it [16:49, 17.20s/it]Batch generations: 57it [17:05, 17.04s/it]Batch generations: 58it [17:20, 16.26s/it]Batch generations: 59it [17:34, 15.53s/it]Batch generations: 60it [17:46, 14.48s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/61 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  28%|██▊       | 17/61 [00:00<00:00, 167.73ba/s][A[A
+
+Creating parquet from Arrow format:  57%|█████▋    | 35/61 [00:00<00:00, 170.42ba/s][A[A
+
+Creating parquet from Arrow format:  87%|████████▋ | 53/61 [00:00<00:00, 172.79ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 61/61 [00:00<00:00, 173.94ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:02<00:00,  2.43s/it][AUploading the dataset shards: 100%|██████████| 1/1 [00:02<00:00,  2.43s/it]
+Batch generations: 61it [18:13, 18.19s/it]Batch generations: 62it [18:31, 18.13s/it]Batch generations: 63it [18:47, 17.56s/it]Batch generations: 64it [19:03, 17.02s/it]Batch generations: 65it [19:22, 17.83s/it]Batch generations: 66it [19:35, 16.37s/it]Batch generations: 67it [19:52, 16.51s/it]Batch generations: 68it [20:11, 17.19s/it]Batch generations: 69it [20:26, 16.50s/it]Batch generations: 70it [20:40, 15.74s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/71 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  24%|██▍       | 17/71 [00:00<00:00, 167.54ba/s][A[A
+
+Creating parquet from Arrow format:  51%|█████     | 36/71 [00:00<00:00, 176.06ba/s][A[A
+
+Creating parquet from Arrow format:  77%|███████▋  | 55/71 [00:00<00:00, 181.97ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 71/71 [00:00<00:00, 182.61ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:02<00:00,  2.53s/it][AUploading the dataset shards: 100%|██████████| 1/1 [00:02<00:00,  2.53s/it]
+Batch generations: 71it [21:08, 19.35s/it]Batch generations: 72it [21:30, 20.25s/it]Batch generations: 73it [21:55, 21.73s/it]Batch generations: 74it [22:13, 20.65s/it]Batch generations: 75it [22:30, 19.53s/it]Batch generations: 76it [22:53, 20.41s/it]Batch generations: 77it [23:11, 19.77s/it]Batch generations: 78it [23:36, 21.47s/it]Batch generations: 79it [23:55, 20.58s/it]Batch generations: 80it [24:12, 19.47s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/81 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  22%|██▏       | 18/81 [00:00<00:00, 172.75ba/s][A[A
+
+Creating parquet from Arrow format:  44%|████▍     | 36/81 [00:00<00:00, 174.04ba/s][A[A
+
+Creating parquet from Arrow format:  68%|██████▊   | 55/81 [00:00<00:00, 180.11ba/s][A[A
+
+Creating parquet from Arrow format:  91%|█████████▏| 74/81 [00:00<00:00, 182.42ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 81/81 [00:00<00:00, 180.38ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:02<00:00,  2.43s/it][AUploading the dataset shards: 100%|██████████| 1/1 [00:02<00:00,  2.44s/it]
+Batch generations: 81it [24:36, 21.07s/it]Batch generations: 82it [24:58, 21.09s/it]Batch generations: 83it [25:26, 23.14s/it]Batch generations: 84it [25:39, 20.17s/it]Batch generations: 85it [25:55, 19.13s/it]Batch generations: 86it [26:11, 17.99s/it]Batch generations: 87it [26:25, 16.82s/it]Batch generations: 88it [26:39, 16.13s/it]Batch generations: 89it [26:55, 16.08s/it]Batch generations: 90it [27:17, 17.66s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/91 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  20%|█▉        | 18/91 [00:00<00:00, 176.38ba/s][A[A
+
+Creating parquet from Arrow format:  40%|███▉      | 36/91 [00:00<00:00, 174.26ba/s][A[A
+
+Creating parquet from Arrow format:  60%|██████    | 55/91 [00:00<00:00, 179.87ba/s][A[A
+
+Creating parquet from Arrow format:  81%|████████▏ | 74/91 [00:00<00:00, 183.03ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 91/91 [00:00<00:00, 181.95ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:01<00:00,  1.51s/it][AUploading the dataset shards: 100%|██████████| 1/1 [00:01<00:00,  1.51s/it]
+Batch generations: 91it [27:43, 20.27s/it]Batch generations: 92it [27:58, 18.52s/it]Batch generations: 93it [28:21, 20.04s/it]Batch generations: 94it [28:38, 19.22s/it]Batch generations: 95it [28:51, 17.09s/it]Batch generations: 96it [29:09, 17.51s/it]Batch generations: 97it [29:28, 18.06s/it]Batch generations: 98it [29:56, 20.82s/it]Batch generations: 99it [30:18, 21.39s/it]Batch generations: 100it [30:33, 19.23s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/1 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/101 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  18%|█▊        | 18/101 [00:00<00:00, 171.96ba/s][A[A
+
+Creating parquet from Arrow format:  36%|███▌      | 36/101 [00:00<00:00, 174.88ba/s][A[A
+
+Creating parquet from Arrow format:  54%|█████▍    | 55/101 [00:00<00:00, 180.72ba/s][A[A
+
+Creating parquet from Arrow format:  73%|███████▎  | 74/101 [00:00<00:00, 183.48ba/s][A[A
+
+Creating parquet from Arrow format:  92%|█████████▏| 93/101 [00:00<00:00, 184.97ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 101/101 [00:00<00:00, 182.52ba/s]
+
+Uploading the dataset shards: 100%|██████████| 1/1 [00:02<00:00,  2.54s/it][AUploading the dataset shards: 100%|██████████| 1/1 [00:02<00:00,  2.54s/it]
+Batch generations: 101it [30:57, 20.93s/it]Batch generations: 102it [31:09, 18.13s/it]Batch generations: 103it [31:24, 17.13s/it]Batch generations: 104it [31:38, 16.33s/it]Batch generations: 105it [31:54, 16.08s/it]Batch generations: 106it [32:12, 16.70s/it]Batch generations: 107it [32:32, 17.65s/it]Batch generations: 108it [32:55, 19.36s/it]Batch generations: 109it [33:16, 19.80s/it]Batch generations: 110it [33:36, 19.88s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/2 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/56 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  32%|███▏      | 18/56 [00:00<00:00, 171.90ba/s][A[A
+
+Creating parquet from Arrow format:  64%|██████▍   | 36/56 [00:00<00:00, 173.86ba/s][A[A
+
+Creating parquet from Arrow format:  98%|█████████▊| 55/56 [00:00<00:00, 178.31ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 56/56 [00:00<00:00, 177.30ba/s]
+
+Uploading the dataset shards:  50%|█████     | 1/2 [00:01<00:01,  1.58s/it][A
+
+Creating parquet from Arrow format:   0%|          | 0/56 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  32%|███▏      | 18/56 [00:00<00:00, 178.17ba/s][A[A
+
+Creating parquet from Arrow format:  64%|██████▍   | 36/56 [00:00<00:00, 176.86ba/s][A[A
+
+Creating parquet from Arrow format:  98%|█████████▊| 55/56 [00:00<00:00, 179.83ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 56/56 [00:00<00:00, 179.45ba/s]
+
+Uploading the dataset shards: 100%|██████████| 2/2 [00:03<00:00,  1.69s/it][AUploading the dataset shards: 100%|██████████| 2/2 [00:03<00:00,  1.67s/it]
+Batch generations: 111it [34:07, 23.24s/it]Batch generations: 112it [34:23, 21.08s/it]Batch generations: 113it [34:44, 20.95s/it]Batch generations: 114it [35:00, 19.55s/it]Batch generations: 115it [35:17, 18.86s/it]Batch generations: 116it [35:34, 18.21s/it]Batch generations: 117it [36:03, 21.48s/it]Batch generations: 118it [36:18, 19.55s/it]Batch generations: 119it [36:48, 22.50s/it]Batch generations: 120it [37:05, 21.12s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/2 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/61 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  30%|██▉       | 18/61 [00:00<00:00, 172.20ba/s][A[A
+
+Creating parquet from Arrow format:  59%|█████▉    | 36/61 [00:00<00:00, 175.52ba/s][A[A
+
+Creating parquet from Arrow format:  90%|█████████ | 55/61 [00:00<00:00, 178.29ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 61/61 [00:00<00:00, 178.86ba/s]
+
+Uploading the dataset shards:  50%|█████     | 1/2 [00:02<00:02,  2.12s/it][A
+
+Creating parquet from Arrow format:   0%|          | 0/61 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  30%|██▉       | 18/61 [00:00<00:00, 176.02ba/s][A[A
+
+Creating parquet from Arrow format:  59%|█████▉    | 36/61 [00:00<00:00, 178.15ba/s][A[A
+
+Creating parquet from Arrow format:  89%|████████▊ | 54/61 [00:00<00:00, 178.00ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 61/61 [00:00<00:00, 178.63ba/s]
+
+Uploading the dataset shards: 100%|██████████| 2/2 [00:03<00:00,  1.87s/it][AUploading the dataset shards: 100%|██████████| 2/2 [00:03<00:00,  1.91s/it]
+Batch generations: 121it [37:33, 23.06s/it]Batch generations: 122it [37:52, 21.98s/it]Batch generations: 123it [38:07, 19.84s/it]Batch generations: 124it [38:25, 19.08s/it]Batch generations: 125it [38:40, 18.02s/it]Batch generations: 126it [38:58, 18.11s/it]Batch generations: 127it [39:15, 17.50s/it]Batch generations: 128it [39:32, 17.53s/it]Batch generations: 129it [39:46, 16.33s/it]Batch generations: 130it [40:10, 18.71s/it]Saving 1000 completions
+
+Uploading the dataset shards:   0%|          | 0/2 [00:00<?, ?it/s][A
+
+Creating parquet from Arrow format:   0%|          | 0/66 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  27%|██▋       | 18/66 [00:00<00:00, 175.79ba/s][A[A
+
+Creating parquet from Arrow format:  56%|█████▌    | 37/66 [00:00<00:00, 182.13ba/s][A[A
+
+Creating parquet from Arrow format:  85%|████████▍ | 56/66 [00:00<00:00, 173.68ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 66/66 [00:00<00:00, 177.28ba/s]
+
+Uploading the dataset shards:  50%|█████     | 1/2 [00:01<00:01,  1.83s/it][A
+
+Creating parquet from Arrow format:   0%|          | 0/66 [00:00<?, ?ba/s][A[A
+
+Creating parquet from Arrow format:  27%|██▋       | 18/66 [00:00<00:00, 173.80ba/s][A[A
+
+Creating parquet from Arrow format:  56%|█████▌    | 37/66 [00:00<00:00, 179.46ba/s][A[A
+
+Creating parquet from Arrow format:  83%|████████▎ | 55/66 [00:00<00:00, 175.70ba/s][A[ACreating parquet from Arrow format: 100%|██████████| 66/66 [00:00<00:00, 177.41ba/s]
+
+Uploading the dataset shards: 100%|██████████| 2/2 [00:03<00:00,  1.80s/it][AUploading the dataset shards: 100%|██████████| 2/2 [00:03<00:00,  1.81s/it]
+Batch generations: 131it [40:39, 21.86s/it]Batch generations: 132it [40:57, 20.52s/it]Batch generations: 133it [41:18, 20.85s/it]Batch generations: 134it [41:34, 19.22s/it]Batch generations: 135it [41:52, 19.08s/it]Batch generations: 136it [42:11, 18.91s/it]Batch generations: 137it [42:36, 20.78s/it]

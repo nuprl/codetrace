@@ -14,11 +14,13 @@ from tqdm import tqdm
 from collections import Counter, defaultdict
 import random
 import pickle
+import json
 
 def batched_get_averages(model: LanguageModel,
                  prompts : List[str],
                  tokens : Union[List[str],List[int]],
-                 batch_size=5) -> torch.Tensor:
+                 batch_size=5,
+                 outdir = None) -> torch.Tensor:
     """
     Get averages of tokens at all layers for all prompts
     
@@ -29,21 +31,23 @@ def batched_get_averages(model: LanguageModel,
     # batch prompts according to batch size
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     hidden_states = []
-    for batch in tqdm(prompt_batches, desc="Batch"):
+    for i,batch in tqdm(enumerate(prompt_batches), desc="Batch", total=len(prompt_batches)):
         if tokens == []:
             hs = collect_hidden_states(model, batch)
         else:
             hs = collect_hidden_states_at_tokens(model, batch, tokens)
         hs_mean = hs.mean(dim=1) # batch size mean
         hidden_states.append(hs_mean)
+        if outdir is not None:
+            with open(os.path.join(outdir, f"hidden_states.pkl"), "wb") as f:
+                pickle.dump(hidden_states, f)
+            with open(os.path.join(outdir, f"avg_prompts.json"), "w") as f:
+                json.dump({"batch_size" : batch_size, "batch_idx" : i, "prompts" : prompt_batches}, f)
         
     # save tensor
     if tokens == []:
         # this means prompts are different token sizes, can't be stacked
         raise NotImplementedError("Prompts are different token sizes, need solution")
-        # hidden_states = torch.cat(hidden_states, dim=0)
-        # print(f"Hidden states shape before avg: {hidden_states.shape}")
-        # return hidden_states.mean(dim=1)
     
     hidden_states = torch.stack(hidden_states, dim=0)
     print(f"Hidden states shape before avg: {hidden_states.shape}")
@@ -79,7 +83,8 @@ def batched_insert_patch_logit(model : LanguageModel,
                     layers_to_patch : List[int],
                     tokens_to_patch : Union[List[str],List[int],str,int],
                     patch_mode : str = "add",
-                    batch_size : int = 5) -> List[str]:
+                    batch_size : int = 5,
+                    outfile: str = None) -> List[str]:
     """
     batched insert patch
     """
@@ -96,6 +101,10 @@ def batched_insert_patch_logit(model : LanguageModel,
             tok = logits[-1][j][-1].tokens(model.tokenizer)
             tok = tok[0].strip()
             predictions.append(tok)
+            
+        if outfile is not None:
+            with open(outfile, "w") as f:
+                json.dump({"batch_size" : batch_size, "batch_idx" : i, "predictions" : predictions}, f)
            
     return predictions
 

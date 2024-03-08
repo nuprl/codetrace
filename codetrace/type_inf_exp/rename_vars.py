@@ -46,7 +46,7 @@ def rename_variable(
         
     return program
 
-def make_new_name(new_length : int, existing_names : set[str]) -> str | None:
+def make_new_name(new_length : int, existing_names : set[str]) -> Union[str, None]:
     """
     Given a set of var captures and a variable name, make a new name for the variable that
     is not already in the program.

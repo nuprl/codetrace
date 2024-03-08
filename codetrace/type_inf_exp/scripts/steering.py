@@ -4,34 +4,37 @@ from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
 import hashlib
+import sys
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
     return ds.remove_columns(columns)
 
 def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
-    # if "hexsha" not in dataset.column_names:
-    #     dataset = dataset.add_column("hexsha", [hashlib.sha256(bytes(x["zip"]+x["filename"],"utf-8")).hexdigest() for x in dataset])
     dataset = filter_prompts(dataset, 
                              single_tokenize=tokenizer, 
                              dedup_prog_threshold=args.prog_threshold, 
                              dedup_type_threshold=args.type_threshold)
     correct = keep_columns(dataset, ["fim_program", "fim_type", "hexsha"])
     incorrect = keep_columns(dataset, ["renamed_fim_program","fim_type","hexsha"])
-    # correct = keep_columns(dataset, ["fim_program", "fim_type", "hexsha"])
-    # incorrect = keep_columns(dataset, ["renamed_fim_program","fim_type","hexsha","renamed_generated_text",
-    #                                    "renamed_variables","renamed_percent","renamed_num"])
     incorrect = incorrect.rename_columns({"renamed_fim_program": "fim_program"})
-    # incorrect = incorrect.rename_columns({"renamed_fim_program": "fim_program", "renamed_generated_text":"generated_text"})
     if args.test_size > 0:
         # set aside some incorrect prompts
-        random.seed(4)
-        hexshas = list(incorrect["hexsha"])
-        hexshas = random.sample(hexshas, int(len(hexshas) * args.test_size))
-        incorrect_eval = incorrect.filter(lambda x : x["hexsha"] in hexshas)
-        incorrect = incorrect.filter(lambda x : x["hexsha"] not in hexshas)
-        correct = correct.filter(lambda x : x["hexsha"] not in hexshas)
-        return correct, incorrect, incorrect_eval
+        hexsha_counts = Counter(incorrect["hexsha"])
+        sorted_hexshas = sorted(hexsha_counts.keys(), key= lambda x : hexsha_counts[x])
+        # print(sorted_hexsha_counts)
+        # accumulate hexshas from the least count until threshold test_size is achieved
+        test_len = int(len(incorrect) * args.test_size)
+        print(test_len)
+        ood_hexshas = []
+        for hexsha in sorted_hexshas:
+            ood_hexshas.append(hexsha)
+            if len(ood_hexshas) > test_len:
+                break
+        incorrect_ood = incorrect.filter(lambda x : x["hexsha"] in ood_hexshas)
+        incorrect = incorrect.filter(lambda x : x["hexsha"] not in ood_hexshas)
+        correct = correct.filter(lambda x : x["hexsha"] not in ood_hexshas)
+        return correct, incorrect, incorrect_ood
     else:
         return correct, incorrect, None
 
@@ -51,13 +54,9 @@ def _pretty_print(ds) -> str:
 
 def steer(
     model,
-    args,
     incorrect_eval,
     diff_tensor,
-    layers_to_patch,
-    tokens_to_patch,
-    patch_mode,
-    batch_size
+    args
 ):
     if args.fim_placeholder:
         eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect_eval]
@@ -68,12 +67,11 @@ def steer(
     predictions = batched_insert_patch_logit(model, 
                 eval_prompts, 
                 diff_tensor, 
-                layers_to_patch,
-                tokens_to_patch,
-                patch_mode,
-                batch_size)
-    with open(f"steering_results.txt", "w") as f:
-        f.write(str(predictions))
+                args.layers_to_patch,
+                args.tokens_to_patch,
+                args.patch_mode,
+                args.batch_size,
+                args.steering_outfile)
     steering_results = []
     for i,tok in enumerate(predictions):
         ex = incorrect_eval[i]
@@ -81,15 +79,29 @@ def steer(
                             "correct_steer" : (ex["fim_type"].startswith(tok)),
                             **ex})
             
-         
     steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
     return steering_ds
 
+def _evaluate(steering_ds, counts, args, outfile):
+    correct_steer = steering_ds.filter(lambda x : x["correct_steer"] == True)
+    metric = f"{len(correct_steer)} / {len(steering_ds)} = {len(correct_steer) / len(steering_ds)}"
+    print(metric)
+    with open(f"{args.out_dir}/{outfile}", "w") as f:
+        f.write(f"## Steering Results\n")
+        f.write(metric)
+        # write arguments of parser
+        f.write(f"\n## Arguments\n")
+        parser = vars(args)
+        for k,v in parser.items():
+            f.write(f"{k} : {v}\n")
+        f.write("\nEval type distribution\n")
+        f.write(str(counts))
+    
 def main():
     # ==========================================================================================
     # PART 0: setup
     # ==========================================================================================
-    steering_args = os.path.join(os.path.dirname(__file__), "args_steering.json")
+    steering_args = sys.argv[1]
     with open(steering_args, "r") as f:
         args = json.load(f)
     args = Namespace(**args)
@@ -97,6 +109,7 @@ def main():
     # parent dir
     exp_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     out_dir = f"{exp_dir}/exp_data/{args.outdir}"
+    args.outdir = out_dir
     os.makedirs(out_dir, exist_ok=True)
     
     ds = datasets.load_dataset(args.dataset, split="train")
@@ -117,6 +130,7 @@ def main():
     else:
         correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
 
+    print(len(correct), len(incorrect), len(incorrect_eval))
     info_incorrect = _pretty_print(incorrect)
     info_correct = _pretty_print(correct)
     if incorrect_eval is not None:
@@ -129,7 +143,7 @@ def main():
     with open(f"{out_dir}/data_readme.md", "w") as f:
         f.write(info)
         
-    print(info)
+    # print(info)
 
     # ==========================================================================================
     # PART 2: averages
@@ -140,6 +154,7 @@ def main():
     if os.path.exists(f"{out_dir}/steering_tensor.pt"):
         print(f"...Loading steering tensor from {out_dir}/steering_tensor.pt...")
         diff_tensor = torch.load(f"{out_dir}/steering_tensor.pt")
+        print(f"Diff tensor shape: {diff_tensor.shape}")
     else:
         print(f"...Creating steering tensor...")
         if args.fim_placeholder:
@@ -152,7 +167,7 @@ def main():
                                                 correct_prompts,
                                                 args.tokens_to_patch,
                                                     batch_size=args.batch_size)
-
+        
         incorrect_avg_tensor = batched_get_averages(model,
                                                     incorrect_prompts,
                                                     args.tokens_to_patch,
@@ -168,66 +183,41 @@ def main():
     #==========================================================================================
     # PART 3: steering on train
     #==========================================================================================
-    
-    def _evaluate(steering_ds, counts, args, out_dir, outfile):
-        correct_steer = steering_ds.filter(lambda x : x["correct_steer"] == True)
-        metric = f"{len(correct_steer)} / {len(steering_ds)} = {len(correct_steer) / len(steering_ds)}"
-        print(metric)
-        with open(f"{out_dir}/{outfile}", "w") as f:
-            f.write(f"## Steering Results\n")
-            f.write(metric)
-            # write arguments of parser
-            f.write(f"\n## Arguments\n")
-            parser = vars(args)
-            for k,v in parser.items():
-                f.write(f"{k} : {v}\n")
-            f.write("\nEval type distribution\n")
-            f.write(str(counts))
             
     print(f"...Applying patch to incorrect prompts...")
     incorrect = datasets.Dataset.from_pandas(pd.DataFrame(incorrect))
     counts = Counter(incorrect["fim_type"])
     print(counts)
-
-    steering_ds = steer(model, 
-                        args,
+    args.steering_outfile = f"{out_dir}/steered_predictions.json"
+    steering_ds = steer(model,
                         incorrect,
-                        diff_tensor,
-                        args.layers_to_patch,
-                        args.tokens_to_patch,
-                        args.patch_mode,
-                        args.batch_size)
+                        diff_tensor, args)
     steering_ds.save_to_disk(f"{out_dir}/steering_results_ds")
     df = steering_ds.to_pandas()
     df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
     df.to_csv(f"{out_dir}/steering_results.csv")
             
-    _evaluate(steering_ds, counts, args, out_dir, "eval_readme.md")
+    _evaluate(steering_ds, counts, args, "eval_readme.md")
         
     # ==========================================================================================
     # PART 4: steering ood
     # ==========================================================================================
     if args.test_size > 0:
-        print(f"...Applying patch to incorrect prompts...")
-
+        print(f"...Applying patch to incorrect OOD prompts...")
+        args.steering_outfile = f"{out_dir}/ood_steered_predictions.json"
         incorrect_eval = datasets.Dataset.from_pandas(pd.DataFrame(incorrect_eval))
         counts = Counter(incorrect["fim_type"])
         print(counts)
 
         steering_ds = steer(model, 
-                            args,
                             incorrect_eval,
                             diff_tensor,
-                            args.layers_to_patch,
-                            args.tokens_to_patch,
-                            args.patch_mode,
-                            args.batch_size)
+                            args)
         steering_ds.save_to_disk(f"{out_dir}/steering_results_ood")
         df = steering_ds.to_pandas()
         df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
         df.to_csv(f"{out_dir}/steering_results_ood.csv")
-        
-        _evaluate(steering_ds, counts, args, out_dir, "eval_ood_readme.md")
+        _evaluate(steering_ds, counts, args, "eval_ood_readme.md")
     
     
 if __name__ == "__main__":

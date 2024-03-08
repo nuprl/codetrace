@@ -23,7 +23,7 @@ new_name = args.new_ds_name
 model_name = model.split("/")[-1]
 print(f"Model: {model_name}")
 
-ds = datasets.load_dataset(dataset, split="train", keep_in_memory=True)
+ds = datasets.load_dataset(dataset, split="train")
 tokenizer = AutoTokenizer.from_pretrained(model)
 
 # def _condition(x):
@@ -32,7 +32,6 @@ tokenizer = AutoTokenizer.from_pretrained(model)
 # ds = ds.filter(_condition, num_proc=cpu_count())
 # sample
 if args.max_size > -1:
-    ds = ds.shuffle(seed=42)
     ds = ds.select(range(args.max_size))
 
 params = SamplingParams(temperature=0)
@@ -47,7 +46,7 @@ if len(prompts) > 10000:
     print("Doing batch generations")
     batch_size = 1000
     # batch generations because of RAM
-    for i in tqdm(range(0, len(prompts), batch_size), desc="Batch generations"):
+    for n,i in tqdm(enumerate(range(0, len(prompts), batch_size)), desc="Batch generations"):
         generations = llm.generate(prompts[i:i+batch_size], params, use_tqdm=False)
 
         for j,output in enumerate(generations):
@@ -57,9 +56,9 @@ if len(prompts) > 10000:
                                 "correct": generated_text.startswith(ds[i+j]["fim_type"].strip()),
                                 "overfull": len(tokenizer.tokenize(generated_text)) > len(tokenizer.tokenize(ds[i+j]["fim_type"].strip())),
                                 "model" : model_name})
-        # save every 5 batches:
-        if i % (5*batch_size) == 0:
-            print(f"Saving {i} completions")
+            
+        if n % 10 == 0 and n > 0:
+            print(f"Saving {batch_size} completions")
             new_ds = datasets.Dataset.from_pandas(pd.DataFrame(completions))
             new_ds.push_to_hub(new_name)
 

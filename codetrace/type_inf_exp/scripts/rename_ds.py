@@ -7,7 +7,6 @@ from multiprocessing import Pool, cpu_count
 from transformers import AutoTokenizer
 import torch
 import json
-from codetrace.py_mutator import dataset_rename_vars as py_dataset_rename_vars
 import hashlib
 
 def _filter_incorrect(ds: datasets.Dataset, 
@@ -17,7 +16,7 @@ def _filter_incorrect(ds: datasets.Dataset,
     Filter out examples where the model's prediction is incorrect. Truncate generation and
     solution at 1 token
     """
-    tokenizer = llm.get_tokenizer().tokenizer
+    tokenizer = llm.get_tokenizer()
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
     batch_size = 10000
@@ -27,7 +26,7 @@ def _filter_incorrect(ds: datasets.Dataset,
     # batch generations because of RAM
     for i in tqdm(range(0, len(ds), batch_size), desc="Batch generations"):
         
-        generations = llm.generate(prompts[i:i+batch_size], params, use_tqdm=False)
+        generations = llm.generate(prompts[i:i+batch_size], params)
 
         for j,output in enumerate(generations):
             generated_text = output.outputs[0].text.strip()
@@ -47,7 +46,7 @@ def _filter_incorrect(ds: datasets.Dataset,
 
 def _preprocess(dataset : datasets.Dataset, 
                 language: str,
-                remove_comments=False) -> datasets.Dataset:
+                do_remove_comments=False) -> datasets.Dataset:
     """
     Preprocess the dataset
     """
@@ -73,7 +72,7 @@ def _preprocess(dataset : datasets.Dataset,
         dataset = dataset.filter(lambda x: not _has_captures(x["fim_program"]))
     
     # remove comments
-    if remove_comments:
+    if do_remove_comments:
         dataset = dataset.map(lambda x: {"fim_program": remove_comments(x["fim_program"])})
     
     return dataset
@@ -122,9 +121,9 @@ def _postprocess(dataset : datasets.Dataset, language : str) -> datasets.Dataset
     
 def main(args):
     ds = datasets.load_dataset(args.completions_ds, split=args.split)
-    ds = _preprocess(ds, language=args.lang, remove_comments=args.remove_comments)
+    ds = _preprocess(ds, language=args.lang, do_remove_comments=args.remove_comments)
     if args.lang in ["python","py"]:
-        ds = py_dataset_rename_vars(ds)
+        raise NotImplementedError("Python not implemented")
     else:
         ds = dataset_rename_vars(ds)
     ds.push_to_hub(args.new_ds_name + "_unfiltered")
