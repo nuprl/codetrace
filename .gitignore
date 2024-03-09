@@ -1,4 +1,5 @@
 .ipynb_*/
+py_data/
 **/*.out
 exp_data/
 temp.png
