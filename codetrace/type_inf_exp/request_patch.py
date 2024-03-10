@@ -88,11 +88,19 @@ def batched_insert_patch_logit(
     tokens_to_patch : Union[List[str],List[int],str,int],
     patch_mode : str = "add",
     batch_size : int = 5,
-    outfile: str = None
+    outfile: str = None,
+    solutions : Union[List[str],str, None] = None
 ) -> List[str]:
     """
     batched insert patch
     """
+    def _percent_success(predictions_so_far, solutions):
+        correct = 0
+        for pred,sol in zip(predictions_so_far, solutions[:len(predictions_so_far)]):
+            if pred.startswith(sol) or pred == sol:
+                correct += 1
+        return correct / len(solutions)
+    
     if tokens_to_patch == []:
         tokens_to_patch = list(range(patch.shape[1]))
     # batch prompts according to batch size
@@ -109,7 +117,11 @@ def batched_insert_patch_logit(
             
         if outfile is not None:
             with open(outfile, "w") as f:
-                json.dump({"batch_size" : batch_size, "batch_idx" : i, "predictions" : predictions}, f)
+                data = {"batch_size" : batch_size, "batch_idx" : i, "predictions" : predictions}
+                if solutions is not None:
+                    json.dump({"percent_success" : _percent_success(predictions, solutions), **data}, f, indent=4)
+                else:
+                    json.dump(data, f, indent=4)
            
     return predictions
 
