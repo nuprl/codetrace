@@ -1,7 +1,7 @@
 .ipynb_*/
 py_data/
 **/*.out
-exp_data/
+exp_data*/
 temp.png
 __pycache__/
 build/

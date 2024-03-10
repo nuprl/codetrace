@@ -5,6 +5,7 @@ from argparse import ArgumentParser, Namespace
 from collections import Counter
 import hashlib
 import sys
+import pickle
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
@@ -86,7 +87,7 @@ def _evaluate(steering_ds, counts, args, outfile):
     correct_steer = steering_ds.filter(lambda x : x["correct_steer"] == True)
     metric = f"{len(correct_steer)} / {len(steering_ds)} = {len(correct_steer) / len(steering_ds)}"
     print(metric)
-    with open(f"{args.out_dir}/{outfile}", "w") as f:
+    with open(f"{args.outdir}/{outfile}", "w") as f:
         f.write(f"## Steering Results\n")
         f.write(metric)
         # write arguments of parser
@@ -96,6 +97,56 @@ def _evaluate(steering_ds, counts, args, outfile):
             f.write(f"{k} : {v}\n")
         f.write("\nEval type distribution\n")
         f.write(str(counts))
+
+def _get_steering_tensor(model, correct, incorrect, args):
+    # load steering tensor if it exists, else create it
+    if os.path.exists(f"{args.outdir}/steering_tensor.pt"):
+        print(f"...Loading steering tensor from {args.outdir}/steering_tensor.pt...")
+        diff_tensor = torch.load(f"{args.outdir}/steering_tensor.pt")
+        print(f"Diff tensor shape: {diff_tensor.shape}")
+    else:
+        print(f"...Creating steering tensor...")
+        if args.fim_placeholder:
+            correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in correct]
+            incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect]
+        else:
+            correct_prompts = [ex["fim_program"] for ex in correct]
+            incorrect_prompts = [ex["fim_program"] for ex in incorrect]
+            
+        if os.path.exists(f"{args.outdir}/correct_avg_tensor.pt"):
+            print(f"...Loading correct avg tensor from {args.outdir}/correct_avg_tensor.pt...")
+            correct_avg_tensor = torch.load(f"{args.outdir}/correct_avg_tensor.pt")
+        else:
+            correct_avg_tensor = batched_get_averages(model, 
+                                                    correct_prompts,
+                                                    args.tokens_to_patch,
+                                                    batch_size=args.batch_size,
+                                                    outfile=f"{args.outdir}/correct_avg_tensor")
+            # save tensor
+            torch.save(correct_avg_tensor, f"{args.outdir}/correct_avg_tensor.pt")
+            
+        if os.path.exists(f"{args.outdir}/incorrect_avg_tensor.pt"):
+            print(f"...Loading incorrect avg tensor from {args.outdir}/incorrect_avg_tensor.pt...")
+            incorrect_avg_tensor = torch.load(f"{args.outdir}/incorrect_avg_tensor.pt")
+        else:
+            incorrect_avg_tensor = batched_get_averages(model,
+                                                        incorrect_prompts,
+                                                        args.tokens_to_patch,
+                                                        batch_size=args.batch_size,
+                                                        outfile=f"{args.outdir}/incorrect_avg_tensor")
+            torch.save(incorrect_avg_tensor, f"{args.outdir}/incorrect_avg_tensor.pt")
+            
+        diff_tensor = correct_avg_tensor - incorrect_avg_tensor
+        diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
+
+        print(f"Diff tensor shape after transform: {diff_tensor.shape}")
+
+        torch.save(diff_tensor, f"{args.outdir}/steering_tensor.pt")
+        
+    if args.multiplier != 1:
+        diff_tensor = diff_tensor * args.multiplier
+        print(f"Diff tensor shape after multiplier: {diff_tensor.shape}")
+    return diff_tensor
     
 def main():
     # ==========================================================================================
@@ -108,9 +159,8 @@ def main():
 
     # parent dir
     exp_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    out_dir = f"{exp_dir}/exp_data/{args.outdir}"
-    args.outdir = out_dir
-    os.makedirs(out_dir, exist_ok=True)
+    args.outdir = f"{exp_dir}/exp_data/{args.outdir}"
+    os.makedirs(args.outdir, exist_ok=True)
     
     ds = datasets.load_dataset(args.dataset, split="train")
 
@@ -125,10 +175,7 @@ def main():
     # ==========================================================================================
     print("...Generating fit test split...")
     
-    if "completions" in args.dataset:
-        correct, incorrect, incorrect_eval = fit_test_split_completions(ds,model.tokenizer, args)
-    else:
-        correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
+    correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
 
     print(len(correct), len(incorrect), len(incorrect_eval))
     info_incorrect = _pretty_print(incorrect)
@@ -140,7 +187,7 @@ def main():
 
     info = f"Correct\n{info_correct}\n\nIncorrect\n{info_incorrect}\n\nIncorrect Eval\n{info_eval}\n"
 
-    with open(f"{out_dir}/data_readme.md", "w") as f:
+    with open(f"{args.outdir}/data_readme.md", "w") as f:
         f.write(info)
         
     # print(info)
@@ -150,35 +197,7 @@ def main():
     # ==========================================================================================
     print(f"...Getting averages for correct and incorrect prompts...")
     
-    # load steering tensor if it exists, else create it
-    if os.path.exists(f"{out_dir}/steering_tensor.pt"):
-        print(f"...Loading steering tensor from {out_dir}/steering_tensor.pt...")
-        diff_tensor = torch.load(f"{out_dir}/steering_tensor.pt")
-        print(f"Diff tensor shape: {diff_tensor.shape}")
-    else:
-        print(f"...Creating steering tensor...")
-        if args.fim_placeholder:
-            correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in correct]
-            incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect]
-        else:
-            correct_prompts = [ex["fim_program"] for ex in correct]
-            incorrect_prompts = [ex["fim_program"] for ex in incorrect]
-        correct_avg_tensor = batched_get_averages(model, 
-                                                correct_prompts,
-                                                args.tokens_to_patch,
-                                                    batch_size=args.batch_size)
-        
-        incorrect_avg_tensor = batched_get_averages(model,
-                                                    incorrect_prompts,
-                                                    args.tokens_to_patch,
-                                                    batch_size=args.batch_size)
-                                                
-        diff_tensor = correct_avg_tensor - incorrect_avg_tensor
-        diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
-
-        print(f"Diff tensor shape after transform: {diff_tensor.shape}")
-
-        torch.save(diff_tensor, f"{out_dir}/steering_tensor.pt")
+    diff_tensor = _get_steering_tensor(model, correct, incorrect, args)
 
     #==========================================================================================
     # PART 3: steering on train
@@ -188,14 +207,14 @@ def main():
     incorrect = datasets.Dataset.from_pandas(pd.DataFrame(incorrect))
     counts = Counter(incorrect["fim_type"])
     print(counts)
-    args.steering_outfile = f"{out_dir}/steered_predictions.json"
+    args.steering_outfile = f"{args.outdir}/steered_predictions.json"
     steering_ds = steer(model,
                         incorrect,
                         diff_tensor, args)
-    steering_ds.save_to_disk(f"{out_dir}/steering_results_ds")
+    steering_ds.save_to_disk(f"{args.outdir}/steering_results_ds")
     df = steering_ds.to_pandas()
     df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
-    df.to_csv(f"{out_dir}/steering_results.csv")
+    df.to_csv(f"{args.outdir}/steering_results.csv")
             
     _evaluate(steering_ds, counts, args, "eval_readme.md")
         
@@ -204,7 +223,7 @@ def main():
     # ==========================================================================================
     if args.test_size > 0:
         print(f"...Applying patch to incorrect OOD prompts...")
-        args.steering_outfile = f"{out_dir}/ood_steered_predictions.json"
+        args.steering_outfile = f"{args.outdir}/ood_steered_predictions.json"
         incorrect_eval = datasets.Dataset.from_pandas(pd.DataFrame(incorrect_eval))
         counts = Counter(incorrect["fim_type"])
         print(counts)
@@ -213,10 +232,10 @@ def main():
                             incorrect_eval,
                             diff_tensor,
                             args)
-        steering_ds.save_to_disk(f"{out_dir}/steering_results_ood")
+        steering_ds.save_to_disk(f"{args.outdir}/steering_results_ood")
         df = steering_ds.to_pandas()
         df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
-        df.to_csv(f"{out_dir}/steering_results_ood.csv")
+        df.to_csv(f"{args.outdir}/steering_results_ood.csv")
         _evaluate(steering_ds, counts, args, "eval_ood_readme.md")
     
     

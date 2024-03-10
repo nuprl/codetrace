@@ -16,11 +16,13 @@ import random
 import pickle
 import json
 
-def batched_get_averages(model: LanguageModel,
-                 prompts : List[str],
-                 tokens : Union[List[str],List[int]],
-                 batch_size=5,
-                 outdir = None) -> torch.Tensor:
+def batched_get_averages(
+    model: LanguageModel,
+    prompts : List[str],
+    tokens : Union[List[str],List[int]],
+    batch_size=5,
+    outfile = None
+) -> torch.Tensor:
     """
     Get averages of tokens at all layers for all prompts
     
@@ -38,10 +40,10 @@ def batched_get_averages(model: LanguageModel,
             hs = collect_hidden_states_at_tokens(model, batch, tokens)
         hs_mean = hs.mean(dim=1) # batch size mean
         hidden_states.append(hs_mean)
-        if outdir is not None:
-            with open(os.path.join(outdir, f"hidden_states.pkl"), "wb") as f:
+        if outfile is not None:
+            with open(outfile+".pkl", "wb") as f:
                 pickle.dump(hidden_states, f)
-            with open(os.path.join(outdir, f"avg_prompts.json"), "w") as f:
+            with open(outfile+".json", "w") as f:
                 json.dump({"batch_size" : batch_size, "batch_idx" : i, "prompts" : prompt_batches}, f)
         
     # save tensor
@@ -54,13 +56,15 @@ def batched_get_averages(model: LanguageModel,
     return hidden_states.mean(dim=0)
 
 
-def batched_insert_patch(model : LanguageModel,
-                    prompts : Union[List[str],str],
-                    patch : torch.Tensor,
-                    layers_to_patch : List[int],
-                    tokens_to_patch : Union[List[str],List[int],str,int],
-                    patch_mode : str = "add",
-                    batch_size : int = 5) -> List[TraceResult]:
+def batched_insert_patch(
+    model : LanguageModel,
+    prompts : Union[List[str],str],
+    patch : torch.Tensor,
+    layers_to_patch : List[int],
+    tokens_to_patch : Union[List[str],List[int],str,int],
+    patch_mode : str = "add",
+    batch_size : int = 5
+) -> List[TraceResult]:
     """
     batched insert patch
     """
@@ -73,18 +77,19 @@ def batched_insert_patch(model : LanguageModel,
         res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode)
         results.append(res)
            
-        
     return results
 
 
-def batched_insert_patch_logit(model : LanguageModel,
-                    prompts : Union[List[str],str],
-                    patch : torch.Tensor,
-                    layers_to_patch : List[int],
-                    tokens_to_patch : Union[List[str],List[int],str,int],
-                    patch_mode : str = "add",
-                    batch_size : int = 5,
-                    outfile: str = None) -> List[str]:
+def batched_insert_patch_logit(
+    model : LanguageModel,
+    prompts : Union[List[str],str],
+    patch : torch.Tensor,
+    layers_to_patch : List[int],
+    tokens_to_patch : Union[List[str],List[int],str,int],
+    patch_mode : str = "add",
+    batch_size : int = 5,
+    outfile: str = None
+) -> List[str]:
     """
     batched insert patch
     """
@@ -94,11 +99,11 @@ def batched_insert_patch_logit(model : LanguageModel,
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     predictions =[]
     for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
-        res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode)
-        prompt_len = res._logits.shape[1]
+        res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode, collect_hidden_states=False)
+        prompt_len = len(batch)
         logits : LogitResult = res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
         for j in range(prompt_len):
-            tok = logits[-1][j][-1].tokens(model.tokenizer)
+            tok = logits[-1][j].tokens(model.tokenizer)
             tok = tok[0].strip()
             predictions.append(tok)
             
@@ -108,10 +113,12 @@ def batched_insert_patch_logit(model : LanguageModel,
            
     return predictions
 
-def filter_prompts(dataset : datasets.Dataset,
-                   single_tokenize : PreTrainedTokenizer = None,
-                   dedup_prog_threshold : int = 3,
-                   dedup_type_threshold : int = 10) -> datasets.Dataset:
+def filter_prompts(
+    dataset : datasets.Dataset,
+    single_tokenize : PreTrainedTokenizer = None,
+    dedup_prog_threshold : int = 3,
+    dedup_type_threshold : int = 10
+) -> datasets.Dataset:
     """
     Balance prompts s.t. there is a balanced distribution of labels.
     Do not use more than max_size prompts.

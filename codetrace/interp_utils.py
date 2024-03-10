@@ -72,12 +72,13 @@ class TraceResult:
     def __init__(self, 
                  logits : torch.Tensor, 
                  layer_idxs : Union[List[int],int],
-                 hidden_states : torch.Tensor = None):
+                 hidden_states : torch.Tensor = None,
+                 model_n_layer : int = 24):
         self._logits = logits.detach().cpu()
         if hidden_states != None:
             hidden_states = hidden_states.detach().cpu()
         self._hidden_states = hidden_states
-        self._layer_idx = [arg_to_literal(i) for i in arg_to_list(layer_idxs)]
+        self._layer_idx = [arg_to_literal(i, n=model_n_layer) for i in arg_to_list(layer_idxs)]
         
     def decode_logits(self, 
                     top_k : int = 1,
@@ -196,12 +197,15 @@ def insert_attn_patch(model : LanguageModel,
     raise NotImplementedError("Not tested")
 
 
-def insert_patch(model : LanguageModel,
-                 prompts : Union[List[str],str],
-                 patch : torch.Tensor,
-                 layers_to_patch : Union[List[int],int],
-                 tokens_to_patch : Union[List[str],List[int],str,int],
-                 patch_mode : str = "add") -> TraceResult:
+def insert_patch(
+    model : LanguageModel,
+    prompts : Union[List[str],str],
+    patch : torch.Tensor,
+    layers_to_patch : Union[List[int],int],
+    tokens_to_patch : Union[List[str],List[int],str,int],
+    patch_mode : str = "add",
+    collect_hidden_states : bool = False
+) -> TraceResult:
     """
     Insert patch at layers and tokens
     NOTE:
@@ -248,20 +252,26 @@ def insert_patch(model : LanguageModel,
                                 x[[i],target_idx[i],:] -= clean_patch
                                 
                     apply_patch(model.transformer.h[layer].output[0])
-                            
-            hidden_states = torch.stack([
-                model.transformer.h[layer_idx].output[0]
-                for layer_idx in range(len(model.transformer.h))
-            ],dim=0).save()
             
-            logits = decode(hidden_states).save()
+            if collect_hidden_states:    
+                hidden_states = torch.stack([
+                    model.transformer.h[layer_idx].output[0]
+                    for layer_idx in range(len(model.transformer.h))
+                ],dim=0).save()
+            
+                logits = decode(hidden_states).save()
+                layer_range = list(range(len(model.transformer.h)))
+            else:
+                logits = model.lm_head.output # shape [n_prompt, n_tokens, n_vocab]
+                logits = torch.stack([logits], dim=0).save() # shape [n_layer, n_prompt, n_tokens, n_vocab]
+                hidden_states = None
+                layer_range = [-1]
             
     hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
     logits = util.apply(logits, lambda x: x.value, Proxy)
     
-    return TraceResult(logits, list(range(len(model.transformer.h))), hidden_states)
+    return TraceResult(logits, layer_range, hidden_states, len(model.transformer.h))
     
-
             
 def logit_lens(model : LanguageModel,
                prompts : Union[List[str],str],
