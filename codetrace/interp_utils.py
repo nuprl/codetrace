@@ -73,12 +73,14 @@ class TraceResult:
                  logits : torch.Tensor, 
                  layer_idxs : Union[List[int],int],
                  hidden_states : torch.Tensor = None,
-                 model_n_layer : int = 24):
+                 model_n_layer : int = 24,
+                 custom_decoder : Union[None, torch.nn.Module] = None):
         self._logits = logits.detach().cpu()
         if hidden_states != None:
             hidden_states = hidden_states.detach().cpu()
         self._hidden_states = hidden_states
         self._layer_idx = [arg_to_literal(i, n=model_n_layer) for i in arg_to_list(layer_idxs)]
+        self.custom_decoder = custom_decoder
         
     def decode_logits(self, 
                     top_k : int = 1,
@@ -96,7 +98,9 @@ class TraceResult:
         logits = self._logits.index_select(0, torch.tensor(layers)
                                            ).index_select(1, torch.tensor(prompt_idx)
                                                           ).index_select(2, torch.tensor(token_idx))
-        
+        if self.custom_decoder is not None:
+            logits = self.custom_decoder(logits)
+            
         if do_log_probs:
             logits = logits.softmax(dim=-1).log()
         else:
@@ -204,7 +208,8 @@ def insert_patch(
     layers_to_patch : Union[List[int],int],
     tokens_to_patch : Union[List[str],List[int],str,int],
     patch_mode : str = "add",
-    collect_hidden_states : bool = False
+    collect_hidden_states : bool = True,
+    custom_decoder : Union[None, torch.nn.Module] = None
 ) -> TraceResult:
     """
     Insert patch at layers and tokens
@@ -223,7 +228,10 @@ def insert_patch(
         raise NotImplementedError(f"Patch mode {patch_mode} not implemented")
     
     def decode(x : torch.Tensor) -> torch.Tensor:
-        return model.lm_head(model.transformer.ln_f(x))
+        if custom_decoder is not None:
+            return x
+        else:
+            return model.lm_head(model.transformer.ln_f(x))
     
     with model.forward() as runner:
         with runner.invoke(prompts) as invoker:
@@ -253,24 +261,22 @@ def insert_patch(
                                 
                     apply_patch(model.transformer.h[layer].output[0])
             
-            if collect_hidden_states:    
-                hidden_states = torch.stack([
-                    model.transformer.h[layer_idx].output[0]
-                    for layer_idx in range(len(model.transformer.h))
-                ],dim=0).save()
-            
-                logits = decode(hidden_states).save()
-                layer_range = list(range(len(model.transformer.h)))
+            if collect_hidden_states:
+                collect_range = list(range(len(model.transformer.h)))
             else:
-                logits = model.lm_head.output # shape [n_prompt, n_tokens, n_vocab]
-                logits = torch.stack([logits], dim=0).save() # shape [n_layer, n_prompt, n_tokens, n_vocab]
-                hidden_states = None
-                layer_range = [-1]
+                collect_range = [-1]
+                   
+            hidden_states = torch.stack([
+                model.transformer.h[layer_idx].output[0]
+                for layer_idx in collect_range
+            ],dim=0).save()
+        
+            logits = decode(hidden_states).save()
             
     hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
     logits = util.apply(logits, lambda x: x.value, Proxy)
     
-    return TraceResult(logits, layer_range, hidden_states, len(model.transformer.h))
+    return TraceResult(logits, collect_range, hidden_states, len(model.transformer.h), custom_decoder=custom_decoder)
     
             
 def logit_lens(model : LanguageModel,
@@ -368,6 +374,7 @@ def custom_lens(model : LanguageModel,
                 k : int = 1,) -> List[str]:
     """
     Apply custom lens to model activations for prompt at (layer, token)
+    Note: for original decoder, load transformer version of model and copy
     """
     layer = arg_to_list(layer)
     prompts = arg_to_list(prompts)
@@ -378,6 +385,7 @@ def custom_lens(model : LanguageModel,
     activations = activations.detach().cpu()
     # apply decoder
     logits = decoder(activations)
+
     # softmax
     logits = logits.softmax(dim=-1)
     topk= logits.topk(k, dim=-1)

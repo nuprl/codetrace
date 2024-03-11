@@ -89,7 +89,8 @@ def batched_insert_patch_logit(
     patch_mode : str = "add",
     batch_size : int = 5,
     outfile: str = None,
-    solutions : Union[List[str],str, None] = None
+    solutions : Union[List[str],str, None] = None,
+    custom_decoder : Union[torch.nn.Module, None] = None
 ) -> List[str]:
     """
     batched insert patch
@@ -107,9 +108,17 @@ def batched_insert_patch_logit(
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     predictions =[]
     for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
-        res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode, collect_hidden_states=False)
+        res : TraceResult = insert_patch(model, 
+                                         batch, 
+                                         patch, 
+                                         layers_to_patch, 
+                                         tokens_to_patch, 
+                                         patch_mode, 
+                                         collect_hidden_states=False,
+                                         custom_decoder=custom_decoder)
         prompt_len = len(batch)
         logits : LogitResult = res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
+
         for j in range(prompt_len):
             tok = logits[-1][j].tokens(model.tokenizer)
             tok = tok[0].strip()

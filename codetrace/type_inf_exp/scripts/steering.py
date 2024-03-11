@@ -6,11 +6,49 @@ from collections import Counter
 import hashlib
 import sys
 import pickle
+from copy import deepcopy
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
     return ds.remove_columns(columns)
 
+def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
+    # recompute "correct"
+    dataset = dataset.map(lambda x : {"correct" : x["generated_text"].strip().startswith(x["fim_type"].strip()), **x})
+    correct = dataset.filter(lambda x : x["correct"] == True)
+    incorrect = dataset.filter(lambda x : x["correct"] == False)
+    correct = filter_prompts(correct, 
+                             single_tokenize=tokenizer, 
+                             dedup_prog_threshold=args.prog_threshold, 
+                             dedup_type_threshold=args.type_threshold)
+    incorrect = filter_prompts(incorrect,
+                                 single_tokenize=tokenizer, 
+                                 dedup_prog_threshold=args.prog_threshold, 
+                                 dedup_type_threshold=args.type_threshold)
+    # keep only hexshas in incorrect
+    correct = correct.filter(lambda x : x["hexsha"] in set(incorrect["hexsha"]))
+    incorrect = incorrect.filter(lambda x : x["hexsha"] in set(correct["hexsha"]))
+    
+    if args.test_size > 0:
+        # set aside some incorrect prompts
+        hexsha_counts = Counter(incorrect["hexsha"])
+        # accumulate hexshas from the least count until threshold test_size is achieved
+        sorted_hexshas = sorted(hexsha_counts.keys(), key= lambda x : hexsha_counts[x])
+        test_len = int(len(incorrect) * args.test_size)
+        ood_hexshas = []
+        count = 0
+        for hexsha in sorted_hexshas:
+            ood_hexshas.append(hexsha)
+            count += hexsha_counts[hexsha]
+            if count > test_len:
+                break
+        incorrect_ood = incorrect.filter(lambda x : x["hexsha"] in ood_hexshas)
+        incorrect = incorrect.filter(lambda x : x["hexsha"] not in ood_hexshas)
+        correct = correct.filter(lambda x : x["hexsha"] not in ood_hexshas)
+        return correct, incorrect, incorrect_ood
+    else:
+        return correct, incorrect, None
+    
 def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
     dataset = filter_prompts(dataset, 
                              single_tokenize=tokenizer, 
@@ -63,6 +101,16 @@ def steer(
         eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect_eval]
     else:
         eval_prompts = [ex["fim_program"] for ex in incorrect_eval]
+    eval_solutions = [ex["fim_type"] for ex in incorrect_eval]
+        
+    if args.custom_decoder is not False:
+        decoder = torch.load(args.custom_decoder)
+        weight = decoder["weight"]
+        linear_layer = torch.nn.Linear(in_features=weight.shape[1], out_features=weight.shape[0])
+        linear_layer.weight.data = weight
+        custom_decoder = linear_layer.to("cpu")
+    else:
+        custom_decoder = None
     # print types in incorrect
     
     predictions = batched_insert_patch_logit(model, 
@@ -72,7 +120,9 @@ def steer(
                 args.tokens_to_patch,
                 args.patch_mode,
                 args.batch_size,
-                args.steering_outfile)
+                args.steering_outfile,
+                solutions=eval_solutions,
+                custom_decoder=custom_decoder)
     steering_results = []
     for i,tok in enumerate(predictions):
         ex = incorrect_eval[i]
@@ -175,9 +225,12 @@ def main():
     # ==========================================================================================
     print("...Generating fit test split...")
     
-    correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
+    if "completions" in args.dataset:
+        correct, incorrect, incorrect_eval = fit_test_split_completions(ds,model.tokenizer, args)
+    else:
+        correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
 
-    print(len(correct), len(incorrect), len(incorrect_eval))
+    print("Correct, incorrect, incorrect ood len:", len(correct), len(incorrect), len(incorrect_eval))
     info_incorrect = _pretty_print(incorrect)
     info_correct = _pretty_print(correct)
     if incorrect_eval is not None:
