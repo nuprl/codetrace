@@ -127,7 +127,7 @@ def steer(
     for i,tok in enumerate(predictions):
         ex = incorrect_eval[i]
         steering_results.append({"steered_generation" : tok, 
-                            "correct_steer" : (ex["fim_type"].startswith(tok)),
+                            "correct_steer" : (ex["fim_type"].startswith(tok) and len(ex["fim_type"]) > 0),
                             **ex})
             
     steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
