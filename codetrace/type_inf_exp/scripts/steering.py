@@ -127,7 +127,8 @@ def steer(
     for i,tok in enumerate(predictions):
         ex = incorrect_eval[i]
         steering_results.append({"steered_generation" : tok, 
-                            "correct_steer" : (tok.startswith(ex["fim_type"]) and len(tok) > 0),
+                            # tok is always one token, fim_type len may vary
+                            "correct_steer" : (ex["fim_type"].startswith(tok) and len(tok) > 0),
                             **ex})
             
     steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
@@ -256,19 +257,25 @@ def main():
     #==========================================================================================
     # PART 3: steering on train
     #==========================================================================================
-            
-    print(f"...Applying patch to incorrect prompts...")
-    incorrect = datasets.Dataset.from_pandas(pd.DataFrame(incorrect))
-    counts = Counter(incorrect["fim_type"])
-    print(counts)
-    args.steering_outfile = f"{args.outdir}/steered_predictions.json"
-    steering_ds = steer(model,
-                        incorrect,
-                        diff_tensor, args)
-    steering_ds.save_to_disk(f"{args.outdir}/steering_results_ds")
-    df = steering_ds.to_pandas()
-    df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
-    df.to_csv(f"{args.outdir}/steering_results.csv")
+    
+    if os.path.exists(f"{args.outdir}/steering_results_ds"):
+        print(f"...Loading steering results from {args.outdir}/steering_results_ds...")
+        steering_ds = datasets.load_from_disk(f"{args.outdir}/steering_results_ds")
+        counts = Counter(steering_ds["fim_type"])
+        print(counts)
+    else:
+        print(f"...Applying patch to incorrect prompts...")
+        incorrect = datasets.Dataset.from_pandas(pd.DataFrame(incorrect))
+        counts = Counter(incorrect["fim_type"])
+        print(counts)
+        args.steering_outfile = f"{args.outdir}/steered_predictions.json"
+        steering_ds = steer(model,
+                            incorrect,
+                            diff_tensor, args)
+        steering_ds.save_to_disk(f"{args.outdir}/steering_results_ds")
+        df = steering_ds.to_pandas()
+        df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
+        df.to_csv(f"{args.outdir}/steering_results.csv")
             
     _evaluate(steering_ds, counts, args, "eval_readme.md")
         
@@ -276,20 +283,26 @@ def main():
     # PART 4: steering ood
     # ==========================================================================================
     if args.test_size > 0:
-        print(f"...Applying patch to incorrect OOD prompts...")
-        args.steering_outfile = f"{args.outdir}/ood_steered_predictions.json"
-        incorrect_eval = datasets.Dataset.from_pandas(pd.DataFrame(incorrect_eval))
-        counts = Counter(incorrect["fim_type"])
-        print(counts)
+        if os.path.exists(f"{args.outdir}/steering_results_ood"):
+            print(f"...Loading steering results from {args.outdir}/steering_results_ood...")
+            steering_ds = datasets.load_from_disk(f"{args.outdir}/steering_results_ood")
+            counts = Counter(steering_ds["fim_type"])
+            print(counts)
+        else:
+            print(f"...Applying patch to incorrect OOD prompts...")
+            args.steering_outfile = f"{args.outdir}/ood_steered_predictions.json"
+            incorrect_eval = datasets.Dataset.from_pandas(pd.DataFrame(incorrect_eval))
+            counts = Counter(incorrect["fim_type"])
+            print(counts)
 
-        steering_ds = steer(model, 
-                            incorrect_eval,
-                            diff_tensor,
-                            args)
-        steering_ds.save_to_disk(f"{args.outdir}/steering_results_ood")
-        df = steering_ds.to_pandas()
-        df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
-        df.to_csv(f"{args.outdir}/steering_results_ood.csv")
+            steering_ds = steer(model, 
+                                incorrect_eval,
+                                diff_tensor,
+                                args)
+            steering_ds.save_to_disk(f"{args.outdir}/steering_results_ood")
+            df = steering_ds.to_pandas()
+            df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
+            df.to_csv(f"{args.outdir}/steering_results_ood.csv")
         _evaluate(steering_ds, counts, args, "eval_ood_readme.md")
     
     
