@@ -147,8 +147,7 @@ def filter_prompts(
     Deduplicate prompts by hexsha by some dedup_prog_threshold (max prompts for a program)
     """
     if not single_tokenize is None:
-        dataset = dataset.filter(lambda x : len(single_tokenize.encode(x["fim_type"])) == 1)
-    
+        dataset = dataset.map(lambda x: {"fim_type" : single_tokenize.decode(single_tokenize.encode(x["fim_type"])[0]), **x})
     # get count of labels
     labels = dataset["fim_type"]
     counter = Counter(labels)

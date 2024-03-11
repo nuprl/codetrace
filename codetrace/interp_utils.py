@@ -250,8 +250,12 @@ def insert_patch(
                     # grab patch
                     clean_patch = patch[layer]
                     # apply patch
-                    def apply_patch(x : torch.Tensor) -> torch.Tensor:
+                    def apply_patch(x : torch.Tensor, clean_patch) -> torch.Tensor:
                         for i in range(len(prompts)):
+                            # if one unique patch for each prompt, grab the correct one
+                            if clean_patch.shape[0] == len(prompts) and len(prompts)>1:
+                                clean_patch = clean_patch.index_select(0, torch.tensor([i]))
+                                
                             if patch_mode == "subst":
                                 x[[i],target_idx[i],:] = clean_patch
                             elif patch_mode == "add":
@@ -259,7 +263,7 @@ def insert_patch(
                             elif patch_mode == "sub":
                                 x[[i],target_idx[i],:] -= clean_patch
                                 
-                    apply_patch(model.transformer.h[layer].output[0])
+                    apply_patch(model.transformer.h[layer].output[0], clean_patch)
             
             if collect_hidden_states:
                 collect_range = list(range(len(model.transformer.h)))

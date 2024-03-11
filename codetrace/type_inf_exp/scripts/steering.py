@@ -193,9 +193,6 @@ def _get_steering_tensor(model, correct, incorrect, args):
 
         torch.save(diff_tensor, f"{args.outdir}/steering_tensor.pt")
         
-    if args.multiplier != 1:
-        diff_tensor = diff_tensor * args.multiplier
-        print(f"Diff tensor shape after multiplier: {diff_tensor.shape}")
     return diff_tensor
     
 def main():
@@ -217,7 +214,11 @@ def main():
     print(ds)
     # filter out too large prompts for OOM
     ds = ds.filter(lambda x : len(x["fim_program"]) < 8000)
-
+    if args.fim_placeholder:
+        assert "<FILL>" in ds["fim_program"][0]
+    else:
+        assert "<FILL>" not in ds["fim_program"][0]
+        
     model = LanguageModel(args.model, device_map="cuda")
 
     # ==========================================================================================
