@@ -22,6 +22,8 @@ from typing import List, Tuple, Union
 from collections import Counter
 from codetrace.interp_utils import collect_hidden_states_at_tokens, insert_patch
 from tqdm import tqdm
+import argparse
+import sys
 
 def _batched_predictions(
     model : LanguageModel,
@@ -155,16 +157,20 @@ def main(args):
     
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, required=True)
-    parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--dataset", type=str, required=True)
-    parser.add_argument("--num_per_type", type=int, default=200)
-    parser.add_argument("--tokens_to_patch", type=str, required=True)
-    parser.add_argument("--batch_size", type=int, default=10)
-    parser.add_argument("--outfile", type=str, default="predictions.csv")
-    parser.add_argument("--plot-only", action="store_true")
-    args = parser.parse_args()
+    if sys.argv[1].endswith(".json") and "args" in sys.argv[1]:
+        with open(sys.argv[1], "r") as f:
+            args = json.load(f)
+        args = argparse.Namespace(**args)
+    else:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--model_name", type=str, required=True)
+        parser.add_argument("--device", type=str, default="cuda")
+        parser.add_argument("--dataset", type=str, required=True)
+        parser.add_argument("--num_per_type", type=int, default=200)
+        parser.add_argument("--tokens_to_patch", type=str, required=True)
+        parser.add_argument("--batch_size", type=int, default=10)
+        parser.add_argument("--outfile", type=str, default="predictions.csv")
+        parser.add_argument("--plot-only", action="store_true")
+        args = parser.parse_args()
     print(args)
     main(args)
