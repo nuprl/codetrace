@@ -87,7 +87,8 @@ class TraceResult:
                     layers : Union[List[int],int] = -1,
                     prompt_idx : Union[List[int],int] = 0,
                     token_idx : Union[List[int],int] = -1,
-                    do_log_probs : bool = False) -> LogitResult:
+                    do_log_probs : bool = False,
+                    top_p : float = 1.0) -> LogitResult:
         """
         Decode logits to tokens, after scoring top_k
         NOTE: layer idxs are [0, n_layer)
@@ -100,13 +101,9 @@ class TraceResult:
                                                           ).index_select(2, torch.tensor(token_idx))
         if self.custom_decoder is not None:
             logits = self.custom_decoder(logits)
-            
-        if do_log_probs:
-            logits = logits.softmax(dim=-1).log()
-        else:
-            logits = logits.softmax(dim=-1)
-        logits = logits.topk(top_k, dim=-1)
         
+        logits = top_k_top_p_filtering(logits, top_k, top_p, do_log_probs)
+
         return LogitResult(logits.indices, logits.values, do_log_probs)
 
 

@@ -8,6 +8,9 @@ from tree_sitter import Language, Parser
 import tree_sitter
 import tempfile
 import re
+import torch
+from collections import namedtuple
+
 
 parent = Path(__file__).parent
 REPO_ROOT = Path(__file__).parent.parent
@@ -167,3 +170,43 @@ def find_between_bytes(
             return i
     return -1
 
+def top_k_top_p_filtering(
+    logits: torch.Tensor,
+    top_k: int,
+    top_p: float,
+    do_log_probs: bool
+) -> torch.Tensor:
+    """
+    # adapted from transformers hf library https://huggingface.co/transformers/v3.2.0/_modules/transformers/generation_utils.html
+    Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
+    """
+    if top_k > 0:
+        if do_log_probs:
+            topk_indices = logits.log_softmax(dim=-1).topk(top_k, dim=-1).indices
+        else:
+            topk_indices = logits.softmax(dim=-1).topk(top_k, dim=-1).indices
+        # keep only indices that are in the top_k
+        logits = torch.gather(logits, -1, topk_indices)
+        sorted_indices_to_keep = topk_indices
+
+    if top_p < 1.0:
+        sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+
+        if do_log_probs:
+            cumulative_probs = torch.cumsum(sorted_logits.log_softmax(dim=-1), dim=-1)
+            top_p = torch.tensor(top_p).log()
+        else:
+            cumulative_probs = torch.cumsum(sorted_logits.softmax(dim=-1), dim=-1)
+
+        # Remove tokens with cumulative probability above the threshold
+        sorted_indices_to_keep = torch.where(cumulative_probs <= top_p, sorted_indices, 0)
+        # 0 will be placed at indexes that are above the threshold and to denote index=0
+        # we always keep at least 1 token, so 0 will always be in indexes to keep
+        sorted_indices_to_keep = torch.unique(sorted_indices_to_keep, dim=-1)
+
+        logits = torch.gather(sorted_logits, -1, sorted_indices_to_keep)
+    # wrap in named tuple
+    
+    TopkTuple = namedtuple('TopkTuple', ['indices','values'])
+    logit_tuple = TopkTuple(indices=sorted_indices_to_keep, values=logits)
+    return logit_tuple

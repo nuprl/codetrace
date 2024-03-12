@@ -1,5 +1,6 @@
 from codetrace.interp_utils import *
 from codetrace.interp_vis import *
+from codetrace.utils import *
 from nnsight import LanguageModel
 from nnsight import util
 from nnsight.tracing import Proxy
@@ -128,52 +129,58 @@ def test_interp_patch():
     tok_b_f = out[-1][1][-1].tokens(model.tokenizer)[-1]
     assert tok_a_f == ')', f"{repr(tok_a_f)}"
     assert tok_b_f == ')', f"{repr(tok_b_f)}"
+   
     
-def test_attn_collect():
-    # TODO: test
-    pass
-    # prompts = [
-    #     '<fim_prefix>print("hello world"<fim_suffix><fim_middle>',
-    #     "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
-    # ]
-    # hs = collect_attention_output(model, prompts[0])
-    # out = insert_attn_patch(model, prompts, hs, 14, patch_mode="subst")
-    # out : Logits = out.decode_logits(prompt_idx=[0,1])
-    # tok_a_f = out[-1][0][-1].tokens(model.tokenizer)[-1]
-    # tok_b_f = out[-1][1][-1].tokens(model.tokenizer)[-1]
-    # assert tok_a_f == ')', f"{repr(tok_a_f)}"
-    # # assert tok_b_f == ')', f"{repr(tok_b_f)}"
-    # NOTE: this one is hard to sanity
-    
-def test_insert_patch_with_generation():
-    from codetrace.code_gen_exp.scripts.steering import steer
-    
-    prompt_a = """def print_name(x):"""
-    prompt_b = """def fib(n):"""
-    patch_a = collect_hidden_states_at_tokens(model, prompt_a, -1, list(range(24)))
-    patch_b = collect_hidden_states_at_tokens(model, prompt_b, -1, list(range(24)))
-    print(patch_a.shape, patch_b.shape)
-    hf_model = AutoModelForCausalLM.from_pretrained(modelname).to("cuda")
-    tokenizer = AutoTokenizer.from_pretrained(modelname)
-    len_a = len(tokenizer.encode(prompt_a))
-    len_b = len(tokenizer.encode(prompt_b))
-    out = steer(hf_model, tokenizer, prompt_b, patch_a, list(range(24)), list(range(len_b)), "add", 1, max_out=100)
-    print("".join([tokenizer.decode(x) for x in out]))
    
 def repeat_test(func, n):
     for i in range(n):
         print(f"Running test {func.__name__} {i+1}/{n}")
         func()
-        
+
+def test_topk_topp():
+    ex = [
+        [[0.9, 0.05, 0.04, 0.01]],
+        [[9, 0.1, 0.02, 0.001]],
+        [[0.5, 0.25, 0.25, 0.1]]
+    ]
+    ## cumulative after softmax
+    # tensor([[[[0.4422, 0.6313, 0.8184, 1.0000]],
+
+    #      [[0.2612, 0.5223, 0.7634, 1.0000]],
+
+    #      [[0.3098, 0.5511, 0.7923, 1.0000]]]])
+    ## cumulative with k select first
+    # tensor([[[[0.5404, 0.7713, 1.0000]],
+
+    #      [[0.9997, 0.9999, 1.0000]],
+
+    #      [[0.3910, 0.6955, 1.0000]]]])
+    top_p = 0.8
+    top_k = 3
+    input_t = torch.tensor(ex)
+    inputs = torch.stack([input_t], dim=0)
+    assert inputs.shape == (1, 3, 1, 4), inputs.shape
+    logits = top_k_top_p_filtering(inputs, top_k, top_p, do_log_probs=False)
+    # logits_log = top_k_top_p_filtering(inputs, top_k, top_p, do_log_probs=True)
+    assert list(logits.values[0,0,0]) == [0.9,0.05], logits.values[0,0,0]
+    assert list(logits.values[0,1,0]) == [9,9], logits.values[0,1,0]
+    assert list(logits.values[0,2,0]) == [0.5, 0.25], logits.values[0,2,0]
+    assert list(logits.indices[0,0,0]) == [0,1], logits.indices[0,0,0]
+    assert list(logits.indices[0,1,0]) == [0,0], logits.indices[0,1,0]
+    assert list(logits.indices[0,2,0]) == [0,1], logits.indices[0,2,0]
+    
+    
 if __name__ == "__main__":
-    # repeat_test(test_logit_pipeline, 1)
-    # repeat_test(test_patch, 1)
-    # repeat_test(test_patch_vis, 1)
-    # repeat_test(test_patch_vis_mult, 1)
-    # repeat_test(test_logit_generation_match, 1)
-    # repeat_test(test_collect_at_token_idx, 1)
-    # repeat_test(test_collect_at_token_idx2, 1)
-    # repeat_test(test_interp_patch, 10)
-    # test_attn_collect()
-    test_insert_patch_with_generation()
+    repeat_test(test_logit_pipeline, 1)
+    repeat_test(test_patch, 1)
+    repeat_test(test_patch_vis, 1)
+    repeat_test(test_patch_vis_mult, 1)
+    repeat_test(test_logit_generation_match, 1)
+    repeat_test(test_collect_at_token_idx, 1)
+    repeat_test(test_collect_at_token_idx2, 1)
+    repeat_test(test_interp_patch, 10)
+    test_topk_topp()
     print("All tests passed!")
+    
+    
+    
