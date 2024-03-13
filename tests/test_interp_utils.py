@@ -1,3 +1,4 @@
+from tqdm import tqdm
 from codetrace.interp_utils import *
 from codetrace.interp_vis import *
 from codetrace.utils import *
@@ -5,6 +6,7 @@ from nnsight import LanguageModel
 from nnsight import util
 from nnsight.tracing import Proxy
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import regex as re
 
 # re-run this
 # NOTE: make sure padding is left side for list of prompts,
@@ -169,7 +171,71 @@ def test_topk_topp():
     assert list(logits.indices[0,1,0]) == [0,0], logits.indices[0,1,0]
     assert list(logits.indices[0,2,0]) == [0,1], logits.indices[0,2,0]
     
+def test_generation():
+    gold = '''from typing import List
+
+def uhslzetzbdurzagwmhn(bwsgyuklklhw: str) -> List[int]:
+""" Input to this function is a string represented multiple groups for nested parentheses separated by spaces.
+For each of the group, output the deepest level of nesting of parentheses.
+E.g. (()()) has maximum two levels of nesting while ((())) has three."""
+
+    def xuuzjpbpbmjwlpktx(e):
+        depth = 0
+        max_depth = 0
+        for c in e:
+            if c == '(':
+                depth += 1
+                max_depth = max(max_depth, depth)
+            elif c == ')':
+                depth -= 1
+                max_depth = max(max_depth, depth)
+        return max_depth
+
+    return [xuuzjpbpbmjwlpktx(bwsgyuklklhw)]'''
     
+    prompt = ['''from typing import List
+
+def uhslzetzbdurzagwmhn(bwsgyuklklhw: str) -> List[int]:
+""" Input to this function is a string represented multiple groups for nested parentheses separated by spaces.
+For each of the group, output the deepest level of nesting of parentheses.
+E.g. (()()) has maximum two levels of nesting while ((())) has three."""
+
+    def xuuzjpbpbmjwlpktx(e):
+        depth = 0
+        max_depth = 0
+        for c in e:
+            if c == '(':
+                depth += 1
+                max_depth = max''']
+    
+    max_out = 512
+    generated = []
+    for i in tqdm(range(max_out)):
+        res = logit_lens(model, prompt, -1)
+        logits = res.decode_logits()
+        tok = logits[-1][-1].tokens(model.tokenizer)[0]
+        if tok == "<|endoftext|>":
+            break
+        generated.append(tok)
+        prompt = [prompt[0] + tok]
+
+    assert prompt[0].strip() == gold.strip(), f"\n{prompt[0]}\n{gold}\n{generated}"
+    
+    generated = []
+    patch = torch.zeros(24, 1, 1, model.config.n_embd)
+    for i in tqdm(range(max_out)):
+        res = insert_patch(model, prompt, patch, [], [-1], collect_hidden_states=False)
+        logits = res.decode_logits()
+        tok = logits[-1][-1].tokens(model.tokenizer)[0]
+        if tok == "<|endoftext|>":
+            break
+        generated.append(tok)
+        prompt = [prompt[0] + tok]
+    
+    assert prompt[0].strip() == gold.strip(), f"\n{prompt[0]}\n{gold}"
+    
+            
+            
 if __name__ == "__main__":
     repeat_test(test_logit_pipeline, 1)
     repeat_test(test_patch, 1)
@@ -179,7 +245,8 @@ if __name__ == "__main__":
     repeat_test(test_collect_at_token_idx, 1)
     repeat_test(test_collect_at_token_idx2, 1)
     repeat_test(test_interp_patch, 10)
-    test_topk_topp()
+    # test_topk_topp()
+    test_generation()
     print("All tests passed!")
     
     

@@ -1,10 +1,10 @@
 {
-    "outdir": 3,
+    "outdir": "rename_tensor_steer",
     "dataset": "franlucc/humaneval_codegen_steering",
     "model": "/home/arjun/models/starcoderbase-1b",
-    "batch_size": 1,
+    "batch_size": 3,
     "patch_mode": "add",
     "tokens_to_patch": [-1],
     "layers_to_patch": [10,11,12,13,14],
-    "test_size": 0.2
+    "max_out": 512
 }

@@ -46,7 +46,11 @@ class LogitResult:
         """
         if self.token_indices.squeeze().dim() > 1:
             raise ValueError(f"token_indices must be 1d")
-        return [tokenizer.decode(i.item()) for i in self.token_indices]
+        
+        def _to_string(idx):
+            return tokenizer.convert_tokens_to_string(tokenizer.tokenize(tokenizer.decode(idx)))
+        
+        return [_to_string(i.item()) for i in self.token_indices]
     
     def probs(self) -> np.ndarray:
         return self.probabilities.flatten().numpy()
@@ -239,7 +243,7 @@ def insert_patch(
                 # for each prompt find the index of token_idx
                 target_idx = np.concatenate([np.where((i  == t)) for i in indices for t in tokenized_to_patch], axis=0).reshape((len(prompts),len(tokens_to_patch)))
             else:
-                target_idx = tokens_to_patch
+                target_idx = [tokens_to_patch]*len(prompts)
                 
             # apply patch to hidden states at target_idx for each prompt
             for layer in range(len(model.transformer.h)):

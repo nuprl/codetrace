@@ -1,5 +1,5 @@
 import datasets
-from codetrace.type_inf_exp.scripts.rename_vars import *
+# from codetrace.type_inf_exp.scripts.rename_vars import *
 from codetrace.utils import *
 from argparse import ArgumentParser
 from multiprocessing import cpu_count

@@ -24,6 +24,7 @@ from codetrace.interp_utils import collect_hidden_states_at_tokens, insert_patch
 from tqdm import tqdm
 import argparse
 import sys
+import numpy as np
 
 def _batched_predictions(
     model : LanguageModel,
@@ -114,14 +115,30 @@ def _plot_results(results : pd.DataFrame, outfile: str) -> None:
     - x axis: layer
     - y axis: accuracy
     """
+    plt.figsize=(10, 10)
     # group by layer and type
     grouped = results.groupby(["patched_layer", "target_type"]).agg({"correct": "mean"}).reset_index()
     # plot different color lines for each type
     fig, ax = plt.subplots()
     for t in grouped["target_type"].unique():
         subset = grouped[grouped["target_type"] == t]
-        ax.plot(subset["patched_layer"], subset["correct"], label=t)
-    ax.legend()
+        
+        x = subset["patched_layer"]
+        y = subset["correct"]
+        # degree = 3  # Degree of the polynomial
+        # coefficients = np.polyfit(x, y, degree)
+        # polynomial = np.poly1d(coefficients)
+        # y = polynomial(x)
+        # x_smooth = np.linspace(subset["patched_layer"].min(), subset["patched_layer"].max(), 10)
+        # y_smooth = np.interp(x_smooth, subset["patched_layer"], subset["correct"])
+        # x = x_smooth
+        # y = y_smooth
+        
+        # smooth line
+        ax.plot(x,y, label=t)
+
+    ax.legend(loc='lower center', ncol=5, bbox_to_anchor=(0.5, -0.55))
+    plt.subplots_adjust(bottom=0.25)
     # set x ticks limit to 0-max layer
     ax.set_xlim(0, max(grouped["patched_layer"]))
     ax.set_xticks(list(range(max(grouped["patched_layer"])+1)))
@@ -130,6 +147,7 @@ def _plot_results(results : pd.DataFrame, outfile: str) -> None:
     ax.set_xlabel("Layer")
     ax.set_ylabel("Accuracy")
     plt.xticks(fontsize=8)
+    plt.tight_layout()
     plt.savefig(outfile)
     plt.close()
     
@@ -143,6 +161,7 @@ def main(args):
     model = LanguageModel(args.model_name, device_map=args.device)
     dataset = datasets.load_dataset(args.dataset, split="train")
     positive_prompts, negative_prompts, target_types = _process_renamed_by_type(dataset, model.tokenizer, args.num_per_type)
+
     print(f"Num prompts: {len(positive_prompts)}")
     predictions = _batched_predictions(model, 
                                        positive_prompts, 

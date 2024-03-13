@@ -98,7 +98,7 @@ def batched_insert_patch_logit(
     def _percent_success(predictions_so_far, solutions):
         correct = 0
         for pred,sol in zip(predictions_so_far, solutions[:len(predictions_so_far)]):
-            if pred.startswith(sol) or pred == sol:
+            if sol.startswith(pred) and len(pred) > 0:
                 correct += 1
         return correct / len(solutions)
     
@@ -136,9 +136,8 @@ def batched_insert_patch_logit(
 
 def filter_prompts(
     dataset : datasets.Dataset,
-    single_tokenize : PreTrainedTokenizer = None,
-    dedup_prog_threshold : int = 3,
-    dedup_type_threshold : int = 10
+    dedup_prog_threshold : int,
+    dedup_type_threshold : int
 ) -> datasets.Dataset:
     """
     Balance prompts s.t. there is a balanced distribution of labels.
@@ -146,8 +145,6 @@ def filter_prompts(
     Remove multi-token label prompts if tokenizer is passed.
     Deduplicate prompts by hexsha by some dedup_prog_threshold (max prompts for a program)
     """
-    if not single_tokenize is None:
-        dataset = dataset.map(lambda x: {"fim_type" : single_tokenize.decode(single_tokenize.encode(x["fim_type"])[0]), **x})
     # get count of labels
     labels = dataset["fim_type"]
     counter = Counter(labels)

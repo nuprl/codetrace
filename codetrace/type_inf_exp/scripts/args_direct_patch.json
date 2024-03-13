@@ -4,6 +4,7 @@
     "num_per_type": 100,
     "tokens_to_patch": ["<fim_middle>"],
     "batch_size": 20,
-    "outfile": "",
-    "plot_only": false
+    "outfile": "py_reverse_patch.csv",
+    "plot_only": false,
+    "device": "cuda"
 }
