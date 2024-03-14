@@ -37,13 +37,14 @@ def steering_ablation(model, steering_tensor,negative_prompts,args, is_ood):
     batch_layers = [j[0] for j in zipped if len(j[0]) == args.sliding_window_size]
     
     for layer in batch_layers:
-        args.steering_outfile = f"{args.outdir}/{ood_flag}layer_results/layer_{'-'.join(layer)}.json"
+        layername = "-".join([str(i) for i in layer])
+        args.steering_outfile = f"{args.outdir}/{ood_flag}layer_results/layer_{layername}.json"
         args.layers_to_patch = layer
         layer_res_ds = steer(model, negative_prompts, steering_tensor, args)
         # add a layer column
-        layer_res_ds = layer_res_ds.map(lambda x : {"patched_layer" : l})
+        layer_res_ds = layer_res_ds.map(lambda x : {"patched_layer" : layername})
         # save layer results
-        layer_res_ds.to_csv(args.steer_outfile.replace(".json", ".csv"))
+        layer_res_ds.to_csv(args.steering_outfile.replace(".json", ".csv"))
         results.append(layer_res_ds)
     results = datasets.concatenate_datasets(results)
     return results
@@ -73,7 +74,7 @@ def _process_prompts(dataset : datasets.Dataset, tokenizer) -> Tuple[List[str]]:
         return positive, negative
 
 
-def _plot_results(results : pd.DataFrame, outfile: str) -> None:
+def _plot_results(results : pd.DataFrame, outfile: str, layer_n=24) -> None:
     """
     Plot confidence interval
     - x axis: layer
@@ -86,12 +87,12 @@ def _plot_results(results : pd.DataFrame, outfile: str) -> None:
     print(grouped)
     # plot accuracy per layer
     fig, ax = plt.subplots()
-    x = [i for i in range(max(grouped["patched_layer"])+1)]
+    x = range(layer_n)
     y = grouped["correct_steer"]
     ax.plot(x, y)
     # set x ticks limit to 0-max layer
-    ax.set_xlim(0, max(grouped["patched_layer"]))
-    ax.set_xticks(list(range(max(grouped["patched_layer"])+1)))
+    ax.set_xlim(0, layer_n)
+    ax.set_xticks(list(range(layer_n)))
     # draw vertical gridlines
     ax.grid(axis="x")
     ax.set_xlabel("Layer")
@@ -150,15 +151,21 @@ def main(args):
     steering_tensor = _get_steering_tensor(model, positive_prompts, negative_prompts, args)
     
     # steering_ablation
-    results = steering_ablation(model, steering_tensor, negative_prompts, args, False)
-    results.save_to_disk(f"{args.outdir}/ablation_results")
+    if os.path.exists(f"{args.outdir}/ablation_results"):
+        results = datasets.load_from_disk(f"{args.outdir}/ablation_results")
+    else:
+        results = steering_ablation(model, steering_tensor, negative_prompts, args, False)
+        results.save_to_disk(f"{args.outdir}/ablation_results")
     
     # plot
     _plot_results(results.to_pandas(), f"{args.outdir}/ablation_results.pdf")
     
     # steering_ablation
-    results_ood = steering_ablation(model, steering_tensor, negative_ood, args, True)
-    results_ood.save_to_disk(f"{args.outdir}/ood_ablation_results")
+    if os.path.exists(f"{args.outdir}/ood_ablation_results"):
+        results_ood = datasets.load_from_disk(f"{args.outdir}/ood_ablation_results")
+    else:
+        results_ood = steering_ablation(model, steering_tensor, negative_ood, args, True)
+        results_ood.save_to_disk(f"{args.outdir}/ood_ablation_results")
     
     # plot
     _plot_results(results_ood.to_pandas(), f"{args.outdir}/ood_ablation_results.pdf")
