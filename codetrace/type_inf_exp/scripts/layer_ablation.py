@@ -84,7 +84,8 @@ def _plot_results(results : pd.DataFrame, window_size, outfile: str, layer_n=24)
     plt.figsize=(10, 10)
     # group by layer and type
     grouped = results.groupby(["patched_layer"]).agg({"correct_steer": "mean"}).reset_index()
-    print(grouped)
+    # set to str
+    grouped["patched_layer"] = grouped["patched_layer"].astype(str)
     
     def _prettify(x):
         return "-".join([str(i) for i in x])
@@ -93,6 +94,7 @@ def _plot_results(results : pd.DataFrame, window_size, outfile: str, layer_n=24)
     zipped = list(zip([all_layers[i:i+window_size] for i in all_layers]))
     windows = [j[0] for j in zipped if len(j[0]) == window_size]
     windows = [_prettify(i) for i in windows]
+    print(grouped["patched_layer"])
     
     # add column with sort_idx
     grouped["sort_idx"] = grouped["patched_layer"].apply(lambda x: windows.index(x))
@@ -157,6 +159,8 @@ def main(args):
         return
     
     os.makedirs(args.outdir, exist_ok=True)
+    print(f"Outdir:{args.outdir}")
+    
     # save args
     with open(f"{args.outdir}/args.json", "w") as f:
         save_args = args
@@ -204,7 +208,7 @@ def main(args):
     
     # plot
     _plot_results( results_ood.to_pandas(), args.sliding_window_size, f"{args.outdir}/ood_ablation_results.pdf")
-    
+    pass
 
 if __name__ == "__main__":
     if sys.argv[1].endswith(".json") and "args" in sys.argv[1]:
