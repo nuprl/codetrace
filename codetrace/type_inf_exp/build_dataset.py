@@ -48,7 +48,7 @@ def fim_remove_types(
     ) -> List[Tuple[str, str]]:
     """
     Make fim prompts for each type annotation in the program, remove all other type annotations
-    TODO: stupid inefficient
+    TODO: inefficient
     """
     parser = lang_to_parser[language]
     lang = lang_to_builder[language]

@@ -143,7 +143,7 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
     
     NOTE:
     - if token is a string, select first occurence of that token in the prompt
-    - if token is an int, select the index of that token in the prompt
+    - if token is an int, it is an index. Select the index in the prompt
     """
     prompts, tokens = map(arg_to_list, [prompts, tokens])
     if layers is None:

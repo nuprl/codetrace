@@ -20,59 +20,14 @@ def _dedup_ds(ds, key):
     """
     Dedup ds by key. Picks the first occurence of key.
     """
-    counts = set()
+    seen = set()
     new_ds = []
     for x in ds:
-        if not x[key] in counts:
+        if not x[key] in seen:
             new_ds.append(x)
-            counts.add(x[key])
+            seen.add(x[key])
     return datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
 
-# def _make_combo_ood(correct, incorrect,args):
-#     """
-#     OOD should have different set of source programs and types.
-#     """
-#     def _filter_multiple_counts(x, key="fim_program"):
-#         xcounts = Counter([k[key] for k in x])
-#         return [k for k in x if xcounts[k[key]] == 1]
-
-#     if args.test_size > 1:
-#         test_len = args.test_size
-#     else:
-#         test_len = int(len(incorrect) * args.test_size)
-        
-#     ood_incorrect_a = _get_ood_subset(incorrect, "hexsha", test_len, reverse=True)
-#     ood_incorrect_b = _get_ood_subset(incorrect, "fim_type", test_len, reverse=True)
-    
-#     ood_incorrect = []
-#     for x in zip(ood_incorrect_a, ood_incorrect_b):
-#         ood_incorrect.append(x[0])
-#         ood_incorrect.append(x[1])
-#         ood_incorrect = _filter_multiple_counts(ood_incorrect)
-#         if len(ood_incorrect) > test_len:
-#             break
-    
-#     ood_incorrect = datasets.Dataset.from_pandas(pd.DataFrame(ood_incorrect))
-#     ood_types = set(ood_incorrect["fim_type"])
-#     ood_hexshas = set(ood_incorrect["hexsha"])
-    
-#     def _keep_condition(x):
-#         return x["hexsha"] not in ood_hexshas and x["fim_type"] not in ood_types
-    
-#     correct = correct.filter(_keep_condition)
-#     incorrect = incorrect.filter(_keep_condition)
-    
-#     # does correct need same exact programs as incorrect?
-#     if args.do_fit_matching_pairs:
-#         intersection = set(incorrect["hexsha"]).intersection(set(correct["hexsha"]))
-#         incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
-#         correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
-#         assert set(incorrect["hexsha"]) == set(correct["hexsha"])
-#         correct = _dedup_programs(correct, "hexsha")
-#         incorrect = _dedup_programs(incorrect, "hexsha")
-#         assert incorrect["hexsha"] == correct["hexsha"]
-        
-#     return correct, incorrect, ood_incorrect
 
 def _get_field_subset(incorrect, field, test_len, reverse):
     """
@@ -130,9 +85,6 @@ def _get_ood(correct, incorrect,args, ood_fn = _make_source_program_ood):
         incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
         correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
         assert set(incorrect["hexsha"]) == set(correct["hexsha"])
-        # correct = _dedup_ds(correct, "hexsha")
-        # incorrect = _dedup_ds(incorrect, "hexsha")
-        # assert incorrect["hexsha"] == correct["hexsha"]
         
     return correct, incorrect, ood
 
@@ -142,7 +94,7 @@ def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
     For CAA and Completions datasets (equivalent)
     """
     if "generated_text" in dataset.column_names:
-        # recompute "correct": generated text starts with first token of fim_type
+        # recompute "correct" sanity check: generated text starts with first token of fim_type
         dataset = dataset.map(lambda x : {"correct" : x["generated_text"].strip().startswith(
             tokenizer.decode(tokenizer.encode(x["fim_type"])[0])), **x})
         

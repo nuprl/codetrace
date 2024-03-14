@@ -55,7 +55,7 @@ def _process_prompts(dataset : datasets.Dataset, tokenizer) -> Tuple[List[str]]:
     """
     # reprocess correct to be sure
     if "generated_text" in dataset.column_names:
-        # recompute "correct": generated text starts with first token of fim_type
+        # recompute "correct" sanity check: generated text starts with first token of fim_type
         dataset = dataset.map(lambda x : {"correct" : x["generated_text"].strip().startswith(
             tokenizer.decode(tokenizer.encode(x["fim_type"])[0])), **x})
     
@@ -173,10 +173,12 @@ def main(args):
         dataset = dataset.shuffle(seed=42)
     
     positive_prompts, negative_prompts = _process_prompts(dataset, model.tokenizer)
+    positive_prompts, negative_prompts, negative_ood = _get_ood(positive_prompts, negative_prompts, args)
+    
     if args.max_size > -1:
         positive_prompts = positive_prompts.select(range(args.max_size))
         negative_prompts = negative_prompts.select(range(args.max_size))
-    positive_prompts, negative_prompts, negative_ood = _get_ood(positive_prompts, negative_prompts, args)
+        negative_ood = negative_ood.select(range(args.max_size))
         
     data_info = f"""
     Positive prompts: {len(positive_prompts)}
@@ -199,7 +201,7 @@ def main(args):
     # plot
     _plot_results(results.to_pandas(), args.sliding_window_size, f"{args.outdir}/ablation_results.pdf")
     
-    # steering_ablation
+    # OOD steering_ablation
     if os.path.exists(f"{args.outdir}/ood_ablation_results"):
         results_ood = datasets.load_from_disk(f"{args.outdir}/ood_ablation_results")
     else:
@@ -208,7 +210,7 @@ def main(args):
     
     # plot
     _plot_results( results_ood.to_pandas(), args.sliding_window_size, f"{args.outdir}/ood_ablation_results.pdf")
-    pass
+
 
 if __name__ == "__main__":
     if sys.argv[1].endswith(".json") and "args" in sys.argv[1]:
