@@ -1,3 +1,4 @@
+from tabulate import tabulate
 from codetrace.type_inf_exp.request_patch import *
 from codetrace.utils import *
 from einops import rearrange
@@ -9,145 +10,142 @@ import pickle
 from multiprocessing import cpu_count
 from copy import deepcopy
 from datasets.utils.logging import enable_progress_bar, disable_progress_bar
-
-
-# def _sort_by_field(incorrect, field, reverse):
-#     field_counts = Counter(incorrect[field])
-#     sorted_field = sorted(field_counts.keys(), key= lambda x : field_counts[x], reverse=reverse)
-#     return sorted_field
-
-# def _make_ood(correct, incorrect,args):
-#     """
-#     OOD should have different set of programs and types.
-#     """
-#     ood_incorrect_a = _get_ood_subset(incorrect, "hexsha", args.test_size, reverse=False)
-#     ood_incorrect_b = _get_ood_subset(incorrect, "fim_type", args.test_size, reverse=False)
-    
-#     ood_incorrect_a = incorrect.filter(lambda x : x["hexsha"] in _sort_by_field(incorrect, "hexsha", reverse=True))
-#     ood_incorrect_b = incorrect.filter(lambda x : x["fim_type"] in _sort_by_field(incorrect, "fim_type", reverse=True))
-    
-#     # collect one from each ood until test_size is achieved
-#     # but sort first
-#     # hex_counts = Counter(incorrect["hexsha"])
-#     # type_counts = Counter(incorrect["fim_type"])
-#     # ood_incorrect_a = sorted(ood_incorrect_a, key=lambda x : hex_counts[x["hexsha"]], reverse=False)
-#     # ood_incorrect_b = sorted(ood_incorrect_b, key=lambda x : type_counts[x["fim_type"]], reverse=True)
-#     def _collect_condition(x, hex_example, type_example):
-#         return x["hexsha"] == hex_example["hexsha"] or x["fim_type"] == type_example["fim_type"]
-
-#     def _dedup_programs(x):
-#         xcounts = Counter([k["fim_program"] for k in x])
-#         return [k for k in x if xcounts[k["fim_program"]] == 1]
-        
-#     correct_acc = []
-#     incorrect_acc = []
-#     fit_threshold = 5
-#     disable_progress_bar()
-#     for i in tqdm(zip(ood_incorrect_a, ood_incorrect_b), desc="Collect fit and ood", total=len(ood_incorrect_a)):
-        
-#         if len(correct_acc) < fit_threshold:
-#             correct_acc += correct.filter(lambda x : _collect_condition(x, i[0], i[1]))
-#             correct_acc = _dedup_programs(correct_acc)
-#         if len(incorrect_acc) < fit_threshold:
-#             incorrect_acc += incorrect.filter(lambda x : _collect_condition(x, i[0], i[1]))
-#             incorrect_acc = _dedup_programs(incorrect_acc)
-        
-#         if len(correct_acc) >= fit_threshold and len(incorrect_acc) >= fit_threshold:
-#             break
-#     enable_progress_bar()
-#     # save
-#     with open(f"{args.outdir}/incorrect_acc.json", "w") as f:
-#         json.dump(incorrect_acc, f, indent=4)
-#     with open(f"{args.outdir}/correct_acc.json", "w") as f:
-#         json.dump(correct_acc, f, indent=4)
-        
-#     correct = datasets.Dataset.from_pandas(pd.DataFrame(correct_acc))
-#     incorrect = datasets.Dataset.from_pandas(pd.DataFrame(incorrect_acc))
-    
-#     fit_hexshas = set(correct["hexsha"]).union(set(incorrect["hexsha"]))
-#     fit_types = set(correct["fim_type"]).union(set(incorrect["fim_type"]))
-#     ood_incorrect = incorrect.filter(lambda x : x["hexsha"] not in fit_hexshas and x["fim_type"] not in fit_types)
-#     ood_incorrect = datasets.Dataset.from_pandas(pd.DataFrame(ood_incorrect))
-    
-#     # does correct need same exact programs as incorrect?
-#     if args.do_fit_matching_pairs:
-#         intersection = set(correct["hexsha"]).intersection(set(incorrect["hexsha"]))
-#         correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
-#         incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
-    
-#     return correct, incorrect, ood_incorrect
+import hashlib
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
     return ds.remove_columns(columns)
 
-def _get_ood_subset(incorrect, field, test_len, reverse):
+def _dedup_ds(ds, key):
+    """
+    Dedup ds by key. Picks the first occurence of key.
+    """
+    counts = set()
+    new_ds = []
+    for x in ds:
+        if not x[key] in counts:
+            new_ds.append(x)
+            counts.add(x[key])
+    return datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
+
+# def _make_combo_ood(correct, incorrect,args):
+#     """
+#     OOD should have different set of source programs and types.
+#     """
+#     def _filter_multiple_counts(x, key="fim_program"):
+#         xcounts = Counter([k[key] for k in x])
+#         return [k for k in x if xcounts[k[key]] == 1]
+
+#     if args.test_size > 1:
+#         test_len = args.test_size
+#     else:
+#         test_len = int(len(incorrect) * args.test_size)
+        
+#     ood_incorrect_a = _get_ood_subset(incorrect, "hexsha", test_len, reverse=True)
+#     ood_incorrect_b = _get_ood_subset(incorrect, "fim_type", test_len, reverse=True)
+    
+#     ood_incorrect = []
+#     for x in zip(ood_incorrect_a, ood_incorrect_b):
+#         ood_incorrect.append(x[0])
+#         ood_incorrect.append(x[1])
+#         ood_incorrect = _filter_multiple_counts(ood_incorrect)
+#         if len(ood_incorrect) > test_len:
+#             break
+    
+#     ood_incorrect = datasets.Dataset.from_pandas(pd.DataFrame(ood_incorrect))
+#     ood_types = set(ood_incorrect["fim_type"])
+#     ood_hexshas = set(ood_incorrect["hexsha"])
+    
+#     def _keep_condition(x):
+#         return x["hexsha"] not in ood_hexshas and x["fim_type"] not in ood_types
+    
+#     correct = correct.filter(_keep_condition)
+#     incorrect = incorrect.filter(_keep_condition)
+    
+#     # does correct need same exact programs as incorrect?
+#     if args.do_fit_matching_pairs:
+#         intersection = set(incorrect["hexsha"]).intersection(set(correct["hexsha"]))
+#         incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
+#         correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
+#         assert set(incorrect["hexsha"]) == set(correct["hexsha"])
+#         correct = _dedup_programs(correct, "hexsha")
+#         incorrect = _dedup_programs(incorrect, "hexsha")
+#         assert incorrect["hexsha"] == correct["hexsha"]
+        
+#     return correct, incorrect, ood_incorrect
+
+def _get_field_subset(incorrect, field, test_len, reverse):
+    """
+    Return a subset of incorrect prompts that have the least/most count of field.
+    stop when test_len is reached.
+    """
      # set aside some incorrect prompts
     field_counts = Counter(incorrect[field])
-    # accumulate from the least count until threshold test_size is achieved
+    # accumulate from the least/most count until threshold test_size is achieved
     sorted_field = sorted(list(incorrect), key= lambda x : field_counts[x[field]], reverse=reverse)
-    ood_subset = []
+    f_subset = []
     for x in sorted_field:
-        ood_subset.append(x)
-        if len(ood_subset) > test_len:
+        f_subset.append(x)
+        if len(f_subset) > test_len:
             break
-    return ood_subset
+    return f_subset
 
-# def _get_field_ood(correct, incorrect, field, test_len, reverse):
-#     ood_subset = _get_ood_subset(incorrect, field, test_len, reverse)
-#     incorrect_ood = incorrect.filter(lambda x : x[field] in ood_subset)
-#     incorrect = incorrect.filter(lambda x : x[field] not in ood_subset)
-#     correct = correct.filter(lambda x : x[field] not in ood_subset)
-#     return correct, incorrect, incorrect_ood
 
-def _dedup_programs(x):
-    xcounts = Counter([k["fim_program"] for k in x])
-    return [k for k in x if xcounts[k["fim_program"]] == 1]
-
-def _make_ood(correct, incorrect,args):
+def _make_source_program_ood(correct, incorrect,args):
     """
-    OOD should have different set of programs and types.
+    OOD should have different set of source programs
     """
     if args.test_size > 1:
         test_len = args.test_size
     else:
         test_len = int(len(incorrect) * args.test_size)
         
-    ood_incorrect_a = _get_ood_subset(incorrect, "hexsha", test_len, reverse=True)
-    ood_incorrect_b = _get_ood_subset(incorrect, "fim_type", test_len, reverse=True)
-    
-    ood_incorrect = []
-    for x in zip(ood_incorrect_a, ood_incorrect_b):
-        ood_incorrect.append(x[0])
-        ood_incorrect.append(x[1])
-        ood_incorrect = _dedup_programs(ood_incorrect)
-        if len(ood_incorrect) > test_len:
-            break
-    
+    ood_incorrect = _get_field_subset(incorrect, "hexsha", test_len, reverse=False)
     ood_incorrect = datasets.Dataset.from_pandas(pd.DataFrame(ood_incorrect))
-    ood_types = set(ood_incorrect["fim_type"])
+
     ood_hexshas = set(ood_incorrect["hexsha"])
     
     def _keep_condition(x):
-        return x["hexsha"] not in ood_hexshas and x["fim_type"] not in ood_types
+        return x["hexsha"] not in ood_hexshas
     
     correct = correct.filter(_keep_condition)
     incorrect = incorrect.filter(_keep_condition)
     
-    # does correct need same exact programs as incorrect?
-    if args.do_fit_matching_pairs:
-        intersection = set(correct["hexsha"]).intersection(set(incorrect["hexsha"]))
-        correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
-        incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
-    
     return correct, incorrect, ood_incorrect
 
 
+def _get_ood(correct, incorrect,args, ood_fn = _make_source_program_ood):
+    """
+    Applies an OOD function to correct and incorrect prompts.
+    Filters correct and incorrect prompts based on OOD and matching pairs.
+    """
+    if args.test_size > 0:
+        correct, incorrect, ood = ood_fn(correct, incorrect,args)
+    else:
+        ood = None
+        
+    # does correct need same exact programs as incorrect?
+    if args.do_fit_matching_pairs:
+        intersection = set(incorrect["hexsha"]).intersection(set(correct["hexsha"]))
+        incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
+        correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
+        assert set(incorrect["hexsha"]) == set(correct["hexsha"])
+        # correct = _dedup_ds(correct, "hexsha")
+        # incorrect = _dedup_ds(incorrect, "hexsha")
+        # assert incorrect["hexsha"] == correct["hexsha"]
+        
+    return correct, incorrect, ood
+
+                         
 def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
+    """
+    For CAA and Completions datasets (equivalent)
+    """
     if "generated_text" in dataset.column_names:
         # recompute "correct": generated text starts with first token of fim_type
         dataset = dataset.map(lambda x : {"correct" : x["generated_text"].strip().startswith(
             tokenizer.decode(tokenizer.encode(x["fim_type"])[0])), **x})
+        
     correct = dataset.filter(lambda x : x["correct"] == True)
     incorrect = dataset.filter(lambda x : x["correct"] == False)
     if args.prog_threshold > 0 or args.type_threshold > 0:
@@ -157,17 +155,12 @@ def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
         incorrect = filter_prompts(incorrect,
                                     dedup_prog_threshold=args.prog_threshold, 
                                     dedup_type_threshold=args.type_threshold)
-    
-    intersection = set(correct["hexsha"]).intersection(set(incorrect["hexsha"]))
-    correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
-    incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count())
-    
-    if args.test_size > 0:
-        return _make_ood(correct, incorrect,args)
-    else:
-        return correct, incorrect, None
+    return _get_ood(correct, incorrect, args)
     
 def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
+    """
+    For renamed datasets
+    """
     if args.prog_threshold > 0 or args.type_threshold > 0:
         dataset = filter_prompts(dataset, 
                                 dedup_prog_threshold=args.prog_threshold, 
@@ -175,23 +168,15 @@ def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
     correct = keep_columns(dataset, ["fim_program", "fim_type", "hexsha"])
     incorrect = keep_columns(dataset, ["renamed_fim_program","fim_type","hexsha"])
     incorrect = incorrect.rename_columns({"renamed_fim_program": "fim_program"})
-    if args.test_size > 0:
-        return _make_ood(correct, incorrect,args)
-    else:
-        return correct, incorrect, None
+    
+    return _get_ood(correct, incorrect, args)
 
-def _pretty_info(ds) -> str:
-    """
-    Give some information about how balanced the ds is
-    """
-    if ds is None:
-        return "None dataset"
-    count_hex = Counter(ds["hexsha"])
-    count_type = Counter(ds["fim_type"])
-    len_ds = len(ds)
-    return f"Length: {len_ds}\nHexsha counts: {count_hex}\nType counts: {count_type}\n"
 
 def _steer_on_ds(model, diff_tensor, incorrect, is_ood, args):
+    """
+    Given model, a steering tensor, and a dataset of incorrect prompts, steer on the dataset.
+    Logs results to args.outdir
+    """
     if is_ood:
         ood_flag = "ood_"
     else:
@@ -209,12 +194,15 @@ def _steer_on_ds(model, diff_tensor, incorrect, is_ood, args):
                             diff_tensor, 
                             args)
         steering_ds.save_to_disk(f"{args.outdir}/{ood_flag}steering_results_ds")
-        df = steering_ds.to_pandas()
-        df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
-        df.to_csv(f"{args.outdir}/{ood_flag}steering_results.csv")
         # remove cache files
         os.remove(args.steering_outfile)
-            
+        
+    df = steering_ds.to_pandas()
+    df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
+    # sort by fim_type
+    df = df.sort_values(by="fim_type")
+    df.to_csv(f"{args.outdir}/{ood_flag}steering_results.csv")
+    
     _log_results(steering_ds, args, f"{ood_flag}eval_readme.md")
 
 
@@ -224,6 +212,10 @@ def steer(
     diff_tensor,
     args
 ):
+    """
+    Given a model, a steering tensor, and a dataset of incorrect prompts, steer on the dataset.
+    
+    """
     if args.fim_placeholder:
         eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect_eval]
     else:
@@ -260,20 +252,13 @@ def steer(
     steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
     return steering_ds
 
-def _log_results(steering_ds,  args, outfile):
-    correct_steer = steering_ds.filter(lambda x : x["correct_steer"] == True)
-    metric = f"{len(correct_steer)} / {len(steering_ds)} = {len(correct_steer) / len(steering_ds)}"
-    print(metric)
-    with open(f"{args.outdir}/{outfile}", "w") as f:
-        f.write(f"## Steering Results\n")
-        f.write(metric)
-        # write arguments of parser
-        f.write(f"\n## Arguments\n")
-        parser = vars(args)
-        for k,v in parser.items():
-            f.write(f"{k} : {v}\n")
+
 
 def _get_steering_tensor(model, correct, incorrect, args):
+    """
+    Given a model, a dataset of correct and incorrect prompts, and args, return a steering tensor
+    from the average of the incorrect prompts and the average of the correct prompts.
+    """
     # load steering tensor if it exists, else create it
     if os.path.exists(f"{args.outdir}/steering_tensor.pt"):
         print(f"...Loading steering tensor from {args.outdir}/steering_tensor.pt...")
@@ -326,7 +311,49 @@ def _get_steering_tensor(model, correct, incorrect, args):
         torch.save(diff_tensor, f"{args.outdir}/steering_tensor.pt")
         
     return diff_tensor
+
+def _get_data_info(ds, name) -> json:
+    """
+    Give some information about how balanced the ds is
+    """
+    if ds is None:
+        return {}
+    count_hex = Counter(ds["hexsha"])
+    count_type = Counter(ds["fim_type"])
+    len_ds = len(ds)
+    return {"name":name, "length" : len_ds, "hexsha_counts" : count_hex, "type_counts" : count_type}
+
+
+def _log_results(steering_ds,  args, outfile):
+    correct_steer = steering_ds.filter(lambda x : x["correct_steer"] == True)
+    metric = f"{len(correct_steer)} / {len(steering_ds)} = {len(correct_steer) / len(steering_ds)}"
+    print(metric)
+    steering_df_by_type = _accuracy_per_type(steering_ds)
     
+    with open(f"{args.outdir}/{outfile}", "w") as f:
+        f.write(f"## Steering Results\n")
+        f.write(metric)
+        f.write("\n\n## Steering Results by Type\n\n")
+        f.write(steering_df_by_type.to_markdown())
+        
+
+def _accuracy_per_type(steering_ds):
+    """
+    Given a dataset of completions after steering, calculate accuracy per type.
+    """
+    # calculate accuracy per type
+    steering_df = steering_ds.to_pandas()
+    # cast correct_steer to int (0 if False, 1 if True)
+    steering_df["correct_steer"] = steering_df["correct_steer"].astype(int)
+    steering_df_by_type = steering_df.groupby("fim_type")
+    steering_df_by_type = steering_df_by_type.agg({"correct_steer" : ["sum", "count"]}).reset_index()
+    # make df of accuracy per type
+    steering_df_by_type["accuracy"] = (steering_df_by_type[("correct_steer", "sum")] / 
+                                       steering_df_by_type[("correct_steer", "count")])
+    # normalize groups
+    steering_df_by_type = steering_df_by_type.sort_values(by="accuracy", ascending=False)
+    return steering_df_by_type.reset_index()
+
 def main():
     # ==========================================================================================
     # PART 0: setup
@@ -337,9 +364,21 @@ def main():
     args = Namespace(**args)
 
     # parent dir
-    exp_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    args.outdir = f"{exp_dir}/exp_data/{args.outdir}"
-    os.makedirs(args.outdir, exist_ok=True)
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    experiment_dir = f"{parent_dir}/{args.outdir}"
+    os.makedirs(experiment_dir, exist_ok=True)
+    
+    # make a unique run_id for given args
+    if args.run_name == False:
+        run_id = f"run_{hashlib.sha256(str(args).encode()).hexdigest()}"
+    else:
+        run_id = args.run_name
+        
+    outdir = f"{experiment_dir}/{run_id}"
+    os.makedirs(outdir, exist_ok=True)
+    with open(f"{outdir}/args_steering.json", "w") as f:
+        json.dump(vars(args), f, indent=4)
+    args.outdir = outdir
     
     ds = datasets.load_dataset(args.dataset, split="train")
     print(ds)
@@ -358,11 +397,11 @@ def main():
     model = LanguageModel(args.model, device_map="cuda")
 
     # ==========================================================================================
-    # PART 1: filter
+    # PART 1: filter data
     # ==========================================================================================
     print("...Generating fit test split...")
     
-    if "completions" in args.dataset:
+    if "completions" in args.dataset or "caa" in args.dataset:
         correct, incorrect, incorrect_eval = fit_test_split_completions(ds,model.tokenizer, args)
     else:
         correct, incorrect, incorrect_eval = fit_test_split(ds,model.tokenizer, args)
@@ -370,15 +409,22 @@ def main():
     if args.max_size > 0:
         correct = correct.select(range(args.max_size))
         incorrect = incorrect.select(range(args.max_size))
+        incorrect_eval = incorrect_eval.select(range(args.max_size))
         
     print("Correct, incorrect, incorrect ood len:", len(correct), len(incorrect), len(incorrect_eval))
-    info_incorrect = _pretty_info(incorrect)
-    info_correct = _pretty_info(correct)
-    info_eval = _pretty_info(incorrect_eval)
+    info_incorrect = _get_data_info(incorrect, "incorrect")
+    info_correct = _get_data_info(correct, "correct")
+    info_ood = _get_data_info(incorrect_eval, "incorrect_ood")
 
-    with open(f"{args.outdir}/data_readme.md", "w") as f:
-        info = f"Correct\n{info_correct}\n\nIncorrect\n{info_incorrect}\n\nIncorrect Eval\n{info_eval}\n"
-        f.write(info)
+    with open(f"{args.outdir}/data_info.json", "w") as f:
+        info = [info_incorrect, info_correct, info_ood]
+        # add types in info_eval that are not in info_incorrect
+        if len(info_ood) > 0:
+            types = list(set(info_ood["type_counts"].keys()).difference(set(info_incorrect["type_counts"].keys())))
+            ood_types = {t : int(info_ood["type_counts"][t]) for t in types}
+            info.append({"ood_types" : ood_types})
+        json.dump(info, f, indent=4)
+
 
     # ==========================================================================================
     # PART 2: averages
