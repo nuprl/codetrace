@@ -1,6 +1,0 @@
-Positive prompts: 2589
-Negative prompts: 421
-...Loading steering tensor from exp_data/steno_caa_rename_tensor_ablation_v2/steering_tensor.pt...
-Diff tensor shape: torch.Size([24, 1, 1, 2048])
-Insert Patch Batch:   0%|          | 0/17 [00:00<?, ?it/s]You're using a GPT2TokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
-Insert Patch Batch:   6%|▌         | 1/17 [00:12<03:18, 12.43s/it]
