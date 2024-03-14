@@ -89,6 +89,8 @@ def _plot_results(results : pd.DataFrame, outfile: str, layer_n=24) -> None:
     fig, ax = plt.subplots()
     x = range(layer_n)
     y = grouped["correct_steer"]
+    if len(y) < layer_n:
+        x = range(len(y))
     ax.plot(x, y)
     # set x ticks limit to 0-max layer
     ax.set_xlim(0, layer_n)
