@@ -7,6 +7,7 @@ from nnsight import util
 from nnsight.tracing import Proxy
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import regex as re
+import torch
 
 # re-run this
 # NOTE: make sure padding is left side for list of prompts,
@@ -17,7 +18,7 @@ prompts = [
     'a=0\nb=1\nc=',
 ]
 
-modelname = "/home/arjun/models/starcoderbase-1b"
+modelname = "bigcode/starcoderbase-1b"
 model = LanguageModel(modelname, device_map="cuda")
 model.tokenizer.padding_side = "left"
 
