@@ -59,7 +59,9 @@ def generate_fim_items(code_dataset):
             prefix_bytes = contents_bytes[:type_annotation_starts[type_index]]
             suffix_bytes = contents_bytes[type_annotation_ends[type_index]:]
             middle_bytes = contents_bytes[type_annotation_starts[type_index]:type_annotation_ends[type_index]]
+            key = f"{item['zip']}/{item['filename']}"
             yield {
+                "key": key,
                 "prefix": prefix_bytes.decode("utf-8"),
                 "suffix": suffix_bytes.decode("utf-8"),
                 "middle": middle_bytes.decode("utf-8")
@@ -159,8 +161,12 @@ def main():
     args.add_argument("--model", type=str, required=True)
     args.add_argument("--output", type=Path, required=True)
     args.add_argument("--batch-size", type=int, default=50)
+    args.add_argument("--start-index", type=int)
+    args.add_argument("--limit", type=int)
     args.add_argument("--all-mutations", action="store_true")
     args = args.parse_args()
+
+    assert (args.start_index is None and args.limit is None) or (args.start_index is not None and args.limit is not None)
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
@@ -176,6 +182,8 @@ def main():
 
     ds = datasets.load_dataset("nuprl/manytypes4py", split="train")
     ds = ds.filter(lambda item: (len(item["contents"]) < 2048 * 3) and len(item["type_annotations"]) > 0)
+    if args.start_index is not None:
+        ds = ds.select(range(args.start_index, min(len(ds), args.start_index + args.limit)))
 
     gen = generate_steering_pairs(model, tokenizer, args.batch_size, ds, args.all_mutations)    
 

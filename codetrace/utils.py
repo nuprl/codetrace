@@ -11,7 +11,6 @@ import re
 import torch
 from collections import namedtuple
 
-
 parent = Path(__file__).parent
 REPO_ROOT = Path(__file__).parent.parent
 Language.build_library(
@@ -213,3 +212,16 @@ def top_k_top_p_filtering(
     TopkTuple = namedtuple('TopkTuple', ['indices','values'])
     logit_tuple = TopkTuple(indices=sorted_indices, values=logits)
     return logit_tuple
+
+def get_next_tokens(model, tokenizer, prompts):
+    inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(model.device)
+    model.eval()
+    with torch.no_grad():
+        outputs = model.forward(**inputs)
+        # All items in batch, last token in sequence, all logits
+    last_token_id_logits = outputs.logits[:, -1, :]
+    last_token_id_dists = torch.softmax(last_token_id_logits, dim=1)
+    last_token_ids = torch.argmax(last_token_id_dists, dim=1)
+    last_token_ids = last_token_ids.to("cpu").tolist()
+    last_tokens = [ tokenizer.decode(token) for token in last_token_ids ]
+    return last_tokens
