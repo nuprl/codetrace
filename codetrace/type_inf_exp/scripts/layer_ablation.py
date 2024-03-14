@@ -85,35 +85,46 @@ def _plot_results(results : pd.DataFrame, window_size, outfile: str, layer_n=24)
     # group by layer and type
     grouped = results.groupby(["patched_layer"]).agg({"correct_steer": "mean"}).reset_index()
     print(grouped)
-    all_layers = list(range(layer_n)) 
+    
+    def _prettify(x):
+        return "-".join([str(i) for i in x])
+    
+    all_layers = list(range(layer_n))
+    zipped = list(zip([all_layers[i:i+window_size] for i in all_layers]))
+    windows = [j[0] for j in zipped if len(j[0]) == window_size]
+    windows = [_prettify(i) for i in windows]
+    
+    # add column with sort_idx
+    grouped["sort_idx"] = grouped["patched_layer"].apply(lambda x: windows.index(x))
+    # sort grouped by window key
+    grouped = grouped.sort_values(by="sort_idx")
+    # set sort_idx as new index
+    grouped.set_index("sort_idx", inplace=True)
+    print(grouped)
+    
     # plot accuracy per layer
     fig, ax = plt.subplots()
-    y = grouped["correct_steer"]
+    y = []
+    x_original = []
+    for i in range(len(grouped)):
+        y.append(grouped.iloc[i]["correct_steer"])
+        x_original.append(grouped.iloc[i]["patched_layer"])
+
+    # sort 
     if len(y) < layer_n:
         layer_n = len(y)
     x = range(layer_n)
+
     ax.plot(x, y)
     # set x ticks limit to 0-max layer
     ax.set_xlim(0, layer_n-1)
     ax.set_xticks(list(range(layer_n)))
     
-    #labels
-    labels = [item.get_text() for item in ax.get_xticklabels()]
-    zipped = list(zip([all_layers[i:i+window_size] for i in all_layers]))
-    new_labels = [j[0] for j in zipped if len(j[0]) == window_size]
-    
-    for i,l in enumerate(labels):
-        labels[i] = new_labels[i]
-
-    def _prettify(x):
-        return "-".join([str(i) for i in x])
-    
-    labels = [_prettify(l) for l in labels]
-    ax.set_xticklabels(labels)
+    ax.set_xticklabels(x_original)
     plt.xticks(rotation=45, ha="right")
 
     # draw vertical gridlines
-    ax.grid(axis="x")
+    ax.grid()
     ax.set_xlabel("Layer")
     ax.set_ylabel("Accuracy")
     plt.xticks(fontsize=8)
