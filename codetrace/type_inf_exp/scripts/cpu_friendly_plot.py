@@ -92,7 +92,7 @@ def main(args):
     args.steering_outfile = None
     
     if args.plot_only:
-        # _plot_only(args.sliding_window_size, args.outdir, "ablation_results", "layer_results")
+        _plot_only(args.sliding_window_size, args.outdir, "ablation_results", "layer_results")
         _plot_only(args.sliding_window_size, args.outdir, "ood_ablation_results", "ood_layer_results")
         return
     return
