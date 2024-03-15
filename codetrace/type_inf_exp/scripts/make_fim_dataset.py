@@ -25,12 +25,17 @@ def _func_combo(batch, query_str, do_remove_comments):
     """
     new_batch = []
     for ex in batch:
+        # filter out too large or too small
+        if ex["size"] > 10000 or ex["size"] < 1000:
+            continue
+        
         if do_remove_comments:
             new_ex = {"_content": remove_comments(ex["content"]), **ex}
         else:
             new_ex = {"_content": ex["content"], **ex}
-            
-        prompts = make_natural_typeinf_prompt(new_ex, query_str, content_key="_content")
+        
+        # limit to 10 fim types per program
+        prompts = make_natural_typeinf_prompt(new_ex, query_str, content_key="_content")[:10]
         
         for p in prompts:
             if ": <FILL>" in p["fim_program"]:
@@ -100,7 +105,7 @@ def multi_process(ds, args):
     
     All operations are batched and done in parallel. Faster than huggingface multiproc map/filter.
     """
-    num_chunks = 10
+    num_chunks = args.num_chunks
     for i in range(num_chunks):
         print(f"Processing chunk {i} / {num_chunks}")
         ds_chunk=ds.shard(num_chunks, i)
@@ -115,7 +120,8 @@ def multi_process(ds, args):
                 yield ex
         ds = datasets.Dataset.from_generator(yielder)
         print(ds)
-        ds.push_to_hub(args.output_ds + f"-chunk_{i}")
+        ds.save_to_disk("datasets/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
+        # ds.push_to_hub(args.output_ds + f"-chunk_{i}")
 
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
         batches = get_batches_fast(results, len(results), args.num_proc)
@@ -188,5 +194,6 @@ if __name__ == "__main__":
     parser.add_argument("--do-remove-comments", action="store_true", default=False)
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--do-multiproc", action="store_true", default=False)
+    parser.add_argument("--num-chunks", type=int, default=1)
     args = parser.parse_args()
     main(args)

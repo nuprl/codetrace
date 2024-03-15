@@ -23,3 +23,4 @@ results/
 .pytest_cache/
 dist/
 codetrace.egg-info/
+codetrace/type_inf_exp/datasets
