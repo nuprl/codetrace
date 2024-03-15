@@ -8,26 +8,6 @@ from tqdm import tqdm
 from functools import partial
 from typing import Callable
 
-# def _batch_get_prompts(batch, query_str):
-#     new_batch = []
-#     for ex in batch:
-#         prompts = make_natural_typeinf_prompt(ex, query_str)
-#         new_batch += prompts
-#     return new_batch
-
-# def _batch_remove_comments(batch):
-#     new_batch = []
-#     for ex in batch:
-#         new_batch.append({"content": remove_comments(ex["content"]), **ex})
-#     return new_batch
-
-# def _batch_filter_fill_in_prog(batch):
-#     new_batch = []
-#     for ex in batch:
-#         if ": <FILL>" in ex["fim_program"]:
-#             new_batch.append(ex)
-#     return new_batch
-
 
 def batch_filter_is_one_token(batch, tokenizer):
     if len(batch) == 0:
@@ -57,12 +37,6 @@ def _func_combo(batch, query_str, do_remove_comments):
                 new_batch.append(p)
     return new_batch
 
-def batched_do_func_from_generator(batches_generator, num_proc, total_len, func, **func_kwargs):
-    pool = multiprocessing.Pool(num_proc)
-    async_out_batches = []
-    for i, batch in tqdm(enumerate(batches_generator), desc="Processing batches", total=total_len):
-        async_out = pool.apply_async(func, args=(batch,), kwds=func_kwargs)
-        async_out_batches.append(async_out)
     
 def batched_do_func(batches, num_proc, func, **func_kwargs):
     pool = multiprocessing.Pool(num_proc)
@@ -80,20 +54,12 @@ def batched_do_func(batches, num_proc, func, **func_kwargs):
     pool.join()
     return results
 
-def get_batches(iterable, len_iter, num_proc):
-    batch_size = len_iter // num_proc
-    batches = []
-    current_batch = []
-    for i,ex in tqdm(enumerate(iterable), desc="Making batches", total=len_iter):
-        if len(current_batch) == batch_size:
-            batches.append(current_batch)
-            current_batch = []
-        current_batch.append(ex)
-    return batches
-
  
 def _collect_index(itr, si, ei):
-    return itr[si:ei]
+    if isinstance(itr, datasets.Dataset):
+        return [itr[i] for i in range(si, ei)]
+    else:
+        return itr[si:ei]
        
 def get_batches_fast(iterable, len_iter, num_proc):
     """
@@ -114,28 +80,14 @@ def get_batches_fast(iterable, len_iter, num_proc):
     progress_bar.close()
     
     batches = []
-    for j in tqdm(range(len(async_out_batches)), desc="Getting results", total=len(async_out_batches)):
+    for j in tqdm(range(len(async_out_batches)), desc="Getting batches", total=len(async_out_batches)):
         batches.append(async_out_batches[j].get())
+        
+    pool.close()
+    pool.join()
     return batches
 
-def yield_batches_fast(iterable, len_iter, num_proc):
-    """
-    Not for IterableDataset
-    """
-    batch_size = len_iter // num_proc
-    pool = multiprocessing.Pool(num_proc)
-    async_out_batches = []
     
-    i=0
-    while i < len_iter:
-        end_index = min(i + batch_size, len_iter)
-        async_out = pool.apply_async(_collect_index, args=(iterable, i, end_index))
-        async_out_batches.append(async_out)
-        i = end_index
-    
-    for j in range(len(async_out_batches)):
-        yield async_out_batches[j].get()
-
 def multi_process(ds, args):
     """
     Method for processing a dataset with multiple processes.
@@ -148,19 +100,33 @@ def multi_process(ds, args):
     
     All operations are batched and done in parallel. Faster than huggingface multiproc map/filter.
     """
-    batches = get_batches_fast(ds, args.len_ds, args.num_proc)
-    del ds
-    results = batched_do_func(batches, args.num_proc, _func_combo, query_str=TS_QUERY_FUNC_TYPES, do_remove_comments=args.do_remove_comments)
-    ds = datasets.Dataset.from_pandas(pd.DataFrame(results))
-    print(ds)
-    ds.push_to_hub(args.output_ds)
+    num_chunks = 10
+    for i in range(num_chunks):
+        print(f"Processing chunk {i} / {num_chunks}")
+        ds_chunk=ds.shard(num_chunks, i)
+        batches = get_batches_fast(ds_chunk, len(ds_chunk), args.num_proc)
+        del ds_chunk
+        results = batched_do_func(batches, args.num_proc, _func_combo, 
+                                query_str=TS_QUERY_FUNC_TYPES, 
+                                do_remove_comments=args.do_remove_comments)
+        print(f"Length of ds: {len(results)}")
+        def yielder():
+            for ex in tqdm(results, desc="Yielding", total=len(results)):
+                yield ex
+        ds = datasets.Dataset.from_generator(yielder)
+        print(ds)
+        ds.push_to_hub(args.output_ds + f"-chunk_{i}")
 
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
-    batches = get_batches_fast(results, len(results), args.num_proc)
-    ds = batched_do_func(batches, args.num_proc, _batch_filter_is_one_token, tokenizer=tokenizer)
-    ds = datasets.Dataset.from_pandas(pd.DataFrame(ds))
-    ds.push_to_hub(args.output_ds + "-1tok")
-    print(ds)
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
+        batches = get_batches_fast(results, len(results), args.num_proc)
+        ds = batched_do_func(batches, args.num_proc, batch_filter_is_one_token, tokenizer=tokenizer)
+        print(f"Length of ds: {len(ds)}")
+        def yielder():
+            for ex in tqdm(ds, desc="Yielding", total=len(ds)):
+                yield ex
+        ds = datasets.Dataset.from_generator(yielder)
+        print(ds)
+        ds.push_to_hub(args.output_ds + f"-1tok-chunk_{i}")
 
 def process(ds, args):
     """
@@ -199,26 +165,19 @@ def _get_subset(iterable_ds, max_size):
         yield ex
 
 def main(args):
+    ds = datasets.load_dataset(args.input_ds, split="train")
+
+    if args.max_size > -1:
+        ds = ds.select(range(args.max_size))
+            
     if not args.do_multiproc:
         print("Using single process")
-        ds = datasets.load_dataset(args.input_ds, split="train")
-
-        if args.max_size > -1:
-            ds = ds.select(range(args.max_size))
-    
         process(ds, args)
     else:
         print("Using multiprocessing")
-        ds = datasets.load_dataset(args.input_ds, split="train")
-        len_ds = ds.info.splits["train"].num_examples
-        if args.max_size > 0:
-            len_ds = min(len_ds, args.max_size)
-            ds = datasets.IterableDataset.from_generator(_get_subset, gen_kwargs={"iterable_ds": ds, "max_size": args.max_size})
-        
-        print("Length of dataset: ", len_ds)
-        args.len_ds = len_ds
         args.num_proc = multiprocessing.cpu_count()
         multi_process(ds, args)
+        
         
     
 if __name__ == "__main__":

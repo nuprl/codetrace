@@ -42,7 +42,7 @@ completions = []
 if len(prompts) > 10000:
     print("Doing batch generations")
     batch_size = 1000
-    # batch generations because of RAM
+    # batch generations because of RAM in vllm
     for n,i in tqdm(enumerate(range(0, len(prompts), batch_size)), desc="Batch generations"):
         generations = llm.generate(prompts[i:i+batch_size], params, use_tqdm=False)
 

@@ -15,6 +15,7 @@ import sys
 from multiprocessing import cpu_count
 from argparse import ArgumentParser
 from typing import List, Tuple, Union, Callable
+from dataclasses import dataclass
 
 TS_IDENTIFIER_QUERY = """((identifier) @name)""" 
 TS_VARIABLE_DECLARATION_QUERY = """
@@ -125,39 +126,77 @@ def dataset_incremental_rename_vars(dataset: datasets.Dataset) -> datasets.Datas
     new_dataset = new_dataset.remove_columns(["correct", "overfull"])
     return new_dataset
 
-def rename_bytes(
-    program : bytes,
-    locations_to_rename : list[Tuple[int, int, str]]) -> bytes:
-    """
-    Rename a variable in a program at the given locations
-    Note the name needs to not already exist in the program.
-    Rename using some naming convention.
-    NOTE: new name can be any length
-    """
-    pass
+"""
+Random mutation code starts here.
 
-def mutation_rename_vars(ds_example, var_location):
+Some considerations.
+
+1. renaming to an arbitrary name (especially length)
+
+the trick to being able to rename to any name is to accumulate
+all the changes and apply them at the end from top to bottom.
+
+2. each mutation method should produce different types of names to prevent overlap
+and also for semantics
+"""
+@dataclass
+class TreeSitterLocation:
+    start_byte : int
+    end_byte : int
+    start_point : Tuple[int, int]
+    end_point : Tuple[int, int]
+    
+@dataclass
+class Mutation:
+    location : TreeSitterLocation
+    byte_replacement : bytes
+    prefix : Union[bytes, None] = None
+
+def mutation_rename_vars(var_locations : List[TreeSitterLocation]) -> List[Mutation]:
     """
     Rename all identifiers in the program that are the same as the varname at the given location
     """
-    pass
+    mutations = []
+    for location in var_locations:
+        replacement = "" # TODO: make new name for variable
+        mutation = Mutation(location, replacement)
+        mutations.append(mutation)
+    return mutations
 
-def mutation_rename_type(ds_example, type_location):
+def mutation_rename_type(type_location : TreeSitterLocation, typename : str) -> List[Mutation]:
     """
     Rename all type identifiers in the program that are the same as the typename at the given location.
     If type is a primitive or larger than 1 token, add a new type declaration wrapper around the new
     name.
     """
-    pass
+    mutations = []
+    for location in type_location:
+        replacement = "" # TODO
+        prefix = "" # TODO this is the new type declaration
+        mutation = Mutation(location, replacement, prefix)
+        mutations.append(mutation)
+    return mutations
 
-def mutation_delete_annotation(ds_example, annotation_location):
+def mutation_delete_annotation(program, annotation_locations)-> List[Mutation]:
     """
     Delete the type annotation at the given location
     """
-    pass
+    mutations = []
+    for location in annotation_locations:
+        replacement = ""
+        mutation = Mutation(location, replacement)
+        mutations.append(mutation)
+    return mutations
 
 def dataset_apply_random_mutations(dataset : datasets.Dataset, mutations : List[Callable]) -> datasets.Dataset:
     """
     Apply random combination of mutations
     """
+    # TODO replace <FILL> placeholder with a parsing placeholder for tree sitter
+    
+    # TODO select a random subset of mutations, then a random subset of corresponding captures
+    # preprocess the subset, i.e. don't touch the fim_type
+    
+    # collect all mutations and sort them by end_byte
+    # apply them from top to bottom
     pass

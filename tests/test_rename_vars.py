@@ -1,6 +1,8 @@
 from codetrace.type_inf_exp.rename_vars import *
+from codetrace.utils import remove_comments, TS_PARSER, TS_LANGUAGE
 from transformers import AutoTokenizer
 import difflib
+
 
 def test_rename_vars():
   program = """
@@ -14,8 +16,9 @@ return {
 };
   """
   tree = TS_PARSER.parse(bytes( program, "utf8"))
-  captured = capture_varnames(tree)
-  newname = make_new_name(len(captured["items"][0].text), set(captured.keys()))
+  captured = capture_identifiers(tree)
+  print(captured)
+  newname = make_new_name(len(captured["items"][0][0].text), set(captured.keys()))
   new_program = rename_variable(tree.text, "myvar", captured["items"]).decode("utf-8").strip()
   gold = """
 export function buildInClause<T>(
@@ -41,8 +44,8 @@ return {
 };
   """
   tree = TS_PARSER.parse(bytes( program, "utf8"))
-  captured = capture_varnames(tree)
-  newname = make_new_name(len(captured["items"][0].text), set(captured.keys()))
+  captured = capture_identifiers(tree)
+  newname = make_new_name(len(captured["items"][0][0].text), set(captured.keys()))
   assert newname != "items", newname
   new_program = rename_variable(tree.text, newname, captured["items"]).decode("utf-8").strip()
   gold = program.replace("items", newname).strip()
@@ -52,15 +55,14 @@ return {
   # assert len(tokens) == 1, tokens
     
 def test_rename_vars3():
-  """
-  NOTE: bug in tree-sitter captures "any" as a variable id, need workaround
-  """
   program = """const t : any = 'a';"""
   tree = TS_PARSER.parse(bytes( program, "utf8"))
-  captured = capture_varnames(tree)
+  captured = capture_identifiers(tree)
   assert "any" not in captured, captured
   
   program = open("tests/test_prog.ts").read()
+  # need to replace <FILL> with a parsing placeholder for tree sitter
+  program = program.replace("<FILL>", "MyCodetraceSpecialPlaceholder")
   tree = TS_PARSER.parse(bytes( program, "utf8"))
   query = "((identifier) @id)"
   query = TS_LANGUAGE.query(query)
@@ -72,7 +74,7 @@ def test_rename_vars3():
       print(c[0].text, c)
   
   tree = TS_PARSER.parse(bytes( program, "utf8"))
-  var_locs = capture_varnames(tree)
+  var_locs = capture_identifiers(tree)
   for v, l in var_locs.items():
     if v == "any":
       print(v, l)
@@ -105,7 +107,7 @@ export interface GrypeCvss {
 if __name__ == "__main__":
     test_rename_vars()
     test_rename_vars2()
-    # test_rename_vars3()
+    test_rename_vars3()
     test_remove_comments()
     print("All tests passed!")
     
