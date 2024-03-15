@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 import pandas as pd
 from multiprocessing import cpu_count
 from tqdm import tqdm
+from collections import Counter
 
 parser = ArgumentParser()
 parser.add_argument("--model", type=str, required=True)
@@ -74,12 +75,6 @@ new_ds = datasets.Dataset.from_pandas(pd.DataFrame(completions))
 new_ds.push_to_hub(new_name)
 
 
-# count: correct and not overfull
-correct = new_ds.filter(lambda x: x["correct"] and not x["overfull"])
-# count: incorrect and not overfull
-incorrect = new_ds.filter(lambda x: not x["correct"] and not x["overfull"])
-print(f"Correct: {len(correct)}, Incorrect: {len(incorrect)}")
-
-# count overfull
-overfull = new_ds.filter(lambda x: x["overfull"])
-print(f"Overfull: {len(overfull)}")
+# print some counts
+print(Counter(new_ds["correct"]))
+print(Counter(new_ds["overfull"]))

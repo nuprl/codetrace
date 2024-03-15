@@ -11,7 +11,6 @@ import re
 import torch
 from collections import namedtuple
 
-
 parent = Path(__file__).parent
 REPO_ROOT = Path(__file__).parent.parent
 Language.build_library(
@@ -75,7 +74,7 @@ def std_to_placeholder_fmt(prompt : str, fim : FimObj) -> str:
 
 def unfim(text : str, fim : FimObj) -> str:
     """
-    Remove fim special tokens and unscramble the prompt
+    Remove fim special tokens and unscramble
     """
     prefix = text.split(fim.prefix)[-1].split(fim.suffix)[0]
     suffix = text.split(fim.suffix)[-1].split(fim.token)[0]
@@ -88,7 +87,7 @@ def get_captures(prompt : Union[str,tree_sitter.Tree],
                  language : str = "typescript") -> List[tree_sitter.Node]:
     """
     Get captures for a prompt given a query
-    Ignores any captures whose parents are in ignore_parents
+    Ignores any captures whose parents match some pattern in ignore_parents
     """
     parser = lang_to_parser[language]
     lang = lang_to_builder[language]
@@ -125,6 +124,8 @@ def get_builtins_regex(language : str) -> str:
 def remove_comments(program : str, 
                     comment_query : str = """((comment) @comment)""",
                     language : str = "typescript") -> str:
+    if language not in ["typescript", "ts"]:
+        raise NotImplementedError("Only typescript supported")
     lang = lang_to_builder[language]
     parser = lang_to_parser[language]
     comment_query = lang.query(comment_query)

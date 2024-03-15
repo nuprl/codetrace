@@ -6,7 +6,7 @@ import datasets
 import pandas as pd
 import json
 from ast import literal_eval
-from typing import Tuple
+from typing import Tuple, List
 import re
 import tempfile
 from tqdm import tqdm
@@ -21,6 +21,27 @@ return_type: (type_annotation) @tp
 """
 The following functions remove all type annotations but one <FILL> fim type
 """
+
+def make_natural_typeinf_prompt(
+    ex : dict,
+    query_str : str,
+    content_key : str = "content"
+    ) -> List[dict]:
+    """
+    Make a dataset where:
+    - for each program, make prompts for every type annotation fim
+    """
+    prompts = []
+    type_annotations = get_captures(ex[content_key], query_str, language="ts")
+    for c in type_annotations:
+        byte_fim_prog = replace_between_bytes(bytes(ex[content_key], "utf-8"), c[0].start_byte, c[0].end_byte, ": <FILL>")
+        fim_program = byte_fim_prog.decode("utf-8").strip()
+        fim_type = c[0].text.decode("utf-8").replace(":","").strip()
+        prompts.append({"fim_program": fim_program, 
+                        "fim_type": fim_type,
+                        **ex})
+
+    return prompts
 
 def make_typeinf_prompts(
     dataset : datasets.Dataset, 
