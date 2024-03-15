@@ -81,7 +81,7 @@ def unfim(text : str, fim : FimObj) -> str:
     middle = text.split(fim.token)[-1]
     return prefix+middle+suffix
 
-def get_captures(prompt : Union[str,tree_sitter.Tree], 
+def get_captures(prompt : Union[str,tree_sitter.Tree, bytes], 
                  query: str, 
                  ignore_parents : List[str] = [],
                  language : str = "typescript") -> List[tree_sitter.Node]:
@@ -93,8 +93,13 @@ def get_captures(prompt : Union[str,tree_sitter.Tree],
     lang = lang_to_builder[language]
     if isinstance(prompt, str):
         tree = parser.parse(bytes( prompt, "utf8"))
-    else:
+    elif isinstance(prompt, tree_sitter.Tree):
         tree = prompt
+    elif isinstance(prompt, bytes):
+        tree = parser.parse(prompt)
+    else:
+        raise ValueError("Prompt must be str, bytes, or tree-sitter.Tree")
+    
     query = lang.query(query)
     captures = query.captures(tree.root_node)
     
@@ -138,23 +143,27 @@ def remove_comments(program : str,
         program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
     return program.decode("utf-8").strip()
 
-def replace_between_bytes(byte_string : bytes,
+def replace_between_bytes(text : Union[str,bytes],
                            start_byte : int, 
                            end_byte : int,
-                           replacement : str = "") -> bytes:
+                           replacement : Union[str,bytes] = "") -> bytes:
     '''
     Replace tree-sitter interval (start_point, end_point) from a string.
     Inclusive of start_point and end_point
     '''
-    byte_replacement = replacement.encode("utf-8")
-    if replacement == "":
-        modified_byte_string = (
-            byte_string[:start_byte] + byte_string[end_byte:]
-        )
+    if isinstance(replacement, str):
+        byte_replacement = replacement.encode("utf-8")
     else:
-        modified_byte_string = (
-            byte_string[:start_byte] + byte_replacement + byte_string[end_byte:]
-        )
+        byte_replacement = replacement
+    
+    if isinstance(text, str):
+        byte_string = text.encode("utf-8")
+    else:
+        byte_string = text
+        
+    modified_byte_string = (
+        byte_string[:start_byte] + byte_replacement + byte_string[end_byte:]
+    )
     return modified_byte_string
 
 def find_between_bytes(

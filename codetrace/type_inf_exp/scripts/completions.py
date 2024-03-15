@@ -27,9 +27,6 @@ print(f"Model: {model_name}")
 ds = datasets.load_dataset(dataset, split="train")
 tokenizer = AutoTokenizer.from_pretrained(model)
 
-# sample
-# if args.max_size > -1:
-#     ds = [ds[i] for i in range(args.max_size)]
 if args.max_size > -1:
     ds = ds.select(range(args.max_size))
 
@@ -45,8 +42,7 @@ if len(prompts) > 10000:
     print("Doing batch generations")
     batch_size = 1000
     # batch generations because of cpu ops in vllm
-    for n,i in tqdm(enumerate(range(0, len(prompts), batch_size)), 
-                    desc="Batch generations", total=len(prompts)//batch_size):
+    for n,i in tqdm(enumerate(range(0, len(prompts), batch_size)), desc="Batch generations", total=len(prompts)//batch_size):
         generations = llm.generate(prompts[i:i+batch_size], params, use_tqdm=False)
 
         for j,output in enumerate(generations):

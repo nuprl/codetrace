@@ -49,15 +49,14 @@ def _ts_preprocess(dataset : datasets.Dataset) -> datasets.Dataset:
     """
     Preprocess the dataset
     - Take only correct examples
-    - either unroll or remove shorthand_property_identifier, shorthand_property_identifier_pattern
+    - TODO: currently do not support shorthands, so either unroll or remove 
+        shorthand_property_identifier, shorthand_property_identifier_pattern
     """
     dataset = dataset.filter(lambda x: x["correct"] == True)
     parser = lang_to_parser["ts"]
     lang = lang_to_builder["ts"]
     
     # remove examples with:
-    # shorthand_property_identifier, shorthand_property_identifier_pattern
-    
     preproc_query = """
     ((shorthand_property_identifier_pattern) @sp)
     ((shorthand_property_identifier) @si)
