@@ -129,6 +129,7 @@ def dataset_apply_random_mutations(dataset : datasets.Dataset, mutations : List[
     # 1. capture all possible mutation locations
     for i, ex in tqdm(enumerate(ds), desc="Mutating", total_len=len(ds)):
         
+        # to prevent tree-sitter error:
         program = ex["fim_program"].replace("<FILL>", "_CodetraceSpecialPlaceholder_")
         
         types_blacklist = [bytes(ex["fim_type"],"utf-8"), bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
@@ -138,7 +139,7 @@ def dataset_apply_random_mutations(dataset : datasets.Dataset, mutations : List[
         remove_annotations_captures = get_captures(program, TS_QUERY_PARAM_TYPES, language="ts")
         
         def select_random_subset(x):
-            n = random.randint(0, len(x))
+            n = random.randint(1, len(x))
             return random.sample(x, n)
         
         var_rename_captures = select_random_subset(var_rename_captures)
@@ -168,7 +169,8 @@ def dataset_apply_random_mutations(dataset : datasets.Dataset, mutations : List[
             all_mutations += m(func_name_to_args[m.__name__])
         
         new_program = apply_mutations(program, all_mutations)
-        new_ds.append({"mutated_program": new_program, "mutations" : [m.__name__ for m in mutations], **ex})
+        new_ds.append({"mutated_program": new_program.replace("_CodetraceSpecialPlaceholder_", "<FILL>"), 
+                       "mutations" : [m.__name__ for m in mutations], **ex})
     
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
     return new_ds
