@@ -1,32 +1,32 @@
-type __typ1 = number;
 type __typ5 = never;
-type __typ0 = string;
+type __typ0 = number;
+type __typ4 = string;
 
-export interface __typ3 {
+export interface __typ2 {
     VendorMetadata: any;
-    Metrics: __typ4;
-    Vector: __typ0;
-    Version: __typ0;
+    Metrics: __typ1;
+    Vector: __typ4;
+    Version: __typ4;
   }
   
-  export interface __typ4 {
-    BaseScore: __typ1;
-    ExploitabilityScore: __typ1;
-    ImpactScore: __typ1;
+  export interface __typ1 {
+    BaseScore: __typ0;
+    ExploitabilityScore: __typ0;
+    ImpactScore: __typ0;
   }
   
   const names = ['VendorMetadata', 'Metrics', 'Vector', 'Version'];
   
   export class Convert {
-    public static toGrypeCvss(json: __typ0): __typ3[] {
+    public static toGrypeCvss(json: __typ4): __typ2[] {
       return cast(JSON.parse(json), a(r('GrypeCvss')));
     }
   
-    public static grypeCvssToJson(value: __typ3[]): __typ0 {
+    public static grypeCvssToJson(value: __typ2[]): __typ4 {
       return JSON.stringify(uncast(value, a(r('GrypeCvss'))), null, 2);
     }
 
-    public static grypeCvssToJson2(value: __typ3): __typ0 {
+    public static grypeCvssToJson2(value: __typ2): __typ4 {
       return JSON.stringify(uncast(value, r('GrypeCvss')), null, 2);
     }
   }
@@ -57,7 +57,7 @@ export interface __typ3 {
   }
   
   function transform(val: any, typ: any, getProps: any, key: any = ''): any {
-    function transformPrimitive(typ: __typ0, val: any): any {
+    function transformPrimitive(typ: __typ4, val: any): any {
       if (typeof typ === typeof val) return val;
       return invalidValue(typ, val, key);
     }
@@ -74,7 +74,7 @@ export interface __typ3 {
       return invalidValue(typs, val);
     }
   
-    function transformEnum(cases: __typ0[], val: any): any {
+    function transformEnum(cases: __typ4[], val: any): any {
       if (cases.indexOf(val) !== -1) return val;
       return invalidValue(cases, val);
     }
@@ -96,7 +96,7 @@ export interface __typ3 {
       return d;
     }
   
-    function transformObject(props: { [k: __typ0]: any }, additional: any, val: any): any {
+    function transformObject(props: { [k: __typ4]: any }, additional: any, val: any): any {
       if (val === null || typeof val !== 'object' || Array.isArray(val)) {
         return invalidValue('object', val);
       }
@@ -138,11 +138,11 @@ export interface __typ3 {
     return transformPrimitive(typ, val);
   }
   
-  function cast<__typ2>(val: any, typ: any): __typ2 {
+  function cast<__typ3>(val: any, typ: any): __typ3 {
     return transform(val, typ, jsonToJSProps);
   }
   
-  function uncast<__typ2>(val: __typ2, typ: any): any {
+  function uncast<__typ3>(val: __typ3, typ: any): any {
     return transform(val, typ, jsToJSONProps);
   }
   
@@ -154,17 +154,27 @@ export interface __typ3 {
     return { unionMembers: typs };
   }
   
+  //  Fran: I will be filtering out shorthands
+  // function o(props: any[], additional: any) {
+  //   return { props, additional };
+  // }
+  
+  // function m(additional: any) {
+  //   return { props: [], additional };
+  // }
+
   function o(props: any[], additional: any) {
-    return { props, additional }; // F: I will be filtering out shorthands
+    return { props: props, additional: additional };
   }
   
   function m(additional: any) {
-    return { props: [], additional };
+    return { props: [], additional:additional };
   }
   
-  function r(name: __typ0) {
+  function r(name: __typ4) {
     return { ref: name };
   }
+  
   
   const typeMap: any = {
     GrypeCvss: o(

@@ -14,11 +14,11 @@ export interface GrypeCvss {
   const names = ['VendorMetadata', 'Metrics', 'Vector', 'Version'];
   
   export class Convert {
-    public static toGrypeCvss(json) {
+    public static toGrypeCvss(json: string): GrypeCvss[] {
       return cast(JSON.parse(json), a(r('GrypeCvss')));
     }
   
-    public static grypeCvssToJson(value) {
+    public static grypeCvssToJson(value): string {
       return JSON.stringify(uncast(value, a(r('GrypeCvss'))), null, 2);
     }
 
@@ -53,7 +53,7 @@ export interface GrypeCvss {
   }
   
   function transform(val: any, typ: any, getProps: any, key: any = ''): any {
-    function transformPrimitive(typ, val: any): any {
+    function transformPrimitive(typ: string, val: any): any {
       if (typeof typ === typeof val) return val;
       return invalidValue(typ, val, key);
     }
@@ -70,7 +70,7 @@ export interface GrypeCvss {
       return invalidValue(typs, val);
     }
   
-    function transformEnum(cases, val: any): any {
+    function transformEnum(cases: string[], val: any): any {
       if (cases.indexOf(val) !== -1) return val;
       return invalidValue(cases, val);
     }
@@ -92,7 +92,7 @@ export interface GrypeCvss {
       return d;
     }
   
-    function transformObject(props, additional: any, val: any): any {
+    function transformObject(props: { [k: string]: any }, additional: any, val: any): any {
       if (val === null || typeof val !== 'object' || Array.isArray(val)) {
         return invalidValue('object', val);
       }
@@ -134,7 +134,7 @@ export interface GrypeCvss {
     return transformPrimitive(typ, val);
   }
   
-  function cast<T>(val: any, typ: any) {
+  function cast<T>(val: any, typ: any): T {
     return transform(val, typ, jsonToJSProps);
   }
   
@@ -146,21 +146,31 @@ export interface GrypeCvss {
     return { arrayItems: typ };
   }
   
-  function u(...typs) {
+  function u(...typs: any[]) {
     return { unionMembers: typs };
   }
   
-  function o(props, additional: any) {
-    return { props, additional }; // F: I will be filtering out shorthands
+  //  Fran: I will be filtering out shorthands
+  // function o(props: any[], additional: any) {
+  //   return { props, additional };
+  // }
+  
+  // function m(additional: any) {
+  //   return { props: [], additional };
+  // }
+
+  function o(props: any[], additional: any) {
+    return { props: props, additional: additional };
   }
   
   function m(additional: any) {
-    return { props: [], additional };
+    return { props: [], additional:additional };
   }
   
-  function r(name) {
+  function r(name: string) {
     return { ref: name };
   }
+  
   
   const typeMap: any = {
     GrypeCvss: o(

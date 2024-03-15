@@ -8,9 +8,13 @@ with open(f"{test_files_dir}/ts_mutator_prog.ts") as f:
     program = f.read()
 fim_type = "any"
 
-DEBUG_SEED = -1
+# note -1 is special random seed value that does not select a random subset of mutations, 
+# but performs everything [debug only]
+DEBUG_SEED = 10
 
 def write_results(out, mutations, file_name):
+    if out is None:
+        out = "// No mutations for this random run :("
     with open(f"{test_files_dir}/{file_name}", "w") as f:
         f.write(out.replace("<FILL>", "any"))
     with open(f"{test_files_dir}/log_{file_name}", "w") as f:
@@ -51,9 +55,18 @@ def test_mutate_all_renames():
     write_results(out, mutations, "OUT_prog_all_renames.ts")
     print(f"[ALL] Num of renamed vars+types: {len(mutations)}")
     
+def test_all_mutations():
+    """
+    test all mutations
+    """
+    out, mutations = random_mutate(program, fim_type, [mutation_rename_vars, mutation_rename_type, mutation_delete_annotation], debug_seed=DEBUG_SEED)
+    write_results(out, mutations, "OUT_prog_all_mutations.ts")
+    print(f"[ALL] Num of all mutations: {len(mutations)}")
+    
 if __name__ == "__main__":
     print("Running tests")
     test_mutate_rename_vars()
     test_mutate_rename_types()
     test_mutate_remove_annotations()
     test_mutate_all_renames()
+    test_all_mutations()

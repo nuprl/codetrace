@@ -150,17 +150,27 @@ export interface GrypeCvss {
     return { unionMembers: typs };
   }
   
+  //  Fran: I will be filtering out shorthands
+  // function o(props: any[], additional: any) {
+  //   return { props, additional };
+  // }
+  
+  // function m(additional: any) {
+  //   return { props: [], additional };
+  // }
+
   function o(props: any[], additional: any) {
-    return { props, additional }; // Fran: I will be filtering out shorthands
+    return { props: props, additional: additional };
   }
   
   function m(additional: any) {
-    return { props: [], additional };
+    return { props: [], additional:additional };
   }
   
   function r(name: string) {
     return { ref: name };
   }
+  
   
   const typeMap: any = {
     GrypeCvss: o(

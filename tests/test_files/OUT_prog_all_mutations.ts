@@ -1,33 +1,36 @@
-export interface GrypeCvss {
+type __typ0 = number;
+type __typ4 = string;
+
+export interface __typ2 {
     VendorMetadata: any;
-    Metrics: Metrics;
-    Vector: string;
-    Version: string;
+    Metrics: __typ1;
+    Vector: __typ4;
+    Version: __typ4;
   }
   
-  export interface Metrics {
-    BaseScore: number;
-    ExploitabilityScore: number;
-    ImpactScore: number;
+  export interface __typ1 {
+    BaseScore: __typ0;
+    ExploitabilityScore: __typ0;
+    ImpactScore: __typ0;
   }
   
   const names = ['VendorMetadata', 'Metrics', 'Vector', 'Version'];
   
   export class Convert {
-    public static toGrypeCvss(__tmp1: string): GrypeCvss[] {
+    public static toGrypeCvss(__tmp1: __typ4): __typ2[] {
       return cast(JSON.parse(__tmp1), a(r('GrypeCvss')));
     }
   
-    public static grypeCvssToJson(value: GrypeCvss[]): string {
+    public static grypeCvssToJson(value): __typ4 {
       return JSON.stringify(uncast(value, a(r('GrypeCvss'))), null, 2);
     }
 
-    public static grypeCvssToJson2(value: GrypeCvss): string {
+    public static grypeCvssToJson2(value) {
       return JSON.stringify(uncast(value, r('GrypeCvss')), null, 2);
     }
   }
   
-  function invalidValue(__tmp3: any, __tmp4: any, key: any = ''): never {
+  function invalidValue(__tmp3: any, __tmp4: any, key: any = '') {
     if (key) {
       throw Error(`Invalid value for key "${key}". Expected type ${JSON.stringify(__tmp3)} but got ${JSON.stringify(__tmp4)}`);
     }
@@ -53,12 +56,12 @@ export interface GrypeCvss {
   }
   
   function transform(__tmp4: any, __tmp3: any, getProps: any, key: any = ''): any {
-    function transformPrimitive(__tmp3: string, __tmp4: any): any {
+    function transformPrimitive(__tmp3: __typ4, __tmp4: any): any {
       if (typeof __tmp3 === typeof __tmp4) return __tmp4;
       return invalidValue(__tmp3, __tmp4, key);
     }
   
-    function transformUnion(typs: any[], __tmp4: any): any {
+    function transformUnion(typs, __tmp4: any): any {
       
       const l = typs.length;
       for (let i = 0; i < l; i++) {
@@ -70,7 +73,7 @@ export interface GrypeCvss {
       return invalidValue(typs, __tmp4);
     }
   
-    function transformEnum(cases: string[], __tmp4: any): any {
+    function transformEnum(cases: __typ4[], __tmp4: any): any {
       if (cases.indexOf(__tmp4) !== -1) return __tmp4;
       return invalidValue(cases, __tmp4);
     }
@@ -92,7 +95,7 @@ export interface GrypeCvss {
       return d;
     }
   
-    function transformObject(__tmp2: { [k: string]: any }, additional: any, __tmp4: any): any {
+    function transformObject(__tmp2: { [k: __typ4]: any }, additional: any, __tmp4: any): any {
       if (__tmp4 === null || typeof __tmp4 !== 'object' || Array.isArray(__tmp4)) {
         return invalidValue('object', __tmp4);
       }
@@ -134,11 +137,11 @@ export interface GrypeCvss {
     return transformPrimitive(__tmp3, __tmp4);
   }
   
-  function cast<T>(__tmp4: any, __tmp3: any): T {
+  function cast<__typ3>(__tmp4: any, __tmp3: any): __typ3 {
     return transform(__tmp4, __tmp3, jsonToJSProps);
   }
   
-  function uncast<T>(__tmp4: T, __tmp3: any): any {
+  function uncast<__typ3>(__tmp4, __tmp3: any): any {
     return transform(__tmp4, __tmp3, jsToJSONProps);
   }
   
@@ -167,7 +170,7 @@ export interface GrypeCvss {
     return { props: [], additional:additional };
   }
   
-  function r(name: string) {
+  function r(name: __typ4) {
     return { ref: name };
   }
   

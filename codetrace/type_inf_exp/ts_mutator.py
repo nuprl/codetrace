@@ -158,9 +158,12 @@ def mutation_delete_annotation(annotation_captures : List[Tuple[tree_sitter.Node
 def apply_mutations(program : str, mutations : List[Mutation]) -> str:
     """
     Apply mutations to the program. Sort mutations by end_byte.
-    NOTE: applies top to bottom to not disturb the byte offsets of other mutations
+    NOTE: 
+    - applies top to bottom to not disturb the byte offsets of other mutations
+    - there's the issue that type rename mutations may be nested inside remove annotation mutations
+        therefore, if a type rename mutation is nested inside a remove annotation mutation, remove it first
     """
-    mutations.sort(key=lambda x: x.location.end_byte, reverse=True)
+    mutations = merge_nested_mutation(mutations)
     byte_program = program.encode("utf-8")
     prefixes = []
     for mutation in mutations:
@@ -174,6 +177,25 @@ def apply_mutations(program : str, mutations : List[Mutation]) -> str:
     else:
         return byte_program.decode("utf-8")
 
+def merge_nested_mutation(mutations : List[Mutation]) -> List[Mutation]:
+    """
+    Merge nested annotation mutations. 
+    """
+    mutations.sort(key=lambda x: x.location.start_byte, reverse=True)
+    new_mutations = []
+    # work in pairs, if next capture is a superset of the current one, skip it
+    for (curr, prev) in zip(mutations, mutations[1:]):
+        if (curr.location.start_point[0] == prev.location.start_point[0] and 
+            curr.location.start_point[1] >= prev.location.start_point[1] and
+            curr.location.end_point[0] == prev.location.end_point[0] and
+            curr.location.end_point[1] <= prev.location.end_point[1]):
+            continue
+        else:
+            new_mutations.append(curr)
+            
+    # add the last capture in all cases
+    new_mutations.append(mutations[-1])       
+    return new_mutations
 
 def random_mutate(
     program : str, 
@@ -245,6 +267,12 @@ def random_mutate(
     for m in mutations:
         all_mutations += m(func_name_to_args[m.__name__])
     
+    if len(all_mutations) == 0:
+        # bad run, try again
+        if debug_seed is not None:
+            return None, []
+        return None
+    
     # modify the program
     new_program = apply_mutations(program, all_mutations)
     assert "_CodetraceSpecialPlaceholder_" in new_program, "Placeholder was mistakenly renamed!"
@@ -264,10 +292,12 @@ def dataset_apply_random_mutations(dataset : datasets.Dataset, mutations : List[
     
     # 1. capture all possible mutation locations
     for i, ex in tqdm(enumerate(ds), desc="Mutating", total_len=len(ds)):
-        
+        new_program = None
         program = ex["fim_program"]
         fim_type = ex["fim_type"]
-        new_program = random_mutate(program, fim_type, mutations)
+        while new_program is None:
+            new_program = random_mutate(program, fim_type, mutations)
+
         new_ds.append({"mutated_program": new_program, 
                        "mutations" : [m.__name__ for m in mutations], **ex})
     

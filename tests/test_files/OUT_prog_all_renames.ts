@@ -1,182 +1,192 @@
-type __typ1 = number;
 type __typ5 = never;
-type __typ0 = string;
+type __typ0 = number;
+type __typ4 = string;
 
-export interface __typ3 {
+export interface __typ2 {
     VendorMetadata: any;
-    Metrics: __typ4;
-    Vector: __typ0;
-    Version: __typ0;
+    Metrics: __typ1;
+    Vector: __typ4;
+    Version: __typ4;
   }
   
-  export interface __typ4 {
-    BaseScore: __typ1;
-    ExploitabilityScore: __typ1;
-    ImpactScore: __typ1;
+  export interface __typ1 {
+    BaseScore: __typ0;
+    ExploitabilityScore: __typ0;
+    ImpactScore: __typ0;
   }
   
-  const __tmp29 = ['VendorMetadata', 'Metrics', 'Vector', 'Version'];
+  const names = ['VendorMetadata', 'Metrics', 'Vector', 'Version'];
   
   export class Convert {
-    public static toGrypeCvss(__tmp5: __typ0): __typ3[] {
-      return __tmp34(JSON.parse(__tmp5), __tmp38(__tmp1('GrypeCvss')));
+    public static toGrypeCvss(__tmp1: __typ4): __typ2[] {
+      return cast(JSON.parse(__tmp1), a(r('GrypeCvss')));
     }
   
-    public static grypeCvssToJson(__tmp21: __typ3[]): __typ0 {
-      return JSON.stringify(__tmp13(__tmp21, __tmp38(__tmp1('GrypeCvss'))), null, 2);
+    public static grypeCvssToJson(value: __typ2[]): __typ4 {
+      return JSON.stringify(uncast(value, a(r('GrypeCvss'))), null, 2);
     }
 
-    public static grypeCvssToJson2(__tmp21: __typ3): __typ0 {
-      return JSON.stringify(__tmp13(__tmp21, __tmp1('GrypeCvss')), null, 2);
+    public static grypeCvssToJson2(value: __typ2): __typ4 {
+      return JSON.stringify(uncast(value, r('GrypeCvss')), null, 2);
     }
   }
   
-  function __tmp26(__tmp16: any, __tmp31: any, __tmp30: any = ''): __typ5 {
-    if (__tmp30) {
-      throw Error(`Invalid value for key "${__tmp30}". Expected type ${JSON.stringify(__tmp16)} but got ${JSON.stringify(__tmp31)}`);
+  function invalidValue(__tmp3: any, __tmp4: any, key: any = ''): __typ5 {
+    if (key) {
+      throw Error(`Invalid value for key "${key}". Expected type ${JSON.stringify(__tmp3)} but got ${JSON.stringify(__tmp4)}`);
     }
-    throw Error(`Invalid value ${JSON.stringify(__tmp31)} for type ${JSON.stringify(__tmp16)}`);
+    throw Error(`Invalid value ${JSON.stringify(__tmp4)} for type ${JSON.stringify(__tmp3)}`);
   }
   
-  function __tmp25(__tmp16: any): any {
-    if (__tmp16.jsonToJS === undefined) {
-      const __tmp36: any = {};
-      __tmp16.props.forEach((__tmp3: any) => (__tmp36[__tmp3.json] = { key: __tmp3.js, typ: __tmp3.typ }));
-      __tmp16.jsonToJS = __tmp36;
+  function jsonToJSProps(__tmp3: any): any {
+    if (__tmp3.jsonToJS === undefined) {
+      const map: any = {};
+      __tmp3.props.forEach((p: any) => (map[p.json] = { key: p.js, typ: p.typ }));
+      __tmp3.jsonToJS = map;
     }
-    return __tmp16.jsonToJS;
+    return __tmp3.jsonToJS;
   }
   
-  function __tmp33(__tmp16: any): any {
-    if (__tmp16.jsToJSON === undefined) {
-      const __tmp36: any = {};
-      __tmp16.props.forEach((__tmp3: any) => (__tmp36[__tmp3.js] = { key: __tmp3.json, typ: __tmp3.typ }));
-      __tmp16.jsToJSON = __tmp36;
+  function jsToJSONProps(__tmp3: any): any {
+    if (__tmp3.jsToJSON === undefined) {
+      const map: any = {};
+      __tmp3.props.forEach((p: any) => (map[p.js] = { key: p.json, typ: p.typ }));
+      __tmp3.jsToJSON = map;
     }
-    return __tmp16.jsToJSON;
+    return __tmp3.jsToJSON;
   }
   
-  function __tmp0(__tmp31: any, __tmp16: any, __tmp27: any, __tmp30: any = ''): any {
-    function __tmp35(__tmp16: __typ0, __tmp31: any): any {
-      if (typeof __tmp16 === typeof __tmp31) return __tmp31;
-      return __tmp26(__tmp16, __tmp31, __tmp30);
+  function transform(__tmp4: any, __tmp3: any, getProps: any, key: any = ''): any {
+    function transformPrimitive(__tmp3: __typ4, __tmp4: any): any {
+      if (typeof __tmp3 === typeof __tmp4) return __tmp4;
+      return invalidValue(__tmp3, __tmp4, key);
     }
   
-    function __tmp11(__tmp24: any[], __tmp31: any): any {
+    function transformUnion(typs: any[], __tmp4: any): any {
       
-      const __tmp37 = __tmp24.length;
-      for (let __tmp6 = 0; __tmp6 < __tmp37; __tmp6++) {
-        const __tmp16 = __tmp24[__tmp6];
+      const l = typs.length;
+      for (let i = 0; i < l; i++) {
+        const __tmp3 = typs[i];
         try {
-          return __tmp0(__tmp31, __tmp16, __tmp27);
+          return transform(__tmp4, __tmp3, getProps);
         } catch (_) {}
       }
-      return __tmp26(__tmp24, __tmp31);
+      return invalidValue(typs, __tmp4);
     }
   
-    function __tmp20(__tmp22: __typ0[], __tmp31: any): any {
-      if (__tmp22.indexOf(__tmp31) !== -1) return __tmp31;
-      return __tmp26(__tmp22, __tmp31);
+    function transformEnum(cases: __typ4[], __tmp4: any): any {
+      if (cases.indexOf(__tmp4) !== -1) return __tmp4;
+      return invalidValue(cases, __tmp4);
     }
   
-    function __tmp12(__tmp16: any, __tmp31: any): any {
+    function transformArray(__tmp3: any, __tmp4: any): any {
       
-      if (!Array.isArray(__tmp31)) return __tmp26('array', __tmp31);
-      return __tmp31.map((__tmp2) => __tmp0(__tmp2, __tmp16, __tmp27));
+      if (!Array.isArray(__tmp4)) return invalidValue('array', __tmp4);
+      return __tmp4.map((el) => transform(el, __tmp3, getProps));
     }
   
-    function __tmp23(__tmp31: any): any {
-      if (__tmp31 === null) {
+    function transformDate(__tmp4: any): any {
+      if (__tmp4 === null) {
         return null;
       }
-      const __tmp7 = new Date(__tmp31);
-      if (isNaN(__tmp7.valueOf())) {
-        return __tmp26('Date', __tmp31);
+      const d = new Date(__tmp4);
+      if (isNaN(d.valueOf())) {
+        return invalidValue('Date', __tmp4);
       }
-      return __tmp7;
+      return d;
     }
   
-    function __tmp17(__tmp10: { [k: __typ0]: any }, __tmp19: any, __tmp31: any): any {
-      if (__tmp31 === null || typeof __tmp31 !== 'object' || Array.isArray(__tmp31)) {
-        return __tmp26('object', __tmp31);
+    function transformObject(__tmp2: { [k: __typ4]: any }, additional: any, __tmp4: any): any {
+      if (__tmp4 === null || typeof __tmp4 !== 'object' || Array.isArray(__tmp4)) {
+        return invalidValue('object', __tmp4);
       }
-      const __tmp18: any = {};
-      Object.getOwnPropertyNames(__tmp10).forEach((__tmp30) => {
-        const __tmp4 = __tmp10[__tmp30];
-        const __tmp14 = Object.prototype.hasOwnProperty.call(__tmp31, __tmp30) ? __tmp31[__tmp30] : undefined;
-        __tmp18[__tmp4.key] = __tmp0(__tmp14, __tmp4.typ, __tmp27, __tmp4.key);
+      const result: any = {};
+      Object.getOwnPropertyNames(__tmp2).forEach((key) => {
+        const prop = __tmp2[key];
+        const v = Object.prototype.hasOwnProperty.call(__tmp4, key) ? __tmp4[key] : undefined;
+        result[prop.key] = transform(v, prop.typ, getProps, prop.key);
       });
-      Object.getOwnPropertyNames(__tmp31).forEach((__tmp30) => {
-        if (!Object.prototype.hasOwnProperty.call(__tmp10, __tmp30)) {
-          __tmp18[__tmp30] = __tmp0(__tmp31[__tmp30], __tmp19, __tmp27, __tmp30);
+      Object.getOwnPropertyNames(__tmp4).forEach((key) => {
+        if (!Object.prototype.hasOwnProperty.call(__tmp2, key)) {
+          result[key] = transform(__tmp4[key], additional, getProps, key);
         }
       });
-      return __tmp18;
+      return result;
     }
   
-    if (__tmp16 === 'any') return __tmp31;
-    if (__tmp16 === null) {
-      if (__tmp31 === null) return __tmp31;
-      return __tmp26(__tmp16, __tmp31);
+    if (__tmp3 === 'any') return __tmp4;
+    if (__tmp3 === null) {
+      if (__tmp4 === null) return __tmp4;
+      return invalidValue(__tmp3, __tmp4);
     }
-    if (__tmp16 === false) return __tmp26(__tmp16, __tmp31);
-    while (typeof __tmp16 === 'object' && __tmp16.ref !== undefined) {
-      __tmp16 = __tmp9[__tmp16.ref];
+    if (__tmp3 === false) return invalidValue(__tmp3, __tmp4);
+    while (typeof __tmp3 === 'object' && __tmp3.ref !== undefined) {
+      __tmp3 = typeMap[__tmp3.ref];
     }
-    if (Array.isArray(__tmp16)) return __tmp20(__tmp16, __tmp31);
-    if (typeof __tmp16 === 'object') {
-      return __tmp16.hasOwnProperty('unionMembers')
-        ? __tmp11(__tmp16.unionMembers, __tmp31)
-        : __tmp16.hasOwnProperty('arrayItems')
-        ? __tmp12(__tmp16.arrayItems, __tmp31)
-        : __tmp16.hasOwnProperty('props')
-        ? __tmp17(__tmp27(__tmp16), __tmp16.additional, __tmp31)
-        : __tmp26(__tmp16, __tmp31);
+    if (Array.isArray(__tmp3)) return transformEnum(__tmp3, __tmp4);
+    if (typeof __tmp3 === 'object') {
+      return __tmp3.hasOwnProperty('unionMembers')
+        ? transformUnion(__tmp3.unionMembers, __tmp4)
+        : __tmp3.hasOwnProperty('arrayItems')
+        ? transformArray(__tmp3.arrayItems, __tmp4)
+        : __tmp3.hasOwnProperty('props')
+        ? transformObject(getProps(__tmp3), __tmp3.additional, __tmp4)
+        : invalidValue(__tmp3, __tmp4);
     }
     
-    if (__tmp16 === Date && typeof __tmp31 !== 'number') return __tmp23(__tmp31);
-    return __tmp35(__tmp16, __tmp31);
+    if (__tmp3 === Date && typeof __tmp4 !== 'number') return transformDate(__tmp4);
+    return transformPrimitive(__tmp3, __tmp4);
   }
   
-  function __tmp34<__typ2>(__tmp31: any, __tmp16: any): __typ2 {
-    return __tmp0(__tmp31, __tmp16, __tmp25);
+  function cast<__typ3>(__tmp4: any, __tmp3: any): __typ3 {
+    return transform(__tmp4, __tmp3, jsonToJSProps);
   }
   
-  function __tmp13<__typ2>(__tmp31: __typ2, __tmp16: any): any {
-    return __tmp0(__tmp31, __tmp16, __tmp33);
+  function uncast<__typ3>(__tmp4: __typ3, __tmp3: any): any {
+    return transform(__tmp4, __tmp3, jsToJSONProps);
   }
   
-  function __tmp38(__tmp16: any) {
-    return { arrayItems: __tmp16 };
+  function a(__tmp3: any) {
+    return { arrayItems: __tmp3 };
   }
   
-  function __tmp28(...__tmp24: any[]) {
-    return { unionMembers: __tmp24 };
+  function u(...typs: any[]) {
+    return { unionMembers: typs };
   }
   
-  function __tmp32(__tmp10: any[], __tmp19: any) {
-    return { props, additional }; // F: I will be filtering out shorthands
+  //  Fran: I will be filtering out shorthands
+  // function o(props: any[], additional: any) {
+  //   return { props, additional };
+  // }
+  
+  // function m(additional: any) {
+  //   return { props: [], additional };
+  // }
+
+  function o(__tmp2: any[], additional: any) {
+    return { props: __tmp2, additional: additional };
   }
   
-  function __tmp8(__tmp19: any) {
-    return { props: [], additional };
+  function __tmp0(additional: any) {
+    return { props: [], additional:additional };
   }
   
-  function __tmp1(__tmp15: __typ0) {
-    return { ref: __tmp15 };
+  function r(name: __typ4) {
+    return { ref: name };
   }
   
-  const __tmp9: any = {
-    GrypeCvss: __tmp32(
+  
+  const typeMap: any = {
+    GrypeCvss: o(
       [
         { json: 'VendorMetadata', js: 'VendorMetadata', typ: 'any' },
-        { json: 'Metrics', js: 'Metrics', typ: __tmp1('Metrics') },
+        { json: 'Metrics', js: 'Metrics', typ: r('Metrics') },
         { json: 'Vector', js: 'Vector', typ: '' },
         { json: 'Version', js: 'Version', typ: '' },
       ],
       false
     ),
-    Metrics: __tmp32(
+    Metrics: o(
       [
         { json: 'BaseScore', js: 'BaseScore', typ: 3.14 },
         { json: 'ExploitabilityScore', js: 'ExploitabilityScore', typ: 3.14 },
