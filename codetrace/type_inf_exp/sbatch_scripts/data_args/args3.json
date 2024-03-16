@@ -1,0 +1,10 @@
+{
+    "datadir": "/work/arjunguha-research-group/franlucc/codetrace/codetrace/type_inf_exp/exp_data/ts_typeinf_1tok_delete_annotations",
+    "source_dataset": "franlucc/ts_typeinf_1tok_delete",
+    "max_size": -1,
+    "shuffle": false,
+    "do_fit_matching_pairs": true,
+    "test_size": 0,
+    "model": "bigcode/starcoderbase-1b",
+    "action": "make_steering_data_splits"
+}

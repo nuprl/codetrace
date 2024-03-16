@@ -1,15 +1,7 @@
-from tabulate import tabulate
-from codetrace.utils import *
-from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
-import hashlib
 import sys
-import pickle
 from multiprocessing import cpu_count
-from copy import deepcopy
-from datasets.utils.logging import enable_progress_bar, disable_progress_bar
-import hashlib
 from transformers import AutoTokenizer
 from codetrace.type_inf_exp.steering import *
 
@@ -42,9 +34,13 @@ def make_steering_data_splits(args):
         assert args.shuffle, "Please select shuffle when truncating dataset."
         correct = correct.select(range(args.max_size))
         incorrect = incorrect.select(range(args.max_size))
-        incorrect_eval = incorrect_eval.select(range(args.max_size))
+        if incorrect_eval != None:
+            incorrect_eval = incorrect_eval.select(range(args.max_size))
+    
+    print("Correct, incorrect:", len(correct), len(incorrect))
+    if incorrect_eval:
+        print("Incorrect ood len:", len(incorrect_eval))
         
-    print("Correct, incorrect, incorrect ood len:", len(correct), len(incorrect), len(incorrect_eval))
     info_incorrect = get_data_info(incorrect, "incorrect")
     info_correct = get_data_info(correct, "correct")
     info_ood = get_data_info(incorrect_eval, "incorrect_ood")
@@ -53,7 +49,8 @@ def make_steering_data_splits(args):
     os.makedirs(args.datadir, exist_ok=True)
     correct.save_to_disk(f"{args.datadir}/correct")
     incorrect.save_to_disk(f"{args.datadir}/incorrect")
-    incorrect_eval.save_to_disk(f"{args.datadir}/incorrect_ood")
+    if incorrect_eval:
+        incorrect_eval.save_to_disk(f"{args.datadir}/incorrect_ood")
 
     # save data info
     with open(f"{args.datadir}/data_info.json", "w") as f:
@@ -117,6 +114,6 @@ if __name__ == "__main__":
         run_steering(args)
     else:
         raise ValueError("""Invalid action, please choose from:
-                         \t- make_steering_data_splits
-                         \t- make_steering_tensor
-                         \t- run_steering""")
+                        \t- make_steering_data_splits
+                        \t- make_steering_tensor
+                        \t- run_steering""")

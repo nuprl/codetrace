@@ -1,0 +1,7 @@
+{
+    "datadir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data/ts_typeinf_1tok_rename_vars",
+    "tokens_to_patch": ["<fim_middle>"],
+    "batch_size": 25,
+    "model": "bigcode/starcoderbase-1b",
+    "action": "make_steering_tensor"
+}

@@ -1,16 +1,10 @@
-from tabulate import tabulate
 from codetrace.type_inf_exp.request_patch import *
-from codetrace.utils import *
+from codetrace.utils import placeholder_to_std_fmt
 from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
-import hashlib
 import sys
-import pickle
 from multiprocessing import cpu_count
-from copy import deepcopy
-from datasets.utils.logging import enable_progress_bar, disable_progress_bar
-import hashlib
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
@@ -257,7 +251,7 @@ def get_data_info(ds, name) -> json:
     Give some information about how balanced the ds is
     """
     if ds is None:
-        return {}
+        return {"name":"No ood set", "length" : -1, "hexsha_counts" : {}, "type_counts" : {}}
     count_hex = Counter(ds["hexsha"])
     count_type = Counter(ds["fim_type"])
     len_ds = len(ds)
@@ -270,11 +264,14 @@ def log_results(steering_ds,  args, outfile):
     print(metric)
     steering_df_by_type = accuracy_per_type(steering_ds)
     
-    with open(f"{args.expdir}/{outfile}", "w") as f:
-        f.write(f"## Steering Results\n")
-        f.write(metric)
-        f.write("\n\n## Steering Results by Type\n\n")
-        f.write(steering_df_by_type.to_markdown())
+    with open(f"{args.expdir}/{outfile}".split(".")[-1] + ".json", "w") as f:
+        results = {
+            "num_succes" : len(correct_steer),
+            "total": len(steering_ds),
+            "accuracy": len(correct_steer) / len(steering_ds),
+            "reuslts_per_type": steering_df_by_type.to_dict()
+        }
+        json.dump(results, f, indent=4)
         
 
 def accuracy_per_type(steering_ds):
