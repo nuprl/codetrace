@@ -8,7 +8,6 @@ from typing import List
 import sys
 import os
 from codetrace.interp_utils import *
-from codetrace.interp_vis import *
 import torch
 from tqdm import tqdm
 from collections import Counter, defaultdict
