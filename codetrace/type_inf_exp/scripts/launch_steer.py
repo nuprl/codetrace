@@ -32,10 +32,10 @@ def make_steering_data_splits(args):
         
     if args.max_size > 0:
         assert args.shuffle, "Please select shuffle when truncating dataset."
-        correct = correct.select(range(args.max_size))
-        incorrect = incorrect.select(range(args.max_size))
+        correct = correct.select(range(min(args.max_size, len(correct))))
+        incorrect = incorrect.select(range(min(args.max_size, len(incorrect))))
         if incorrect_eval != None:
-            incorrect_eval = incorrect_eval.select(range(args.max_size))
+            incorrect_eval = incorrect_eval.select(range(min(args.max_size, len(incorrect_eval))))
     
     print("Correct, incorrect:", len(correct), len(incorrect))
     if incorrect_eval:
@@ -80,8 +80,8 @@ def make_steering_tensor(args):
         
     if args.max_size > 0:
         assert args.shuffle, "Please select shuffle when truncating dataset."
-        correct = correct.select(range(args.max_size))
-        incorrect = incorrect.select(range(args.max_size))
+        correct = correct.select(range(min(args.max_size, len(correct))))
+        incorrect = incorrect.select(range(min(args.max_size, len(incorrect))))
         
     if "<FILL>" in correct["fim_program"][0]:
         args.fim_placeholder = True
@@ -91,7 +91,7 @@ def make_steering_tensor(args):
     diff_tensor = get_steering_tensor(model, correct, incorrect, args)
     
     # save steering tensor
-    torch.save(diff_tensor, f"{args.datadir}/{args.steering_tensor_name}.pt")
+    torch.save(diff_tensor, f"{args.datadir}/{args.steering_tensor_name}")
 
 def run_steering(args):
     print("[STEP 3] Running steering eval on incorrect and incorrect ood...")
@@ -114,7 +114,7 @@ def run_steering(args):
             eval_ds = eval_ds.shuffle(seed=42)
         if args.max_size > 0:
             assert args.shuffle, "Please select shuffle when truncating dataset."
-            eval_ds = eval_ds.select(range(args.max_size))
+            eval_ds = eval_ds.select(range(min(args.max_size, len(eval_ds))))
             
         steer_on_ds(model, diff_tensor, eval_ds, do_ood, args)
     
@@ -129,6 +129,7 @@ if __name__ == "__main__":
     with open(steering_args, "r") as f:
         args = json.load(f)
     args = Namespace(**args)
+    print(f"Passed args:\n{args}")
     
     if args.action == "make_steering_data_splits":
         make_steering_data_splits(args)

@@ -187,7 +187,7 @@ def merge_nested_mutation(mutations : List[Mutation]) -> List[Mutation]:
     """
     mutations.sort(key=lambda x: x.location.start_byte, reverse=True)
     new_mutations = []
-    # work in pairs, if next capture is a superset of the current one, skip it
+    # work in pairs, if next capture is a superset of the current one, skip curr
     for (curr, prev) in zip(mutations, mutations[1:]):
         if (curr.location.start_point[0] == prev.location.start_point[0] and 
             curr.location.start_point[1] >= prev.location.start_point[1] and

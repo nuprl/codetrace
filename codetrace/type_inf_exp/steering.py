@@ -199,10 +199,12 @@ def get_steering_tensor(model, correct, incorrect, args):
     NOTE: while this function makes cache files for the correct/incorrect average tensor computation, the functionality
     to restart computing averga vectors from the cache files (for example after unexpected crash) has not been implemented yet
     """
-    # load steering tensor if it exists, else create it
-    if os.path.exists(f"{args.datadir}/steering_tensor.pt"):
-        print(f"Loading steering tensor from {args.datadir}/steering_tensor.pt...")
-        diff_tensor = torch.load(f"{args.datadir}/steering_tensor.pt")
+    basename = args.steering_tensor_name.replace(".pt","")
+    
+    # load steering tensor if it exists, load it, otherwise create it
+    if os.path.exists(f"{args.datadir}/{args.steering_tensor_name}"):
+        print(f"Loading steering tensor from {args.datadir}...")
+        diff_tensor = torch.load(f"{args.datadir}/{args.steering_tensor_name}")
         print(f"Diff tensor shape: {diff_tensor.shape}")
     else:
         if args.fim_placeholder:
@@ -212,43 +214,42 @@ def get_steering_tensor(model, correct, incorrect, args):
             correct_prompts = [ex["fim_program"] for ex in correct]
             incorrect_prompts = [ex["fim_program"] for ex in incorrect]
             
-        if os.path.exists(f"{args.datadir}/correct_avg_tensor.pt"):
-            print(f"Loading correct avg tensor from {args.datadir}/correct_avg_tensor.pt...")
-            correct_avg_tensor = torch.load(f"{args.datadir}/correct_avg_tensor.pt")
+        if os.path.exists(f"{args.datadir}/{basename}_correct_avg.pt"):
+            print(f"Loading correct avg tensor from {args.datadir}...")
+            correct_avg_tensor = torch.load(f"{args.datadir}/{basename}_correct_avg.pt")
         else:
             print(f"Creating correct avg tensor...")
             correct_avg_tensor = batched_get_averages(model, 
                                                     correct_prompts,
                                                     args.tokens_to_patch,
                                                     batch_size=args.batch_size,
-                                                    outfile=f"{args.datadir}/correct_avg_tensor")
+                                                    outfile=f"{args.datadir}/{basename}_correct_avg")
             # save tensor
-            torch.save(correct_avg_tensor, f"{args.datadir}/correct_avg_tensor.pt")
+            torch.save(correct_avg_tensor, f"{args.datadir}/{basename}_correct_avg.pt")
             # remove cache files
-            os.remove(f"{args.datadir}/correct_avg_tensor.pkl")
-            os.remove(f"{args.datadir}/correct_avg_tensor.json")
+            os.remove(f"{args.datadir}/{basename}_correct_avg.pkl")
+            os.remove(f"{args.datadir}/{basename}_correct_avg.json")
             
-        if os.path.exists(f"{args.datadir}/incorrect_avg_tensor.pt"):
-            print(f"Loading incorrect avg tensor from {args.datadir}/incorrect_avg_tensor.pt...")
-            incorrect_avg_tensor = torch.load(f"{args.datadir}/incorrect_avg_tensor.pt")
+        if os.path.exists(f"{args.datadir}/{basename}_incorrect_avg.pt"):
+            print(f"Loading incorrect avg tensor from {args.datadir}...")
+            incorrect_avg_tensor = torch.load(f"{args.datadir}/{basename}_incorrect_avg.pt")
         else:
             print(f"Creating incorrect avg tensor...")
             incorrect_avg_tensor = batched_get_averages(model,
                                                         incorrect_prompts,
                                                         args.tokens_to_patch,
                                                         batch_size=args.batch_size,
-                                                        outfile=f"{args.datadir}/incorrect_avg_tensor")
-            torch.save(incorrect_avg_tensor, f"{args.datadir}/incorrect_avg_tensor.pt")
+                                                        outfile=f"{args.datadir}/{basename}_incorrect_avg")
+            # svae tensor
+            torch.save(incorrect_avg_tensor, f"{args.datadir}/{basename}_incorrect_avg.pt")
             # remove cache files
-            os.remove(f"{args.datadir}/incorrect_avg_tensor.pkl")
-            os.remove(f"{args.datadir}/incorrect_avg_tensor.json")
+            os.remove(f"{args.datadir}/{basename}_incorrect_avg.pkl")
+            os.remove(f"{args.datadir}/{basename}_incorrect_avg.json")
             
         diff_tensor = correct_avg_tensor - incorrect_avg_tensor
         diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
 
         print(f"Diff tensor shape after transform: {diff_tensor.shape}")
-
-        torch.save(diff_tensor, f"{args.datadir}/steering_tensor.pt")
         
     return diff_tensor
 
