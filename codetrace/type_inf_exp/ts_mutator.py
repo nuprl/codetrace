@@ -275,7 +275,11 @@ def random_mutate(
     
     # modify the program
     new_program = apply_mutations(program, all_mutations)
-    assert "_CodetraceSpecialPlaceholder_" in new_program, "Placeholder was mistakenly renamed!"
+    
+    # sometimes the placeholder can be deleted, for example in nested type annotations.
+    if not "_CodetraceSpecialPlaceholder_" in new_program:
+        return None
+    
     new_program = new_program.replace("_CodetraceSpecialPlaceholder_", "<FILL>")
     
     if debug_seed is not None:
