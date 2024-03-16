@@ -24,7 +24,7 @@ def filter_incorrect(ds: datasets.Dataset,
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
     ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["mutated_program"], STARCODER_FIM),
-                            "solution":tokenizer.decode(tokenizer.encode(x["fim_type"])[0])})
+                            "solution":tokenizer.decode(tokenizer.encode(x["fim_type"])[0])}, desc="Prepping prompts")
     prompts = ds["prompt"]
     # batch generations so we can save them early
     for n,i in tqdm(enumerate(range(0, len(ds), batch_size)), desc="Batch generations", total=len(ds) // batch_size):
@@ -82,22 +82,24 @@ def preprocess_then_mutate(batch, mutations):
     return ts_mutator.iter_apply_random_mutations(post, mutations)
     
 def main(args):
-    # ds = datasets.load_dataset(args.completions_ds, split=args.split)
-    # if args.max_size > -1:
-    #     ds = ds.shuffle(seed=42).select(range(args.max_size))
-    # mutations = [getattr(ts_mutator, m) for m in args.mutations]
+    ds = datasets.load_dataset(args.completions_ds, split=args.split)
+    if args.max_size > -1:
+        ds = ds.shuffle(seed=42).select(range(args.max_size))
+    mutations = [getattr(ts_mutator, m) for m in args.mutations]
     
-    # batches = get_batches_fast(ds, len(ds), cpu_count())
-    # results = batched_do_func(batches, cpu_count(), preprocess_then_mutate, mutations=mutations)
+    batches = get_batches_fast(ds, len(ds), cpu_count())
+    results = batched_do_func(batches, cpu_count(), preprocess_then_mutate, mutations=mutations)
 
-    # def _yielder():
-    #     for ex in tqdm(results, desc="Yielding", total=len(results)):
-    #         yield ex
+    def _yielder():
+        for ex in tqdm(results, desc="Yielding", total=len(results)):
+            yield ex
             
-    # ds = datasets.Dataset.from_generator(_yielder)
-    # print(ds)
-    # ds.push_to_hub(args.new_ds_name + "_unfiltered")
-    ds = datasets.load_dataset(args.new_ds_name + "_unfiltered", split=args.split)
+    ds = datasets.Dataset.from_generator(_yielder)
+    print(ds)
+    ds.push_to_hub(args.new_ds_name + "_unfiltered")
+    
+    # ds = datasets.load_dataset(args.new_ds_name + "_unfiltered", split=args.split)
+    
     llm = LLM(args.model)
     ds = filter_incorrect(ds, llm, args.new_ds_name)
     print(ds)
