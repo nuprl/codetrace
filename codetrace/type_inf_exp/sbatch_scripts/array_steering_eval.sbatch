@@ -6,7 +6,7 @@
 #SBATCH --job-name=eval
 #SBATCH --output=%A_%a.out
 #SBATCH --error=%A_%a.err
-#SBATCH --array=1-1
+#SBATCH --array=2-8
 
 source /work/arjunguha-research-group/franlucc/venvs/v_codetrace/bin/activate
 

@@ -141,7 +141,7 @@ def steer_on_ds(model, diff_tensor, incorrect, is_ood, args):
     df = df.sort_values(by="fim_type")
     df.to_csv(f"{args.expdir}/{ood_flag}steering_results.csv")
     
-    log_results(steering_ds, args, f"{ood_flag}eval_readme.md")
+    log_results(steering_ds, args, f"{args.expdir}/{ood_flag}eval_readme.json")
 
 
 def steer(
@@ -271,12 +271,22 @@ def log_results(steering_ds,  args, outfile):
     print(metric)
     steering_df_by_type = accuracy_per_type(steering_ds)
     
-    with open(f"{args.expdir}/{outfile}".split(".")[-1] + ".json", "w") as f:
+    per_type_res = []
+    for dikt in steering_df_by_type.to_dict('records'):
+        d = {}
+        for k,v in dikt.items():
+            if str(k[1]) == "":
+                d[k[0]] = v
+            else:
+                d[k[1]] = v
+        per_type_res.append(d)
+
+    with open(outfile, "w") as f:
         results = {
-            "num_succes" : len(correct_steer),
+            "num_success" : len(correct_steer),
             "total": len(steering_ds),
             "accuracy": len(correct_steer) / len(steering_ds),
-            "reuslts_per_type": steering_df_by_type.to_dict()
+            "results_per_type": per_type_res
         }
         json.dump(results, f, indent=4)
         
