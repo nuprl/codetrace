@@ -1,0 +1,62 @@
+/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/diffusers/utils/outputs.py:63: UserWarning: torch.utils._pytree._register_pytree_node is deprecated. Please use torch.utils._pytree.register_pytree_node instead.
+  torch.utils._pytree._register_pytree_node(
+/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/tree_sitter/__init__.py:36: FutureWarning: Language.build_library is deprecated. Use the new bindings instead.
+  warn("{} is deprecated. Use {} instead.".format(old, new), FutureWarning)
+/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/tree_sitter/__init__.py:36: FutureWarning: Language(path, name) is deprecated. Use Language(ptr, name) instead.
+  warn("{} is deprecated. Use {} instead.".format(old, new), FutureWarning)
+Batch:   0%|          | 0/292 [00:00<?, ?it/s]huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+You're using a GPT2TokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
+Batch:   0%|          | 1/292 [00:12<1:00:55, 12.56s/it]Batch:   1%|          | 2/292 [00:27<1:06:37, 13.79s/it]Batch:   1%|          | 3/292 [00:39<1:02:18, 12.94s/it]Batch:   1%|▏         | 4/292 [00:50<59:23, 12.37s/it]  Batch:   2%|▏         | 5/292 [01:06<1:04:47, 13.55s/it]Batch:   2%|▏         | 6/292 [01:20<1:05:35, 13.76s/it]Batch:   2%|▏         | 7/292 [01:30<1:00:13, 12.68s/it]Batch:   3%|▎         | 8/292 [01:42<58:11, 12.29s/it]  Batch:   3%|▎         | 9/292 [01:53<56:58, 12.08s/it]Batch:   3%|▎         | 10/292 [02:02<51:27, 10.95s/it]Batch:   4%|▍         | 11/292 [02:11<48:07, 10.28s/it]Batch:   4%|▍         | 12/292 [02:17<42:58,  9.21s/it]Batch:   4%|▍         | 13/292 [02:30<47:43, 10.26s/it]Batch:   5%|▍         | 14/292 [02:35<39:59,  8.63s/it]Batch:   5%|▌         | 15/292 [02:38<32:11,  6.97s/it]Batch:   5%|▌         | 15/292 [02:45<50:59, 11.04s/it]
+Traceback (most recent call last):
+  File "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/scripts/steer.py", line 112, in <module>
+    make_steering_tensor(args)
+  File "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/scripts/steer.py", line 81, in make_steering_tensor
+    diff_tensor = get_steering_tensor(model, correct, incorrect, args)
+  File "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/steering.py", line 214, in get_steering_tensor
+    correct_avg_tensor = batched_get_averages(model, 
+  File "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/request_patch.py", line 39, in batched_get_averages
+    hs = collect_hidden_states_at_tokens(model, batch, tokens)
+  File "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/interp_utils.py", line 157, in collect_hidden_states_at_tokens
+    with model.forward() as runner:
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 73, in __exit__
+    self.run_local()
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/nnsight/contexts/Runner.py", line 78, in run_local
+    self.output = self.model(
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 194, in __call__
+    output = fn(inputs, *args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/nnsight/models/NNsightModel.py", line 398, in _forward
+    return self.local_model(
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1561, in _call_impl
+    result = forward_call(*args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 1268, in forward
+    transformer_outputs = self.transformer(
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 1121, in forward
+    outputs = block(
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1561, in _call_impl
+    result = forward_call(*args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 728, in forward
+    attn_outputs = self.attn(
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 637, in forward
+    attn_output, attn_weights = self._attn(query, key, value, attention_mask, head_mask)
+  File "/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py", line 569, in _attn
+    sdpa_result = torch.nn.functional.scaled_dot_product_attention(
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 24.78 GiB. GPU 0 has a total capacity of 79.15 GiB of which 6.39 GiB is free. Including non-PyTorch memory, this process has 72.74 GiB memory in use. Of the allocated memory 46.11 GiB is allocated by PyTorch, and 26.14 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

@@ -111,6 +111,9 @@ def steer_on_ds(model, diff_tensor, incorrect, is_ood, args):
     """
     Given model, a steering tensor, and a dataset of incorrect prompts, steer on the dataset.
     Logs results to args.outdir
+    
+    NOTE: while this function makes cache files for predictions, the functionality
+    to restart steering from a cache file (for example after unexpected crash) has not been implemented yet
     """
     if is_ood:
         ood_flag = "ood_"
@@ -192,6 +195,9 @@ def get_steering_tensor(model, correct, incorrect, args):
     """
     Given a model, a dataset of correct and incorrect prompts, and args, return a steering tensor
     from the average of the incorrect prompts and the average of the correct prompts.
+    
+    NOTE: while this function makes cache files for the correct/incorrect average tensor computation, the functionality
+    to restart computing averga vectors from the cache files (for example after unexpected crash) has not been implemented yet
     """
     # load steering tensor if it exists, else create it
     if os.path.exists(f"{args.datadir}/steering_tensor.pt"):

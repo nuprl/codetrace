@@ -1,0 +1,8 @@
+/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/diffusers/utils/outputs.py:63: UserWarning: torch.utils._pytree._register_pytree_node is deprecated. Please use torch.utils._pytree.register_pytree_node instead.
+  torch.utils._pytree._register_pytree_node(
+/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/tree_sitter/__init__.py:36: FutureWarning: Language.build_library is deprecated. Use the new bindings instead.
+  warn("{} is deprecated. Use {} instead.".format(old, new), FutureWarning)
+/work/arjunguha-research-group/franlucc/venvs/v_codetrace/lib/python3.10/site-packages/tree_sitter/__init__.py:36: FutureWarning: Language(path, name) is deprecated. Use Language(ptr, name) instead.
+  warn("{} is deprecated. Use {} instead.".format(old, new), FutureWarning)
+Saving the dataset (0/1 shards):   0%|          | 0/7290 [00:00<?, ? examples/s]Saving the dataset (1/1 shards): 100%|██████████| 7290/7290 [00:00<00:00, 77086.60 examples/s]Saving the dataset (1/1 shards): 100%|██████████| 7290/7290 [00:00<00:00, 76570.98 examples/s]
+Saving the dataset (0/1 shards):   0%|          | 0/7290 [00:00<?, ? examples/s]Saving the dataset (1/1 shards): 100%|██████████| 7290/7290 [00:00<00:00, 77356.90 examples/s]Saving the dataset (1/1 shards): 100%|██████████| 7290/7290 [00:00<00:00, 76855.83 examples/s]

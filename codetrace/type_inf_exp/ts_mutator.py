@@ -89,13 +89,14 @@ class Mutation:
 
 def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutation]:
     """
-    Rename all identifiers in the program that are the same as the varname at the given location
-    NOTE: new name cannot exist elsewhere in the program, must be different in format from type names
-    format for vars: __tmp{var_index}
+    Make mutations for renaming vraiables in VAR_CAPTURES.
+    NOTE: new name cannot exist elsewhere in the program, must be different in format from type names.
+    The format for vars this function uses is: __tmp{var_index}
     We assume the program does not naturally contain variables with this format
     """
-    # map names to new_names
+    # map names to captures
     all_names = set([x[0].text for x in var_captures])
+    # map name to new name
     name_to_new_name = {name : bytes(f"__tmp{ix}","utf-8") for ix, name in enumerate(all_names)}
     mutations = []
     for capture in var_captures:
@@ -121,8 +122,9 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> L
     NOTE: new name cannot exist elsewhere in the program, must be different in format from variable names.
     We assume the program does not naturally contain types with format __typ{type_index}
     """
-    # map names to new_names
+    # map names to captures
     all_names = set([x[0].text for x in type_captures])
+    # map names to new names
     name_to_new_name = {name : bytes(f"__typ{ix}","utf-8") for ix, name in enumerate(all_names)}
     
     mutations = []
@@ -146,7 +148,7 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> L
 
 def mutation_delete_annotation(annotation_captures : List[Tuple[tree_sitter.Node,str]])-> List[Mutation]:
     """
-    Delete the type annotation at the given location
+    Delete the type annotations from captures
     """
     mutations = []
     for capture in annotation_captures:
@@ -157,13 +159,15 @@ def mutation_delete_annotation(annotation_captures : List[Tuple[tree_sitter.Node
 
 def apply_mutations(program : str, mutations : List[Mutation]) -> str:
     """
-    Apply mutations to the program. Sort mutations by end_byte.
+    Apply mutations to the program.
     NOTE: 
-    - applies top to bottom to not disturb the byte offsets of other mutations
+    - applies from bottom up in order to not disturb the byte offsets of other mutations
     - there's the issue that type rename mutations may be nested inside remove annotation mutations
-        therefore, if a type rename mutation is nested inside a remove annotation mutation, remove it first
+        therefore, if a mutation is nested inside another mutation, only remove the parent mutation
     """
+    # take care of nested mutations
     mutations = merge_nested_mutation(mutations)
+    
     byte_program = program.encode("utf-8")
     prefixes = []
     for mutation in mutations:
@@ -205,7 +209,9 @@ def random_mutate(
 ) -> str:
     """
     Apply random combination of mutations to the program.
-    NOTE: if debug_seed is -1, this is a special case where we do not select a random subset (DEGUB only)
+    Can provide a random seed DEBUG_SEED for debugging.
+    NOTE: if debug_seed is -1, this is a special case where we do not select a random subset but
+    and run the full set instead (DEGUB only)
     """
     if debug_seed is not None:
         random.seed(debug_seed)
@@ -262,21 +268,22 @@ def random_mutate(
         "mutation_rename_type" : type_rename_full_captures,
         "mutation_delete_annotation" : remove_annotations_captures
     }
-    # actually runs the mutations
+    # collects mutations
     all_mutations = []
     for m in mutations:
         all_mutations += m(func_name_to_args[m.__name__])
     
     if len(all_mutations) == 0:
-        # bad run, try again
+        # bad run, return None
         if debug_seed is not None:
             return None, []
         return None
     
-    # modify the program
+    # actually modify the program
     new_program = apply_mutations(program, all_mutations)
     
-    # sometimes the placeholder can be deleted, for example in nested type annotations.
+    # sometimes the placeholder can be deleted, for example in nested type annotations,
+    # so here's a safety check
     if not "_CodetraceSpecialPlaceholder_" in new_program:
         return None
     
@@ -294,7 +301,6 @@ def iter_apply_random_mutations(iterable, mutations : List[Callable]):
     """
     new_ds = []
     
-    # 1. capture all possible mutation locations
     for i, ex in enumerate(iterable):
         new_program = None
         program = ex["fim_program"]
