@@ -3,7 +3,7 @@
 #SBATCH --job-name=data_collect
 #SBATCH --output=%A_%a.out
 #SBATCH --error=%A_%a.err
-#SBATCH --array=1-8
+#SBATCH --array=3-3
 #SBATCH --time=00:30:00
 #SBATCH --mem=48G
 

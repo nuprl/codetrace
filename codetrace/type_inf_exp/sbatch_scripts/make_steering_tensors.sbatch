@@ -1,10 +1,12 @@
 #!/bin/bash
 #SBATCH --partition=177huntington
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:a100:1
+#SBATCH --cpus-per-task=2
 #SBATCH --job-name=data_t
 #SBATCH --output=%A_%a.out
 #SBATCH --error=%A_%a.err
-#SBATCH --array=1-8
-#SBATCH --mem=48G
+#SBATCH --array=3-3
 
 source /work/arjunguha-research-group/franlucc/venvs/v_codetrace/bin/activate
 
