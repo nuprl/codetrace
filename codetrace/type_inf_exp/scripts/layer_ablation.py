@@ -28,7 +28,7 @@ def steering_ablation(model, steering_tensor,negative_prompts,args, is_ood):
     else:
         ood_flag = ""
         
-    os.makedirs(f"{args.outdir}/{ood_flag}layer_results", exist_ok=True)
+    os.makedirs(f"{args.expdir}/{ood_flag}layer_results", exist_ok=True)
     results = []
     
     all_layers = list(range(steering_tensor.shape[0]))
@@ -38,7 +38,7 @@ def steering_ablation(model, steering_tensor,negative_prompts,args, is_ood):
     
     for layer in batch_layers:
         layername = "-".join([str(i) for i in layer])
-        args.steering_outfile = f"{args.outdir}/{ood_flag}layer_results/layer_{layername}.json"
+        args.steering_outfile = f"{args.expdir}/{ood_flag}layer_results/layer_{layername}.json"
         args.layers_to_patch = layer
         layer_res_ds = steer(model, negative_prompts, steering_tensor, args)
         # add a layer column
@@ -148,21 +148,22 @@ def _plot_only(window_size, outdir, resultsdir, layersdir):
         print(f"No results found in {outdir}/{resultsdir} or {outdir}/{layersdir}")
 
 def main(args):
+    raise NotImplementedError("This script has not been updated!")
     args.fim_placeholder = False
     args.custom_decoder = False
     args.patch_mode = "add"
     args.steering_outfile = None
     
     if args.plot_only:
-        _plot_only(args.sliding_window_size, args.outdir, "ablation_results", "layer_results")
-        _plot_only(args.sliding_window_size, args.outdir, "ood_ablation_results", "ood_layer_results")
+        _plot_only(args.sliding_window_size, args.expdir, "ablation_results", "layer_results")
+        _plot_only(args.sliding_window_size, args.expdir, "ood_ablation_results", "ood_layer_results")
         return
     
-    os.makedirs(args.outdir, exist_ok=True)
-    print(f"Outdir:{args.outdir}")
+    expdir = f"{args.expdir}/{args.run_id}"
+    os.makedirs(expdir, exist_ok=True)
     
     # save args
-    with open(f"{args.outdir}/args.json", "w") as f:
+    with open(f"{expdir}/args.json", "w") as f:
         save_args = args
         save_args.plot_only = True
         json.dump(vars(save_args), f, indent=4)
@@ -221,10 +222,11 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser()
         parser.add_argument("--model_name", type=str, required=True)
         parser.add_argument("--device", type=str, default="cuda")
-        parser.add_argument("--dataset", type=str, required=True)
+        parser.add_argument("--source-dataset", type=str, required=True)
         parser.add_argument("--tokens_to_patch", type=str, required=True)
         parser.add_argument("--batch_size", type=int, default=10)
-        parser.add_argument("--out_dir", type=str)
+        parser.add_argument("--datadir", type=str)
+        parser.add_argument("--expdir", type=str)
         parser.add_argument("--plot-only", action="store_true")
         args = parser.parse_args()
 

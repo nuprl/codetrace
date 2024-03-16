@@ -18,10 +18,6 @@ TS_QUERY_FUNC_TYPES = """
 return_type: (type_annotation) @tp
 """
 
-"""
-The following functions remove all type annotations but one <FILL> fim type
-"""
-
 def make_natural_typeinf_prompt(
     ex : dict,
     query_str : str,
@@ -42,6 +38,11 @@ def make_natural_typeinf_prompt(
                         **ex})
 
     return prompts
+
+"""
+Older functions below. These remove all type annotations first.
+See ts_mutator.py for the latest version
+"""
 
 def make_typeinf_prompts(
     dataset : datasets.Dataset, 

@@ -1,16 +1,17 @@
 {
-    "outdir": "steno_caa",
-    "dataset": "franlucc/stenotype-typeinf-1tok-completions",
+    "expdir": "",
+    "datadir": "",
+    "evaldir": "",
+    "source_dataset": "franlucc/stenotype-typeinf-1tok-completions",
+    "max_size": -1,
+    "shuffle": false,
+    "do_fit_matching_pairs": false,
+    "test_size": 0.2,
     "model": "/home/arjun/models/starcoderbase-1b",
-    "prog_threshold": -1,
-    "type_threshold": -1,
     "batch_size": 25,
     "patch_mode": "add",
     "tokens_to_patch": ["<fim_middle>"],
     "layers_to_patch": [10,11,12,13,14],
-    "test_size": 0.2,
     "custom_decoder": false,
-    "max_size": -1,
-    "shuffle": false,
-    "do_fit_matching_pairs": false
+    "action": ""
 }

@@ -7,7 +7,7 @@ from transformers import AutoTokenizer
 from tqdm import tqdm
 from functools import partial
 from typing import Callable
-
+from codetrace.fast_utils import get_batches_fast, batched_do_func
 
 def batch_filter_is_one_token(batch, tokenizer):
     if len(batch) == 0:
@@ -43,56 +43,6 @@ def _func_combo(batch, query_str, do_remove_comments):
     return new_batch
 
     
-def batched_do_func(batches, num_proc, func, **func_kwargs):
-    pool = multiprocessing.Pool(num_proc)
-    
-    async_out_batches = []
-    for i, batch in tqdm(enumerate(batches), desc="Processing batches", total=len(batches)):
-        async_out = pool.apply_async(func, args=(batch,), kwds=func_kwargs)
-        async_out_batches.append(async_out)
-    
-    results = []
-    for i in tqdm(range(len(async_out_batches)), desc="Getting results", total=len(async_out_batches)):
-        results += async_out_batches[i].get()
-            
-    pool.close()
-    pool.join()
-    return results
-
- 
-def _collect_index(itr, si, ei):
-    if isinstance(itr, datasets.Dataset):
-        return [itr[i] for i in range(si, ei)]
-    else:
-        return itr[si:ei]
-       
-def get_batches_fast(iterable, len_iter, num_proc):
-    """
-    Not for IterableDataset
-    """
-    batch_size = len_iter // num_proc
-    pool = multiprocessing.Pool(num_proc)
-    async_out_batches = []
-    
-    i=0
-    progress_bar = tqdm(total=num_proc, desc="Making batches")
-    while i < len_iter:
-        end_index = min(i + batch_size, len_iter)
-        async_out = pool.apply_async(_collect_index, args=(iterable, i, end_index))
-        async_out_batches.append(async_out)
-        i = end_index
-        progress_bar.update(1)
-    progress_bar.close()
-    
-    batches = []
-    for j in tqdm(range(len(async_out_batches)), desc="Getting batches", total=len(async_out_batches)):
-        batches.append(async_out_batches[j].get())
-        
-    pool.close()
-    pool.join()
-    return batches
-
-    
 def multi_process(ds, args):
     """
     Method for processing a dataset with multiple processes.
@@ -102,8 +52,6 @@ def multi_process(ds, args):
     - filters out examples that do not have a fill in program
     - pushes to hub
     - pushes a copy to hub where all examples have a one token type
-    
-    All operations are batched and done in parallel. Faster than huggingface multiproc map/filter.
     """
     num_chunks = args.num_chunks
     for i in range(num_chunks):
@@ -185,7 +133,6 @@ def main(args):
         multi_process(ds, args)
         
         
-    
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--output_ds", type=str, required=True)

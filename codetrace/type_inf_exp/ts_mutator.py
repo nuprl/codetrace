@@ -21,7 +21,7 @@ Some considerations.
 1. renaming to an arbitrary name (especially length)
 
 the trick to being able to rename to any name is to accumulate
-all the changes and apply them at the end from top to bottom.
+all the changes and apply them finally from end to start
 
 2. each mutation method should produce different types of names to prevent overlap
 and also for semantics
@@ -225,7 +225,7 @@ def random_mutate(
     remove_annotations_captures = get_captures(tree, TS_QUERY_PARAM_TYPES, language="ts")
     
     def select_random_subset(x):
-        if debug_seed == -1:
+        if debug_seed == -1 or len(x) == 0:
             return x
         n = random.randint(1, len(x))
         return random.sample(x, n)
@@ -284,22 +284,26 @@ def random_mutate(
     return new_program
 
 
-def dataset_apply_random_mutations(dataset : datasets.Dataset, mutations : List[Callable]) -> datasets.Dataset:
+def iter_apply_random_mutations(iterable, mutations : List[Callable]):
     """
     Apply random combination of mutations
     """
     new_ds = []
     
     # 1. capture all possible mutation locations
-    for i, ex in tqdm(enumerate(ds), desc="Mutating", total_len=len(ds)):
+    for i, ex in enumerate(iterable):
         new_program = None
         program = ex["fim_program"]
         fim_type = ex["fim_type"]
-        while new_program is None:
+        
+        tries = 0
+        while new_program is None and tries < 10:
+            tries += 1
             new_program = random_mutate(program, fim_type, mutations)
+        if new_program is None:
+            continue
 
         new_ds.append({"mutated_program": new_program, 
                        "mutations" : [m.__name__ for m in mutations], **ex})
     
-    new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
     return new_ds
