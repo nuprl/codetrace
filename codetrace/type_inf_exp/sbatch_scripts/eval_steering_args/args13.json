@@ -1,0 +1,14 @@
+{
+    "steering_tensor": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data/ts_typeinf_1tok_rename_vars/steering_tensor-2000.pt",
+    "expdir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_results/ts_rename_vars_on_fit_more-layers",
+    "evaldir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data/ts_typeinf_1tok_rename_vars",
+    "model": "bigcode/starcoderbase-1b",
+    "batch_size": 10,
+    "max_size": 2000,
+    "shuffle": true,
+    "patch_mode": "add",
+    "tokens_to_patch": ["<fim_middle>"],
+    "layers_to_patch": [1,2,3,4,5,6,7,8,9,10,11,12,13,14],
+    "custom_decoder": false,
+    "action": "run_steering"
+}

@@ -45,23 +45,23 @@ for subdir in glob.glob(f"{results_dir}/*"):
             with open(feval_res, "r") as f:
                 eval_res = json.load(f)
         
-        total_num_success = eval_res.get("num_success",-1) + eval_ood.get("num_success", -1)
-        total_count = eval_res.get("total",-1) + eval_ood.get("total", -1)
-        if total_count > -1:
+        total_num_success = eval_res.get("num_success",0) + eval_ood.get("num_success", 0)
+        total_count = eval_res.get("total",0) + eval_ood.get("total", 0)
+        if total_count > 0:
             total_accuracy = total_num_success / total_count
         else:
-            total_accuracy = -1 # file not found
-            total_num_success = -1
-            total_count = -1
+            total_accuracy = 0 # file not found
+            total_num_success = 0
+            total_count = 0
         row = {
             "experiment_dir" : basename(subdir),
             "eval_dir": basename(args["evaldir"]),
-            "ood_accuracy": eval_ood.get("accuracy", -1),
-            "ood_num_success":eval_ood.get("num_success",-1),
-            "ood_total":eval_ood.get("total",-1),
-            "fit_accuracy": eval_res.get("accuracy",-1),
-            "fit_num_success": eval_res.get("num_success",-1),
-            "fit_total": eval_res.get("num_success",-1),
+            "ood_accuracy": eval_ood.get("accuracy", 0),
+            "ood_num_success":eval_ood.get("num_success",0),
+            "ood_total":eval_ood.get("total",0),
+            "fit_accuracy": eval_res.get("accuracy",0),
+            "fit_num_success": eval_res.get("num_success",0),
+            "fit_total": eval_res.get("num_success",0),
             "total_num_success": total_num_success,
             "total_count": total_count,
             "total_accuracy": total_accuracy,

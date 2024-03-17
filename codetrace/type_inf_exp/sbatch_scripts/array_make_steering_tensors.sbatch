@@ -15,7 +15,5 @@ export HF_DATASETS_CACHE="/work/arjunguha-research-group/franlucc/.cache"
 
 dir="/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp"
 
-if [ "$SLURM_ARRAY_TASK_ID" -ge 1 ] && [ "$SLURM_ARRAY_TASK_ID" -le 8 ]; then
-    echo "Running task $SLURM_ARRAY_TASK_ID"
-    python "${dir}/scripts/launch_steer.py" "${dir}/sbatch_scripts/steering_tensor_args/args${SLURM_ARRAY_TASK_ID}.json"
-fi
+echo "Running task $SLURM_ARRAY_TASK_ID"
+python "${dir}/scripts/launch_steer.py" "${dir}/sbatch_scripts/steering_tensor_args/args${SLURM_ARRAY_TASK_ID}.json"

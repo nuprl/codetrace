@@ -228,6 +228,13 @@ def insert_patch(
     if patch_mode not in ["sub", "add", "subst"]:
         raise NotImplementedError(f"Patch mode {patch_mode} not implemented")
     
+    # SPECIAL CASE: if token to patch is "*" patch everything
+    if tokens_to_patch[0] == "*":
+        print("[Apply to ALL]")
+        apply_to_all = True
+    else:
+        apply_to_all = False
+    
     def decode(x : torch.Tensor) -> torch.Tensor:
         if custom_decoder is not None:
             return x
@@ -239,11 +246,12 @@ def insert_patch(
             
             indices = invoker.input["input_ids"].numpy()
 
-            if isinstance(tokens_to_patch[0], str):
-                # for each prompt find the index of token_idx
-                target_idx = np.concatenate([np.where((i  == t)) for i in indices for t in tokenized_to_patch], axis=0).reshape((len(prompts),len(tokens_to_patch)))
-            else:
-                target_idx = [tokens_to_patch]*len(prompts)
+            if not apply_to_all:
+                if isinstance(tokens_to_patch[0], str):
+                    # for each prompt find the index of token_idx
+                    target_idx = np.concatenate([np.where((i  == t)) for i in indices for t in tokenized_to_patch], axis=0).reshape((len(prompts),len(tokens_to_patch)))
+                else:
+                    target_idx = [tokens_to_patch]*len(prompts)
                 
             # apply patch to hidden states at target_idx for each prompt
             for layer in range(len(model.transformer.h)):
@@ -258,11 +266,23 @@ def insert_patch(
                                 clean_patch = clean_patch.index_select(0, torch.tensor([i]))
                                 
                             if patch_mode == "subst":
-                                x[[i],target_idx[i],:] = clean_patch
+                                if apply_to_all:
+                                    for t in range(x.shape[1]):
+                                        x[[i],[t],:] = clean_patch
+                                else:
+                                    x[[i],target_idx[i],:] = clean_patch
                             elif patch_mode == "add":
-                                x[[i],target_idx[i],:] += clean_patch
+                                if apply_to_all:
+                                    for t in range(x.shape[1]):
+                                        x[[i],[t],:] += clean_patch
+                                else:
+                                    x[[i],target_idx[i],:] += clean_patch
                             elif patch_mode == "sub":
-                                x[[i],target_idx[i],:] -= clean_patch
+                                if apply_to_all:
+                                    for t in range(x.shape[1]):
+                                        x[[i],[t],:] -= clean_patch
+                                else:
+                                    x[[i],target_idx[i],:] -= clean_patch
                                 
                     apply_patch(model.transformer.h[layer].output[0], clean_patch)
             

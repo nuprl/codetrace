@@ -88,9 +88,8 @@ def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
     For CAA and Completions datasets (equivalent)
     """
     if "generated_text" in dataset.column_names:
-        # recompute "correct" sanity check: generated text starts with first token of fim_type
-        dataset = dataset.map(lambda x : {"correct" : x["generated_text"].strip().startswith(
-            tokenizer.decode(tokenizer.encode(x["fim_type"])[0])), **x}, desc="Sanity Recomputing correct")
+        # recompute "correct" sanity check
+        dataset = dataset.map(lambda x : {"correct" : tokenizer.encode(x["generated_text"])[0] == tokenizer.encode(x["fim_type"])[0], **x}, desc="Sanity Recomputing correct")
         
     correct = dataset.filter(lambda x : x["correct"] == True, desc="Getting correct subset")
     incorrect = dataset.filter(lambda x : x["correct"] == False, desc="Getting incorrect subset")
@@ -135,6 +134,14 @@ def steer_on_ds(model, diff_tensor, incorrect, is_ood, args):
         # remove cache files
         os.remove(args.steering_outfile)
         
+    # # steering_ds recount
+    # steering_ds_2 = []
+    # for ex in steering_ds:
+    #     ex_2 = ex.copy()
+    #     ex_2["correct_steer"] = (ex["fim_type"] == ex["steered_generation"].strip())
+    #     steering_ds_2.append(ex_2)
+    # steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_ds_2))
+    
     df = steering_ds.to_pandas()
     df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
     # sort by fim_type
@@ -183,8 +190,7 @@ def steer(
     for i,tok in enumerate(predictions):
         ex = incorrect_eval[i]
         steering_results.append({"steered_generation" : tok, 
-                            # tok is always one token, fim_type len may vary
-                            "correct_steer" : (ex["fim_type"].startswith(tok) and len(tok) > 0),
+                            "correct_steer" : ex["fim_type"] == tok.strip(),
                             **ex})
             
     steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))

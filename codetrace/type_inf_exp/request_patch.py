@@ -97,7 +97,7 @@ def batched_insert_patch_logit(
     def _percent_success(predictions_so_far, solutions):
         correct = 0
         for pred,sol in zip(predictions_so_far, solutions[:len(predictions_so_far)]):
-            if sol.startswith(pred) and len(pred) > 0:
+            if sol == pred:
                 correct += 1
         return correct / len(solutions)
     

@@ -4,6 +4,8 @@ import sys
 from multiprocessing import cpu_count
 from transformers import AutoTokenizer
 from codetrace.type_inf_exp.steering import *
+from pathlib import Path
+import os 
 
 def make_steering_data_splits(args):
     """
@@ -119,7 +121,8 @@ def run_steering(args):
         steer_on_ds(model, diff_tensor, eval_ds, do_ood, args)
     
     # incorrect ood eval
-    _eval(model, diff_tensor, True, args)
+    if os.path.exists(Path(f"{args.evaldir}/incorrect_ood")):
+        _eval(model, diff_tensor, True, args)
     # incorrect eval
     _eval(model, diff_tensor, False, args)
     
