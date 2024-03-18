@@ -210,7 +210,8 @@ def insert_patch(
     tokens_to_patch : Union[List[str],List[int],str,int],
     patch_mode : str = "add",
     collect_hidden_states : bool = True,
-    custom_decoder : Union[None, torch.nn.Module] = None
+    custom_decoder : Union[None, torch.nn.Module] = None,
+    rotation_matrix = None,
 ) -> TraceResult:
     """
     Insert patch at layers and tokens
@@ -264,27 +265,31 @@ def insert_patch(
                             # if one unique patch for each prompt, grab the correct one
                             if clean_patch.shape[0] == len(prompts) and len(prompts)>1:
                                 clean_patch = clean_patch.index_select(0, torch.tensor([i]))
-                                
+
                             if patch_mode == "subst":
                                 if apply_to_all:
-                                    for t in range(x.shape[1]):
-                                        x[[i],[t],:] = clean_patch
+                                    x[[i],list(range(x.shape[1])),:] = clean_patch
                                 else:
                                     x[[i],target_idx[i],:] = clean_patch
                             elif patch_mode == "add":
                                 if apply_to_all:
-                                    for t in range(x.shape[1]):
-                                        x[[i],[t],:] += clean_patch
+                                    x[[i],list(range(x.shape[1])),:] += clean_patch
                                 else:
                                     x[[i],target_idx[i],:] += clean_patch
                             elif patch_mode == "sub":
                                 if apply_to_all:
-                                    for t in range(x.shape[1]):
-                                        x[[i],[t],:] -= clean_patch
+                                    x[[i],list(range(x.shape[1])),:] -= clean_patch
                                 else:
                                     x[[i],target_idx[i],:] -= clean_patch
-                                
-                    apply_patch(model.transformer.h[layer].output[0], clean_patch)
+                    
+                    if rotation_matrix == None:
+                        apply_patch(model.transformer.h[layer].output[0], clean_patch)
+                    else:
+                        batch_size = len(prompts)
+                        out = rotation_matrix(model.transformer.h[layer].output[0][:,-1,:], clean_patch.to("cuda"))
+                        hs = model.transformer.h[layer].output[0]
+                        hs[:,-1,:] = out
+                        model.transformer.h[layer].output = (hs, model.transformer.h[layer].output[1])
             
             if collect_hidden_states:
                 collect_range = list(range(len(model.transformer.h)))

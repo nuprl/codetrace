@@ -89,7 +89,8 @@ def batched_insert_patch_logit(
     batch_size : int = 5,
     outfile: str = None,
     solutions : Union[List[str],str, None] = None,
-    custom_decoder : Union[torch.nn.Module, None] = None
+    custom_decoder : Union[torch.nn.Module, None] = None,
+    rotation_matrix = None,
 ) -> List[str]:
     """
     batched insert patch
@@ -116,7 +117,8 @@ def batched_insert_patch_logit(
                                          tokens_to_patch, 
                                          patch_mode, 
                                          collect_hidden_states=False,
-                                         custom_decoder=custom_decoder)
+                                         custom_decoder=custom_decoder,
+                                         rotation_matrix=rotation_matrix)
         prompt_len = len(batch)
         logits : LogitResult = res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
 
@@ -127,9 +129,14 @@ def batched_insert_patch_logit(
             
         if outfile is not None:
             with open(outfile, "w") as f:
-                data = {"batch_size" : batch_size, "batch_idx" : i, "predictions" : predictions}
+                data = {"batch_size" : batch_size, "batch_idx" : i, "total_batches": len(prompt_batches), "predictions" : predictions}
                 if solutions is not None:
-                    json.dump({"percent_success" : _percent_success(predictions, solutions), **data}, f, indent=4)
+                    curr_accuracy =  _percent_success(predictions, solutions)
+                    if i == 0:
+                        projected_accuracy = 0
+                    else:
+                        projected_accuracy = (len(prompt_batches) * curr_accuracy) / i
+                    json.dump({"current_accuracy" : curr_accuracy, "projected_accuracy": projected_accuracy, **data}, f, indent=4)
                 else:
                     json.dump(data, f, indent=4)
            
@@ -146,6 +153,12 @@ def filter_prompts(
     Remove multi-token label prompts if tokenizer is passed.
     Deduplicate prompts by hexsha by some dedup_prog_threshold (max prompts for a program)
     """
+    if dedup_prog_threshold == -1:
+        # set to the max value, aka do not dedup
+        dedup_prog_threshold = len(dataset)
+    if dedup_type_threshold == -1:
+        dedup_type_threshold = len(dataset)
+        
     # get count of labels
     labels = dataset["fim_type"]
     counter = Counter(labels)
@@ -153,7 +166,7 @@ def filter_prompts(
     hexsha_count = {h:0 for h in dataset["hexsha"]}
     label_count = {label : 0 for label in labels}
     balanced_prompts = []
-    for i,ex in enumerate(dataset):
+    for i,ex in tqdm(enumerate(dataset), desc="Deduping dataset",total=len(dataset)):
         if label_count[ex["fim_type"]] >= dedup_type_threshold and hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: 
             # if label and hexsha are already at threshold, break
             break

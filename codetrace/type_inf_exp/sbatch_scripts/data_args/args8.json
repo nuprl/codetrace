@@ -5,6 +5,8 @@
     "shuffle": false,
     "do_fit_matching_pairs": true,
     "test_size": 0.2,
+    "dedup_type_threshold": -1,
+    "dedup_prog_threshold": -1,
     "model": "bigcode/starcoderbase-1b",
     "action": "make_steering_data_splits"
 }

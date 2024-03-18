@@ -1,0 +1,23 @@
+{
+    "steering_tensor": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data2/ts_typeinf_1tok_all_mutations/steering_tensor-2000.pt",
+    "expdir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_results3/ts_all_mutations_fit",
+    "evaldir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data2/ts_typeinf_1tok_all_mutations",
+    "model": "bigcode/starcoderbase-1b",
+    "batch_size": 10,
+    "max_size": 2000,
+    "shuffle": true,
+    "patch_mode": "add",
+    "tokens_to_patch": [
+        "<fim_middle>"
+    ],
+    "layers_to_patch": [
+        10,
+        11,
+        12,
+        13,
+        14
+    ],
+    "custom_decoder": false,
+    "rotation_matrix": false,
+    "action": "run_steering"
+}

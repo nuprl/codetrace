@@ -5,6 +5,7 @@ from argparse import ArgumentParser, Namespace
 from collections import Counter
 import sys
 from multiprocessing import cpu_count
+from .pyvene_das import *
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
@@ -87,9 +88,17 @@ def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
     """
     For CAA and Completions datasets (equivalent)
     """
+    def _is_correct_sanity_check(x, tokenizer):
+        toks_generated = tokenizer.encode(x["generated_text"])
+        solution_toks = tokenizer.encode(x["fim_type"])
+        if len(toks_generated) == 0:
+            return False
+        else:
+            return toks_generated[0] == solution_toks[0]
+        
     if "generated_text" in dataset.column_names:
         # recompute "correct" sanity check
-        dataset = dataset.map(lambda x : {"correct" : tokenizer.encode(x["generated_text"])[0] == tokenizer.encode(x["fim_type"])[0], **x}, desc="Sanity Recomputing correct")
+        dataset = dataset.map(lambda x : {"correct" : _is_correct_sanity_check(x, tokenizer), **x}, desc="Sanity Recomputing correct")
         
     correct = dataset.filter(lambda x : x["correct"] == True, desc="Getting correct subset")
     incorrect = dataset.filter(lambda x : x["correct"] == False, desc="Getting incorrect subset")
@@ -176,6 +185,16 @@ def steer(
     else:
         custom_decoder = None
         
+    if args.rotation_matrix is not False:
+        rotator = BoundlessRotatedSpaceIntervention(model.config.n_embd)
+        matrix_weights = torch.load(args.rotation_matrix)
+        rotate_layer = RotateLayer(model.config.n_embd)
+        rotate_layer.weight = torch.nn.Parameter(matrix_weights)
+        rotator.rotate_layer = rotate_layer
+        rotator = rotator.to("cuda")
+    else:
+        rotator = None
+        
     predictions = batched_insert_patch_logit(model, 
                 eval_prompts, 
                 diff_tensor, 
@@ -185,7 +204,8 @@ def steer(
                 args.batch_size,
                 args.steering_outfile,
                 solutions=eval_solutions,
-                custom_decoder=custom_decoder)
+                custom_decoder=custom_decoder,
+                rotation_matrix=rotator)
     steering_results = []
     for i,tok in enumerate(predictions):
         ex = incorrect_eval[i]

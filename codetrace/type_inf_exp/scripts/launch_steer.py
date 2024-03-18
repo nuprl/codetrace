@@ -32,6 +32,13 @@ def make_steering_data_splits(args):
     else:
         correct, incorrect, incorrect_eval = fit_test_split(ds,tokenizer, args)
         
+    if args.dedup_type_threshold > -1 or args.dedup_prog_threshold > -1:
+        assert args.shuffle, "Please select shuffle when deduping dataset."
+        correct = filter_prompts(correct, args.dedup_prog_threshold, args.dedup_type_threshold)
+        incorrect = filter_prompts(incorrect, args.dedup_prog_threshold, args.dedup_type_threshold)
+        if incorrect_eval != None:
+            incorrect_eval = filter_prompts(incorrect_eval, args.dedup_prog_threshold, args.dedup_type_threshold)
+        
     if args.max_size > 0:
         assert args.shuffle, "Please select shuffle when truncating dataset."
         correct = correct.select(range(min(args.max_size, len(correct))))
@@ -39,6 +46,8 @@ def make_steering_data_splits(args):
         if incorrect_eval != None:
             incorrect_eval = incorrect_eval.select(range(min(args.max_size, len(incorrect_eval))))
     
+    
+    # [DONE WITH SPLITS, LOG INFO AND SAVE]
     print("Correct, incorrect:", len(correct), len(incorrect))
     if incorrect_eval:
         print("Incorrect ood len:", len(incorrect_eval))

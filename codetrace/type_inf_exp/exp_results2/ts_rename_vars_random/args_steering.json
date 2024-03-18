@@ -1,0 +1,22 @@
+{
+    "steering_tensor": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data2/random_tensor.pt",
+    "model": "bigcode/starcoderbase-1b",
+    "expdir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_results2/ts_rename_vars_random",
+    "evaldir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data2/ts_typeinf_1tok_rename_vars",
+    "batch_size": 10,
+    "max_size": 2000,
+    "shuffle": true,
+    "patch_mode": "add",
+    "tokens_to_patch": [
+        "<fim_middle>"
+    ],
+    "layers_to_patch": [
+        10,
+        11,
+        12,
+        13,
+        14
+    ],
+    "custom_decoder": false,
+    "action": "run_steering"
+}
