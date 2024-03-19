@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from .utils import PY_LANGUAGE, PY_PARSER
 from more_itertools import interleave_longest
 import random
-
+import typing
+import builtins
 
 # There are ~114 types of non-terminals listed in the Python tree-sitter
 # grammar:
@@ -243,3 +244,123 @@ def random_mutations(code: str, fixed_type_location: int, apply_all_mutations: b
         
     if apply_all_mutations:
         yield (adjusted_type_location, buffer.decode("utf-8"))
+
+def _needs_alias(typ: str):
+    # if type is a builtin, needs alias
+    return any([typ==str(t) for t in dir(builtins)+dir(typing)])
+    
+def random_mutations_subset(
+    code: str,
+    fixed_type_location: int,
+    target: str = "",
+    target_mutations: List[str] = [],
+    debug = False
+) -> Generator[Tuple[int, bytes, bytes], None, None]:
+    """
+    Generate a sequence of random mutations to a Python program. Each successive
+    mutation is to the previous mutation. The fixed_type_location is a byte offset
+    to a type annotation that is *not* mutated.
+    """
+    buffer = code.encode("utf-8")
+    tree = PY_PARSER.parse(buffer)
+    root = tree.root_node
+    target = target.encode("utf-8")
+    
+    all_vars = [v for v in list(_get_bound_vars(buffer, root)) if v != target]
+
+    adjusted_type_location = fixed_type_location
+
+    all_type_annotations = [
+        EditableNode.from_node(item[0]) for item in TYPED_IDENTIFIERS.captures(root)
+    ]
+
+    all_type_annotations = [
+        node
+        for node in all_type_annotations
+        if not node.contains_byte(fixed_type_location)
+    ]
+    
+    all_annotated_types = [t[0].text.split(b":")[-1].strip() for t in TYPED_IDENTIFIERS.captures(root)]
+    all_types = [t[0].text.strip() for t in IDENTIFIERS.captures(root) 
+                 if t[0].text.strip() in all_annotated_types and t[0].text.strip() != target]
+    all_types = list(set(all_types))
+    
+    
+    def _select_random_subset(muts):
+        if len(muts) == 0:
+            return []
+        n = random.randint(1, len(muts))
+        return random.sample(muts, n)
+    
+    if "rename_vars" in target_mutations:
+        all_vars = _select_random_subset(all_vars)
+    else:
+        all_vars = []
+        
+    if "rename_types" in target_mutations:
+        all_types = _select_random_subset(all_types)
+    else:
+        all_types = []
+        
+    if "remove_type_annotations" in target_mutations:
+        all_type_annotations = _select_random_subset(all_type_annotations)
+    else:
+        all_type_annotations = []
+    
+    if debug:
+        print([all_vars, all_types, all_type_annotations])
+        
+    next_var_index = 0
+    next_typ_index = 0
+    type_aliases = []
+    # select random subset
+    max_mutations = len(all_vars) + len(all_types) + len(all_type_annotations)
+    remaining_mutations = target_mutations
+        
+    for counter in range(max_mutations):
+        # pick a random mutation out of the ones that are left
+        if len(all_vars) == 0:
+            remaining_mutations = [m for m in remaining_mutations if m != "rename_vars"]
+        if len(all_types) == 0:
+            remaining_mutations = [m for m in remaining_mutations if m != "rename_types"]
+        if len(all_type_annotations) == 0:
+            remaining_mutations = [m for m in remaining_mutations if m != "remove_type_annotations"]
+        
+        # pick a random mutation out of the ones that are left
+        mut = random.choice(remaining_mutations)
+        # index = random.randint(0, max_mutations - counter - 1)
+        if mut == "rename_vars":
+            (buffer, edits) = rename_var(
+                buffer,
+                root,
+                all_vars.pop(),
+                f"__tmp{next_var_index}".encode("utf-8"),
+            )
+            next_var_index += 1
+        elif mut == "rename_types":
+            this_typ = all_types.pop()
+            (buffer, edits) = rename_var(
+                buffer,
+                root,
+                this_typ,
+                f"__typ{next_typ_index}".encode("utf-8"),
+            )
+
+            if _needs_alias(this_typ.decode("utf-8").strip()):
+                type_aliases.append(f"__typ{next_typ_index} = ".encode("utf-8") + this_typ)
+            next_typ_index += 1
+        elif mut == "remove_type_annotations":
+            (buffer, edits) = remove_type_annotion(buffer, all_type_annotations.pop())
+        
+        # Adjust locations
+        edit_nodes(edits, all_type_annotations)
+        if len(type_aliases) > 0:
+            byte_type_aliases = (b"\n".join(type_aliases) + b"\n\n")
+        else:
+            byte_type_aliases = b""
+
+        for edit in edits:
+            if edit.start_byte < adjusted_type_location:
+                adjusted_type_location += edit.new_end_byte - edit.old_end_byte
+        yield (adjusted_type_location, byte_type_aliases, buffer)
+        
