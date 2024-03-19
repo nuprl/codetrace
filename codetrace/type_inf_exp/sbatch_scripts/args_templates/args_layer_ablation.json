@@ -1,0 +1,16 @@
+{
+    "source_dataset": "",
+    "model_name": "/home/arjun/models/starcoderbase-1b",
+    "datadir": "",
+    "expdir": "",
+    "run_id": "",
+    "tokens_to_patch": ["<fim_middle>"],
+    "batch_size": 25,
+    "plot_only": false,
+    "device": "cuda",
+    "max_size": 125,
+    "test_size": 25,
+    "sliding_window_size":5,
+    "do_fit_matching_pairs": false,
+    "shuffle": true
+}

@@ -3,7 +3,7 @@
     "expdir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_results3/ts_all_renames_fit",
     "evaldir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data2/ts_typeinf_1tok_all_renames",
     "model": "bigcode/starcoderbase-1b",
-    "batch_size": 10,
+    "batch_size": 5,
     "max_size": 2000,
     "shuffle": true,
     "patch_mode": "add",

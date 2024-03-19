@@ -61,7 +61,7 @@ for subdir in glob.glob(f"{results_dir}/*"):
             "ood_total":eval_ood.get("total",0),
             "fit_accuracy": eval_res.get("accuracy",0),
             "fit_num_success": eval_res.get("num_success",0),
-            "fit_total": eval_res.get("num_success",0),
+            "fit_total": eval_res.get("total",0),
             "total_num_success": total_num_success,
             "total_count": total_count,
             "total_accuracy": total_accuracy,

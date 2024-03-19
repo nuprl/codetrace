@@ -1,0 +1,12 @@
+{
+    "datadir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/exp_data2/ts_typeinf_1tok_rename_types",
+    "source_dataset": "franlucc/ts_typeinf_1tok_types",
+    "max_size": -1,
+    "shuffle": true,
+    "do_fit_matching_pairs": true,
+    "test_size": 0.2,
+    "dedup_type_threshold": 25,
+    "dedup_prog_threshold": -1,
+    "model": "bigcode/starcoderbase-1b",
+    "action": "make_steering_data_splits"
+}

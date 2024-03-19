@@ -1,0 +1,518 @@
+{
+    "num_success": 93,
+    "total": 297,
+    "accuracy": 0.31313131313131315,
+    "results_per_type": [
+        {
+            "index": 70,
+            "fim_type": "vector",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 2,
+            "fim_type": "Action",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 26,
+            "fim_type": "Expression",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 4,
+            "fim_type": "ArrayBuffer",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 20,
+            "fim_type": "E",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 44,
+            "fim_type": "Rectangle",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 34,
+            "fim_type": "Moment",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 8,
+            "fim_type": "Callback",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 39,
+            "fim_type": "Out",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 10,
+            "fim_type": "Change",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 17,
+            "fim_type": "Deps",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 12,
+            "fim_type": "Coords",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 41,
+            "fim_type": "Position",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 14,
+            "fim_type": "Date",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 42,
+            "fim_type": "Props",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 28,
+            "fim_type": "Function",
+            "sum": 7,
+            "count": 8,
+            "accuracy": 0.875
+        },
+        {
+            "index": 71,
+            "fim_type": "void",
+            "sum": 15,
+            "count": 25,
+            "accuracy": 0.6
+        },
+        {
+            "index": 13,
+            "fim_type": "D",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 5,
+            "fim_type": "B",
+            "sum": 2,
+            "count": 4,
+            "accuracy": 0.5
+        },
+        {
+            "index": 31,
+            "fim_type": "JSONObject",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 65,
+            "fim_type": "object",
+            "sum": 6,
+            "count": 13,
+            "accuracy": 0.46153846153846156
+        },
+        {
+            "index": 66,
+            "fim_type": "string",
+            "sum": 11,
+            "count": 25,
+            "accuracy": 0.44
+        },
+        {
+            "index": 54,
+            "fim_type": "U",
+            "sum": 4,
+            "count": 11,
+            "accuracy": 0.36363636363636365
+        },
+        {
+            "index": 60,
+            "fim_type": "boolean",
+            "sum": 9,
+            "count": 25,
+            "accuracy": 0.36
+        },
+        {
+            "index": 43,
+            "fim_type": "R",
+            "sum": 1,
+            "count": 3,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 46,
+            "fim_type": "S",
+            "sum": 1,
+            "count": 3,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 69,
+            "fim_type": "unknown",
+            "sum": 4,
+            "count": 12,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 58,
+            "fim_type": "any",
+            "sum": 7,
+            "count": 25,
+            "accuracy": 0.28
+        },
+        {
+            "index": 23,
+            "fim_type": "Error",
+            "sum": 3,
+            "count": 13,
+            "accuracy": 0.23076923076923078
+        },
+        {
+            "index": 37,
+            "fim_type": "Object",
+            "sum": 1,
+            "count": 6,
+            "accuracy": 0.16666666666666666
+        },
+        {
+            "index": 64,
+            "fim_type": "number",
+            "sum": 3,
+            "count": 25,
+            "accuracy": 0.12
+        },
+        {
+            "index": 50,
+            "fim_type": "T",
+            "sum": 2,
+            "count": 23,
+            "accuracy": 0.08695652173913043
+        },
+        {
+            "index": 68,
+            "fim_type": "undefined",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 67,
+            "fim_type": "this",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 63,
+            "fim_type": "never",
+            "sum": 0,
+            "count": 3,
+            "accuracy": 0.0
+        },
+        {
+            "index": 48,
+            "fim_type": "Snippet",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 62,
+            "fim_type": "latex",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 49,
+            "fim_type": "Symbol",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 51,
+            "fim_type": "TP",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 61,
+            "fim_type": "detection",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 52,
+            "fim_type": "TResult",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 53,
+            "fim_type": "Tenant",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 59,
+            "fim_type": "bigint",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 57,
+            "fim_type": "X",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 55,
+            "fim_type": "V",
+            "sum": 0,
+            "count": 4,
+            "accuracy": 0.0
+        },
+        {
+            "index": 56,
+            "fim_type": "W",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 47,
+            "fim_type": "Slot",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 0,
+            "fim_type": "2",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 1,
+            "fim_type": "A",
+            "sum": 0,
+            "count": 3,
+            "accuracy": 0.0
+        },
+        {
+            "index": 3,
+            "fim_type": "Actions",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 6,
+            "fim_type": "BaseModel",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 7,
+            "fim_type": "C",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 9,
+            "fim_type": "Category",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 11,
+            "fim_type": "Command",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 15,
+            "fim_type": "DateTime",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 16,
+            "fim_type": "Delegate",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 18,
+            "fim_type": "Directory",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 19,
+            "fim_type": "DisplayName",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 21,
+            "fim_type": "En",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 36,
+            "fim_type": "O",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 24,
+            "fim_type": "ErrorCode",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 25,
+            "fim_type": "EventHandler",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 27,
+            "fim_type": "F",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 29,
+            "fim_type": "I",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 30,
+            "fim_type": "IF",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 32,
+            "fim_type": "Label",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 33,
+            "fim_type": "Mark",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 35,
+            "fim_type": "Move",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 72,
+            "fim_type": "{}",
+            "sum": 0,
+            "count": 6,
+            "accuracy": 0.0
+        },
+        {
+            "index": 38,
+            "fim_type": "Options",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 40,
+            "fim_type": "P",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 45,
+            "fim_type": "RegExp",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 22,
+            "fim_type": "Entity",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        }
+    ]
+}

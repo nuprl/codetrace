@@ -10,6 +10,7 @@ import tempfile
 import re
 import torch
 from collections import namedtuple
+import builtins
 
 parent = Path(__file__).parent
 REPO_ROOT = Path(__file__).parent.parent
@@ -119,8 +120,7 @@ def get_builtins_regex(language : str) -> str:
     """
     if language in ["python", "py"]:
         parent_dir = Path(__file__).parent
-        with open(f"{parent_dir}/py_builtins.json","r") as f:
-            builtins = json.load(f)
+        builtins = dir(builtins)
         return "^(" + "|".join(builtins) + ")$"
     elif language in ["typescript", "ts"]:
         raise NotImplementedError("Typescript builtins not implemented")
