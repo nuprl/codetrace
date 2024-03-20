@@ -1,0 +1,1491 @@
+{
+    "num_success": 430,
+    "total": 892,
+    "accuracy": 0.4820627802690583,
+    "results_per_type": [
+        {
+            "index": 7,
+            "fim_type": "Attribute",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 5,
+            "fim_type": "Args",
+            "sum": 3,
+            "count": 3,
+            "accuracy": 1.0
+        },
+        {
+            "index": 2,
+            "fim_type": "Address",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 10,
+            "fim_type": "Board",
+            "sum": 7,
+            "count": 7,
+            "accuracy": 1.0
+        },
+        {
+            "index": 12,
+            "fim_type": "BooleanField",
+            "sum": 4,
+            "count": 4,
+            "accuracy": 1.0
+        },
+        {
+            "index": 134,
+            "fim_type": "Seconds",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 135,
+            "fim_type": "SecretKey",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 115,
+            "fim_type": "Port",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 117,
+            "fim_type": "PrivateKey",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 119,
+            "fim_type": "Publisher",
+            "sum": 4,
+            "count": 4,
+            "accuracy": 1.0
+        },
+        {
+            "index": 121,
+            "fim_type": "Queue",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 21,
+            "fim_type": "Checklist",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 22,
+            "fim_type": "Choice",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 23,
+            "fim_type": "Circuit",
+            "sum": 3,
+            "count": 3,
+            "accuracy": 1.0
+        },
+        {
+            "index": 24,
+            "fim_type": "Color",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 25,
+            "fim_type": "Command",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 27,
+            "fim_type": "Config",
+            "sum": 7,
+            "count": 7,
+            "accuracy": 1.0
+        },
+        {
+            "index": 30,
+            "fim_type": "Context",
+            "sum": 4,
+            "count": 4,
+            "accuracy": 1.0
+        },
+        {
+            "index": 31,
+            "fim_type": "Contract",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 32,
+            "fim_type": "Coordinate",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 35,
+            "fim_type": "Dataset",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 36,
+            "fim_type": "Date",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 37,
+            "fim_type": "Decimal",
+            "sum": 4,
+            "count": 4,
+            "accuracy": 1.0
+        },
+        {
+            "index": 170,
+            "fim_type": "Traceback",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 171,
+            "fim_type": "Trainer",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 173,
+            "fim_type": "Tree",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 174,
+            "fim_type": "TreeNode",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 109,
+            "fim_type": "Person",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 110,
+            "fim_type": "Piece",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 111,
+            "fim_type": "Platform",
+            "sum": 3,
+            "count": 3,
+            "accuracy": 1.0
+        },
+        {
+            "index": 129,
+            "fim_type": "Resource",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 130,
+            "fim_type": "Response",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 131,
+            "fim_type": "Route",
+            "sum": 4,
+            "count": 4,
+            "accuracy": 1.0
+        },
+        {
+            "index": 132,
+            "fim_type": "Row",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 41,
+            "fim_type": "Document",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 42,
+            "fim_type": "Domain",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 43,
+            "fim_type": "Dummy",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 47,
+            "fim_type": "EntryPoint",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 53,
+            "fim_type": "Field",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 54,
+            "fim_type": "Files",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 55,
+            "fim_type": "Func",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 165,
+            "fim_type": "Theme",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 168,
+            "fim_type": "Topic",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 57,
+            "fim_type": "Game",
+            "sum": 3,
+            "count": 3,
+            "accuracy": 1.0
+        },
+        {
+            "index": 97,
+            "fim_type": "Numbers",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 98,
+            "fim_type": "Operations",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 102,
+            "fim_type": "Output",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 104,
+            "fim_type": "Pairs",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 106,
+            "fim_type": "Params",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 58,
+            "fim_type": "Gauge",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 60,
+            "fim_type": "Group",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 62,
+            "fim_type": "Headers",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 63,
+            "fim_type": "HostName",
+            "sum": 4,
+            "count": 4,
+            "accuracy": 1.0
+        },
+        {
+            "index": 158,
+            "fim_type": "TableRow",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 159,
+            "fim_type": "Task",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 160,
+            "fim_type": "Team",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 68,
+            "fim_type": "Instrument",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 69,
+            "fim_type": "InternalServerError",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 70,
+            "fim_type": "Item",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 73,
+            "fim_type": "K",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 76,
+            "fim_type": "Lazy",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 78,
+            "fim_type": "Listener",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 79,
+            "fim_type": "Loader",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 80,
+            "fim_type": "Location",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 145,
+            "fim_type": "Set",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 146,
+            "fim_type": "Settings",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 147,
+            "fim_type": "Signal",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 148,
+            "fim_type": "Snapshot",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 149,
+            "fim_type": "Specification",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 150,
+            "fim_type": "Stage",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 151,
+            "fim_type": "State",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 152,
+            "fim_type": "Storage",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 84,
+            "fim_type": "MediaType",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 85,
+            "fim_type": "Message",
+            "sum": 3,
+            "count": 3,
+            "accuracy": 1.0
+        },
+        {
+            "index": 87,
+            "fim_type": "Model",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 88,
+            "fim_type": "Mol",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 89,
+            "fim_type": "Msg",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 90,
+            "fim_type": "Name",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 92,
+            "fim_type": "NodeType",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 138,
+            "fim_type": "Sensor",
+            "sum": 3,
+            "count": 3,
+            "accuracy": 1.0
+        },
+        {
+            "index": 140,
+            "fim_type": "Sequential",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 144,
+            "fim_type": "Session",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 122,
+            "fim_type": "Reader",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 123,
+            "fim_type": "Realm",
+            "sum": 4,
+            "count": 4,
+            "accuracy": 1.0
+        },
+        {
+            "index": 124,
+            "fim_type": "Recorder",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 126,
+            "fim_type": "Request",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 203,
+            "fim_type": "matrix",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 1,
+            "fim_type": "Account",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 14,
+            "fim_type": "C",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 16,
+            "fim_type": "Candidates",
+            "sum": 8,
+            "count": 8,
+            "accuracy": 1.0
+        },
+        {
+            "index": 187,
+            "fim_type": "Vehicle",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 189,
+            "fim_type": "Writer",
+            "sum": 2,
+            "count": 2,
+            "accuracy": 1.0
+        },
+        {
+            "index": 190,
+            "fim_type": "annotation",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 17,
+            "fim_type": "Card",
+            "sum": 4,
+            "count": 4,
+            "accuracy": 1.0
+        },
+        {
+            "index": 20,
+            "fim_type": "Character",
+            "sum": 1,
+            "count": 1,
+            "accuracy": 1.0
+        },
+        {
+            "index": 91,
+            "fim_type": "Node",
+            "sum": 11,
+            "count": 12,
+            "accuracy": 0.9166666666666666
+        },
+        {
+            "index": 161,
+            "fim_type": "Tensor",
+            "sum": 10,
+            "count": 11,
+            "accuracy": 0.9090909090909091
+        },
+        {
+            "index": 164,
+            "fim_type": "Text",
+            "sum": 8,
+            "count": 9,
+            "accuracy": 0.8888888888888888
+        },
+        {
+            "index": 136,
+            "fim_type": "Section",
+            "sum": 22,
+            "count": 25,
+            "accuracy": 0.88
+        },
+        {
+            "index": 44,
+            "fim_type": "Element",
+            "sum": 5,
+            "count": 6,
+            "accuracy": 0.8333333333333334
+        },
+        {
+            "index": 181,
+            "fim_type": "User",
+            "sum": 9,
+            "count": 11,
+            "accuracy": 0.8181818181818182
+        },
+        {
+            "index": 125,
+            "fim_type": "Reference",
+            "sum": 4,
+            "count": 5,
+            "accuracy": 0.8
+        },
+        {
+            "index": 108,
+            "fim_type": "Path",
+            "sum": 19,
+            "count": 25,
+            "accuracy": 0.76
+        },
+        {
+            "index": 196,
+            "fim_type": "datetime",
+            "sum": 3,
+            "count": 4,
+            "accuracy": 0.75
+        },
+        {
+            "index": 38,
+            "fim_type": "Dict",
+            "sum": 7,
+            "count": 10,
+            "accuracy": 0.7
+        },
+        {
+            "index": 46,
+            "fim_type": "Entity",
+            "sum": 2,
+            "count": 3,
+            "accuracy": 0.6666666666666666
+        },
+        {
+            "index": 100,
+            "fim_type": "Options",
+            "sum": 2,
+            "count": 3,
+            "accuracy": 0.6666666666666666
+        },
+        {
+            "index": 71,
+            "fim_type": "Iterable",
+            "sum": 2,
+            "count": 3,
+            "accuracy": 0.6666666666666666
+        },
+        {
+            "index": 184,
+            "fim_type": "UserProfile",
+            "sum": 6,
+            "count": 10,
+            "accuracy": 0.6
+        },
+        {
+            "index": 179,
+            "fim_type": "UUID",
+            "sum": 5,
+            "count": 9,
+            "accuracy": 0.5555555555555556
+        },
+        {
+            "index": 211,
+            "fim_type": "type",
+            "sum": 6,
+            "count": 11,
+            "accuracy": 0.5454545454545454
+        },
+        {
+            "index": 107,
+            "fim_type": "Password",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 153,
+            "fim_type": "StringField",
+            "sum": 3,
+            "count": 6,
+            "accuracy": 0.5
+        },
+        {
+            "index": 157,
+            "fim_type": "Table",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 101,
+            "fim_type": "Outcome",
+            "sum": 2,
+            "count": 4,
+            "accuracy": 0.5
+        },
+        {
+            "index": 185,
+            "fim_type": "Value",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 94,
+            "fim_type": "Normal",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 139,
+            "fim_type": "Sequence",
+            "sum": 2,
+            "count": 4,
+            "accuracy": 0.5
+        },
+        {
+            "index": 83,
+            "fim_type": "Mapping",
+            "sum": 3,
+            "count": 6,
+            "accuracy": 0.5
+        },
+        {
+            "index": 188,
+            "fim_type": "Verification",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 29,
+            "fim_type": "Container",
+            "sum": 2,
+            "count": 4,
+            "accuracy": 0.5
+        },
+        {
+            "index": 169,
+            "fim_type": "Trace",
+            "sum": 2,
+            "count": 4,
+            "accuracy": 0.5
+        },
+        {
+            "index": 52,
+            "fim_type": "Executor",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 50,
+            "fim_type": "EventData",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 175,
+            "fim_type": "Tuple",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 178,
+            "fim_type": "U",
+            "sum": 1,
+            "count": 2,
+            "accuracy": 0.5
+        },
+        {
+            "index": 116,
+            "fim_type": "Position",
+            "sum": 2,
+            "count": 4,
+            "accuracy": 0.5
+        },
+        {
+            "index": 186,
+            "fim_type": "Vector",
+            "sum": 3,
+            "count": 7,
+            "accuracy": 0.42857142857142855
+        },
+        {
+            "index": 201,
+            "fim_type": "int",
+            "sum": 10,
+            "count": 25,
+            "accuracy": 0.4
+        },
+        {
+            "index": 49,
+            "fim_type": "Event",
+            "sum": 2,
+            "count": 5,
+            "accuracy": 0.4
+        },
+        {
+            "index": 176,
+            "fim_type": "Type",
+            "sum": 4,
+            "count": 10,
+            "accuracy": 0.4
+        },
+        {
+            "index": 200,
+            "fim_type": "float",
+            "sum": 9,
+            "count": 25,
+            "accuracy": 0.36
+        },
+        {
+            "index": 209,
+            "fim_type": "str",
+            "sum": 9,
+            "count": 25,
+            "accuracy": 0.36
+        },
+        {
+            "index": 75,
+            "fim_type": "Label",
+            "sum": 1,
+            "count": 3,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 207,
+            "fim_type": "set",
+            "sum": 2,
+            "count": 6,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 34,
+            "fim_type": "DataPoint",
+            "sum": 1,
+            "count": 3,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 15,
+            "fim_type": "Callable",
+            "sum": 6,
+            "count": 18,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 113,
+            "fim_type": "Point",
+            "sum": 1,
+            "count": 3,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 118,
+            "fim_type": "PropertyValue",
+            "sum": 1,
+            "count": 3,
+            "accuracy": 0.3333333333333333
+        },
+        {
+            "index": 86,
+            "fim_type": "Mock",
+            "sum": 8,
+            "count": 25,
+            "accuracy": 0.32
+        },
+        {
+            "index": 51,
+            "fim_type": "Exception",
+            "sum": 5,
+            "count": 17,
+            "accuracy": 0.29411764705882354
+        },
+        {
+            "index": 197,
+            "fim_type": "dict",
+            "sum": 7,
+            "count": 25,
+            "accuracy": 0.28
+        },
+        {
+            "index": 155,
+            "fim_type": "T",
+            "sum": 6,
+            "count": 22,
+            "accuracy": 0.2727272727272727
+        },
+        {
+            "index": 166,
+            "fim_type": "Token",
+            "sum": 3,
+            "count": 11,
+            "accuracy": 0.2727272727272727
+        },
+        {
+            "index": 4,
+            "fim_type": "Any",
+            "sum": 6,
+            "count": 25,
+            "accuracy": 0.24
+        },
+        {
+            "index": 202,
+            "fim_type": "list",
+            "sum": 6,
+            "count": 25,
+            "accuracy": 0.24
+        },
+        {
+            "index": 194,
+            "fim_type": "bytes",
+            "sum": 5,
+            "count": 25,
+            "accuracy": 0.2
+        },
+        {
+            "index": 177,
+            "fim_type": "TypeInfo",
+            "sum": 1,
+            "count": 5,
+            "accuracy": 0.2
+        },
+        {
+            "index": 93,
+            "fim_type": "None",
+            "sum": 5,
+            "count": 25,
+            "accuracy": 0.2
+        },
+        {
+            "index": 204,
+            "fim_type": "ndarray",
+            "sum": 1,
+            "count": 5,
+            "accuracy": 0.2
+        },
+        {
+            "index": 193,
+            "fim_type": "bool",
+            "sum": 4,
+            "count": 24,
+            "accuracy": 0.16666666666666666
+        },
+        {
+            "index": 141,
+            "fim_type": "Serializable",
+            "sum": 1,
+            "count": 6,
+            "accuracy": 0.16666666666666666
+        },
+        {
+            "index": 210,
+            "fim_type": "tuple",
+            "sum": 1,
+            "count": 7,
+            "accuracy": 0.14285714285714285
+        },
+        {
+            "index": 33,
+            "fim_type": "Cursor",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 45,
+            "fim_type": "ElementType",
+            "sum": 0,
+            "count": 6,
+            "accuracy": 0.0
+        },
+        {
+            "index": 56,
+            "fim_type": "Future",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 39,
+            "fim_type": "Distribution",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 40,
+            "fim_type": "Doc",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 172,
+            "fim_type": "Training",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 48,
+            "fim_type": "ErrorHandler",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 26,
+            "fim_type": "Complex",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 28,
+            "fim_type": "Configuration",
+            "sum": 0,
+            "count": 3,
+            "accuracy": 0.0
+        },
+        {
+            "index": 180,
+            "fim_type": "Updater",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 182,
+            "fim_type": "UserID",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 183,
+            "fim_type": "UserId",
+            "sum": 0,
+            "count": 3,
+            "accuracy": 0.0
+        },
+        {
+            "index": 18,
+            "fim_type": "Cart",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 167,
+            "fim_type": "TokenType",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 195,
+            "fim_type": "callable",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 198,
+            "fim_type": "dt",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 199,
+            "fim_type": "fixture",
+            "sum": 0,
+            "count": 6,
+            "accuracy": 0.0
+        },
+        {
+            "index": 3,
+            "fim_type": "Anchor",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 205,
+            "fim_type": "object",
+            "sum": 0,
+            "count": 25,
+            "accuracy": 0.0
+        },
+        {
+            "index": 206,
+            "fim_type": "partial",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 208,
+            "fim_type": "slice",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 127,
+            "fim_type": "RequestId",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 19,
+            "fim_type": "Cartesian",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 142,
+            "fim_type": "Series",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 137,
+            "fim_type": "Segment",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 103,
+            "fim_type": "PS",
+            "sum": 0,
+            "count": 4,
+            "accuracy": 0.0
+        },
+        {
+            "index": 99,
+            "fim_type": "Optional",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 112,
+            "fim_type": "Player",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 105,
+            "fim_type": "Parameter",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 133,
+            "fim_type": "S",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 120,
+            "fim_type": "QueryParam",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 59,
+            "fim_type": "Generator",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 13,
+            "fim_type": "Boxes",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 11,
+            "fim_type": "Body",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 9,
+            "fim_type": "Blockchain",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 192,
+            "fim_type": "array",
+            "sum": 0,
+            "count": 7,
+            "accuracy": 0.0
+        },
+        {
+            "index": 191,
+            "fim_type": "any",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 0,
+            "fim_type": "A",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 128,
+            "fim_type": "Resolver",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 8,
+            "fim_type": "Backup",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 114,
+            "fim_type": "Points",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 163,
+            "fim_type": "TestCase",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 162,
+            "fim_type": "Term",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 64,
+            "fim_type": "HttpRequest",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 61,
+            "fim_type": "Hash",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 6,
+            "fim_type": "Array",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 156,
+            "fim_type": "TU",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 154,
+            "fim_type": "Submission",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 72,
+            "fim_type": "JsonResponse",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 143,
+            "fim_type": "Server",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 66,
+            "fim_type": "Input",
+            "sum": 0,
+            "count": 4,
+            "accuracy": 0.0
+        },
+        {
+            "index": 65,
+            "fim_type": "Identifier",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 77,
+            "fim_type": "List",
+            "sum": 0,
+            "count": 4,
+            "accuracy": 0.0
+        },
+        {
+            "index": 74,
+            "fim_type": "LN",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 82,
+            "fim_type": "Macro",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 81,
+            "fim_type": "Lookup",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 96,
+            "fim_type": "Number",
+            "sum": 0,
+            "count": 2,
+            "accuracy": 0.0
+        },
+        {
+            "index": 95,
+            "fim_type": "NotBlank",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        },
+        {
+            "index": 67,
+            "fim_type": "InputType",
+            "sum": 0,
+            "count": 1,
+            "accuracy": 0.0
+        }
+    ]
+}

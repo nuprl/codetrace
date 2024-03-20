@@ -61,10 +61,10 @@ for subdir in glob.glob(f"{results_dir}/*"):
             "total_accuracy": total_accuracy,
             "ood_accuracy": eval_ood.get("accuracy", 0),
             "ood_num_success":eval_ood.get("num_success",0),
-            "ood_total":eval_ood.get("total",0),
+            "ood_count":eval_ood.get("total",0),
             "fit_accuracy": eval_res.get("accuracy",0),
             "fit_num_success": eval_res.get("num_success",0),
-            "fit_total": eval_res.get("total",0),
+            "fit_count": eval_res.get("total",0),
             "tokens_patched": args["tokens_to_patch"],
             "layers_patched": args["layers_to_patch"],
         }
