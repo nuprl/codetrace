@@ -1,0 +1,28 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "steered_generation": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "correct_steer": {
+      "dtype": "bool",
+      "_type": "Value"
+    },
+    "fim_program": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "fim_type": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "hexsha": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}
