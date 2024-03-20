@@ -20,7 +20,7 @@ def filter_incorrect(ds: datasets.Dataset,
     Filter out examples where the model's prediction is incorrect. Truncate generation and
     solution at 1 token
     """
-    tokenizer = llm.get_tokenizer()
+    tokenizer = llm.get_tokenizer().tokenizer
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
     ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["mutated_program"], STARCODER_FIM),
@@ -47,7 +47,7 @@ def filter_incorrect(ds: datasets.Dataset,
     return new_ds
 
 
-def ts_preprocess(iterable):
+def ts_preprocess(iterable, correct_bool = True):
     """
     Preprocess the dataset
     - Take only correct examples
@@ -70,36 +70,38 @@ def ts_preprocess(iterable):
         return len(captures) > 0
     
     def _condition(x):
-        return x["correct"] == True and not _has_captures(x["fim_program"])
+        return x["correct"] == correct_bool and not _has_captures(x["fim_program"])
     
     if isinstance(iterable, datasets.Dataset):
         return iterable.filter(_condition, desc="Preprocess")
     else:
         return [i for i in iterable if _condition(i)]
 
-def preprocess_then_mutate(batch, mutations):
-    post = ts_preprocess(batch)
+def preprocess_then_mutate(batch, mutations, correct_bool = True):
+    post = ts_preprocess(batch, correct_bool)
     return ts_mutator.iter_apply_random_mutations(post, mutations)
     
 def main(args):
-    # ds = datasets.load_dataset(args.completions_ds, split=args.split)
-    # if args.max_size > -1:
-    #     ds = ds.shuffle(seed=42).select(range(args.max_size))
-    # mutations = [getattr(ts_mutator, m) for m in args.mutations]
-    
-    # batches = get_batches_fast(ds, len(ds), cpu_count())
-    # results = batched_do_func(batches, cpu_count(), preprocess_then_mutate, mutations=mutations)
+    if not args.only_completions:
+        ds = datasets.load_dataset(args.completions_ds, split=args.split)
+        if args.max_size > -1:
+            ds = ds.shuffle(seed=42).select(range(args.max_size))
+        mutations = [getattr(ts_mutator, m) for m in args.mutations]
+        
+        batches = get_batches_fast(ds, len(ds), cpu_count())
+        results = batched_do_func(batches, cpu_count(), preprocess_then_mutate, mutations=mutations, correct_bool=args.correct_bool)
 
-    # def _yielder():
-    #     for ex in tqdm(results, desc="Yielding", total=len(results)):
-    #         yield ex
-            
-    # ds = datasets.Dataset.from_generator(_yielder)
-    # print(ds)
-    # ds.push_to_hub(args.new_ds_name + "_unfiltered")
+        def _yielder():
+            for ex in tqdm(results, desc="Yielding", total=len(results)):
+                yield ex
+                
+        ds = datasets.Dataset.from_generator(_yielder)
+        print(ds)
+        ds.push_to_hub(args.new_ds_name + "_unfiltered")
     
-    ds = datasets.load_dataset(args.new_ds_name + "_unfiltered", split=args.split)
-    
+    if args.only_completions:
+        ds = datasets.load_dataset(args.new_ds_name + "_unfiltered", split=args.split)
+        
     llm = LLM(args.model)
     ds = filter_incorrect(ds, llm, args.new_ds_name)
     print(ds)
@@ -108,14 +110,17 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
-    parser.add_argument("--model", type=str)
+    parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--mutations", type=str, required=True, nargs="+", choices=["mutation_rename_type",
                                                                                     "mutation_rename_vars",
                                                                                     "mutation_delete_annotation"])
     parser.add_argument("--split", type=str, default="train")
     parser.add_argument("--max-size", type=int, default=-1)
+    parser.add_argument("--correct-bool", type=bool, default=True)
+    parser.add_argument("--only-completions", action="store_true", default=False)
     args = parser.parse_args()
+    print(args.only_completions)
     main(args)
 
     
