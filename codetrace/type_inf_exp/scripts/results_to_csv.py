@@ -56,9 +56,9 @@ for subdir in glob.glob(f"{results_dir}/*"):
         row = {
             "experiment_dir" : basename(subdir),
             "eval_dir": basename(args["evaldir"]),
-            "total_accuracy": total_accuracy,
             "total_num_success": total_num_success,
             "total_count": total_count,
+            "total_accuracy": total_accuracy,
             "ood_accuracy": eval_ood.get("accuracy", 0),
             "ood_num_success":eval_ood.get("num_success",0),
             "ood_count":eval_ood.get("total",0),
