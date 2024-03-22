@@ -6,7 +6,7 @@
 #SBATCH --job-name=eval
 #SBATCH --output=%A_%a.out
 #SBATCH --error=%A_%a.err
-#SBATCH --array=17-18
+#SBATCH --array=7-9
 
 source /work/arjunguha-research-group/franlucc/venvs/v_codetrace/bin/activate
 
@@ -16,4 +16,4 @@ export HF_DATASETS_CACHE="/work/arjunguha-research-group/franlucc/.cache"
 dir="/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp"
 
 echo "Running task $SLURM_ARRAY_TASK_ID"
-python "${dir}/scripts/launch_steer.py" "${dir}/sbatch_scripts/args/py_eval_steering_args_dedup/args${SLURM_ARRAY_TASK_ID}.json"
+python "${dir}/scripts/launch_steer.py" "${dir}/sbatch_scripts/args/py_layer_ablation/args${SLURM_ARRAY_TASK_ID}.json"

@@ -134,6 +134,61 @@ def run_steering(args):
         _eval(model, diff_tensor, True, args)
     # incorrect eval
     _eval(model, diff_tensor, False, args)
+
+def run_layer_ablation(args):
+    """
+    The difference between this and run_steering is that this takes the length of layers
+    to patch P and performs an ablation from [0...P] all the way to [N-P...N].
+    """
+    print("[STEP 3 - ABLATION] Running layer ablation steering eval on incorrect and incorrect ood...")
+    model = LanguageModel(args.model, device_map="cuda")
+    os.makedirs(args.expdir, exist_ok=True)
+    
+    # load steering tensor
+    diff_tensor = torch.load(args.steering_tensor)
+    
+    # load eval data
+    if os.path.exists(Path(f"{args.evaldir}/incorrect_ood")):
+        ood_eval_ds = datasets.load_from_disk(f"{args.evaldir}/incorrect_ood")
+    fit_eval_ds = datasets.load_from_disk(f"{args.evaldir}/incorrect")
+    
+    def _eval(model, diff_tensor, do_ood, args):
+        if do_ood:
+            eval_ds = ood_eval_ds
+        else:
+            eval_ds = fit_eval_ds
+            
+        if args.shuffle:
+            eval_ds = eval_ds.shuffle(seed=42)
+        if args.max_size > 0:
+            assert args.shuffle, "Please select shuffle when truncating dataset."
+            eval_ds = eval_ds.select(range(min(args.max_size, len(eval_ds))))
+            
+        steer_on_ds(model, diff_tensor, eval_ds, do_ood, args)
+    
+    original_dir = args.expdir
+    window_size = len(args.layers_to_patch)
+    all_layers = list(range(diff_tensor.shape[0]))
+    # create sliding window of layers
+    zipped = list(zip([all_layers[i:i+window_size] for i in all_layers]))
+    windows_to_patch = [j[0] for j in zipped if len(j[0]) == window_size]
+    
+    for window in windows_to_patch:
+        print(f"Running layer ablation {window}")
+        args.layers_to_patch = window
+        args.expdir = f"{original_dir}/layer_{'-'.join([str(w) for w in window])}"
+        os.makedirs(args.expdir, exist_ok=True)
+        
+        with open(f"{args.expdir}/args_steering.json", "w") as f:
+            json.dump(vars(args), f, indent=4)
+        
+        # only do OOD for now
+        # incorrect ood eval
+        if os.path.exists(Path(f"{args.evaldir}/incorrect_ood")):
+            _eval(model, diff_tensor, True, args)
+            
+        # # incorrect eval
+        # _eval(model, diff_tensor, False, args)
     
     
 if __name__ == "__main__":
@@ -149,8 +204,11 @@ if __name__ == "__main__":
         make_steering_tensor(args)
     elif args.action == "run_steering":
         run_steering(args)
+    elif args.action == "layer_ablation":
+        run_layer_ablation(args)
     else:
         raise ValueError("""Invalid action, please choose from:
                         \t- make_steering_data_splits
                         \t- make_steering_tensor
-                        \t- run_steering""")
+                        \t- run_steering
+                        \t- layer_ablation""")

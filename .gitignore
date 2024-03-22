@@ -1,5 +1,7 @@
 .ipynb_*/
 py_data/
+results/
+data/
 **/*.csv
 result_csvs/
 logs/
