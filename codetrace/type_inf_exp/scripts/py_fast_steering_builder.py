@@ -1,6 +1,6 @@
 import datasets
 import argparse
-from codetrace.utils import *
+from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt, get_captures
 import pandas as pd
 from multiprocessing import Pool, cpu_count
 from transformers import AutoTokenizer
@@ -11,6 +11,7 @@ from multiprocessing import cpu_count
 from tqdm import tqdm
 from codetrace.fast_utils import get_batches_fast, batched_do_func
 from codetrace.py_mutator import random_mutations_subset, NONVAR_STATEMENTS
+import os
 
 def filter_incorrect(ds: datasets.Dataset, 
                       llm: LLM,
@@ -25,6 +26,7 @@ def filter_incorrect(ds: datasets.Dataset,
     new_ds = []
     ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["mutated_program"], STARCODER_FIM),
                             "solution":tokenizer.decode(tokenizer.encode(x["fim_type"])[0])}, desc="Prepping prompts")
+    
     prompts = ds["prompt"]
     # batch generations so we can save them early
     for n,i in tqdm(enumerate(range(0, len(ds), batch_size)), desc="Batch generations", total=len(ds) // batch_size):
@@ -39,10 +41,10 @@ def filter_incorrect(ds: datasets.Dataset,
         # save every
         print(f"Len new_ds: {len(new_ds)}")
         new_ds_hf = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-        new_ds_hf.push_to_hub(new_ds_name)
+        new_ds_hf.push_to_hub(new_ds_name, private=True)
     
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-    new_ds.push_to_hub(new_ds_name)
+    new_ds.push_to_hub(new_ds_name, private=True)
     new_ds = new_ds.remove_columns(["prompt", "solution"])
     return new_ds
 
@@ -115,21 +117,25 @@ def main(args):
                 
         ds = datasets.Dataset.from_generator(_yielder)
         print(ds)
-        ds.push_to_hub(args.new_ds_name + "_unfiltered")
+        ds.push_to_hub(args.new_ds_name + "_" + args.model_name + "_unfiltered", private=True)
     
     if args.only_completions:
-        ds = datasets.load_dataset(args.new_ds_name + "_unfiltered", split=args.split)
+        ds = datasets.load_dataset(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
+        if args.max_size > -1:
+            ds = ds.shuffle(seed=42).select(range(args.max_size))
     
     llm = LLM(args.model)
-    ds = filter_incorrect(ds, llm, args.new_ds_name)
+    print(args.model, args.model_name)
+    ds = filter_incorrect(ds, llm, args.new_ds_name + "_" + args.model_name)
     print(ds)
     
-    ds.push_to_hub(args.new_ds_name)
+    ds.push_to_hub(args.new_ds_name + "_" + args.model_name, private=True)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
+    parser.add_argument("--model-name", type=str, required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--mutations", type=str, required=True, nargs="+", choices=["rename_types",
                                                                                     "rename_vars",
@@ -137,5 +143,8 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="train")
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--only-completions", action="store_true", default=False)
+    parser.add_argument("--gpu", type=int)
     args = parser.parse_args()
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+    print(os.environ["CUDA_VISIBLE_DEVICES"])
     main(args)
