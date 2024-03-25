@@ -5,7 +5,6 @@ from argparse import ArgumentParser, Namespace
 from collections import Counter
 import sys
 from multiprocessing import cpu_count
-from .pyvene_das import *
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
@@ -186,12 +185,13 @@ def steer(
         custom_decoder = None
         
     if args.rotation_matrix is not False:
-        rotator = BoundlessRotatedSpaceIntervention(model.config.n_embd)
-        matrix_weights = torch.load(args.rotation_matrix)
-        rotate_layer = RotateLayer(model.config.n_embd)
-        rotate_layer.weight = torch.nn.Parameter(matrix_weights)
-        rotator.rotate_layer = rotate_layer
-        rotator = rotator.to("cuda")
+        # rotator = BoundlessRotatedSpaceIntervention(model.config.n_embd)
+        # matrix_weights = torch.load(args.rotation_matrix)
+        # rotate_layer = RotateLayer(model.config.n_embd)
+        # rotate_layer.weight = torch.nn.Parameter(matrix_weights)
+        # rotator.rotate_layer = rotate_layer
+        # rotator = rotator.to("cuda")
+        rotator = None
     else:
         rotator = None
         

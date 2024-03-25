@@ -1,4 +1,5 @@
 .ipynb_*/
+logs/
 py_data/
 results/
 data/
@@ -8,6 +9,7 @@ logs/
 log/
 exp_results/
 **/*.out
+**/*.err
 exp_data*/
 temp.png
 __pycache__/
