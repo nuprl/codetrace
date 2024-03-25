@@ -1,0 +1,14 @@
+{
+    "steering_tensor": "<[INPUT] abs path to local steering tensor>",
+    "model": "<model>",
+    "expdir": "<[OUTPUT] abs path to local experiment>",
+    "evaldir": "<[INPUT] abs path to local eval data to use for evaluation, will run incorrect subdir and incorrect_ood subdir (only if it exists)>",
+    "batch_size": 25,
+    "max_size": -1, 
+    "shuffle": true,
+    "patch_mode": "add",
+    "tokens_to_patch": ["<fim_middle>"],
+    "layers_to_patch": [10,11,12,13,14],
+    "custom_decoder": "<false or abs path to custom decoder model>",
+    "action": "run_steering"
+}
