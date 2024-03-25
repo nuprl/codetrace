@@ -33,3 +33,5 @@ results/
 dist/
 codetrace.egg-info/
 codetrace/type_inf_exp/datasets
+logs/
+job*/
