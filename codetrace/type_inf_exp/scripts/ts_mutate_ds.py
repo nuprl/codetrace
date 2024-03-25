@@ -11,6 +11,7 @@ from vllm import LLM, SamplingParams
 from multiprocessing import cpu_count
 from tqdm import tqdm
 from codetrace.fast_utils import get_batches_fast, batched_do_func
+import os
 
 def filter_incorrect(ds: datasets.Dataset, 
                       llm: LLM,
@@ -39,10 +40,10 @@ def filter_incorrect(ds: datasets.Dataset,
         # save every
         print(f"Len new_ds: {len(new_ds)}")
         new_ds_hf = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-        new_ds_hf.push_to_hub(new_ds_name)
+        new_ds_hf.push_to_hub(new_ds_name, private=True)
     
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-    new_ds.push_to_hub(new_ds_name)
+    new_ds.push_to_hub(new_ds_name, private=True)
     new_ds = new_ds.remove_columns(["prompt", "solution"])
     return new_ds
 
@@ -97,15 +98,15 @@ def main(args):
                 
         ds = datasets.Dataset.from_generator(_yielder)
         print(ds)
-        ds.push_to_hub(args.new_ds_name + "_unfiltered")
+        ds.push_to_hub(args.new_ds_name + "_" + args.model_name + "_unfiltered", private=True)
     
     if args.only_completions:
-        ds = datasets.load_dataset(args.new_ds_name + "_unfiltered", split=args.split)
+        ds = datasets.load_dataset(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
         
     llm = LLM(args.model)
-    ds = filter_incorrect(ds, llm, args.new_ds_name)
+    ds = filter_incorrect(ds, llm, args.new_ds_name + "_" + args.model_name)
     print(ds)
-    ds.push_to_hub(args.new_ds_name + args.model_name)
+    ds.push_to_hub(args.new_ds_name + "_" + args.model_name, private=True)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -116,12 +117,15 @@ if __name__ == "__main__":
     parser.add_argument("--mutations", type=str, required=True, nargs="+", choices=["mutation_rename_type",
                                                                                     "mutation_rename_vars",
                                                                                     "mutation_delete_annotation"])
+    parser.add_argument("--gpu", type=int, required=True)
     parser.add_argument("--split", type=str, default="train")
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--correct-bool", type=bool, default=True)
     parser.add_argument("--only-completions", action="store_true", default=False)
     args = parser.parse_args()
     print(args.only_completions)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+    print(os.environ["CUDA_VISIBLE_DEVICES"])
     main(args)
 
     
