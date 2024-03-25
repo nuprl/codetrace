@@ -83,6 +83,7 @@ class TraceResult:
         if hidden_states != None:
             hidden_states = hidden_states.detach().cpu()
         self._hidden_states = hidden_states
+        self.n_layers = model_n_layer
         self._layer_idx = [arg_to_literal(i, n=model_n_layer) for i in arg_to_list(layer_idxs)]
         self.custom_decoder = custom_decoder
         
@@ -98,7 +99,7 @@ class TraceResult:
         NOTE: layer idxs are [0, n_layer)
         """
         layers, token_idx, prompt_idx = map(arg_to_list, [layers, token_idx, prompt_idx])
-        layers = [self._layer_idx.index(arg_to_literal(i)) for i in layers]
+        layers = [self._layer_idx.index(arg_to_literal(i, n=self.n_layers)) for i in layers]
         token_idx = [arg_to_literal(i, self._logits.shape[2]) for i in token_idx]
         logits = self._logits.index_select(0, torch.tensor(layers)
                                            ).index_select(1, torch.tensor(prompt_idx)
@@ -321,7 +322,7 @@ def logit_lens(model : LanguageModel,
     if layers is None:
         layers = list(range(len(model.transformer.h)))
     else:
-        layers = arg_to_list(layers)
+        layers = arg_to_list(layers, len(model.transformer.h))
         
     def decode(x : torch.Tensor) -> torch.Tensor:
         if apply_norm:
@@ -341,9 +342,9 @@ def logit_lens(model : LanguageModel,
     
     layers = [arg_to_literal(x, len(model.transformer.h)) for x in layers]
     if store_hidden_states:
-        return TraceResult(logits, layers, hidden_states)
+        return TraceResult(logits, layers, hidden_states, len(model.transformer.h))
     else: 
-        return TraceResult(logits, layers)
+        return TraceResult(logits, layers, model_n_layer=len(model.transformer.h))
     
     
 def patch_clean_to_corrupt(model : LanguageModel,
@@ -393,7 +394,7 @@ def patch_clean_to_corrupt(model : LanguageModel,
     logits = util.apply(logits, lambda x: x.value, Proxy)
     # logit should be in shape [n_layer, n_prompt, n_tokens, n_vocab]
     logits = torch.stack([logits], dim=0)
-    return TraceResult(logits, -1)
+    return TraceResult(logits, -1, model_n_layer=len(model.transformer.h))
     
 
 def custom_lens(model : LanguageModel,

@@ -60,8 +60,8 @@ def steer(
         batch = [unfim(k, STARCODER_FIM) for k in batch]
         for j in range(len(batch)):
             results.append({
-                "generated" : batch[j],
-                **dataset[b*batch_size + j]
+                **dataset[b*batch_size + j],
+                "generated" : batch[j]
             })
             
         if outfile is not None:
@@ -158,18 +158,16 @@ def main():
     # save into MultiPLE completions format
     if "results" in steering_ds.column_names:
         steering_ds = steering_ds.rename_columns({"results":"old_results"})
-        steering_ds = steering_ds.map(lambda x : {"completions" : [x["generated"].strip()+"\n"+x["tests"]], **x})
-        steering_ds = steering_ds.map(lambda x : {'changed_after_steering': _is_changed(x["old_results"], x["completions"], x["tests"]),
+        steering_ds = steering_ds.map(lambda x : {**x, "completions" : [x["generated"].strip()+"\n"+x["tests"]]})
+        steering_ds = steering_ds.map(lambda x : {**x, 'changed_after_steering': _is_changed(x["old_results"], x["completions"], x["tests"]),
                                                 'top_p': 0.95, # TODO: fix this?
-                                                'max_tokens': args.max_out,
-                                                **x
+                                                'max_tokens': args.max_out
                                                 })
     else:
-        steering_ds = steering_ds.map(lambda x : {"completions" : [x["generated"].strip()+"\n"+x["tests"]], **x})
-        steering_ds = steering_ds.map(lambda x : {'changed_after_steering': None,
+        steering_ds = steering_ds.map(lambda x : {**x, "completions" : [x["generated"].strip()+"\n"+x["tests"]]})
+        steering_ds = steering_ds.map(lambda x : {**x, 'changed_after_steering': None,
                                                 'top_p': 0.95, # TODO: fix this?
-                                                'max_tokens': args.max_out,
-                                                **x
+                                                'max_tokens': args.max_out
                                                 })
     # count num changed
     print(f"Num changed after steering: {Counter(steering_ds['changed_after_steering'])}")
