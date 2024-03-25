@@ -105,12 +105,13 @@ def main(args):
     llm = LLM(args.model)
     ds = filter_incorrect(ds, llm, args.new_ds_name)
     print(ds)
-    ds.push_to_hub(args.new_ds_name)
+    ds.push_to_hub(args.new_ds_name + args.model_name)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
+    parser.add_argument("--model-name", type=str, required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--mutations", type=str, required=True, nargs="+", choices=["mutation_rename_type",
                                                                                     "mutation_rename_vars",
