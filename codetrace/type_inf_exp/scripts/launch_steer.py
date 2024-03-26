@@ -6,6 +6,16 @@ from transformers import AutoTokenizer
 from codetrace.type_inf_exp.steering import *
 from pathlib import Path
 import os 
+from codetrace.fast_utils import get_batches_fast, batched_do_func
+from multiprocessing import cpu_count
+from tqdm import tqdm
+
+def filter_oom(batch):
+    new_batch = []
+    for b in batch:
+        if len(b["fim_program"]) < 8000:
+            new_batch.append(b)
+    return new_batch
 
 def make_steering_data_splits(args):
     """
@@ -18,16 +28,24 @@ def make_steering_data_splits(args):
     
     if args.shuffle:
         ds = ds.shuffle(seed=42)
-        
+    
     # filter out too large prompts for OOM
-    ds = ds.filter(lambda x : len(x["fim_program"]) < 8000, desc="Filter OOM")
+    batches = get_batches_fast(ds, len(ds), cpu_count())
+    results = batched_do_func(batches, cpu_count(), filter_oom)
+    
+    def yielder():
+        for ex in tqdm(results, desc="yielding", total=len(results)):
+            yield ex
+            
+    ds = datasets.Dataset.from_generator(yielder)
+
     if "<FILL>" in ds["fim_program"][0]:
         args.fim_placeholder = True
     else:
         args.fim_placeholder = False
     
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    if "completions" in args.source_dataset or "caa" in args.source_dataset:
+    if "mutated_program" not in ds.column_names:
         correct, incorrect, incorrect_eval = fit_test_split_completions(ds,tokenizer, args)
     else:
         correct, incorrect, incorrect_eval = fit_test_split(ds,tokenizer, args)
@@ -84,6 +102,7 @@ def make_steering_tensor(args):
     
     correct = datasets.load_from_disk(args.datadir + "/correct")
     incorrect = datasets.load_from_disk(args.datadir + "/incorrect")
+    print(correct, incorrect)
     
     if args.shuffle:
         correct = correct.shuffle(seed=42)

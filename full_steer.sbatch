@@ -14,15 +14,15 @@ export HF_DATASETS_CACHE="/work/arjunguha-research-group/franlucc/.cache"
 export TOKENIZERS_PARALLELISM="false"
 
 dir="/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp"
-argsdir="${dir}/slurm/args/starcoderbase-1b/proper_caa/py_rename_types"
+argsdir="${dir}/slurm/args/starcoderbase-1b/proper_caa/rename_vars"
 
 echo "Making data splits..."
 python "${dir}/scripts/launch_steer.py" "${argsdir}/data.json"
 
 echo "Making steering tensor..."
-python "${dir}/scripts/launch_steer.py" "${argsdir}/tensors.json"
+python "${dir}/scripts/launch_steer.py" "${argsdir}/tensor.json"
 
-echo "Running steering eval..."
+echo "Running eval..."
 python "${dir}/scripts/launch_steer.py" "${argsdir}/eval.json"
 
 # echo "Running layer ablation..."

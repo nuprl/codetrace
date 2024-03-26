@@ -95,8 +95,8 @@ def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
     """
     if "generated_text" in dataset.column_names:
         # recompute "correct" sanity check: generated text starts with first token of fim_type
-        dataset = dataset.map(lambda x : {"correct" : x["generated_text"].strip().startswith(
-            tokenizer.decode(tokenizer.encode(x["fim_type"])[0])), **x})
+        dataset = dataset.map(lambda x : {**x, "correct" : x["generated_text"].strip().startswith(
+            tokenizer.decode(tokenizer.encode(x["fim_type"])[0]))})
         
     correct = dataset.filter(lambda x : x["correct"] == True)
     incorrect = dataset.filter(lambda x : x["correct"] == False)

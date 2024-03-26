@@ -97,7 +97,7 @@ def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
         
     if "generated_text" in dataset.column_names:
         # recompute "correct" sanity check
-        dataset = dataset.map(lambda x : {"correct" : _is_correct_sanity_check(x, tokenizer), **x}, desc="Sanity Recomputing correct")
+        dataset = dataset.map(lambda x : {**x, "correct" : _is_correct_sanity_check(x, tokenizer)}, desc="Sanity Recomputing correct")
         
     correct = dataset.filter(lambda x : x["correct"] == True, desc="Getting correct subset")
     incorrect = dataset.filter(lambda x : x["correct"] == False, desc="Getting incorrect subset")
