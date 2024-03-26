@@ -162,7 +162,7 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
             if isinstance(tokens[0], str):
                 target_idx = np.concatenate([np.where((i == t)) for t in tokenized_idx for i in indices], axis=0).reshape(indices.shape[0], -1)
             else:
-                target_idx = np.array(tokens).reshape(indices.shape[0], -1)
+                target_idx = np.array(tokens*len(prompts)).reshape(indices.shape[0], -1)
                 
             hidden_states = [
                     model.transformer.h[layer_idx].output[0]

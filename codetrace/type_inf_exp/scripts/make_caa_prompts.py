@@ -32,10 +32,14 @@ def get_bad_type(program, gold, language, tokenizer):
 def transform(batch, language, tokenizer):
     new_items = []
     for item in batch:
-        prompt = placeholder_to_std_fmt(item["fim_program"], STARCODER_FIM)
+        if "mutated_program" in item.keys():
+            fim_column = "mutated_program"
+        else:
+            fim_column = "fim_program"
+        prompt = placeholder_to_std_fmt(item[fim_column], STARCODER_FIM)
         gold = item["fim_type"]
         fim_program = prompt+gold
-        neg = get_bad_type(item["fim_program"].replace("<FILL>",gold), gold, language, tokenizer)
+        neg = get_bad_type(item[fim_column].replace("<FILL>",gold), gold, language, tokenizer)
         if neg == None:
             continue
         mutated = prompt + neg
