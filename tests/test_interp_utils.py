@@ -18,7 +18,7 @@ prompts = [
     'a=0\nb=1\nc=',
 ]
 
-modelname = "bigcode/starcoderbase-1b"
+modelname = "/home/arjun/models/starcoderbase-1b"
 model = LanguageModel(modelname, device_map="cuda")
 model.tokenizer.padding_side = "left"
 
@@ -111,6 +111,21 @@ def test_collect_at_token_idx2():
     toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
     tok_idx = [model.tokenizer.encode(t)[0] for t in toks]
     out = collect_hidden_states_at_tokens(model, prompts, toks[-1], debug=True)
+    out : TraceResult = TraceResult(out, list(range(len(model.transformer.h))))
+    logits : LogitResult = out.decode_logits(prompt_idx=[0,1])
+    
+    tok_a_f = logits[-1][0][-1].tokens(model.tokenizer)[-1]
+    tok_b_f = logits[-1][1][-1].tokens(model.tokenizer)[-1]
+    assert tok_a_f == ')', f"{repr(tok_a_f)}"
+    assert tok_b_f == '6', f"{repr(tok_b_f)}"
+    
+def test_collect_at_token_idx3():
+    prompts = [
+        '<fim_prefix>print("hello world"<fim_suffix>\n<fim_middle>',
+        "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
+    ]
+    toks = [-1]
+    out = collect_hidden_states_at_tokens(model, prompts, toks, debug=True)
     out : TraceResult = TraceResult(out, list(range(len(model.transformer.h))))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1])
     
@@ -245,6 +260,7 @@ if __name__ == "__main__":
     repeat_test(test_logit_generation_match, 1)
     repeat_test(test_collect_at_token_idx, 1)
     repeat_test(test_collect_at_token_idx2, 1)
+    repeat_test(test_collect_at_token_idx3, 1)
     repeat_test(test_interp_patch, 10)
     # test_topk_topp()
     test_generation()
