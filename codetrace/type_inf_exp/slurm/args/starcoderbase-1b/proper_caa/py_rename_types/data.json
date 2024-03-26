@@ -1,6 +1,6 @@
 {
-    "datadir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/exp_data_exploratory/ts_rename_vars_caa_proper_v2",
-    "source_dataset": "franlucc/ts_rename_vars_caa_proper",
+    "datadir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/exp_data_exploratory/py_rename_types_caa_proper",
+    "source_dataset": "franlucc/py_rename_types_caa_proper",
     "max_size": 2000,
     "shuffle": true,
     "do_fit_matching_pairs": true,

@@ -1,5 +1,5 @@
 {
-    "datadir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/exp_data_exploratory/ts_rename_vars_caa_proper_v2",
+    "datadir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/exp_data_exploratory/py_rename_types_caa_proper",
     "tokens_to_patch": [-1],
     "batch_size": 10,
     "max_size": 2000, 

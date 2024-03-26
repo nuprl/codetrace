@@ -1,14 +1,14 @@
 {
-    "steering_tensor": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/exp_data_exploratory/ts_rename_vars_caa_proper/steering_tensor-2000.pt",
+    "steering_tensor": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/exp_data_exploratory/ts_rename_vars_caa_proper_v2/steering_tensor-2000.pt",
     "model": "/work/arjunguha-research-group/arjun/models/starcoderbase-1b",
-    "expdir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/results/starcoderbase-1b/exp_results_exploratory/ts_rename_vars_caa_proper",
+    "expdir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/results/starcoderbase-1b/exp_results_exploratory/ts_rename_vars_caa_proper_v2",
     "evaldir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/typescript/exp_data2/ts_typeinf_1tok_rename_vars",
     "batch_size": 10,
     "max_size": 2000, 
     "shuffle": true,
     "patch_mode": "add",
     "tokens_to_patch": ["<fim_middle>"],
-    "layers_to_patch": [10,11,12,13,14],
+    "layers_to_patch": [14],
     "custom_decoder": false,
     "rotation_matrix": false,
     "action": "run_steering"

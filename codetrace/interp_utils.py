@@ -163,7 +163,7 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
             if isinstance(tokens[0], str):
                 target_idx = np.concatenate([np.where((i == t)) for t in tokenized_idx for i in indices], axis=0).reshape(indices.shape[0], -1)
             else:
-                target_idx = np.array(tokens).reshape(indices.shape[0], -1)
+                target_idx = np.array(tokens*len(prompts)).reshape(indices.shape[0], -1)
                 
             hidden_states = [
                     model.transformer.h[layer_idx].output[0]
@@ -174,6 +174,7 @@ def collect_hidden_states_at_tokens(model : LanguageModel,
                 hidden_states = [decode(x) for x in hidden_states]
                 
             hidden_states = torch.stack(hidden_states, dim=0).save()
+            
             
     hidden_states = util.apply(hidden_states, lambda x: x.value.cpu(), Proxy)
     th = torch.tensor(target_idx)

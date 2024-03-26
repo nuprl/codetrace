@@ -32,7 +32,7 @@ def batched_get_averages(
     # batch prompts according to batch size
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     hidden_states = []
-    for i,batch in tqdm(enumerate(prompt_batches), desc="Batch", total=len(prompt_batches)):
+    for i,batch in tqdm(enumerate(prompt_batches), desc="Batch avg", total=len(prompt_batches)):
         if tokens == []:
             hs = collect_hidden_states(model, batch)
         else:
