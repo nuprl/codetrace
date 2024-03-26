@@ -1,0 +1,15 @@
+{
+    "steering_tensor": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/python/exp_data_py/py_typeinf_vars_and_delete/steering_tensor-2000.pt",
+    "expdir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/results/starcoderbase-1b/exp_results_exploratory/ts_vars_and_delete_with_py_tensor",
+    "evaldir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-1b/typescript/exp_data2/ts_typeinf_1tok_vars_and_delete",
+    "model": "/work/arjunguha-research-group/arjun/models/starcoderbase-1b",
+    "batch_size": 5,
+    "max_size": 2000,
+    "shuffle": true,
+    "patch_mode": "add",
+    "tokens_to_patch": ["<fim_middle>"],
+    "layers_to_patch": [10,11,12,13,14],
+    "custom_decoder": false,
+    "rotation_matrix": false,
+    "action": "run_steering"
+}
