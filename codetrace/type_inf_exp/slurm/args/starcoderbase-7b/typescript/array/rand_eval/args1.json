@@ -1,0 +1,15 @@
+{
+    "steering_tensor": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-7b/random_tensor.pt",
+    "model": "/work/arjunguha-research-group/arjun/models/starcoderbase-7b",
+    "expdir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/results/starcoderbase-7b/typescript/ts_results/ts_rename_types_rand_fit",
+    "evaldir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-7b/typescript/ts_data/ts_rename_types_fit",
+    "batch_size": 10,
+    "max_size": 2000, 
+    "shuffle": true,
+    "patch_mode": "add",
+    "tokens_to_patch": ["<fim_middle>"],
+    "layers_to_patch": [19,20,21,22,23],
+    "custom_decoder": false,
+    "rotation_matrix": false,
+    "action": "run_steering"
+}
