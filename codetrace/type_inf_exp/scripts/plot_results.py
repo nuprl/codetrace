@@ -262,7 +262,7 @@ if __name__=="__main__":
 
     if args.plotfunc == "main":
         data = []
-        for f in list(args.results_file):
+        for f in list(args.results_csv):
             df = pd.read_csv(f)
             data.append(df)
             
@@ -274,7 +274,7 @@ if __name__=="__main__":
         plot_finetuning_ablation(pd.DataFrame(finetune_starcoder_py_results), args.outfile)
         
     if args.plotfunc == "layer":
-        df = pd.read_csv(args.results_file[0])
+        df = pd.concat([pd.read_csv(i) for i in args.results_csv])
         # serapate into 3
         df["lengths"] = df["layers_patched"].map(lambda x: len(str(x).split(",")))
         df0 = df.loc[df["lengths"] == 1]

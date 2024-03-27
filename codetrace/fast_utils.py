@@ -37,6 +37,8 @@ def get_batches_fast(iterable, len_iter, num_proc):
     Is parallelized for speed on large datasets.
     """
     batch_size = len_iter // num_proc
+    if batch_size < 1:
+        batch_size = 1
     pool = multiprocessing.Pool(num_proc)
     async_out_batches = []
     

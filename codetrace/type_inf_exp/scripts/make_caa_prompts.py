@@ -60,7 +60,7 @@ def combo_func(batch, tokenizer, language):
 
 def main(args):
     ds = datasets.load_dataset(args.src_ds, split="train")
-    tokenizer = AutoTokenizer.from_pretrained("/home/arjun/models/starcoderbase-1b")
+    tokenizer = AutoTokenizer.from_pretrained("/work/arjunguha-research-group/arjun/models/starcoderbase-1b")
     batches = get_batches_fast(ds, len(ds), cpu_count())
     results = batched_do_func(batches, cpu_count(), combo_func, language=args.lang, tokenizer=tokenizer)
     
