@@ -17,23 +17,15 @@ import datasets
 
 
 finetune_starcoder_py_results = [
-    {"checkpoint":"0","humaneval": 0.14161490683229813, "accuracy":0, "marker":"."},
-    {"checkpoint":"1","humaneval": 0.04440993788819876, "accuracy":0.86, "marker":"."},
-    {"checkpoint":"2","humaneval": 0.08167701863354036, "accuracy":0.93, "marker":"."},
-    {"checkpoint":"3", "humaneval": 0.04534161490683229, "accuracy":0.95, "marker":"."},
-    {"checkpoint":"4","humaneval": 0.0686335403726708, "accuracy":0.93, "marker":"."},
-    {"checkpoint":"5","humaneval": 0.049689440993788817, "accuracy":0.91, "marker":"."},
-    {"checkpoint":"6","humaneval": 0.04751552795031056, "accuracy":0.96, "marker":"."},
+    {"checkpoint":"0","humaneval": 0.14161490683229813, "accuracy":0},
+    {"checkpoint":"1","humaneval": 0.04440993788819876, "accuracy":0.86},
+    {"checkpoint":"2","humaneval": 0.08167701863354036, "accuracy":0.93},
+    {"checkpoint":"3", "humaneval": 0.04534161490683229, "accuracy":0.95},
+    {"checkpoint":"4","humaneval": 0.0686335403726708, "accuracy":0.93},
+    {"checkpoint":"5","humaneval": 0.049689440993788817, "accuracy":0.91},
+    # {"checkpoint":"6","humaneval": 0.04751552795031056, "accuracy":0.96},
 ]
 
-def marker_for_len(l):
-    if l == 1:
-        return "."
-    elif l == 3:
-        return "o"
-    else:
-        return "x"
-    
 def layer_sort(df, layer_n, window_size):
     all_layers = list(range(layer_n))
     zipped = list(zip([all_layers[i:i+window_size] for i in all_layers]))
@@ -41,7 +33,6 @@ def layer_sort(df, layer_n, window_size):
 
     # add column with sort_idx
     df["sort_idx"] = df["layers_patched"].map(lambda x: windows.index(x))
-    df["marker"] = df["lengths"].map(marker_for_len)
     # sort grouped by window key
     df = df.sort_values(by="sort_idx")
     # set sort_idx as new index
@@ -57,43 +48,22 @@ def layer_sort(df, layer_n, window_size):
     df["layers_patched"] = df["layers_patched"].map(rename)
     return df
 
-def counter(data, all_labels):
-    count = {d:0 for d in all_labels}
-    for i in data:
-        if i in count.keys():
-            count[i] += 1
-    return count
-
-def softmax(x):
-    """Compute softmax values for each sets of scores in x."""
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum()
-
-
-def kl(p, q):
-    p = np.asarray(p, dtype=float)
-    q = np.asarray(q, dtype=float)
-
-    return np.sum(np.where(p != 0, p * np.log(p / q), 0))
- 
-def divergence(ds):
-    all_types = ds["fim_type"]
-    x = softmax(list(counter(ds["fim_type"], all_types).values()))
-    y = softmax(list(counter(ds["steered_generation"], all_types).values()))
-    return kl(x,y)
-
-
-def get_kl_div(df, parent_dir):
-    df["results_ds"] = df["experiment_dir"].map(lambda x: f"{parent_dir}/{x}/ood_steering_results_ds")
-    kl_divs = {}
-    for path in df["results_ds"]:
-        ds = datasets.load_from_disk(path)
-        kl = divergence(ds)
-        kl_divs[path] = kl
-    max_kl = max(kl_divs.values())
-    df["kl_div"] = df["results_ds"].map(lambda x: kl_divs[x]) # / max_kl
-    return df, max_kl
-
+def _label(x):
+    if "rename_types" in x:
+        return "Rename Types"
+    elif "rename_vars" in x:
+        return "Rename Variables"
+    elif "delete" in x:
+        return "Remove Type Annotations"
+    else:
+        return "NO LABEL"
+    
+def split_subsets(df):
+    df["_kind"] = df["eval_dir"].map(_label)
+    df_t = df.loc[df["_kind"] == "Rename Types"]
+    df_v = df.loc[df["_kind"] == "Rename Variables"]
+    df_d = df.loc[df["_kind"] == "Remove Type Annotations"]
+    return df_v, df_t, df_d
 
 def plot_layer_ablation(data: List[pd.DataFrame], outfile, parent_dir = None):
     """
@@ -101,70 +71,71 @@ def plot_layer_ablation(data: List[pd.DataFrame], outfile, parent_dir = None):
     - x: layers patched
     - y: accuracy on ood
     """
-    plt.figure(figsize=(20,4))
+    size=14
+    fig = plt.figure(figsize=(17,4))
     n_layer = len(data[0]["layers_patched"].unique())
     lengths = [1,3,5]
-    accuracies = []
-    for d in data:
-        acc = d["ood_accuracy"]
-        accuracies += [float(a) for a in acc]
-    max_y = max(accuracies) + 0.1
+    ax_legend = None
     for i,df in enumerate(data, start=1):
-        # add a kl_divergence column
-        df, max_kl = get_kl_div(df, parent_dir)
-        df = layer_sort(df, n_layer, lengths[i-1])
         subplot = f"1{len(data)}{i}"
         ax = plt.subplot(int(subplot))
-        sns.lineplot(data=df, x="layers_patched", y="ood_accuracy", markers=True, style="marker",linewidth=2)
-        # sns.lineplot(data=df, x="layers_patched", y="kl_div", markers=True, style="marker",linewidth=2, color="red")
-        y = df["ood_accuracy"]
-        for xy in zip(list(range(len(y))), y):
-            text = xy[1]
-            ax.annotate(f'{text:.2f}',xy,va="bottom", ha="right", fontsize=8, color="blue")
-        # y = df["kl_div"] 
-        # for xy in zip(list(range(len(y))), y):
-        #     text = xy[1]
-        #     ax.annotate(f'{text:.2f}',xy,va="bottom", ha="right", fontsize=8, color="red")
-        
-        ax.set_ylim(0,max_y)
-        ax.legend()
+        if i == 2:
+            ax_legend = ax
+        df_v,df_t,df_d = split_subsets(df)
+        df_v, df_t, df_d = map(lambda x: layer_sort(x, n_layer, lengths[i-1]), [df_v, df_t, df_d])
+        sns.lineplot(data=df_v, x="layers_patched", y="ood_accuracy", markers=True, linewidth=2,color="red")
+        sns.lineplot(data=df_t, x="layers_patched", y="ood_accuracy", markers=True, linewidth=2,color="blue")
+        sns.lineplot(data=df_d, x="layers_patched", y="ood_accuracy", markers=True, linewidth=2, color="green")
+        ax.set_ylim(0,1)
+        ax.set_xlim(0,24-lengths[i-1])
         plt.xticks(rotation=45, ha="right")
-        ax.set_xlabel("Layers Patched", fontsize=12)
-        ax.set_ylabel("Accuracy on Held out set", fontsize=12)
+        ax.set_xlabel("Layers Patched", fontsize=size)
+        ax.set_ylabel("Accuracy on Held out set", fontsize=size)
+        plt.xticks(fontsize=10)
+        plt.yticks(fontsize=size)
+    
+    fig.subplots_adjust(bottom=0.3, wspace=0.3)
+    labels = ["Rename Variables", "Rename Types", "Remove Type Annotations"]
+    legend_elements = [Line2D([0], [0], color=c, lw=1, label=l) for c,l in zip(["red","blue","green"], labels)]
 
-    plt.tight_layout()
-    plt.savefig(outfile)
+    ax_legend.legend(handles=legend_elements, bbox_to_anchor=(0.5,-0.3), loc="upper center", fontsize=size, ncol=3)
+    plt.savefig(outfile, bbox_inches="tight")
     plt.close()
 
 
 def plot_finetuning_ablation(df: pd.DataFrame, outfile):
-    plt.figure(figsize=(12,7))
+    font=15
+    line=3
+    size=(6,4)
+    plt.figure(figsize=size)
     ax = plt.subplot()
-    sns.lineplot(data=df, x="checkpoint", y="humaneval",markers=True, style="marker",linewidth=2)
-    sns.lineplot(data=df, x="checkpoint", y="accuracy",markers=True, style="marker",linewidth=2)
+    sns.lineplot(data=df, x="checkpoint", y="humaneval",markers=True,linewidth=line, color="orange")
+    plt.xlim(0,5)
+    ax.set_xlabel("Epoch number", fontsize=font)
+    plt.xticks(fontsize=font)
+    plt.yticks(fontsize=font)
+    ax.set_ylabel("HumanEval pass@1", fontsize=font)
+    plt.tight_layout()
+    plt.savefig(outfile.replace(".pdf","_humaneval.pdf"))
+    plt.close()
     
-    for item in zip(df["checkpoint"], df["humaneval"]):
-        x = item[0]
-        y = item[1]
-        ax.text(x,y,f'{y:.2f}',color="blue", va="bottom", linespacing=2, fontsize=12)
-
-    for item in zip(df["checkpoint"], df["accuracy"]):
-        x = item[0]
-        y = item[1]
-        ax.text(x,y,f'{y:.2f}',color="orange", va="bottom", ha="right", linespacing=2, fontsize=12)
+    # accuracy fig
+    plt.figure(figsize=size)
+    ax = plt.subplot()
+    sns.lineplot(data=df, x="checkpoint", y="accuracy",markers=True,linewidth=line)
+    sns.lineplot(data=df, x="checkpoint", y=[0.9]*len(df["checkpoint"]),markers=True,linewidth=line-1,linestyle="dotted", color="red")
     
     plt.ylim(0,1)
-    ax.legend()
-    ax.set_xlabel("Epoch number", fontsize=12)
-    ax.set_ylabel("", fontsize=12)
-    custom_handles = [Line2D([0], [0], color='orange', lw=1, label="Accuracy on Held out set"),
-                      Line2D([0], [0], color='blue', lw=1, label="Humaneval performance")]
-    
-    custom_legend = plt.legend(handles=custom_handles, loc='center right', title="Legend", fontsize=12)
-    ax.add_artist(custom_legend)
+    plt.xlim(0,5)
+    plt.xticks(fontsize=font)
+    plt.yticks(fontsize=font)
+    ax.set_xlabel("Epoch number", fontsize=font)
+    ax.set_ylabel("Accuracy", fontsize=font)
     plt.tight_layout()
     plt.savefig(outfile)
     plt.close()
+
+
     
 def plot_main_results(df, outfile, accuracy_kind="ood_accuracy"):
     """
@@ -260,76 +231,23 @@ def plot_main_results(df, outfile, accuracy_kind="ood_accuracy"):
     plt.savefig(outfile)
     plt.close()
 
-def plot_cdf(df: pd.DataFrame, outfile):
+def plot_box(df: pd.DataFrame, outfile):
     """
     Takes a df from an eval_readme.json[results_per_type] which has: fim_type, count, sum (num_success)
-    CDF:
-    - y axis is cumulative prob
-    - x axis is count of labels (after ordering in descending count)
-    
-    Output cdf with a line for actual distribution, distribution of correct
     """
+    font_size=15
     # test set distribution
-    plt.figure(figsize=(12,7))
+    plt.figure(figsize=(9,5))
     ax = plt.subplot()
-    # sort df by counts descending
-    # counts = []
-    # num_success = []
-    df = df.sort_values(by="count", ascending=False)
-    # print(list(df["count"]))
-    # print(list(df["sum"]))
-    # for c in df.itertuples():
-    #     counts += [1]* int(c.count)
-    #     num_success += [1]*int(c.sum)
-    
-    # print(counts)
-    # print(sum(df["count"]))
-    # print(sum(df["sum"]))
-    # df_new = pd.DataFrame([{"count": c} for c in counts])
-    # sns.ecdfplot(data=df, x="count", color="blue")
-    # calculate separate line for nums
-    
-    counts = [0,]
-    idx = 0
-    for d in df.itertuples():
-        counts.append(counts[idx] + int(d.count))
-        idx += 1
-    counts = counts[1:]
-    # print(counts)
-    distr = [(c / sum(df["sum"])) for c in counts]
-    # print(distr)
-    # sns.lineplot(x=counts, y=distr, color="blue")
-    sns.ecdfplot(data=df, x="count", color="blue")
-    # cum_numsuccess = [0,]
-    # idx = 0
-    # for d in df.itertuples():
-    #     cum_numsuccess.append(cum_numsuccess[idx] + int(d.sum))
-    #     idx += 1
-    # cum_numsuccess = cum_numsuccess[1:]
-    # print(cum_numsuccess)
-    # distr = [(c / sum(df["sum"])) for c in cum_numsuccess]
-    # print(distr)
-    # sns.lineplot(x=cum_numsuccess, y=distr, color="red")
-    
-    # plt.savefig(outfile)
-    
-    # test set distribution
-    # plt.figure(figsize=(12,7))
-    # ax = plt.subplot()
-    # sort df by counts descending
-    # df = df.sort_values(by="count", ascending=False)
-    # df_new = pd.DataFrame([{"sum": c} for c in num_success])
-    # df = df.sort_values(by="sum", ascending=False)
-    # sns.ecdfplot(data=df, x="sum", color="red")
-    
-    custom_handles = [Line2D([0], [0], color='blue', lw=1, label="dataset"),
-                      Line2D([0], [0], color='red', lw=1, label="successful steer")]
-    
-    custom_legend = plt.legend(handles=custom_handles, loc='upper right', title="Mutations")
-    ax.add_artist(custom_legend)
-    # ax.set_xlim(0,sum(df["count"]))
-    # ax.set_ylim(0,1.1)
-    plt.savefig(outfile)
+    df = df.sort_values("count", ascending=False)
+    sx = sns.barplot(x=df["count"], y=df["accuracy"], color="cornflowerblue", errorbar=("pi",50),capsize = 0.1)
+    ax.set_ylim(0,1)
+    plt.xlabel("Frequency of the type label", fontsize=font_size)
+    plt.ylabel("Mean Accuracy", fontsize=font_size)
+    plt.xticks(fontsize=font_size)
+    plt.yticks(fontsize=font_size)
+    # plt.tight_layout()
+    plt.savefig(outfile, bbox_inches="tight")
     plt.close()
 
 
@@ -337,8 +255,9 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--outfile", type=str, required=True)
     parser.add_argument("--results_file", type=str, nargs="+", required=False)
-    parser.add_argument("--plotfunc", type=str, required=True, choices=["main", "ftune", "layer","cdf"])
+    parser.add_argument("--plotfunc", type=str, required=True, choices=["main", "ftune", "layer","box"])
     parser.add_argument("--parent_dir", type=str, required=False)
+    parser.add_argument("--do_transfer", action="store_true", default=False)
     args = parser.parse_args()
 
     if args.plotfunc == "main":
@@ -349,7 +268,7 @@ if __name__=="__main__":
             
         df = pd.concat(data).reset_index()
         # print(df)
-        plot_main_results(df, args.outfile, "ood_accuracy")
+        plot_main_results(df, args.outfile, "ood_accuracy", do_transfer=args.do_transfer)
         
     if args.plotfunc == "ftune":
         plot_finetuning_ablation(pd.DataFrame(finetune_starcoder_py_results), args.outfile)
@@ -363,11 +282,11 @@ if __name__=="__main__":
         df2 = df.loc[df["lengths"] == 5]
         plot_layer_ablation([df0,df1,df2], args.outfile, args.parent_dir)
 
-    if args.plotfunc == "cdf":
+    if args.plotfunc == "box":
         data = []
         for res in args.results_file:
             with open(res, "r") as f:
                 d = json.load(f)
                 data += d["results_per_type"]
         data = pd.DataFrame(data)
-        plot_cdf(data, args.outfile)
+        plot_box(data, args.outfile)
