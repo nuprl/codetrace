@@ -83,6 +83,8 @@ class TraceResult:
         if hidden_states != None:
             hidden_states = hidden_states.detach().cpu()
         self._hidden_states = hidden_states
+        del(hidden_states)
+        del(logits)
         self.n_layers = model_n_layer
         self._layer_idx = [arg_to_literal(i, n=model_n_layer) for i in arg_to_list(layer_idxs)]
         self.custom_decoder = custom_decoder

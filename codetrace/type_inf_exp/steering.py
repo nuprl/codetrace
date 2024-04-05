@@ -114,19 +114,14 @@ def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
     return get_ood(correct, incorrect, args)
 
 
-def steer_on_ds(model, diff_tensor, incorrect, is_ood, args):
+def steer_on_ds(model, diff_tensor, incorrect, ood_flag, args):
     """
     Given model, a steering tensor, and a dataset of incorrect prompts, steer on the dataset.
     Logs results to args.outdir
     
     NOTE: while this function makes cache files for predictions, the functionality
     to restart steering from a cache file (for example after unexpected crash) has not been implemented yet
-    """
-    if is_ood:
-        ood_flag = "ood_"
-    else:
-        ood_flag = ""
-        
+    """ 
     if os.path.exists(f"{args.expdir}/{ood_flag}steering_results_ds"):
         print(f"...Loading steering results from {args.expdir}/{ood_flag}steering_results_ds...")
         steering_ds = datasets.load_from_disk(f"{args.expdir}/{ood_flag}steering_results_ds")

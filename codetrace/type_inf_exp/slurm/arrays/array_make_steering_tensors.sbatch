@@ -6,7 +6,7 @@
 #SBATCH --job-name=data_t
 #SBATCH --output=%A_%a.out
 #SBATCH --error=%A_%a.err
-#SBATCH --array=1-1
+#SBATCH --array=7
 
 source /work/arjunguha-research-group/franlucc/venvs/v_codetrace/bin/activate
 

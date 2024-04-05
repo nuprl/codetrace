@@ -7,6 +7,7 @@ data/
 result_csvs/
 logs/
 log/
+pyright_log/
 exp_results/
 **/*.out
 **/*.err

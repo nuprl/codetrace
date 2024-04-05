@@ -133,26 +133,31 @@ def run_steering(args):
     
     # load steering tensor
     diff_tensor = torch.load(args.steering_tensor)
-    
-    def _eval(model, diff_tensor, do_ood, args):
-        if do_ood:
-            eval_ds = datasets.load_from_disk(f"{args.evaldir}/incorrect_ood")
-        else:
-            eval_ds = datasets.load_from_disk(f"{args.evaldir}/incorrect")
+    if args.multiplier != False:
+        diff_tensor *= args.multiplier
+        
+    def _eval(model, diff_tensor, dirname, args):
+        eval_ds = datasets.load_from_disk(f"{args.evaldir}/{dirname}")
             
         if args.shuffle:
             eval_ds = eval_ds.shuffle(seed=42)
         if args.max_size > 0:
             assert args.shuffle, "Please select shuffle when truncating dataset."
             eval_ds = eval_ds.select(range(min(args.max_size, len(eval_ds))))
-            
-        steer_on_ds(model, diff_tensor, eval_ds, do_ood, args)
+        
+        ood_flag = ""
+        if dirname == "incorrect_ood":
+            ood_flag = "ood_"
+        elif dirname == "correct":
+            ood_flag = "correct_"
+        steer_on_ds(model, diff_tensor, eval_ds, ood_flag, args)
     
     # incorrect ood eval
     if os.path.exists(Path(f"{args.evaldir}/incorrect_ood")):
-        _eval(model, diff_tensor, True, args)
+        _eval(model, diff_tensor, "incorrect_ood", args)
     # incorrect eval
-    _eval(model, diff_tensor, False, args)
+    _eval(model, diff_tensor, "incorrect", args)
+    # _eval(model, diff_tensor, "correct", args)
 
 def run_layer_ablation(args):
     """

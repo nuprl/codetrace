@@ -1,5 +1,5 @@
 {
-    "datadir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-7b/typescript/ts_data/ts_rename_vars_fit",
+    "datadir": "/work/arjunguha-research-group/franlucc/projects/codetrace/codetrace/type_inf_exp/data/starcoderbase-7b/typescript/ts_data/ts_delete_fit",
     "tokens_to_patch": ["<fim_middle>"],
     "batch_size": 2,
     "max_size": 2000, 
