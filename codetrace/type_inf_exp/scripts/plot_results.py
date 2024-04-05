@@ -231,7 +231,35 @@ def plot_main_results(df, outfile, accuracy_kind="ood_accuracy"):
     plt.savefig(outfile)
     plt.close()
 
-def main(args):    
+def plot_box(df: pd.DataFrame, outfile):
+    """
+    Takes a df from an eval_readme.json[results_per_type] which has: fim_type, count, sum (num_success)
+    """
+    font_size=15
+    # test set distribution
+    plt.figure(figsize=(9,5))
+    ax = plt.subplot()
+    df = df.sort_values("count", ascending=False)
+    sx = sns.barplot(x=df["count"], y=df["accuracy"], color="cornflowerblue", errorbar=("pi",50),capsize = 0.1)
+    ax.set_ylim(0,1)
+    plt.xlabel("Frequency of the type label", fontsize=font_size)
+    plt.ylabel("Mean Accuracy", fontsize=font_size)
+    plt.xticks(fontsize=font_size)
+    plt.yticks(fontsize=font_size)
+    # plt.tight_layout()
+    plt.savefig(outfile, bbox_inches="tight")
+    plt.close()
+
+
+if __name__=="__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--outfile", type=str, required=True)
+    parser.add_argument("--results_file", type=str, nargs="+", required=False)
+    parser.add_argument("--plotfunc", type=str, required=True, choices=["main", "ftune", "layer","box"])
+    parser.add_argument("--parent_dir", type=str, required=False)
+    parser.add_argument("--do_transfer", action="store_true", default=False)
+    args = parser.parse_args()
+
     if args.plotfunc == "main":
         data = []
         for f in list(args.results_csv):
@@ -240,7 +268,7 @@ def main(args):
             
         df = pd.concat(data).reset_index()
         # print(df)
-        plot_main_results(df, args.outfile, "ood_accuracy")
+        plot_main_results(df, args.outfile, "ood_accuracy", do_transfer=args.do_transfer)
         
     if args.plotfunc == "ftune":
         plot_finetuning_ablation(pd.DataFrame(finetune_starcoder_py_results), args.outfile)
@@ -254,12 +282,11 @@ def main(args):
         df2 = df.loc[df["lengths"] == 5]
         plot_layer_ablation([df0,df1,df2], args.outfile, args.parent_dir)
 
-
-if __name__=="__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--outfile", type=str, required=True)
-    parser.add_argument("--results_csv", type=str, nargs="+", required=False)
-    parser.add_argument("--plotfunc", type=str, required=True, choices=["main", "ftune", "layer"])
-    parser.add_argument("--parent_dir", type=str, required=False, nargs="+")
-    args = parser.parse_args()
-    main(args)
+    if args.plotfunc == "box":
+        data = []
+        for res in args.results_file:
+            with open(res, "r") as f:
+                d = json.load(f)
+                data += d["results_per_type"]
+        data = pd.DataFrame(data)
+        plot_box(data, args.outfile)
