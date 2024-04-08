@@ -1,0 +1,2 @@
+a013cdd0814a28afc97a74f04407b7ff6e04f9ff.ts(1,22): error TS2507: Type 'SymbolConstructor' is not a constructor function type.
+a013cdd0814a28afc97a74f04407b7ff6e04f9ff.ts(44,20): error TS2348: Value of type 'typeof __typ0' is not callable. Did you mean to include 'new'?

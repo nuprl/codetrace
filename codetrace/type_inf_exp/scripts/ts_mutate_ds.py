@@ -16,7 +16,7 @@ import os
 def filter_incorrect(ds: datasets.Dataset, 
                       llm: LLM,
                       new_ds_name,
-                      batch_size = 60000) -> datasets.Dataset:
+                      batch_size = 10000) -> datasets.Dataset:
     """
     Filter out examples where the model's prediction is incorrect. Truncate generation and
     solution at 1 token
@@ -83,7 +83,7 @@ def preprocess_then_mutate(batch, mutations, correct_bool = True):
     return ts_mutator.iter_apply_random_mutations(post, mutations)
     
 def main(args):
-    if not args.only_completions:
+    if "do_mutate" in args.actions:
         ds = datasets.load_dataset(args.completions_ds, split=args.split)
         if args.max_size > -1:
             ds = ds.shuffle(seed=42).select(range(args.max_size))
@@ -99,16 +99,18 @@ def main(args):
         ds = datasets.Dataset.from_generator(_yielder)
         print(ds)
         ds.push_to_hub(args.new_ds_name + "_" + args.model_name + "_unfiltered", private=True)
-    
-    if args.only_completions:
+    else:
         ds = datasets.load_dataset(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
         
-    llm = LLM(args.model)
-    ds = filter_incorrect(ds, llm, args.new_ds_name + "_" + args.model_name)
-    print(ds)
-    ds.push_to_hub(args.new_ds_name + "_" + args.model_name, private=True)
+    if "do_completions" in args.actions:
+        llm = LLM(args.model)
+        ds = filter_incorrect(ds, llm, args.new_ds_name + "_" + args.model_name)
+        print(ds)
+        ds.push_to_hub(args.new_ds_name + "_" + args.model_name, private=True)
     
 if __name__ == "__main__":
+    datasets.disable_caching()
+    print("Caching:", datasets.is_caching_enabled())
     parser = argparse.ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
@@ -121,9 +123,8 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="train")
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--correct-bool", type=bool, default=True)
-    parser.add_argument("--only-completions", action="store_true", default=False)
+    parser.add_argument("--actions", nargs="+", choices=["do_completions", "do_mutate"], default=["do_completions", "do_mutate"])
     args = parser.parse_args()
-    print(args.only_completions)
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     print(os.environ["CUDA_VISIBLE_DEVICES"])
     main(args)

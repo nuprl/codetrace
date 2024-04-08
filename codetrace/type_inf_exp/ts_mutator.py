@@ -1,5 +1,5 @@
 import tree_sitter
-from codetrace.utils import replace_between_bytes, get_captures, TS_PARSER
+from codetrace.utils import replace_between_bytes, get_captures, TS_PARSER, typescript_builtin_objects
 import datasets
 from collections import defaultdict
 from vllm import LLM, SamplingParams
@@ -106,13 +106,14 @@ def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]]) -> Li
         mutations.append(mutation)
     return mutations
 
+
 def needs_alias(node : tree_sitter.Node) -> bool:
     """
     Whether the node, when renamed, will need a type alias to be added to the program.
     Includes:
     - predefined types
     """
-    return node.type == "predefined_type"
+    return node.type == "predefined_type" or node.text.decode("utf-8") in typescript_builtin_objects
     
 def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutation]:
     """
@@ -135,7 +136,10 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> L
         
         if needs_alias(capture[0]) and capture[0].text not in do_not_prefix:
             # make new type alias
-            prefix = b"type " + replacement + b" = " + capture[0].text + b";"
+            if capture[0].text.decode("utf-8") in typescript_builtin_objects:
+                prefix = b"class " + replacement + b" extends " + capture[0].text + b" {};"
+            else:
+                prefix = b"type " + replacement + b" = " + capture[0].text + b";"
             # only make one alias for each predefined type
             do_not_prefix.add(capture[0].text)
         else:
@@ -201,6 +205,198 @@ def merge_nested_mutation(mutations : List[Mutation]) -> List[Mutation]:
     new_mutations.append(mutations[-1])       
     return new_mutations
 
+def select_random_subset(x):
+    if len(x) == 0:
+        return x
+    n = random.randint(1, len(x))
+    return random.sample(x, n)
+
+def random_rename_vars(
+    program : str, 
+    fim_type : str
+) -> str:
+    """
+    Apply random combination of rename_vars to the program.
+    """
+    # to prevent tree-sitter error:
+    program = program.replace("<FILL>", "_CodetraceSpecialPlaceholder_")
+    
+    # do not rename or delete these types
+    types_blacklist = [bytes(fim_type,"utf-8"), 
+                       bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
+    
+    # -----------------------
+    # get SELECT captures for target nodes that we can mutate
+    tree = TS_PARSER.parse(bytes(program, "utf-8"))
+    var_rename_captures = get_captures(tree, TS_VARIABLE_DECLARATION_QUERY, language="ts")
+    
+    #  random subset of captures
+    var_rename_captures = select_random_subset(var_rename_captures)
+    
+    # -----------------------
+    # find ALL ADDITIONAL locations that contain targets
+    var_rename_targets = set([x[0].text for x in var_rename_captures])
+    
+    all_id_captures = get_captures(tree, TS_IDENTIFIER_QUERY, language="ts")
+    
+    var_rename_full_captures = [x for x in all_id_captures if x[0].text in var_rename_targets]
+    
+    # -----------------------
+    # Apply the selected mutations
+    
+    # collects mutations
+    all_mutations = mutation_rename_vars(var_rename_full_captures)
+    
+    if len(all_mutations) == 0:
+        # bad run, return None
+        return None
+    
+    # actually modify the program
+    new_program = apply_mutations(program, all_mutations)
+    
+    # sometimes the placeholder can be deleted, for example in nested type annotations,
+    # so here's a safety check
+    if not "_CodetraceSpecialPlaceholder_" in new_program:
+        return None
+    
+    new_program = new_program.replace("_CodetraceSpecialPlaceholder_", "<FILL>")
+    
+    return new_program
+    
+def random_rename_types(
+    program : str, 
+    fim_type : str
+) -> str:
+    """
+    Apply random rename types mutations to the program.
+    """
+    # to prevent tree-sitter error:
+    program = program.replace("<FILL>", "_CodetraceSpecialPlaceholder_")
+    
+    # do not rename or delete these types
+    types_blacklist = [bytes(fim_type,"utf-8"), 
+                       bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
+    
+    # -----------------------
+    # get SELECT captures for target nodes that we can mutate
+    tree = TS_PARSER.parse(bytes(program, "utf-8"))
+    type_rename_captures = get_captures(tree, TS_QUERY_TYPE_ANNOTATIONS, language="ts")
+    
+    #  random subset of captures
+    type_rename_captures = select_random_subset(type_rename_captures)
+    
+    # -----------------------
+    # find ALL ADDITIONAL locations that contain targets
+    type_rename_targets = set([x[0].text.replace(b":",b"").strip() for x in type_rename_captures])
+    
+    all_id_captures = get_captures(tree, TS_IDENTIFIER_QUERY, language="ts")
+    all_type_id_captures = get_captures(tree, 
+                                        TS_TYPE_IDENTIFIER_QUERY + TS_PREDEFINED_TYPE_QUERY, 
+                                        language="ts")
+    
+    type_rename_full_captures = [x for x in all_id_captures+all_type_id_captures 
+                                    if (x[0].text in type_rename_targets 
+                                        and x[0].text not in types_blacklist)
+                                ]
+    
+    # -----------------------
+    # Apply the selected mutations
+    
+    # collects mutations
+    all_mutations = mutation_rename_type(type_rename_full_captures)
+    
+    if len(all_mutations) == 0:
+        # bad run, return None
+        return None
+    
+    # actually modify the program
+    new_program = apply_mutations(program, all_mutations)
+    
+    # sometimes the placeholder can be deleted, for example in nested type annotations,
+    # so here's a safety check
+    if not "_CodetraceSpecialPlaceholder_" in new_program:
+        return None
+    
+    new_program = new_program.replace("_CodetraceSpecialPlaceholder_", "<FILL>")
+    
+    return new_program
+
+def random_remove_annotations(
+    program : str, 
+    fim_type : str
+) -> str:
+    """
+    Apply random remove annotations mutations to the program.
+    """  
+    # to prevent tree-sitter error:
+    program = program.replace("<FILL>", "_CodetraceSpecialPlaceholder_")
+    
+    # do not rename or delete these types
+    types_blacklist = [bytes(fim_type,"utf-8"), 
+                       bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
+    
+    # -----------------------
+    # get SELECT captures for target nodes that we can mutate
+    tree = TS_PARSER.parse(bytes(program, "utf-8"))
+    remove_annotations_captures = get_captures(tree, TS_QUERY_PARAM_TYPES, language="ts")
+    
+    #  random subset of captures
+    remove_annotations_captures = select_random_subset(remove_annotations_captures)
+    
+    # -----------------------
+    # find ALL ADDITIONAL locations that contain targets
+    remove_annotations_captures = [x for x in remove_annotations_captures 
+                                        if (x[0].text.replace(b":",b"").strip() not in types_blacklist)
+                                ]
+    
+    # -----------------------
+    # Apply the selected mutations
+    # collects mutations
+    all_mutations = mutation_delete_annotation(remove_annotations_captures)
+    
+    if len(all_mutations) == 0:
+        # bad run, return None
+        return None
+    
+    # actually modify the program
+    new_program = apply_mutations(program, all_mutations)
+    
+    # sometimes the placeholder can be deleted, for example in nested type annotations,
+    # so here's a safety check
+    if not "_CodetraceSpecialPlaceholder_" in new_program:
+        return None
+    
+    new_program = new_program.replace("_CodetraceSpecialPlaceholder_", "<FILL>")
+    
+    return new_program
+
+
+def random_mutate_sequential(
+    program : str, 
+    fim_type : str,
+    mutations : List[Callable],
+) -> str:
+    """
+    Apply random combination of mutations to the program.
+    NOTE: does rename variables first, then rename types, then delete
+    """
+    new_program = program
+    if mutation_rename_vars in mutations:
+        p = random_rename_vars(new_program, fim_type)
+        if p != None:
+            new_program = p
+            
+    if mutation_rename_type in mutations:
+        p = random_rename_types(new_program, fim_type)
+        if p != None:
+            new_program = p
+            
+    if mutation_delete_annotation in mutations:
+        p = random_remove_annotations(new_program, fim_type)
+        if p != None:
+            new_program = p
+    return new_program
+    
 def random_mutate(
     program : str, 
     fim_type : str,
@@ -309,7 +505,7 @@ def iter_apply_random_mutations(iterable, mutations : List[Callable]):
         tries = 0
         while new_program is None and tries < 10:
             tries += 1
-            new_program = random_mutate(program, fim_type, mutations)
+            new_program = random_mutate_sequential(program, fim_type, mutations)
         if new_program is None:
             continue
 

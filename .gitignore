@@ -1,5 +1,6 @@
 .ipynb_*/
 logs/
+**/_*
 py_data/
 results/
 data/

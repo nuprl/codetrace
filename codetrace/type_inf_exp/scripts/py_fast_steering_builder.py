@@ -132,6 +132,8 @@ def main(args):
     ds.push_to_hub(args.new_ds_name + "_" + args.model_name, private=True)
     
 if __name__ == "__main__":
+    datasets.disable_caching()
+    print("Caching:", datasets.is_caching_enabled())
     parser = argparse.ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")

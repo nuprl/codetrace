@@ -1,0 +1,4 @@
+a470ae7674724a1fbec367d556dbb47c995b31f7.ts(4,19): error TS2304: Cannot find name '__typ0'.
+a470ae7674724a1fbec367d556dbb47c995b31f7.ts(5,22): error TS2304: Cannot find name '__typ0'.
+a470ae7674724a1fbec367d556dbb47c995b31f7.ts(41,22): error TS2304: Cannot find name '__typ0'.
+a470ae7674724a1fbec367d556dbb47c995b31f7.ts(51,22): error TS2304: Cannot find name '__typ0'.
