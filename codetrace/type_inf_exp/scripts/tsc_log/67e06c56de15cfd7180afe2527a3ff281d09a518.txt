@@ -1,3 +1,0 @@
-67e06c56de15cfd7180afe2527a3ff281d09a518.ts(1,24): error TS2749: '__typ0' refers to a value, but is being used as a type here. Did you mean 'typeof __typ0'?
-67e06c56de15cfd7180afe2527a3ff281d09a518.ts(3,32): error TS2749: '__typ0' refers to a value, but is being used as a type here. Did you mean 'typeof __typ0'?
-67e06c56de15cfd7180afe2527a3ff281d09a518.ts(33,39): error TS2749: '__typ0' refers to a value, but is being used as a type here. Did you mean 'typeof __typ0'?

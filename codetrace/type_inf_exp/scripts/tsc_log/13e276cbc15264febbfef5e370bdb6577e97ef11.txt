@@ -1,4 +1,0 @@
-13e276cbc15264febbfef5e370bdb6577e97ef11.ts(6,55): error TS2749: '__typ0' refers to a value, but is being used as a type here. Did you mean 'typeof __typ0'?
-13e276cbc15264febbfef5e370bdb6577e97ef11.ts(6,64): error TS2749: '__typ0' refers to a value, but is being used as a type here. Did you mean 'typeof __typ0'?
-13e276cbc15264febbfef5e370bdb6577e97ef11.ts(9,55): error TS2749: '__typ1' refers to a value, but is being used as a type here. Did you mean 'typeof __typ1'?
-13e276cbc15264febbfef5e370bdb6577e97ef11.ts(9,64): error TS2749: '__typ1' refers to a value, but is being used as a type here. Did you mean 'typeof __typ1'?

@@ -236,9 +236,10 @@ def tuned_lens_viz(prompt: str,
     # tokens = tokenizer.tokenize(prompt)
     indices = topk.indices # [nlayer, nprompt, ntoken, topk]
     values = topk.values # [nlayer, nprompt, ntoken, topk]
+    
     values = values.squeeze(0).squeeze(0).detach() # nlayer and nprompt are 1
     indices = indices.squeeze(0).squeeze(0).detach() # nlayer and nprompt are 1
-    
+
     # make a list where for each token idx, we have the tokenized idx and the value
 
     hover_data = []

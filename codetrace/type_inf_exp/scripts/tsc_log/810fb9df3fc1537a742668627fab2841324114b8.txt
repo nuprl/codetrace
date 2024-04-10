@@ -1,5 +1,0 @@
-810fb9df3fc1537a742668627fab2841324114b8.ts(1,27): error TS2749: '__typ0' refers to a value, but is being used as a type here. Did you mean 'typeof __typ0'?
-810fb9df3fc1537a742668627fab2841324114b8.ts(11,37): error TS2304: Cannot find name '__typ0'.
-810fb9df3fc1537a742668627fab2841324114b8.ts(25,43): error TS2749: '__typ0' refers to a value, but is being used as a type here. Did you mean 'typeof __typ0'?
-810fb9df3fc1537a742668627fab2841324114b8.ts(25,52): error TS2749: '__typ0' refers to a value, but is being used as a type here. Did you mean 'typeof __typ0'?
-810fb9df3fc1537a742668627fab2841324114b8.ts(30,33): error TS2304: Cannot find name '__typ0'.

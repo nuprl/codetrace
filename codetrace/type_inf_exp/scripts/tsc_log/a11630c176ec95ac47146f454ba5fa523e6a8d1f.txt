@@ -1,1 +1,0 @@
-a11630c176ec95ac47146f454ba5fa523e6a8d1f.ts(45,30): error TS2345: Argument of type '([key, value]: [Extract<keyof Obj, string>, T]) => void' is not assignable to parameter of type '(value: [Extract<keyof Obj, string>, unknown], index: number, array: [Extract<keyof Obj, string>, unknown][]) => void'.

@@ -304,5 +304,6 @@ typescript_builtin_objects = [
     "Intl.NumberFormat",
     "Intl.PluralRules",
     "Intl.RelativeTimeFormat",
-    "Intl.Segmenter"
+    "Intl.Segmenter",
+    "bigint"
 ]

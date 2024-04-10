@@ -1,7 +1,0 @@
-6d86e42e6756e9196c209667cca731be6b8c90a8.ts(20,45): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?
-6d86e42e6756e9196c209667cca731be6b8c90a8.ts(30,51): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?
-6d86e42e6756e9196c209667cca731be6b8c90a8.ts(34,49): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?
-6d86e42e6756e9196c209667cca731be6b8c90a8.ts(48,43): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?
-6d86e42e6756e9196c209667cca731be6b8c90a8.ts(48,78): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?
-6d86e42e6756e9196c209667cca731be6b8c90a8.ts(66,28): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?
-6d86e42e6756e9196c209667cca731be6b8c90a8.ts(70,27): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?

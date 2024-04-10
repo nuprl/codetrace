@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 import argparse
 import datasets
@@ -101,7 +102,7 @@ def typecheck_batch(files: List[str], lang) -> Dict[str, str]:
     prefix = f"{os.environ['SCRATCH_DIR']}/tmp/{lang}"
     hexsha = hashlib.sha256(bytes("".join(files), "utf-8")).hexdigest()
     tempdir = f"{prefix}/{hexsha}"
-    os.makedirs(tempdir, exist_ok=True)
+    os.makedirs(tempdir)
     for contents in files:
         hash_object = hashlib.sha1(bytes(contents, "utf8"))
         hex_dig = hash_object.hexdigest()
@@ -256,6 +257,11 @@ if __name__=="__main__":
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--scratch-dir", type=str, default="/scratch/lucchetti.f")
     args = parser.parse_args()
+    # clear logs
+    for dirpath in ["tsc_log","pyright_log",f"{args.scratch_dir}/tmp"]:
+        if os.path.exists(dirpath) and os.path.isdir(dirpath):
+            shutil.rmtree(dirpath)
+            
     os.environ["NPM_PACKAGES"] = args.npm_location
     os.environ["SCRATCH_DIR"] = args.scratch_dir
     assert os.path.exists(Path(args.npm_location)), "Please pass a path to npm package location"

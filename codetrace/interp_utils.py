@@ -193,18 +193,6 @@ def collect_attention_output(model : LanguageModel,
     """
     raise NotImplementedError("Not tested")
 
-def insert_attn_patch(model : LanguageModel,
-                 prompts : Union[List[str],str],
-                 patch : torch.Tensor,
-                 layers_to_patch : Union[List[int],int],
-                 patch_mode : str = "add") -> TraceResult:
-    """
-    Insert attn patch at layers. Only supports full-token patch.
-    Note that prompts will be padded to match the patch. If prompts are
-    larger than patch, this will result in a mismatch.
-    """
-    raise NotImplementedError("Not tested")
-
 
 def insert_patch(
     model : LanguageModel,
@@ -416,6 +404,8 @@ def custom_lens(model : LanguageModel,
         activations = collect_hidden_states(model,
                                             prompts,
                                             layers=layer)
+    else:
+        activations = activations[layer]
     activations = activations.detach().cpu()
     # apply decoder
     logits = decoder(activations)

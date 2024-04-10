@@ -1,2 +1,0 @@
-5c4e0bd3a3a29aa3b5360dba8718f177eae13bf2.ts(4,32): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?
-5c4e0bd3a3a29aa3b5360dba8718f177eae13bf2.ts(94,42): error TS2552: Cannot find name '__typ1'. Did you mean '__typ0'?
