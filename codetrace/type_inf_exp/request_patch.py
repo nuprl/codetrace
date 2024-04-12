@@ -54,31 +54,6 @@ def batched_get_averages(
     print(f"Hidden states shape before avg: {hidden_states.shape}")
     return hidden_states.mean(dim=0)
 
-
-# def batched_insert_patch(
-#     model : LanguageModel,
-#     prompts : Union[List[str],str],
-#     patch : torch.Tensor,
-#     layers_to_patch : List[int],
-#     tokens_to_patch : Union[List[str],List[int],str,int],
-#     patch_mode : str = "add",
-#     batch_size : int = 5
-# ) -> List[TraceResult]:
-#     """
-#     batched insert patch
-#     """
-#     if tokens_to_patch == []:
-#         tokens_to_patch = list(range(patch.shape[1]))
-#     # batch prompts according to batch size
-#     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
-#     results = []
-#     for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
-#         res : TraceResult = insert_patch(model, batch, patch, layers_to_patch, tokens_to_patch, patch_mode)
-#         results.append(res)
-           
-#     return results
-
-
 def batched_insert_patch_logit(
     model : LanguageModel,
     prompts : Union[List[str],str],

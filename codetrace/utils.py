@@ -114,16 +114,16 @@ def get_captures(prompt : Union[str,tree_sitter.Tree, bytes],
         captures = [c for c in captures if not matches_any(c[0].parent.type,ignore_parents)]
     return captures
 
-def get_builtins_regex(language : str) -> str:
-    """
-    Returns the builtins for a language as a regex pattern
-    """
-    if language in ["python", "py"]:
-        parent_dir = Path(__file__).parent
-        builtins = dir(builtins)
-        return "^(" + "|".join(builtins) + ")$"
-    elif language in ["typescript", "ts"]:
-        raise NotImplementedError("Typescript builtins not implemented")
+# def get_builtins_regex(language : str) -> str:
+#     """
+#     Returns the builtins for a language as a regex pattern
+#     """
+#     if language in ["python", "py"]:
+#         parent_dir = Path(__file__).parent
+#         builtins = dir(builtins)
+#         return "^(" + "|".join(builtins) + ")$"
+#     elif language in ["typescript", "ts"]:
+#         raise NotImplementedError("Typescript builtins not implemented")
     
 
 def remove_comments(program : str, 

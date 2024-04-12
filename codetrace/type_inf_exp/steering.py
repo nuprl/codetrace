@@ -136,14 +136,6 @@ def steer_on_ds(model, diff_tensor, incorrect, ood_flag, args):
         steering_ds.save_to_disk(f"{args.expdir}/{ood_flag}steering_results_ds")
         # remove cache files
         os.remove(args.steering_outfile)
-        
-    # # steering_ds recount
-    # steering_ds_2 = []
-    # for ex in steering_ds:
-    #     ex_2 = ex.copy()
-    #     ex_2["correct_steer"] = (ex["fim_type"] == ex["steered_generation"].strip())
-    #     steering_ds_2.append(ex_2)
-    # steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_ds_2))
     
     df = steering_ds.to_pandas()
     df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
@@ -179,17 +171,6 @@ def steer(
     else:
         custom_decoder = None
         
-    if args.rotation_matrix is not False:
-        # rotator = BoundlessRotatedSpaceIntervention(model.config.n_embd)
-        # matrix_weights = torch.load(args.rotation_matrix)
-        # rotate_layer = RotateLayer(model.config.n_embd)
-        # rotate_layer.weight = torch.nn.Parameter(matrix_weights)
-        # rotator.rotate_layer = rotate_layer
-        # rotator = rotator.to("cuda")
-        rotator = None
-    else:
-        rotator = None
-        
     predictions = batched_insert_patch_logit(model, 
                 eval_prompts, 
                 diff_tensor, 
@@ -199,8 +180,7 @@ def steer(
                 args.batch_size,
                 args.steering_outfile,
                 solutions=eval_solutions,
-                custom_decoder=custom_decoder,
-                rotation_matrix=rotator)
+                custom_decoder=custom_decoder)
     steering_results = []
     for i,tok in enumerate(predictions):
         ex = incorrect_eval[i]

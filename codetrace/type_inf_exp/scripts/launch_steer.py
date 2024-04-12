@@ -214,14 +214,8 @@ def run_layer_ablation(args):
         # # incorrect eval
         # _eval(model, diff_tensor, False, args)
     
-    
-if __name__ == "__main__":
-    steering_args = sys.argv[1]
-    with open(steering_args, "r") as f:
-        args = json.load(f)
-    args = Namespace(**args)
-    print(f"Passed args:\n{args}")
-    
+
+def main(args):
     if args.action == "make_steering_data_splits":
         make_steering_data_splits(args)
     elif args.action == "make_steering_tensor":
@@ -236,3 +230,11 @@ if __name__ == "__main__":
                         \t- make_steering_tensor
                         \t- run_steering
                         \t- layer_ablation""")
+        
+if __name__ == "__main__":
+    steering_args = sys.argv[1]
+    with open(steering_args, "r") as f:
+        args = json.load(f)
+    args = Namespace(**args)
+    print(f"Passed args:\n{args}")
+    main(args)

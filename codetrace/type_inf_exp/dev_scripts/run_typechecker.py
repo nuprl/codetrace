@@ -161,12 +161,12 @@ def get_parse_num(parser, programs, lang):
             f.write(p.text.decode("utf-8"))
     return len(parse_trees)-len(error), len(parse_trees)
 
-def process_dataset(res_ds, col="fim_program"):
+def process_dataset(res_ds, col):
     programs = res_ds[col]
     if "<FILL>" in programs[0]:
         programs = [p.replace("<FILL>", res_ds[i]["fim_type"]) for i,p in enumerate(programs)]
     else:
-        programs = [placeholder_to_std_fmt(p, STARCODER_FIM) for p in programs]
+        raise ValueError("No <FILL> in programs")
     return programs
 
 def main(args):
@@ -180,69 +180,72 @@ def main(args):
     
     data = []
     
-    if args.hf_hub_dataset:
-        for subdir in args.list_o_dirs:
+
+    for subdir in args.list_o_dirs:
+        if args.local_dataset:
+            ds = datasets.load_from_disk(subdir)
+        else:
             ds = datasets.load_dataset(subdir, split="train")
-            programs = process_dataset(ds, "mutated_program")
-            if args.max_size > -1:
-                random.Random(42).shuffle(programs)
-                programs = programs[:args.max_size]
-            parse_num, tot_parse = get_parse_num(parser, programs, args.lang)
-            parse_ratio = parse_num / tot_parse
-            typecheck_num, tot_typecheck = get_typecheck_num(programs, args.lang)
-            typecheck_ratio = typecheck_num / tot_typecheck
-            data.append({"subdir": subdir, 
-                         "parse_num": parse_num,
-                         "parse_total": tot_parse,
-                         "parse_ratio": parse_ratio, 
-                         "typecheck_num": typecheck_num,
-                         "typecheck_total": tot_typecheck,
-                         "typecheck_ratio": typecheck_ratio})
-            
-            df = pd.DataFrame(data)
-            df.to_csv(args.outfile)
-    else:
-        list_o_dirs = [d for d in args.list_o_dirs if (not "rand" in d and not "caa" in d and "fit" in d)]
-        for subdir in tqdm(list_o_dirs, desc="processing subdirs"):
-            print(subdir)
-            if os.path.exists(Path(f"{subdir}/steering_results_ds")):
-                res_ds = datasets.load_from_disk(f"{subdir}/steering_results_ds")
-                programs = process_dataset(res_ds)
-                if args.max_size > -1:
-                    random.Random(42).shuffle(programs)
-                    programs = programs[:args.max_size]
-                parse_num, tot_parse = get_parse_num(parser, programs, args.lang)
-                parse_ratio = parse_num / tot_parse
-                typecheck_num, tot_typecheck = get_typecheck_num(programs, args.lang)
-                typecheck_ratio = typecheck_num / tot_typecheck
-                data.append({"subdir": f"{subdir}/steering_results_ds", 
-                         "parse_num": parse_num,
-                         "parse_total": tot_parse,
-                         "parse_ratio": parse_ratio, 
-                         "typecheck_num": typecheck_num,
-                         "typecheck_total": tot_typecheck,
-                         "typecheck_ratio": typecheck_ratio})
+        programs = process_dataset(ds, args.column_name)
+        if args.max_size > -1:
+            random.Random(42).shuffle(programs)
+            programs = programs[:args.max_size]
+        parse_num, tot_parse = get_parse_num(parser, programs, args.lang)
+        parse_ratio = parse_num / tot_parse
+        typecheck_num, tot_typecheck = get_typecheck_num(programs, args.lang)
+        typecheck_ratio = typecheck_num / tot_typecheck
+        data.append({"subdir": subdir, 
+                        "parse_num": parse_num,
+                        "parse_total": tot_parse,
+                        "parse_ratio": parse_ratio, 
+                        "typecheck_num": typecheck_num,
+                        "typecheck_total": tot_typecheck,
+                        "typecheck_ratio": typecheck_ratio})
+        
+        df = pd.DataFrame(data)
+        df.to_csv(args.outfile)
+    # else:
+    #     list_o_dirs = [d for d in args.list_o_dirs if (not "rand" in d and not "caa" in d and "fit" in d)]
+    #     for subdir in tqdm(list_o_dirs, desc="processing subdirs"):
+    #         print(subdir)
+    #         if os.path.exists(Path(f"{subdir}/steering_results_ds")):
+    #             res_ds = datasets.load_from_disk(f"{subdir}/steering_results_ds")
+    #             programs = process_dataset(res_ds)
+    #             if args.max_size > -1:
+    #                 random.Random(42).shuffle(programs)
+    #                 programs = programs[:args.max_size]
+    #             parse_num, tot_parse = get_parse_num(parser, programs, args.lang)
+    #             parse_ratio = parse_num / tot_parse
+    #             typecheck_num, tot_typecheck = get_typecheck_num(programs, args.lang)
+    #             typecheck_ratio = typecheck_num / tot_typecheck
+    #             data.append({"subdir": f"{subdir}/steering_results_ds", 
+    #                      "parse_num": parse_num,
+    #                      "parse_total": tot_parse,
+    #                      "parse_ratio": parse_ratio, 
+    #                      "typecheck_num": typecheck_num,
+    #                      "typecheck_total": tot_typecheck,
+    #                      "typecheck_ratio": typecheck_ratio})
                 
-            if os.path.exists(Path(f"{subdir}/ood_steering_results_ds")):
-                res_ds = datasets.load_from_disk(f"{subdir}/ood_steering_results_ds")
-                programs = process_dataset(res_ds)
-                if args.max_size > -1:
-                    random.Random(42).shuffle(programs)
-                    programs = programs[:args.max_size]
-                parse_num, tot_parse = get_parse_num(parser, programs, args.lang)
-                parse_ratio = parse_num / tot_parse
-                typecheck_num, tot_typecheck = get_typecheck_num(programs, args.lang)
-                typecheck_ratio = typecheck_num / tot_typecheck
-                data.append({"subdir": f"{subdir}/ood_steering_results_ds", 
-                         "parse_num": parse_num,
-                         "parse_total": tot_parse,
-                         "parse_ratio": parse_ratio, 
-                         "typecheck_num": typecheck_num,
-                         "typecheck_total": tot_typecheck,
-                         "typecheck_ratio": typecheck_ratio})
+    #         if os.path.exists(Path(f"{subdir}/ood_steering_results_ds")):
+    #             res_ds = datasets.load_from_disk(f"{subdir}/ood_steering_results_ds")
+    #             programs = process_dataset(res_ds)
+    #             if args.max_size > -1:
+    #                 random.Random(42).shuffle(programs)
+    #                 programs = programs[:args.max_size]
+    #             parse_num, tot_parse = get_parse_num(parser, programs, args.lang)
+    #             parse_ratio = parse_num / tot_parse
+    #             typecheck_num, tot_typecheck = get_typecheck_num(programs, args.lang)
+    #             typecheck_ratio = typecheck_num / tot_typecheck
+    #             data.append({"subdir": f"{subdir}/ood_steering_results_ds", 
+    #                      "parse_num": parse_num,
+    #                      "parse_total": tot_parse,
+    #                      "parse_ratio": parse_ratio, 
+    #                      "typecheck_num": typecheck_num,
+    #                      "typecheck_total": tot_typecheck,
+    #                      "typecheck_ratio": typecheck_ratio})
             
-            df = pd.DataFrame(data)
-            df.to_csv(args.outfile)
+    #         df = pd.DataFrame(data)
+    #         df.to_csv(args.outfile)
     
     df = pd.DataFrame(data)
     df.to_csv(args.outfile)
@@ -250,10 +253,11 @@ def main(args):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--list-o-dirs", type=str, nargs="+", required=True)
-    parser.add_argument("--hf-hub-dataset", action="store_true", default=False)
+    parser.add_argument("--local-dataset", action="store_true", default=False)
+    parser.add_argument("--column-name", type=str, default="fim_program")
     parser.add_argument("--lang", choices=["py", "ts"], required=True)
     parser.add_argument("--outfile", type=str, required=True)
-    parser.add_argument("--npm-location", type=str, default="./.npm_packages")
+    parser.add_argument("--npm-location", type=str, default="~/.npm_packages")
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--scratch-dir", type=str, default="/scratch/lucchetti.f")
     args = parser.parse_args()

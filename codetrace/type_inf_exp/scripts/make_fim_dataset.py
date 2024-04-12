@@ -8,6 +8,7 @@ from tqdm import tqdm
 from functools import partial
 from typing import Callable
 from codetrace.fast_utils import get_batches_fast, batched_do_func
+import shutil
 
 def batch_filter_is_one_token(batch, tokenizer):
     if len(batch) == 0:
@@ -34,8 +35,7 @@ def _func_combo(batch, query_str, do_remove_comments):
         else:
             new_ex = {"_content": ex["content"], **ex}
         
-        # limit to 10 fim types per program
-        prompts = make_natural_typeinf_prompt(new_ex, query_str, content_key="_content")[:10]
+        prompts = make_natural_typeinf_prompt(new_ex, query_str, content_key="_content")
         
         for p in prompts:
             if ": <FILL>" in p["fim_program"]:
@@ -68,8 +68,7 @@ def multi_process(ds, args):
                 yield ex
         ds = datasets.Dataset.from_generator(yielder)
         print(ds)
-        ds.save_to_disk("datasets/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
-        # ds.push_to_hub(args.output_ds + f"-chunk_{i}")
+        ds.save_to_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
 
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
         batches = get_batches_fast(results, len(results), args.num_proc)
@@ -80,8 +79,25 @@ def multi_process(ds, args):
                 yield ex
         ds = datasets.Dataset.from_generator(yielder)
         print(ds)
-        ds.push_to_hub(args.output_ds + f"-1tok-chunk_{i}")
+        ds.save_to_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-1tok-chunk_{i}")
+        
+    # load all chunks and push to hub
+    ds_1tok = []
+    ds_any_tok = []
+    for i in range(num_chunks):
+        ds = datasets.load_from_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
+        one_tok = datasets.load_from_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-1tok-chunk_{i}")
+        ds_1tok.append(one_tok)
+        ds_any_tok.append(ds)
+    ds_1tok = datasets.concatenate_datasets(ds_1tok)
+    print(ds_1tok)
+    ds_1tok.push_to_hub(args.output_ds + "-1tok", private=True)
+    
+    ds_any_tok = datasets.concatenate_datasets(ds_any_tok)
+    print(ds_any_tok)
+    ds_any_tok.push_to_hub(args.output_ds + "-ntok", private=True)
 
+    
 def process(ds, args):
     """
     Method for processing a dataset with a single process.
@@ -129,6 +145,9 @@ def main(args):
         process(ds, args)
     else:
         print("Using multiprocessing")
+        if os.path.exists(Path("dataset_chunks")):
+            raise ValueError("dataset_chunks directory already exists. Please remove.")
+        os.mkdir("dataset_chunks")
         args.num_proc = multiprocessing.cpu_count()
         multi_process(ds, args)
         
