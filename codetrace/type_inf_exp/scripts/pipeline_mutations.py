@@ -49,8 +49,7 @@ def pipeline(args):
         
         print(f"Running mutations for: {mutate_args.new_ds_name}_{args.model_name}")
         
-        if mut_combo != ("mutation_rename_type",):              
-            mutate_main(mutate_args)
+        mutate_main(mutate_args)
         
         print(f"Running typechecking for: {mutate_args.new_ds_name}_{args.model_name}")
         # step 2: run typecheck

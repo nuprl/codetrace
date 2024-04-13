@@ -17,10 +17,20 @@ import random
 import numpy as np
 import re
 import shutil
+import json
+        
+pyright_config = {
+    "typeCheckingMode" : "basic",
+    "reportMissingImports" : False,
+    "analyzeUnannotatedFunctions" : False,
+    "strictParameterNoneValue" : False,
+    "reportMissingModuleSource" : False,
+}
 
 def log(path, data):
     with open(path, "w") as f:
         f.write(data + "\n")
+        
 
 # from https://github.com/nuprl/MultiPL-T/
 def run_typechecker(d, lang, do_log=False):
@@ -29,7 +39,10 @@ def run_typechecker(d, lang, do_log=False):
         files = list(glob.glob(f"{d}/*.py"))
         try:
             outs = subprocess.run(
-                ["pyright", "*"],
+                ["pyright",
+                 "-p", "pyright_config.json",
+                "*"
+                 ],
                 cwd=d,
                 capture_output=True,
                 timeout=300,
@@ -85,10 +98,15 @@ def run_typechecker(d, lang, do_log=False):
                 cur_file = filename_in_line
                 cur_lines = ""
         
-        if len(cur_file) > 0  and lang == "py" and "- error:" in line and not '- error: Import "' in line:
+        if (len(cur_file) > 0  and lang == "py" and "- error:" in line and 
+            not '- error: Import "' in line
+            and not "unknown import symbol" in line
+            and not 'Expression of type "None" cannot be assigned to return type' in line
+            and not 'is not a known member of "None"' in line):
             cur_lines += line + "\n"
             filemap[cur_file] += 1
-        elif (len(cur_file) > 0 and lang == "ts" and ": error" in line and not "Cannot find module" in line
+        elif (len(cur_file) > 0 and lang == "ts" and ": error" in line 
+            and not "Cannot find module" in line
             and not "Invalid module name in augmentation" in line):
             cur_lines += line + "\n"
             filemap[cur_file] += 1
@@ -111,6 +129,8 @@ def filter_typecheck_batch(examples: List[dict], colname, lang, do_log=False) ->
             with open(name, "w") as f:
                 f.write(program)
 
+        with open(f"{tempdir}/pyright_config.json", "w") as f:
+            json.dump(pyright_config, f)
         # Run pyright in the temporary directory
         typecheck_map = run_typechecker(tempdir, lang, do_log=do_log)
         if typecheck_map is None:

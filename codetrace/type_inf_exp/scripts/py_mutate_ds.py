@@ -10,7 +10,7 @@ from vllm import LLM, SamplingParams
 from multiprocessing import cpu_count
 from tqdm import tqdm
 from codetrace.fast_utils import get_batches_fast, batched_do_func
-from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations
+from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations, remove_comments
 import os
 from codetrace.type_inf_exp import py_mutator 
 
@@ -59,8 +59,11 @@ def py_preprocess(iterable, correct_bool = True):
     
     if isinstance(iterable, datasets.Dataset):
         return iterable.filter(_condition, desc="Preprocess")
+        # return iterable.map(lambda x: {**x, "fim_program": remove_comments(x["fim_program"])}, 
+        #                     desc="Removing comments")
     else:
-        return [i for i in iterable if _condition(i)]
+        return filter(_condition, iterable)
+        # return map(lambda x: {**x, "fim_program": remove_comments(x["fim_program"])}, iterable)
 
 def preprocess_then_mutate(batch, mutations, correct_bool = True):
     post = py_preprocess(batch, correct_bool=correct_bool)

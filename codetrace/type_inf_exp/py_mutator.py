@@ -16,6 +16,7 @@ import random
 import typing
 import builtins
 from collections import namedtuple
+from pyminifier.minification import remove_comments_and_docstrings
 """
 https://github.com/nvim-treesitter/nvim-treesitter/blob/master/queries/python/highlights.scm
 Random mutation code.
@@ -498,3 +499,12 @@ def iter_apply_random_mutations(iterable, mutations : List[Callable]):
                        "mutations" : [m.__name__ for m in mutations], **ex})
     
     return new_ds
+
+def remove_comments(program):
+    try:
+        res = remove_comments_and_docstrings(program).strip()
+    except Exception as e:
+        print(f"Error in removing comments: {e}")
+        # sometimes parser fails, return empty string
+        return ""
+    return res
