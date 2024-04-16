@@ -331,13 +331,11 @@ def random_mutate(
     # collects mutations
     all_mutations = []
     for m in mutations:
+        captures = func_name_to_args[m.__name__]
+        if len(captures) == 0:
+            # if any out of the selected mutations has no captures, return None
+            return None
         all_mutations += m(func_name_to_args[m.__name__])
-    
-    if len(all_mutations) == 0:
-        # bad run, return None
-        if debug_seed is not None:
-            return None, []
-        return None
     
     # actually modify the program
     new_program = apply_mutations(program, all_mutations)

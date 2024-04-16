@@ -31,6 +31,9 @@ def pipeline(args):
     combinations = []
     for i in range(1, len(mutations)+1):
         combinations += list(itertools.combinations(mutations, i))
+    
+    if args.do_only_combos is not None:
+        combinations = [combo for combo in combinations if combo_to_name(combo) in args.do_only_combos]
     combinations = [combo for combo in combinations if not combo_to_name(combo) in args.skip_combos]
     
     print(f"Running mutation pipeline for {len(combinations)} combinations: {combinations}")
@@ -59,7 +62,8 @@ def pipeline(args):
                                     "column_name":"mutated_program",
                                     "local_dataset":False,
                                     "max_size":-1,
-                                    "npm_location":os.environ["NPM_PACKAGES"]})
+                                    "npm_location":os.environ["NPM_PACKAGES"],
+                                    "do_log" : False})
         
         typecheck_main(typecheck_args)
         
@@ -74,7 +78,14 @@ if __name__=="__main__":
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--unique-id", type=str, required=True)
     parser.add_argument("--hf-prefix", type=str, required=True)
-    
+    parser.add_argument("--do-only-combos", type=str, nargs="+", default=None,
+                        choices=["all_mutations", 
+                                 "rename_types", 
+                                 "rename_vars",
+                                 "delete_annotations",
+                                 "types_and_delete",
+                                 "vars_and_delete",
+                                 "all_renames"])
     parser.add_argument("--skip-combos", type=str, nargs="+", default=[],
                         choices=["all_mutations", 
                                  "rename_types", 

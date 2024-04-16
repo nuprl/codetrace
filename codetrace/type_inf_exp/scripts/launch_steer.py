@@ -23,6 +23,10 @@ def make_steering_data_splits(args):
     Logs data info to directory.
     """
     print("[STEP 1] Generating fit test splits...")
+    if os.path.exists(f"{args.datadir}/correct") and os.path.exists(f"{args.datadir}/incorrect"):
+        print("Correct and incorrect splits already exist, skipping...")
+        return
+    
     ds = datasets.load_dataset(args.source_dataset, split="train")
     print(ds)
     

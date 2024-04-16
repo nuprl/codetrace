@@ -14,8 +14,8 @@ def pipeline(args):
         "shuffle": True,
         "do_fit_matching_pairs": True,
         "dedup_type_threshold": 25,
-        "dedup_prog_threshold": -1,
-        "test_size": 0.2,
+        "dedup_prog_threshold": 1,
+        "test_size": 100,
         "model": args.model,
         "action": "make_steering_data_splits"
     }

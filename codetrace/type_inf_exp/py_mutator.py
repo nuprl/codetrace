@@ -154,7 +154,7 @@ class Mutation:
         prefix={prefix}
     )"""
 
-def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutation]:
+def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]], **kwargs) -> List[Mutation]:
     """
     Make mutations for renaming vraiables in VAR_CAPTURES.
     NOTE: new name cannot exist elsewhere in the program, must be different in format from type names.
@@ -174,11 +174,12 @@ def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]]) -> Li
     return mutations
 
 
-def needs_alias(typ: str):
-    # if type is a builtin, needs alias
-    return any([typ==str(t) for t in dir(builtins)+dir(typing)])
+def needs_alias(typ: bytes, import_statements : bytes) -> bool:
+    # if type is a builtin or typing, needs alias
+    # if a type is in imports, needs alias
+    return any([typ==bytes(t,"utf-8") for t in dir(builtins)+dir(typing)]) or typ in import_statements
     
-def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutation]:
+def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]], **kwargs) -> List[Mutation]:
     """
     Make mutations for renaming types. Assign a new name to each type in type_captures.
     If a type needs it, we create a new type alias for its renamed version.
@@ -197,7 +198,7 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> L
         location = TreeSitterLocation(capture)
         replacement = name_to_new_name[capture[0].text]
         
-        if needs_alias(capture[0]):
+        if needs_alias(capture[0].text, kwargs["import_statement_names"]):
             # make new type alias
             prefix = replacement + b" = " + capture[0].text
         else:
@@ -206,7 +207,7 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> L
         mutations.append(mutation)
     return mutations
 
-def mutation_delete_annotation(annotation_captures : List[Tuple[tree_sitter.Node,str]])-> List[Mutation]:
+def mutation_delete_annotation(annotation_captures : List[Tuple[tree_sitter.Node,str]], **kwargs)-> List[Mutation]:
     """
     Delete the type annotations from captures
     """
@@ -222,7 +223,7 @@ def add_type_aliases_after_imports(code: bytes, type_aliases : List[bytes]) -> b
     Add type aliases to the prefix after the last import statement
     NOTE:we assume all imports are at the top of the file
     """
-    type_aliases = b"\n".join(type_aliases) + "\n\n"
+    type_aliases = b"\n".join(type_aliases) + b"\n\n"
     captures = get_captures(code, IMPORT_STATEMENT_QUERY, [], "py")
     if len(captures) == 0:
         return type_aliases + code
@@ -250,6 +251,7 @@ def apply_mutations(program : str, mutations : List[Mutation]) -> str:
         if mutation.prefix is not None:
             prefixes.append(mutation.prefix)
 
+    prefixes = list(set(prefixes))
     if len(prefixes) > 0:
         return add_type_aliases_after_imports(byte_program, prefixes).decode("utf-8")
     else:
@@ -353,6 +355,15 @@ def postprocess_py_return_type(node_capture : Tuple[tree_sitter.Node, str], byte
     
     return node_capture
 
+def is_in_capture_range(node : tree_sitter.Node, captures : List[Tuple[tree_sitter.Node, str]]) -> bool:
+    """
+    Check if the node is in the range of any of the captures
+    """
+    for capture in captures:
+        if node.start_byte >= capture[0].start_byte and node.end_byte <= capture[0].end_byte:
+            return True
+    return False
+
 
 def random_mutate(
     program : str, 
@@ -415,9 +426,9 @@ def random_mutate(
                                 if x[0].text in var_rename_targets
                                 # don't rename attributes
                                 and not x[0].text in attribute_names #TODO: do we want to rename attributes?
-                                # don't rename built-ins
+                                # don't rename built-ins because no alias supported for vars
                                 and not x[0].text.decode("utf-8") in dir(builtins)+dir(typing)
-                                # don't rename anything in import statements
+                                # don't rename anything in import statements because no alias supported for vars
                                 and not x[0].text in import_statement_names
                                 ]
     type_rename_full_captures = [x for x in all_id_captures
@@ -425,19 +436,15 @@ def random_mutate(
                                 if x[0].text in type_rename_targets
                                 # don't rename attributes
                                 and not x[0].text in attribute_names #TODO: do we want to rename attributes?
-                                # don't rename built-ins
-                                and not x[0].text.decode("utf-8") in dir(builtins)+dir(typing)
                                 # don't rename forbidden types
                                 and x[0].text not in types_blacklist
-                                # don't rename anything in import statements
-                                and not x[0].text in import_statement_names
+                                # don't rename if in range of import statements 
+                                # NOTE: we can rename text in import statements because of alias support, but not the actual imports
+                                and not is_in_capture_range(x[0], import_statements)
                                 ]
     remove_annotations_captures = [x for x in remove_annotations_captures  
                                    if (x[0].text.replace(b":",b"").replace(b"->",b"").strip() not in types_blacklist
-                                    # don't remove anything in import statements
-                                    # TODO: relax this last filter?
-                                    and x[0].text.replace(b":",b"").replace(b"->",b"").strip() not in import_statement_names)
-                                   ]
+                                    )]
     
     # -----------------------
     # Apply the selected mutations
@@ -450,13 +457,11 @@ def random_mutate(
     # collects mutations
     all_mutations = []
     for m in mutations:
-        all_mutations += m(func_name_to_args[m.__name__])
-    
-    if len(all_mutations) == 0:
-        # bad run, return None
-        if debug_seed is not None:
-            return None, []
-        return None
+        captures = func_name_to_args[m.__name__]
+        if len(captures) == 0:
+            # if any out of the selected mutations has no captures, return None
+            return None
+        all_mutations += m(captures, import_statement_names=import_statement_names)
     
     # actually modify the program
     new_program = apply_mutations(program, all_mutations)
