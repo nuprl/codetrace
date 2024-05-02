@@ -44,7 +44,7 @@ def filter_1tok(batch, tokenizer):
             new_batch.append(b)
     return new_batch
 
-batches = get_batches_fast(ds, len(ds), cpu_count())
+batches = get_batches_fast(ds, cpu_count())
 data = batched_do_func(batches, cpu_count(), filter_1tok, tokenizer=tokenizer)
 def yielder():
     for ex in tqdm(data, desc="Yielding", total=len(data)):

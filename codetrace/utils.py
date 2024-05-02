@@ -1,18 +1,12 @@
-import glob
-from pathlib import Path
-from typing import List, Dict, Tuple, Optional, Union
-import numpy as np
-import os
-import json
-from tree_sitter import Language, Parser
 import tree_sitter
-import tempfile
-import re
+from tree_sitter import Language, Parser
 import torch
 from collections import namedtuple
-import builtins
+from pathlib import Path
+from typing import List, Union
+from copy import deepcopy
+from transformers import AutoModelForCausalLM
 
-parent = Path(__file__).parent
 REPO_ROOT = Path(__file__).parent.parent
 Language.build_library(
     f"{REPO_ROOT}/build/my-languages.so",
@@ -30,11 +24,13 @@ lang_to_parser = {"typescript" : TS_PARSER, "python" : PY_PARSER, "py" : PY_PARS
 lang_to_builder = {"typescript" : TS_LANGUAGE, "python" : PY_LANGUAGE, "py" : PY_LANGUAGE, "ts" : TS_LANGUAGE}
 
 class FimObj:
-    def __init__(self,
-                 fim_prefix : str,
-                 fim_suffix : str,
-                 fim_token : str,
-                 fim_placeholder : str):
+    def __init__(
+        self,
+        fim_prefix : str,
+        fim_suffix : str,
+        fim_token : str,
+        fim_placeholder : str
+    ):
         self.prefix = fim_prefix
         self.suffix = fim_suffix
         self.token = fim_token
@@ -49,7 +45,6 @@ class FimObj:
 fim_placeholder = "<FILL>"      
 STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
 
-
 def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
     """
     Take a prompt in fill format and convert it to standard format
@@ -59,7 +54,7 @@ def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
     """
     parts = prompt.split(fim.placeholder)
     if len(parts) != 2:
-        raise ValueError(f"Prompt does not contain a single placeholder: {parts}")
+        raise ValueError(f"Prompt does not contain a fim placeholder: {fim.placeholder}")
     prompt = fim.prefix + parts[0] + fim.suffix + parts[1] + fim.token
     return prompt
 
@@ -71,7 +66,10 @@ def std_to_placeholder_fmt(prompt : str, fim : FimObj) -> str:
     "def func(n : <FILL>)"
     
     """
-    return prompt.replace(fim.prefix, "").replace(fim.suffix, fim.placeholder).replace(fim.token,"")
+    new_prompt = prompt.replace(fim.prefix, "").replace(fim.suffix, fim.placeholder).replace(fim.token,"")
+    if fim.placeholder not in new_prompt:
+        raise ValueError(f"Prompt does not contain a fim placeholder: {fim.placeholder}")
+    return new_prompt
 
 def unfim(text : str, fim : FimObj) -> str:
     """
@@ -82,10 +80,11 @@ def unfim(text : str, fim : FimObj) -> str:
     middle = text.split(fim.token)[-1]
     return prefix+middle+suffix
 
-def get_captures(prompt : Union[str,tree_sitter.Tree, bytes], 
-                 query: str, 
-                 ignore_parents : List[str] = [],
-                 language : str = "typescript") -> List[tree_sitter.Node]:
+def get_captures(
+    prompt : Union[str,tree_sitter.Tree, bytes], 
+    query: Union[str, tree_sitter.binding.Query],
+    language : str = "typescript"
+) -> List[tree_sitter.Node]:
     """
     Get captures for a prompt given a query
     Ignores any captures whose parents match some pattern in ignore_parents
@@ -98,85 +97,49 @@ def get_captures(prompt : Union[str,tree_sitter.Tree, bytes],
         tree = prompt
     elif isinstance(prompt, bytes):
         tree = parser.parse(prompt)
-    else:
-        raise ValueError("Prompt must be str, bytes, or tree-sitter.Tree")
     
-    query = lang.query(query)
+    if isinstance(query, str):
+        query = lang.query(query)
+        
     captures = query.captures(tree.root_node)
-    
-    def matches_any(s : str, patterns : List[str]) -> bool:
-        for p in patterns:
-            if re.match(p, s):
-                return True
-        return False
-    
-    if len(ignore_parents) > 0:
-        captures = [c for c in captures if not matches_any(c[0].parent.type,ignore_parents)]
     return captures
 
-# def get_builtins_regex(language : str) -> str:
-#     """
-#     Returns the builtins for a language as a regex pattern
-#     """
-#     if language in ["python", "py"]:
-#         parent_dir = Path(__file__).parent
-#         builtins = dir(builtins)
-#         return "^(" + "|".join(builtins) + ")$"
-#     elif language in ["typescript", "ts"]:
-#         raise NotImplementedError("Typescript builtins not implemented")
-    
-
-def remove_comments(program : str, 
-                    comment_query : str = """((comment) @comment)""",
-                    language : str = "typescript") -> str:
-    if language not in ["typescript", "ts"]:
-        raise NotImplementedError("Only typescript supported")
-    lang = lang_to_builder[language]
-    parser = lang_to_parser[language]
-    comment_query = lang.query(comment_query)
-    tree = parser.parse(bytes(program, "utf8"))
-    captures = comment_query.captures(tree.root_node)
-    # sort by start byte descending
-    captures.sort(key=lambda x: x[0].start_byte, reverse=True)
-    program = tree.text
-    for c in captures:
-        program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
-    return program.decode("utf-8").strip()
-
-def replace_between_bytes(text : Union[str,bytes],
-                           start_byte : int, 
-                           end_byte : int,
-                           replacement : Union[str,bytes] = "") -> bytes:
+def replace_between_bytes(
+    text : Union[str,bytes],
+    start_byte : int, 
+    end_byte : int,
+    replacement : Union[str,bytes] = ""
+) -> bytes:
     '''
     Replace tree-sitter interval (start_point, end_point) from a string.
     Inclusive of start_point and end_point
     '''
     if isinstance(replacement, str):
-        byte_replacement = replacement.encode("utf-8")
-    else:
-        byte_replacement = replacement
-    
+        replacement = replacement.encode("utf-8")
     if isinstance(text, str):
-        byte_string = text.encode("utf-8")
-    else:
-        byte_string = text
+        text = text.encode("utf-8")
         
     modified_byte_string = (
-        byte_string[:start_byte] + byte_replacement + byte_string[end_byte:]
+        text[:start_byte] + replacement + text[end_byte:]
     )
     return modified_byte_string
 
 def find_between_bytes(
-    byte_string : bytes,
+    text : Union[str,bytes],
     start_byte : int, 
     end_byte : int,
-    target : str) -> int:
+    target : Union[str,bytes]
+) -> int:
     '''
     Find the first occurence of target between start_byte and end_byte
     '''
-    target = bytes(target, "utf-8")
+    if isinstance(target, str):
+        target = bytes(target, "utf-8")
+    if isinstance(text, str):
+        text = bytes(text, "utf-8")
+        
     for i in range(start_byte, end_byte):
-        if byte_string[i:i+len(target)] == target:
+        if text[i:i+len(target)] == target:
             return i
     return -1
 
@@ -187,7 +150,6 @@ def top_k_top_p_filtering(
     do_log_probs: bool
 ) -> torch.Tensor:
     """
-    # adapted from transformers hf library https://huggingface.co/transformers/v3.2.0/_modules/transformers/generation_utils.html
     Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
     """
     if top_k > 0:
@@ -200,25 +162,7 @@ def top_k_top_p_filtering(
         sorted_indices = topk_indices
 
     if top_p < 1.0:
-        raise NotImplementedError("Top p filtering has bug in sorted_indices, use top_k only for now--top_p not needed for greedy")
-        # sorted_logits, sorted_indices = torch.sort(logits, descending=True)
-        # print(sorted_indices)
-        # if do_log_probs:
-        #     cumulative_probs = torch.cumsum(sorted_logits.log_softmax(dim=-1), dim=-1)
-        #     top_p = torch.tensor(top_p).log()
-        # else:
-        #     cumulative_probs = torch.cumsum(sorted_logits.softmax(dim=-1), dim=-1)
-
-        # # Remove tokens with cumulative probability above the threshold
-        # sorted_indices_to_keep = torch.where(cumulative_probs <= top_p, sorted_indices, 0)
-        # # 0 will be placed at indexes that are above the threshold and to denote index=0
-        # # we always keep at least 1 token, so 0 will always be in indexes to keep
-        # sorted_indices_to_keep = torch.unique(sorted_indices_to_keep, dim=-1)
-
-        # logits = torch.gather(sorted_logits, -1, sorted_indices_to_keep)
-        # print(sorted_indices_to_keep, sorted_indices)
-        # sorted_indices = torch.gather(sorted_indices, -1, sorted_indices_to_keep)
-    # wrap in named tuple
+        raise NotImplementedError("use top_k only for now, top_p not needed for greedy decoding")
     
     TopkTuple = namedtuple('TopkTuple', ['indices','values'])
     logit_tuple = TopkTuple(indices=sorted_indices, values=logits)
@@ -237,6 +181,17 @@ def get_next_tokens(model, tokenizer, prompts):
     last_tokens = [ tokenizer.decode(token) for token in last_token_ids ]
     return last_tokens
 
+def make_decoder_copy(modelname:str) -> torch.nn.Module:
+    """
+    Make a copy of the model's decoder on cpu
+    """
+    model = AutoModelForCausalLM.from_pretrained(modelname).to("cpu")
+    decoder = deepcopy(model.lm_head)
+    norm = deepcopy(model.transformer.ln_f)
+    del model
+    decoder = torch.nn.Sequential(norm, decoder).to("cpu")
+    return decoder
+    
 typescript_builtin_objects = [
     "globalThis",
     "Infinity",

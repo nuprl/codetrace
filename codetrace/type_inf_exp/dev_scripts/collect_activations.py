@@ -41,7 +41,7 @@ def main(args):
             prompts = batch["fim_program"] 
             
         if steering_tensor == None:
-            hs = collect_hidden_states_at_tokens(model, prompts, "<fim_middle>")
+            hs = collect_hidden_states_at_tokens(model, prompts, "<fim_middle>").cpu()
         else:
             tr = insert_patch(model, prompts, steering_tensor, args.layers_to_patch, "<fim_middle>", collect_hidden_states=True)
             hs = tr._hidden_states

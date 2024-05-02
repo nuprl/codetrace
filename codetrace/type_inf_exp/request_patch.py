@@ -36,7 +36,7 @@ def batched_get_averages(
         if tokens == []:
             hs = collect_hidden_states(model, batch)
         else:
-            hs = collect_hidden_states_at_tokens(model, batch, tokens)
+            hs = collect_hidden_states_at_tokens(model, batch, tokens).cpu()
         hs_mean = hs.mean(dim=1) # batch size mean
         hidden_states.append(hs_mean)
         if outfile is not None:

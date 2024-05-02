@@ -76,7 +76,7 @@ def main(args):
             ds = ds.shuffle(seed=args.seed).select(range(args.max_size))
         mutations = [getattr(py_mutator, m) for m in args.mutations]
         
-        batches = get_batches_fast(ds, len(ds), cpu_count())
+        batches = get_batches_fast(ds, cpu_count())
         results = batched_do_func(batches, cpu_count(), preprocess_then_mutate, mutations=mutations, correct_bool=args.correct_bool)
 
         def _yielder():

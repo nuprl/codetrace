@@ -1,14 +1,21 @@
 import multiprocessing
 from tqdm import tqdm
 import datasets
+from typing import List
 """
 Fast parallel utils for processing data in batches.
 Faster than huggingface multiproc map/filter.
 """
     
-def batched_do_func(batches, num_proc, func, **func_kwargs):
+def batched_do_func(
+    batches : List[List[any]], 
+    num_proc : int, 
+    func : callable, 
+    **func_kwargs
+):
     """
     Apply a function to batches of data in parallel.
+    A batch is a list of data.
     """
     pool = multiprocessing.Pool(num_proc)
     
@@ -30,12 +37,13 @@ def _collect_index(itr, si, ei):
         return [itr[i] for i in range(si, ei)] # faster
     else:
         return itr[si:ei]
-      
-def get_batches_fast(iterable, len_iter, num_proc):
+    
+def get_batches_fast(iterable, num_proc : int):
     """
-    Not for IterableDataset. Makes batches of data for parallel processing.
+    Makes batches of data for parallel processing.
     Is parallelized for speed on large datasets.
     """
+    len_iter = len(iterable)
     batch_size = len_iter // num_proc
     if batch_size < 1:
         batch_size = 1

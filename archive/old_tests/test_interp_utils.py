@@ -28,8 +28,8 @@ def test_logit_pipeline():
     
     logits = logit_lens(model, prompts)
     logits : LogitResult = logits.decode_logits( layers=[0,23], prompt_idx=[0,1])
-    tok_a_f = logits[1,0].tokens(model.tokenizer)
-    tok_b_f = logits[1,-1].tokens(model.tokenizer)
+    tok_a_f = logits[1][0].tokens(model.tokenizer)
+    tok_b_f = logits[1][-1].tokens(model.tokenizer)
     assert tok_b_f == '2', tok_b_f
     assert tok_a_f == '"', tok_a_f
 
@@ -61,8 +61,8 @@ def test_logit_generation_match():
     ]
     logits = logit_lens(model, prompts)
     logits : LogitResult = logits.decode_logits(prompt_idx=[0,1])
-    tok_a_f = logits[0,0,0].tokens(model.tokenizer)
-    tok_b_f = logits[0,1,0].tokens(model.tokenizer)
+    tok_a_f = logits[0][0].tokens(model.tokenizer)[0]
+    tok_b_f = logits[0][1].tokens(model.tokenizer)[0]
     
     with model.generate(max_new_tokens=1) as gen:
         with gen.invoke(prompts) as invoker:
@@ -82,8 +82,8 @@ def test_collect_at_token_idx():
     logits = logit_lens(model, prompts)
     logits : LogitResult = logits.decode_logits(prompt_idx=[0,1])
 
-    tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
-    tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
+    tok_a_f = logits[-1][0][-1].tokens(model.tokenizer)
+    tok_b_f = logits[-1][1][-1].tokens(model.tokenizer)
     assert tok_a_f == ')', f"{repr(tok_a_f)}"
     assert tok_b_f == '6', f"{repr(tok_b_f)}"
     
@@ -99,8 +99,8 @@ def test_collect_at_token_idx2():
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1])
 
-    tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
-    tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
+    tok_a_f = logits[-1][0][-1].tokens(model.tokenizer)
+    tok_b_f = logits[-1][1][-1].tokens(model.tokenizer)
     assert tok_a_f == ')', f"{repr(tok_a_f)}"
     assert tok_b_f == '6', f"{repr(tok_b_f)}"
     
@@ -117,8 +117,8 @@ def test_collect_at_token_idx3():
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1])
     
-    tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
-    tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
+    tok_a_f = logits[-1][0][-1].tokens(model.tokenizer)
+    tok_b_f = logits[-1][1][-1].tokens(model.tokenizer)
     assert tok_a_f == ')', f"{repr(tok_a_f)}"
     assert tok_b_f == '6', f"{repr(tok_b_f)}"
     
@@ -134,8 +134,8 @@ def test_collect_at_token_idx4():
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1])
 
-    tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
-    tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
+    tok_a_f = logits[-1][0][-1].tokens(model.tokenizer)
+    tok_b_f = logits[-1][1][-1].tokens(model.tokenizer)
     assert tok_a_f == ')', f"{repr(tok_a_f)}"
     assert tok_b_f == '6', f"{repr(tok_b_f)}"
     
@@ -151,8 +151,8 @@ def test_collect_at_token_idx5():
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[0,-1])
     
-    tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
-    tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
+    tok_a_f = logits[-1][0][-1].tokens(model.tokenizer)
+    tok_b_f = logits[-1][1][-1].tokens(model.tokenizer)
     assert tok_a_f == ')', f"{repr(tok_a_f)}"
     assert tok_b_f == '6', f"{repr(tok_b_f)}"
     
@@ -166,8 +166,8 @@ def test_interp_patch():
     patch = hs.expand(-1,len(prompts),-1,-1)
     out = insert_patch(model, prompts, patch, list(range(len(model.transformer.h))), toks, patch_mode="subst")
     out : LogitResult = out.decode_logits(prompt_idx=[0,1])
-    tok_a_f = out[-1,0,-1].tokens(model.tokenizer)
-    tok_b_f = out[-1,1,-1].tokens(model.tokenizer)
+    tok_a_f = out[-1][0][-1].tokens(model.tokenizer)
+    tok_b_f = out[-1][1][-1].tokens(model.tokenizer)
     assert tok_a_f == ')', f"{repr(tok_a_f)}"
     assert tok_b_f == ')', f"{repr(tok_b_f)}"
    
@@ -194,7 +194,7 @@ E.g. (()()) has maximum two levels of nesting while ((())) has three."""
 
     return [xuuzjpbpbmjwlpktx(bwsgyuklklhw)]'''
     
-    original_prompt = '''from typing import List
+    prompt = '''from typing import List
 
 def uhslzetzbdurzagwmhn(bwsgyuklklhw: str) -> List[int]:
 """ Input to this function is a string represented multiple groups for nested parentheses separated by spaces.
@@ -211,11 +211,10 @@ E.g. (()()) has maximum two levels of nesting while ((())) has three."""
     
     max_out = 512
     generated = []
-    prompt = original_prompt
     for i in tqdm(range(max_out)):
         res = logit_lens(model, prompt, -1)
         logits = res.decode_logits()
-        tok = logits[-1,-1].tokens(model.tokenizer)
+        tok = logits[-1][-1].tokens(model.tokenizer)[0]
         if tok == "<|endoftext|>":
             break
         generated.append(tok)
@@ -224,13 +223,12 @@ E.g. (()()) has maximum two levels of nesting while ((())) has three."""
     assert prompt.strip() == gold.strip(), f"\n{prompt.strip()}\n\n\n{gold}"
     
     generated = []
-    prompt = original_prompt
     patch = torch.zeros(24, 1, 1, model.config.n_embd)
     for i in tqdm(range(max_out)):
         # patch nothing, this checks precision errors in code
-        res = insert_patch(model, prompt, patch, list(range(len(model.transformer.h))), [-1], collect_hidden_states=False)
+        res = insert_patch(model, prompt, patch, list(len(model.transformer.h)), [-1], collect_hidden_states=False)
         logits = res.decode_logits()
-        tok = logits[-1,-1].tokens(model.tokenizer)
+        tok = logits[-1][-1].tokens(model.tokenizer)[0]
         if tok == "<|endoftext|>":
             break
         generated.append(tok)

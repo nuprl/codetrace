@@ -160,7 +160,7 @@ def main(args):
     if args.max_size > -1:
         ds = ds.shuffle(42).select(range(args.max_size))
 
-    batches = get_batches_fast(ds, len(ds), cpu_count())
+    batches = get_batches_fast(ds, cpu_count())
     result = batched_do_func(batches, cpu_count(), filter_typecheck_batch, 
                              colname=args.column_name, lang=args.lang, do_log=args.do_log)
     def yielder():

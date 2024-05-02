@@ -1,6 +1,6 @@
 import datasets
-from codetrace.type_inf_exp.build_dataset import *
-from codetrace.utils import *
+from codetrace.type_inf_exp.build_dataset import make_natural_typeinf_prompt, TS_QUERY_FUNC_TYPES
+from codetrace.utils import lang_to_builder, lang_to_parser
 from argparse import ArgumentParser
 import multiprocessing
 from transformers import AutoTokenizer
@@ -16,6 +16,25 @@ def batch_filter_is_one_token(batch, tokenizer):
     input_ids = tokenizer.batch_encode_plus([ex["fim_type"] for ex in batch])["input_ids"]
     return [ex for i,ex in enumerate(batch) if len(input_ids[i]) == 1]
 
+# TODO: this may not need to be in utils
+def remove_comments(
+    program : str, 
+    comment_query : str = """((comment) @comment)""",
+    language : str = "typescript"
+) -> str:
+    if language not in ["typescript", "ts"]:
+        raise NotImplementedError("Only typescript supported")
+    lang = lang_to_builder[language]
+    parser = lang_to_parser[language]
+    comment_query = lang.query(comment_query)
+    tree = parser.parse(bytes(program, "utf8"))
+    captures = comment_query.captures(tree.root_node)
+    # sort by start byte descending
+    captures.sort(key=lambda x: x[0].start_byte, reverse=True)
+    program = tree.text
+    for c in captures:
+        program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
+    return program.decode("utf-8").strip()
 
 def _func_combo(batch, query_str, do_remove_comments):
     """
@@ -57,7 +76,7 @@ def multi_process(ds, args):
     for i in range(num_chunks):
         print(f"Processing chunk {i} / {num_chunks}")
         ds_chunk=ds.shard(num_chunks, i)
-        batches = get_batches_fast(ds_chunk, len(ds_chunk), args.num_proc)
+        batches = get_batches_fast(ds_chunk, args.num_proc)
         del ds_chunk
         results = batched_do_func(batches, args.num_proc, _func_combo, 
                                 query_str=TS_QUERY_FUNC_TYPES, 
@@ -71,7 +90,7 @@ def multi_process(ds, args):
         ds.save_to_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
 
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
-        batches = get_batches_fast(results, len(results), args.num_proc)
+        batches = get_batches_fast(results, args.num_proc)
         ds = batched_do_func(batches, args.num_proc, batch_filter_is_one_token, tokenizer=tokenizer)
         print(f"Length of ds: {len(ds)}")
         def yielder():

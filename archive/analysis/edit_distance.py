@@ -29,7 +29,7 @@ for f in os.walk(data_dir, topdown=False):
     if "incorrect" in f[1]:
         file_tups.append(f)
         
-batches = get_batches_fast(file_tups, len(file_tups), cpu_count())
+batches = get_batches_fast(file_tups, cpu_count())
 results = batched_do_func(batches, cpu_count(), run_rouge)
 
 def yielder():

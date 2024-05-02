@@ -34,7 +34,7 @@ def make_steering_data_splits(args):
         ds = ds.shuffle(seed=args.seed)
     
     # filter out too large prompts for OOM
-    batches = get_batches_fast(ds, len(ds), cpu_count())
+    batches = get_batches_fast(ds, cpu_count())
     results = batched_do_func(batches, cpu_count(), filter_oom)
     
     def yielder():
