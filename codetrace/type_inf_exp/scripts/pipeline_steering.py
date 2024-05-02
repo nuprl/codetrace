@@ -6,7 +6,7 @@ import torch
 def pipeline(args):
     if args.evaldir == None:
         args.evaldir = args.datadir
-
+    
     args_data = {
         "datadir": args.datadir,
         "source_dataset": args.source_dataset,
@@ -17,7 +17,8 @@ def pipeline(args):
         "dedup_prog_threshold": 1,
         "test_size": 100,
         "model": args.model,
-        "action": "make_steering_data_splits"
+        "action": "make_steering_data_splits",
+        "seed": args.seed
     }
 
     args_tensor = {
@@ -28,7 +29,8 @@ def pipeline(args):
         "shuffle": True,
         "model": args.model,
         "steering_tensor_name": args.tensor_name,
-        "action": "make_steering_tensor"
+        "action": "make_steering_tensor",
+        "seed": args.seed
     }
 
     args_eval ={
@@ -45,7 +47,8 @@ def pipeline(args):
         "custom_decoder": False,
         "rotation_matrix": False,
         "multiplier": False,
-        "action": "run_steering"
+        "action": "run_steering",
+        "seed": args.seed
     }
 
     args_data = Namespace(**args_data)
@@ -98,6 +101,7 @@ if __name__=="__main__":
     parser.add_argument("--expdir", type=str, required=True)
     parser.add_argument("--max_size", type=int, required=True)
     parser.add_argument("--batchsize", type=int, required=True)
+    parser.add_argument("--seed", type=int, required=True) # default 42
     
     parser.add_argument("--evaldir", type=str, required=False, default=None)
     parser.add_argument("--rand_steering_tensor", action="store_true", default=None)

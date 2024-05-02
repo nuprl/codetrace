@@ -31,7 +31,7 @@ def make_steering_data_splits(args):
     print(ds)
     
     if args.shuffle:
-        ds = ds.shuffle(seed=42)
+        ds = ds.shuffle(seed=args.seed)
     
     # filter out too large prompts for OOM
     batches = get_batches_fast(ds, len(ds), cpu_count())
@@ -100,6 +100,7 @@ def make_steering_tensor(args):
     Load datasets saved to disk.
     Compute correct and incorrect steering tensors, save to shared steering_data directory.
     Create steering tensor from averages
+    load if it exists.
     """
     print("[STEP 2] Computing averages for steering tensor...")
     model = LanguageModel(args.model, device_map="cuda")
@@ -109,8 +110,8 @@ def make_steering_tensor(args):
     print(correct, incorrect)
     
     if args.shuffle:
-        correct = correct.shuffle(seed=42)
-        incorrect = incorrect.shuffle(seed=42)
+        correct = correct.shuffle(seed=args.seed)
+        incorrect = incorrect.shuffle(seed=args.seed)
         
     if args.max_size > 0:
         assert args.shuffle, "Please select shuffle when truncating dataset."
@@ -144,7 +145,7 @@ def run_steering(args):
         eval_ds = datasets.load_from_disk(f"{args.evaldir}/{dirname}")
             
         if args.shuffle:
-            eval_ds = eval_ds.shuffle(seed=42)
+            eval_ds = eval_ds.shuffle(seed=args.seed)
         if args.max_size > 0:
             assert args.shuffle, "Please select shuffle when truncating dataset."
             eval_ds = eval_ds.select(range(min(args.max_size, len(eval_ds))))
@@ -187,7 +188,7 @@ def run_layer_ablation(args):
             eval_ds = fit_eval_ds
             
         if args.shuffle:
-            eval_ds = eval_ds.shuffle(seed=42)
+            eval_ds = eval_ds.shuffle(seed=args.seed)
         if args.max_size > 0:
             assert args.shuffle, "Please select shuffle when truncating dataset."
             eval_ds = eval_ds.select(range(min(args.max_size, len(eval_ds))))

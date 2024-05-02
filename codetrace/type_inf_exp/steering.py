@@ -241,7 +241,7 @@ def get_steering_tensor(model, correct, incorrect, args):
                                                         args.tokens_to_patch,
                                                         batch_size=args.batch_size,
                                                         outfile=f"{args.datadir}/{basename}_incorrect_avg")
-            # svae tensor
+            # save tensor
             torch.save(incorrect_avg_tensor, f"{args.datadir}/{basename}_incorrect_avg.pt")
             # remove cache files
             os.remove(f"{args.datadir}/{basename}_incorrect_avg.pkl")

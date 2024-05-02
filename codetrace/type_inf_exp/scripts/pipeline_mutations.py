@@ -78,6 +78,7 @@ if __name__=="__main__":
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--unique-id", type=str, required=True)
     parser.add_argument("--hf-prefix", type=str, required=True)
+    parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--do-only-combos", type=str, nargs="+", default=None,
                         choices=["all_mutations", 
                                  "rename_types", 

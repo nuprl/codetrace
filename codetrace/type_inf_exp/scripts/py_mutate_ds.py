@@ -73,7 +73,7 @@ def main(args):
     if "do_mutate" in args.actions:
         ds = datasets.load_dataset(args.completions_ds, split=args.split)
         if args.max_size > -1:
-            ds = ds.shuffle(seed=42).select(range(args.max_size))
+            ds = ds.shuffle(seed=args.seed).select(range(args.max_size))
         mutations = [getattr(py_mutator, m) for m in args.mutations]
         
         batches = get_batches_fast(ds, len(ds), cpu_count())
@@ -116,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="train")
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--correct-bool", type=bool, default=True)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--actions", nargs="+", choices=["do_completions", "do_mutate"], default=["do_completions", "do_mutate"])
     args = parser.parse_args()
     if args.no_caching:
