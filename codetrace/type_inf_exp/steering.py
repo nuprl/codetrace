@@ -1,4 +1,4 @@
-from codetrace.type_inf_exp.request_patch import *
+from codetrace.type_inf_exp.steering_utils import batched_get_averages, batched_insert_patch_logit, filter_prompts
 from codetrace.utils import placeholder_to_std_fmt
 from einops import rearrange
 from argparse import ArgumentParser, Namespace

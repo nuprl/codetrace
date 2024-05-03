@@ -153,9 +153,9 @@ def main(args):
         parser = TS_PARSER
 
     if args.local_dataset:
-        ds = datasets.load_from_disk(args.dirname)
+        ds = datasets.load_from_disk(args.dsname)
     else:
-        ds = datasets.load_dataset(args.dirname, split="train")
+        ds = datasets.load_dataset(args.dsname, split="train")
         
     if args.max_size > -1:
         ds = ds.shuffle(42).select(range(args.max_size))
@@ -173,7 +173,7 @@ def main(args):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dirname", type=str, required=True)
+    parser.add_argument("--dsname", type=str, required=True)
     parser.add_argument("--lang", choices=["py", "ts"], required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--column-name", type=str, required=True)

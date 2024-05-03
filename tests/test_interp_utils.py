@@ -14,6 +14,19 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from argparse import ArgumentParser
 
+"""
+Setup code
+"""
+parser = ArgumentParser()
+parser.add_argument("--modelname", type=str, default="bigcode/starcoderbase-1b")
+parser.add_argument("--num_reps", type=int, default=10)
+args = parser.parse_args()
+model = LanguageModel(args.modelname, device_map="cuda")
+
+"""
+tests
+"""
+
 def test_logit_pipeline():
     prompts = [
         'print(f',
@@ -245,13 +258,7 @@ def repeat_test(func, n, **kwargs):
     for i in range(n):
         print(f"Running {func.__name__} {i+1}/{n}")
         func(**kwargs)
-            
-parser = ArgumentParser()
-parser.add_argument("--modelname", type=str, required=True)
-parser.add_argument("--num_reps", type=int, default=10)
-args = parser.parse_args()
-model = LanguageModel(args.modelname, device_map="cuda")
-
+        
 # repeating tests multiple times ensures no precision errors in code
 
 repeat_test(test_logit_pipeline, args.num_reps)

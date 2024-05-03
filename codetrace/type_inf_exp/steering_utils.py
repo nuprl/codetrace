@@ -1,19 +1,21 @@
 """
-We try to find a model edit at the representation level that
-is able to fix broken type-inf predictions.
+Steering utils:
+- batched patch requests
+- prompt filtering
 """
 from nnsight import LanguageModel
-from transformers import PreTrainedTokenizer
-from typing import List
-import sys
-import os
-from codetrace.interp_utils import *
 import torch
 from tqdm import tqdm
-from collections import Counter, defaultdict
-import random
+from collections import Counter
 import pickle
 import json
+from codetrace.interp_utils import (
+    collect_hidden_states,
+    collect_hidden_states_at_tokens,
+    insert_patch,
+    TraceResult,
+    LogitResult
+)
 
 def batched_get_averages(
     model: LanguageModel,
@@ -23,20 +25,24 @@ def batched_get_averages(
     outfile = None
 ) -> torch.Tensor:
     """
-    Get averages of tokens at all layers for all prompts
+    Get averages of token activations at all layers for prompts. Batches the prompts to
+    avoid memory issues. If an outfile is passed, will cache the hidden states to the outfile.
     
     NOTE:
-    - if tokens is string, then first occurence of token is used
-    - if tokens is int, then that token index is used
+    tokens can be interpreted in two ways
+    - str: select the index of this token in the tokenized prompt. 
+        Assumes token appears exactly once in prompt, will throw error if token not found OR if multiple occurences.
+    - int: select this index in the tokenized prompt
     """
+    if tokens == []:
+        # this means prompt batches can be different token sizes, can't be stacked
+        raise NotImplementedError("Prompt batches will be different token sizes, need solution")
+    
     # batch prompts according to batch size
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     hidden_states = []
-    for i,batch in tqdm(enumerate(prompt_batches), desc="Batch avg", total=len(prompt_batches)):
-        if tokens == []:
-            hs = collect_hidden_states(model, batch)
-        else:
-            hs = collect_hidden_states_at_tokens(model, batch, tokens).cpu()
+    for i,batch in tqdm(enumerate(prompt_batches), desc="Batch average", total=len(prompt_batches)):
+        hs = collect_hidden_states_at_tokens(model, batch, tokens).cpu()
         hs_mean = hs.mean(dim=1) # batch size mean
         hidden_states.append(hs_mean)
         if outfile is not None:
@@ -46,14 +52,17 @@ def batched_get_averages(
                 json.dump({"batch_size" : batch_size, "batch_idx" : i, "prompts" : prompt_batches}, f)
         
     # save tensor
-    if tokens == []:
-        # this means prompts are different token sizes, can't be stacked
-        raise NotImplementedError("Prompts are different token sizes, need solution")
-    
     hidden_states = torch.stack(hidden_states, dim=0)
     print(f"Hidden states shape before avg: {hidden_states.shape}")
     return hidden_states.mean(dim=0)
 
+def _percent_success(predictions_so_far, solutions):
+    correct = 0
+    for pred,sol in zip(predictions_so_far, solutions[:len(predictions_so_far)]):
+        if sol == pred:
+            correct += 1
+    return correct / len(solutions)
+    
 def batched_insert_patch_logit(
     model : LanguageModel,
     prompts : Union[List[str],str],
@@ -65,18 +74,11 @@ def batched_insert_patch_logit(
     outfile: str = None,
     solutions : Union[List[str],str, None] = None,
     custom_decoder : Union[torch.nn.Module, None] = None,
-    rotation_matrix = None,
 ) -> List[str]:
     """
-    batched insert patch
+    Inserts patch and collects resulting logits. Batches the prompts to avoid memory issues.
+    If outfile and solutions are passed, will cache the predictions and accuracy to the outfile.
     """
-    def _percent_success(predictions_so_far, solutions):
-        correct = 0
-        for pred,sol in zip(predictions_so_far, solutions[:len(predictions_so_far)]):
-            if sol == pred:
-                correct += 1
-        return correct / len(solutions)
-    
     if tokens_to_patch == []:
         # patch all
         tokens_to_patch = list(range(patch.shape[1]))
@@ -91,9 +93,8 @@ def batched_insert_patch_logit(
                                          layers_to_patch, 
                                          tokens_to_patch, 
                                          patch_mode, 
-                                         collect_hidden_states=False,
-                                         custom_decoder=custom_decoder,
-                                         rotation_matrix=rotation_matrix)
+                                         collect_hidden_states=False, # don't need hidden states, prevent oom
+                                         custom_decoder=custom_decoder)
         prompt_len = len(batch)
         logits : LogitResult = res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
 
@@ -123,13 +124,10 @@ def filter_prompts(
     dedup_type_threshold : int
 ) -> datasets.Dataset:
     """
-    Balance prompts s.t. there is a balanced distribution of labels.
-    Do not use more than max_size prompts.
-    Remove multi-token label prompts if tokenizer is passed.
-    Deduplicate prompts by hexsha by some dedup_prog_threshold (max prompts for a program)
+    Balance prompts s.t. there is a balanced distribution of labels (program ids and/or types).
     """
+    # if -1, set to the max value, aka do not dedup
     if dedup_prog_threshold == -1:
-        # set to the max value, aka do not dedup
         dedup_prog_threshold = len(dataset)
     if dedup_type_threshold == -1:
         dedup_type_threshold = len(dataset)

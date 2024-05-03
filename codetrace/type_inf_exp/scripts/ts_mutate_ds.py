@@ -1,14 +1,12 @@
 import datasets
 import argparse
 from codetrace.type_inf_exp import ts_mutator
-from codetrace.utils import *
+from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt
 import pandas as pd
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
 from transformers import AutoTokenizer
 import torch
-import json
 from vllm import LLM, SamplingParams
-from multiprocessing import cpu_count
 from tqdm import tqdm
 from codetrace.fast_utils import get_batches_fast, batched_do_func
 import os
@@ -103,11 +101,14 @@ def main(args):
         ds = datasets.load_dataset(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
         
     if "do_completions" in args.actions:
-        llm = LLM(args.model, tensor_parallel_size=len(args.gpu))
-        print(f"Serving VLLM across {len(args.gpu)} GPUs.")
-        if len(args.gpu) > 1:
+        tps = 1
+        if isinstance(args.gpu, list):
+            tps = len(args.gpu)
+        print(f"Serving VLLM across {tps} GPUs.")
+        llm = LLM(args.model, tensor_parallel_size=tps)
+        if tps > 1:
             # still want to save some intermediate completions
-            batchsize = 10000*len(args.gpu)
+            batchsize = 10000*tps
         else:
             batchsize = 10000
         ds = filter_incorrect(ds, llm, args.new_ds_name + "_" + args.model_name, batch_size=batchsize)

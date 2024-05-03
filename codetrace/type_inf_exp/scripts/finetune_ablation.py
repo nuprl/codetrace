@@ -2,15 +2,10 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import datasets
 from tqdm import tqdm
-from multiprocessing import cpu_count
-import wandb
-from torch import nn
-import pandas as pd
 from torch.utils.data.dataloader import default_collate
 from codetrace.utils import placeholder_to_std_fmt, STARCODER_FIM
 from argparse import ArgumentParser
 from sklearn.model_selection import train_test_split
-from collections import Counter
 from transformers import get_scheduler
 from torch.optim import AdamW
 """

@@ -1,23 +1,17 @@
 import datasets
 import argparse
-from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt, get_captures
 import pandas as pd
-from multiprocessing import Pool, cpu_count
-from transformers import AutoTokenizer
-import torch
-import json
-from vllm import LLM, SamplingParams
 from multiprocessing import cpu_count
+from transformers import AutoTokenizer
+from vllm import LLM, SamplingParams
 from tqdm import tqdm
 from codetrace.fast_utils import get_batches_fast, batched_do_func
-from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations, remove_comments
+from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations
 import os
 from codetrace.type_inf_exp import py_mutator 
+from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt
 
-def filter_incorrect(ds: datasets.Dataset, 
-                      llm: LLM,
-                      new_ds_name,
-                      batch_size = 60000) -> datasets.Dataset:
+def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 60000) -> datasets.Dataset:
     """
     Filter out examples where the model's prediction is incorrect. Truncate generation and
     solution at 1 token
@@ -59,11 +53,8 @@ def py_preprocess(iterable, correct_bool = True):
     
     if isinstance(iterable, datasets.Dataset):
         return iterable.filter(_condition, desc="Preprocess")
-        # return iterable.map(lambda x: {**x, "fim_program": remove_comments(x["fim_program"])}, 
-        #                     desc="Removing comments")
     else:
         return filter(_condition, iterable)
-        # return map(lambda x: {**x, "fim_program": remove_comments(x["fim_program"])}, iterable)
 
 def preprocess_then_mutate(batch, mutations, correct_bool = True):
     post = py_preprocess(batch, correct_bool=correct_bool)
@@ -90,11 +81,15 @@ def main(args):
         ds = datasets.load_dataset(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
         
     if "do_completions" in args.actions:
-        llm = LLM(args.model, tensor_parallel_size=len(args.gpu))
-        print(f"Serving VLLM across {len(args.gpu)} GPUs.")
-        if len(args.gpu) > 1:
+        tps = 1
+        if isinstance(args.gpu, list):
+            tps = len(args.gpu)
+        print(f"Serving VLLM across {tps} GPUs.")
+        llm = LLM(args.model, tensor_parallel_size=tps)
+        
+        if tps > 1:
             # still want to save some intermediate completions
-            batchsize = 10000*len(args.gpu)
+            batchsize = 10000*tps
         else:
             batchsize = 10000
         ds = filter_incorrect(ds, llm, args.new_ds_name + "_" + args.model_name, batch_size=batchsize)

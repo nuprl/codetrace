@@ -1,9 +1,7 @@
 from argparse import ArgumentParser, Namespace
 from collections import Counter
-import sys
-from multiprocessing import cpu_count
 from transformers import AutoTokenizer
-from codetrace.type_inf_exp.steering import *
+from codetrace.type_inf_exp.steering import fit_test_split, fit_test_split_completions, get_steering_tensor, steer_on_ds
 from pathlib import Path
 import os 
 from codetrace.fast_utils import get_batches_fast, batched_do_func

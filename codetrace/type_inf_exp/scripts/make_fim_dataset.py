@@ -1,6 +1,4 @@
 import datasets
-from codetrace.type_inf_exp.build_dataset import make_natural_typeinf_prompt, TS_QUERY_FUNC_TYPES
-from codetrace.utils import lang_to_builder, lang_to_parser
 from argparse import ArgumentParser
 import multiprocessing
 from transformers import AutoTokenizer
@@ -8,7 +6,35 @@ from tqdm import tqdm
 from functools import partial
 from typing import Callable
 from codetrace.fast_utils import get_batches_fast, batched_do_func
-import shutil
+from typing import List
+import os
+from pathlib import Path
+from codetrace.utils import lang_to_builder, lang_to_parser, replace_between_bytes, get_captures
+
+TS_QUERY_FUNC_TYPES = """
+(required_parameter pattern: (_) (type_annotation) @tp)
+(optional_parameter pattern: (_) (type_annotation) @tp)
+return_type: (type_annotation) @tp
+"""
+
+def make_natural_typeinf_prompt(
+    ex : dict,
+    type_annotation_query : str,
+    content_key : str = "content"
+) -> List[dict]:
+    """
+    Make a dataset where:
+    - for each program, make prompts for every type annotation
+    """
+    prompts = []
+    type_annotations = get_captures(ex[content_key], type_annotation_query, language="ts")
+    for c in type_annotations:
+        byte_fim_prog = replace_between_bytes(bytes(ex[content_key], "utf-8"), c[0].start_byte, c[0].end_byte, ": <FILL>")
+        fim_program = byte_fim_prog.decode("utf-8").strip()
+        fim_type = c[0].text.decode("utf-8").replace(":","").strip()
+        prompts.append({"fim_program": fim_program, "fim_type": fim_type, **ex})
+
+    return prompts
 
 def batch_filter_is_one_token(batch, tokenizer):
     if len(batch) == 0:
@@ -16,14 +42,9 @@ def batch_filter_is_one_token(batch, tokenizer):
     input_ids = tokenizer.batch_encode_plus([ex["fim_type"] for ex in batch])["input_ids"]
     return [ex for i,ex in enumerate(batch) if len(input_ids[i]) == 1]
 
-# TODO: this may not need to be in utils
-def remove_comments(
-    program : str, 
-    comment_query : str = """((comment) @comment)""",
-    language : str = "typescript"
-) -> str:
-    if language not in ["typescript", "ts"]:
-        raise NotImplementedError("Only typescript supported")
+def remove_comments(program : str) -> str:
+    comment_query = """((comment) @comment)"""
+    language = "ts"
     lang = lang_to_builder[language]
     parser = lang_to_parser[language]
     comment_query = lang.query(comment_query)
@@ -36,7 +57,7 @@ def remove_comments(
         program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
     return program.decode("utf-8").strip()
 
-def _func_combo(batch, query_str, do_remove_comments):
+def _process_prompts(batch, query_str, do_remove_comments):
     """
     func combo for:
     - remove comments (optional)
@@ -62,7 +83,7 @@ def _func_combo(batch, query_str, do_remove_comments):
     return new_batch
 
     
-def multi_process(ds, args):
+def multiprocess(ds, args):
     """
     Method for processing a dataset with multiple processes.
     Does following:
@@ -71,23 +92,26 @@ def multi_process(ds, args):
     - filters out examples that do not have a fill in program
     - pushes to hub
     - pushes a copy to hub where all examples have a one token type
+    
+    NOTE: chunking is necessary because filtering 1-tok is expensive once
+    all possible fim_types are generated.
     """
-    num_chunks = args.num_chunks
-    for i in range(num_chunks):
-        print(f"Processing chunk {i} / {num_chunks}")
-        ds_chunk=ds.shard(num_chunks, i)
+    for i in range(args.num_chunks):
+        print(f"Processing chunk {i} / {args.num_chunks}")
+        ds_chunk=ds.shard(args.num_chunks, i)
         batches = get_batches_fast(ds_chunk, args.num_proc)
         del ds_chunk
-        results = batched_do_func(batches, args.num_proc, _func_combo, 
-                                query_str=TS_QUERY_FUNC_TYPES, 
-                                do_remove_comments=args.do_remove_comments)
+        results = batched_do_func(batches, args.num_proc, _process_prompts, query_str=TS_QUERY_FUNC_TYPES, do_remove_comments=args.do_remove_comments)
         print(f"Length of ds: {len(results)}")
         def yielder():
             for ex in tqdm(results, desc="Yielding", total=len(results)):
                 yield ex
         ds = datasets.Dataset.from_generator(yielder)
         print(ds)
-        ds.save_to_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
+        if args.num_chunks == 1:
+            ds.push_to_hub(args.output_ds + "-ntok", private=True)
+        else:
+            ds.save_to_disk(f"{args.cache_dir}/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
 
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
         batches = get_batches_fast(results, args.num_proc)
@@ -98,14 +122,17 @@ def multi_process(ds, args):
                 yield ex
         ds = datasets.Dataset.from_generator(yielder)
         print(ds)
-        ds.save_to_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-1tok-chunk_{i}")
+        if args.num_chunks == 1:
+            ds.push_to_hub(args.output_ds + "-1tok", private=True)
+            return
+        ds.save_to_disk(f"{args.cache_dir}/"+ args.output_ds.split("/")[-1] + f"-1tok-chunk_{i}")
         
     # load all chunks and push to hub
     ds_1tok = []
     ds_any_tok = []
-    for i in range(num_chunks):
-        ds = datasets.load_from_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
-        one_tok = datasets.load_from_disk("dataset_chunks/"+ args.output_ds.split("/")[-1] + f"-1tok-chunk_{i}")
+    for i in range(args.num_chunks):
+        ds = datasets.load_from_disk(f"{args.cache_dir}/"+ args.output_ds.split("/")[-1] + f"-chunk_{i}")
+        one_tok = datasets.load_from_disk(f"{args.cache_dir}/"+ args.output_ds.split("/")[-1] + f"-1tok-chunk_{i}")
         ds_1tok.append(one_tok)
         ds_any_tok.append(ds)
     ds_1tok = datasets.concatenate_datasets(ds_1tok)
@@ -130,13 +157,13 @@ def process(ds, args):
     if args.remove_comments:
         ds = ds.map(lambda x: {"content": remove_comments(x["content"])})
 
-    def _generate_prompts(ds):
+    def generate_prompts():
         for ex in ds:
             prompts = make_natural_typeinf_prompt(ex, TS_QUERY_FUNC_TYPES)
             for prompt in prompts:
                 yield prompt
     
-    prompts = datasets.Dataset.from_generator(partial(_generate_prompts, ds), features=ds.features)
+    prompts = datasets.Dataset.from_generator(generate_prompts, features=ds.features)
         
     ds = ds.filter(lambda x: ": <FILL>" in x["fim_program"])
     print(ds)
@@ -147,38 +174,34 @@ def process(ds, args):
     ds.push_to_hub(args.output_ds + "-1tok")
     print(ds)
 
-def _get_subset(iterable_ds, max_size):
-    for i, ex in enumerate(iterable_ds):
-        if i >= max_size:
-            break
-        yield ex
 
 def main(args):
     ds = datasets.load_dataset(args.input_ds, split="train")
 
     if args.max_size > -1:
-        ds = ds.select(range(args.max_size))
+        ds = ds.shuffle().select(range(args.max_size))
             
     if not args.do_multiproc:
         print("Using single process")
         process(ds, args)
     else:
         print("Using multiprocessing")
-        if os.path.exists(Path("dataset_chunks")):
-            raise ValueError("dataset_chunks directory already exists. Please remove.")
-        os.mkdir("dataset_chunks")
+        if os.path.exists(Path(args.cache_dir)):
+            raise ValueError(f"Cache dir {args.cache_dir} already exists. Please remove.")
+        os.mkdir(args.cache_dir)
         args.num_proc = multiprocessing.cpu_count()
-        multi_process(ds, args)
+        multiprocess(ds, args)
         
         
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--output_ds", type=str, required=True)
-    parser.add_argument("--input_ds", type=str, required=True)
-    parser.add_argument("--tokenizer", type=str, default="/home/arjun/models/starcoderbase-1b")
+    parser.add_argument("--output-ds", type=str, required=True)
+    parser.add_argument("--input-ds", type=str, required=True)
+    parser.add_argument("--tokenizer", type=str, required=True)
     parser.add_argument("--do-remove-comments", action="store_true", default=False)
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--do-multiproc", action="store_true", default=False)
+    parser.add_argument("--cache-dir", type=str, default="dataset_chunks")
     parser.add_argument("--num-chunks", type=int, default=1)
     args = parser.parse_args()
     main(args)

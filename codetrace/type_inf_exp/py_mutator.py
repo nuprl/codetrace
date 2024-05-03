@@ -16,7 +16,6 @@ import random
 import typing
 import builtins
 from collections import namedtuple
-from pyminifier.minification import remove_comments_and_docstrings
 """
 https://github.com/nvim-treesitter/nvim-treesitter/blob/master/queries/python/highlights.scm
 Random mutation code.
@@ -224,7 +223,7 @@ def add_type_aliases_after_imports(code: bytes, type_aliases : List[bytes]) -> b
     NOTE:we assume all imports are at the top of the file
     """
     type_aliases = b"\n".join(type_aliases) + b"\n\n"
-    captures = get_captures(code, IMPORT_STATEMENT_QUERY, [], "py")
+    captures = get_captures(code, IMPORT_STATEMENT_QUERY, "py")
     if len(captures) == 0:
         return type_aliases + code
     # find the last import statement
@@ -357,7 +356,7 @@ def postprocess_py_return_type(node_capture : Tuple[tree_sitter.Node, str], byte
 
 def is_in_capture_range(node : tree_sitter.Node, captures : List[Tuple[tree_sitter.Node, str]]) -> bool:
     """
-    Check if the node is in the range of any of the captures
+    Check if the node is in the range of any of the captures.
     """
     for capture in captures:
         if node.start_byte >= capture[0].start_byte and node.end_byte <= capture[0].end_byte:
@@ -504,12 +503,3 @@ def iter_apply_random_mutations(iterable, mutations : List[Callable]):
                        "mutations" : [m.__name__ for m in mutations], **ex})
     
     return new_ds
-
-def remove_comments(program):
-    try:
-        res = remove_comments_and_docstrings(program).strip()
-    except Exception as e:
-        print(f"Error in removing comments: {e}")
-        # sometimes parser fails, return empty string
-        return ""
-    return res
