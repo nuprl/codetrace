@@ -84,7 +84,8 @@ def pipeline(args):
             "custom_decoder": False,
             "rotation_matrix": False,
             "multiplier": False,
-            "action": "run_steering"
+            "action": "run_steering",
+            "seed": args.seed
         }
         args_rand_eval = Namespace(**args_rand_eval)
         main_steer(args_rand_eval)

@@ -9,6 +9,8 @@ from tqdm import tqdm
 from collections import Counter
 import pickle
 import json
+import datasets
+from typing import List, Union
 from codetrace.interp_utils import (
     collect_hidden_states,
     collect_hidden_states_at_tokens,
@@ -16,6 +18,7 @@ from codetrace.interp_utils import (
     TraceResult,
     LogitResult
 )
+import pandas as pd
 
 def batched_get_averages(
     model: LanguageModel,
@@ -87,20 +90,20 @@ def batched_insert_patch_logit(
     prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     predictions =[]
     for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
+        # repeat patch in dim 1 to match batch len
+        prompt_len = len(batch)
         res : TraceResult = insert_patch(model, 
                                          batch, 
-                                         patch, 
+                                         patch.repeat(1,prompt_len,1,1),
                                          layers_to_patch, 
                                          tokens_to_patch, 
                                          patch_mode, 
                                          collect_hidden_states=False, # don't need hidden states, prevent oom
                                          custom_decoder=custom_decoder)
-        prompt_len = len(batch)
         logits : LogitResult = res.decode_logits(prompt_idx=list(range(prompt_len)), do_log_probs=False)
 
         for j in range(prompt_len):
-            tok = logits[-1][j].tokens(model.tokenizer)
-            tok = tok[0].strip()
+            tok = logits[-1,j].tokens(model.tokenizer).strip()
             predictions.append(tok)
             
         if outfile is not None:

@@ -1,12 +1,23 @@
 from argparse import ArgumentParser, Namespace
 from collections import Counter
 from transformers import AutoTokenizer
-from codetrace.type_inf_exp.steering import fit_test_split, fit_test_split_completions, get_steering_tensor, steer_on_ds
+from codetrace.type_inf_exp.steering import (
+    fit_test_split, 
+    fit_test_split_completions, 
+    get_steering_tensor, 
+    steer_on_ds,
+    get_data_info
+)
 from pathlib import Path
 import os 
 from codetrace.fast_utils import get_batches_fast, batched_do_func
 from multiprocessing import cpu_count
 from tqdm import tqdm
+import datasets
+from codetrace.type_inf_exp.steering_utils import filter_prompts
+import json
+from nnsight import LanguageModel
+import torch
 
 def filter_oom(batch):
     new_batch = []
@@ -141,7 +152,7 @@ def run_steering(args):
         
     def _eval(model, diff_tensor, dirname, args):
         eval_ds = datasets.load_from_disk(f"{args.evaldir}/{dirname}")
-            
+
         if args.shuffle:
             eval_ds = eval_ds.shuffle(seed=args.seed)
         if args.max_size > 0:
@@ -156,6 +167,7 @@ def run_steering(args):
         steer_on_ds(model, diff_tensor, eval_ds, ood_flag, args)
     
     # incorrect ood eval
+    
     if os.path.exists(Path(f"{args.evaldir}/incorrect_ood")):
         _eval(model, diff_tensor, "incorrect_ood", args)
     # incorrect eval

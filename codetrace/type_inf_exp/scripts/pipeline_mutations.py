@@ -56,7 +56,7 @@ def pipeline(args):
         
         print(f"Running typechecking for: {mutate_args.new_ds_name}_{args.model_name}")
         # step 2: run typecheck
-        typecheck_args = Namespace(**{"dirname": mutate_args.new_ds_name + "_" + args.model_name, 
+        typecheck_args = Namespace(**{"dsname": mutate_args.new_ds_name + "_" + args.model_name, 
                                     "lang":args.lang, 
                                     "new_ds_name": mutate_args.new_ds_name + f"_{args.model_name}_typechecked",
                                     "column_name":"mutated_program",

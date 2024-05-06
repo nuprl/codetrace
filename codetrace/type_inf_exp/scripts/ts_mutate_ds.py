@@ -1,7 +1,7 @@
 import datasets
 import argparse
 from codetrace.type_inf_exp import ts_mutator
-from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt
+from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt, lang_to_parser, lang_to_builder
 import pandas as pd
 from multiprocessing import cpu_count
 from transformers import AutoTokenizer

@@ -1,10 +1,15 @@
 from codetrace.type_inf_exp.steering_utils import batched_get_averages, batched_insert_patch_logit, filter_prompts
-from codetrace.utils import placeholder_to_std_fmt
+from codetrace.utils import placeholder_to_std_fmt, STARCODER_FIM
 from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
 import sys
+import json
+import pandas as pd
 from multiprocessing import cpu_count
+import datasets
+import os
+import torch
 
 def keep_columns(ds, cols):
     columns = [c for c in ds.column_names if c not in cols]
