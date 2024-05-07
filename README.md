@@ -30,5 +30,5 @@ Starcoder modeling needs to be adapted to nnsight.
 
 # TODOs
 
-- generate more python mutated examples
-- rerun typescript 
+- generate more python mutated examples [X]
+- rerun typescript [ONGOING] 
