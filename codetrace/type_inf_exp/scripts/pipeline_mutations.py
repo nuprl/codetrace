@@ -69,9 +69,6 @@ def pipeline(args):
         
 
 if __name__=="__main__":
-    datasets.disable_caching()
-    print("Caching enabled?:", datasets.is_caching_enabled())
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     parser = ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--lang", type=str, required=True, choices=["py", "ts"])
@@ -97,8 +94,14 @@ if __name__=="__main__":
                                  "all_renames"])
     parser.add_argument("--model-name", type=str, default=None)
     parser.add_argument("--max-size", type=int, default=-1)
+    parser.add_argument("--no-caching", action="store_true", default=False)
     args = parser.parse_args()
     
+    if args.no_caching:
+        datasets.disable_caching()
+        
+    print("Caching enabled?:", datasets.is_caching_enabled())    
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     assert os.environ["CUDA_VISIBLE_DEVICES"] != "", "Set CUDA_VISIBLE_DEVICES to the GPU you want to use"
     assert os.environ["NPM_PACKAGES"] != "", "Set NPM_PACKAGES to the location of your npm packages"
     print("CUDA_VISIBLE_DEVICES:", os.environ["CUDA_VISIBLE_DEVICES"])

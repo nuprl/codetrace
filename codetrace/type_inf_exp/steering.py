@@ -33,7 +33,7 @@ def get_field_subset(incorrect, field, test_len, reverse):
     Return a subset of incorrect prompts that have the least/most count of field.
     stop when test_len is reached.
     """
-     # set aside some incorrect prompts
+    # set aside some incorrect prompts
     field_counts = Counter(incorrect[field])
     # accumulate from the least/most count until threshold test_size is achieved
     sorted_field = sorted(list(incorrect), key= lambda x : field_counts[x[field]], reverse=reverse)

@@ -68,11 +68,13 @@ for subdir in glob.glob(f"{results_dir}/*"):
             "tokens_patched": args["tokens_to_patch"],
             "layers_patched": args["layers_to_patch"],
         }
+        # round all numbers to 3 decimal places
+        for k,v in row.items():
+            if isinstance(v, float):
+                row[k] = round(v,3)
         csv_rows.append(row)
 
 df = pd.DataFrame(csv_rows)
+# sort alphabetically by experiment_dir
+df = df.sort_values(by="experiment_dir").reset_index(drop=True)
 df.to_csv(outfile)
-    
-    
-        
-    

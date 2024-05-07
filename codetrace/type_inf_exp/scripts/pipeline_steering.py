@@ -14,8 +14,8 @@ def pipeline(args):
         "shuffle": True,
         "do_fit_matching_pairs": True,
         "dedup_type_threshold": 25,
-        "dedup_prog_threshold": 1,
-        "test_size": 100,
+        "dedup_prog_threshold": 3,
+        "test_size": 0.2,
         "model": args.model,
         "action": "make_steering_data_splits",
         "seed": args.seed
@@ -45,7 +45,6 @@ def pipeline(args):
         "tokens_to_patch": ["<fim_middle>"],
         "layers_to_patch": [10,11,12,13,14],
         "custom_decoder": False,
-        "rotation_matrix": False,
         "multiplier": False,
         "action": "run_steering",
         "seed": args.seed
