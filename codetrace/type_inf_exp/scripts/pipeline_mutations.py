@@ -7,6 +7,7 @@ import os
 from tqdm import tqdm
 
 def combo_to_name(combo):
+    # TODO: standardize naming
     if len(combo) == 3:
         return "all_mutations"
     elif len(combo) == 1:
