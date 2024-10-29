@@ -1,3 +1,5 @@
+import pandas as pd
+import datasets
 import tree_sitter
 from tree_sitter import Language, Parser
 import torch
@@ -6,6 +8,7 @@ from pathlib import Path
 from typing import List, Union
 from copy import deepcopy
 from transformers import AutoModelForCausalLM
+import re
 
 REPO_ROOT = Path(__file__).parent.parent
 Language.build_library(
@@ -191,7 +194,24 @@ def make_decoder_copy(modelname:str) -> torch.nn.Module:
     del model
     decoder = torch.nn.Sequential(norm, decoder).to("cpu")
     return decoder
-    
+
+def keep_columns(ds, cols):
+    columns = [c for c in ds.column_names if c not in cols]
+    return ds.remove_columns(columns)
+
+def dedup_ds_by_key(ds, key):
+    """
+    Dedup ds by key. Picks the first occurence of key.
+    """
+    seen = set()
+    new_ds = []
+    for x in ds:
+        if not x[key] in seen:
+            new_ds.append(x)
+            seen.add(x[key])
+    return datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
+
+
 typescript_builtin_objects = [
     "globalThis",
     "Infinity",
@@ -262,3 +282,54 @@ typescript_builtin_objects = [
     "Intl.Segmenter",
     "bigint"
 ]
+
+def parse_callable(tokens_to_patch):
+    if not isinstance(tokens_to_patch, str):
+        # ignore lists, int
+        return tokens_to_patch
+    
+    base_module = ".".join(tokens_to_patch.split(".")[:-1])
+    fn = tokens_to_patch.split(".")[-1]
+    
+    if base_module == "":
+        try:
+            # return callable from local namespace
+            module = importlib.import_module(__name__)
+            return getattr(module, fn)
+        except:
+            return tokens_to_patch
+    else:
+        try:
+            # import and return callable from module
+            module = importlib.import_module(base_module)
+            return getattr(module, fn)
+        except:
+            return tokens_to_patch
+    
+def test_parse_callable():
+    assert parse_callable("codetrace.fast_utils.get_batches_fast") == get_batches_fast
+    assert callable(parse_callable("codetrace.fast_utils.get_batches_fast"))
+    assert parse_callable(5) == 5
+    assert parse_callable([1,2,3]) == [1,2,3]
+    assert parse_callable(["hi","bye"]) == ["hi","bye"]
+    assert parse_callable("hi") == "hi"
+    assert parse_callable("run_layer_ablation") == run_layer_ablation
+    assert callable(parse_callable("run_layer_ablation"))
+    
+def last_assert_statement_index(prompt_input_ids: List[int], **kwargs) -> List[int]:
+    """
+    Find the index of the function call in a prompt
+    """
+    tokenizer = kwargs.get("tokenizer")
+    prompt = tokenizer.decode(prompt_input_ids)
+    captures = re.findall(f"(assert\s+\w+\s*\()", prompt)
+    # assert only one func def
+    assert len(captures) == 1
+    func_call_statement = captures[0]
+    tokenized = tokenizer.encode(func_call_statement)
+    # find the last occurence of the sublist tokenized in prompt_input_ids
+    last_idx = -1
+    for i in range(len(prompt_input_ids)):
+        if list(prompt_input_ids[i:i+len(tokenized)]) == list(tokenized):
+            last_idx = i
+    return list(range(last_idx, last_idx+len(tokenized)))

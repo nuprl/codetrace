@@ -10,25 +10,14 @@ from multiprocessing import cpu_count
 import datasets
 import os
 import torch
+from typing import List
 
-def keep_columns(ds, cols):
-    columns = [c for c in ds.column_names if c not in cols]
-    return ds.remove_columns(columns)
-
-def dedup_ds_by_key(ds, key):
-    """
-    Dedup ds by key. Picks the first occurence of key.
-    """
-    seen = set()
-    new_ds = []
-    for x in ds:
-        if not x[key] in seen:
-            new_ds.append(x)
-            seen.add(x[key])
-    return datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-
-
-def get_field_subset(incorrect, field, test_len, reverse):
+def get_field_subset(
+        incorrect: datasets.Dataset, 
+        field: str, 
+        test_len: int, 
+        reverse: True
+    ):
     """
     Return a subset of incorrect prompts that have the least/most count of field.
     stop when test_len is reached.
@@ -44,15 +33,18 @@ def get_field_subset(incorrect, field, test_len, reverse):
             break
     return f_subset
 
-
-def make_source_program_ood(correct, incorrect, args):
+def make_source_program_ood(
+        correct, 
+        incorrect, 
+        test_size:float
+    ):
     """
     OOD should have different set of source programs
     """
-    if args.test_size > 1:
-        test_len = args.test_size
+    if test_size > 1:
+        test_len = test_size
     else:
-        test_len = int(len(incorrect) * args.test_size)
+        test_len = int(len(incorrect) * test_size)
         
     ood_incorrect = get_field_subset(incorrect, "hexsha", test_len, reverse=False)
     ood_incorrect = datasets.Dataset.from_pandas(pd.DataFrame(ood_incorrect))
@@ -68,18 +60,24 @@ def make_source_program_ood(correct, incorrect, args):
     return correct, incorrect, ood_incorrect
 
 
-def get_ood(correct, incorrect,args, ood_fn = make_source_program_ood):
+def get_ood(
+        correct: str, 
+        incorrect: str,
+        test_size: float, 
+        do_fit_matching_pairs:bool,
+        ood_fn = make_source_program_ood
+    ):
     """
     Applies an OOD function to correct and incorrect prompts.
     Filters correct and incorrect prompts based on OOD and matching pairs.
     """
-    if args.test_size > 0:
+    if test_size > 0:
         correct, incorrect, ood = ood_fn(correct, incorrect,args)
     else:
         ood = None
         
     # does correct need same exact programs as incorrect?
-    if args.do_fit_matching_pairs:
+    if do_fit_matching_pairs:
         intersection = set(incorrect["hexsha"]).intersection(set(correct["hexsha"]))
         incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count(), desc="Filtering ood")
         correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count(), desc="Filtering ood")

@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm
 from nnsight import LanguageModel, util
 from nnsight.tracing.Proxy import Proxy
-from typing import List, Union
+from typing import List, Union, Callable
 import transformers
 from codetrace.utils import top_k_top_p_filtering
 import numpy as np
@@ -146,7 +146,7 @@ def collect_hidden_states(
 def collect_hidden_states_at_tokens(
     model : LanguageModel,
     prompts : Union[List[str],str],
-    tokens : Union[List[int],int,List[str],str],
+    tokens : Union[List[int],int,List[str],str, Callable],
     layers : List[int] = None,
 ) -> torch.Tensor:
     """
@@ -169,10 +169,13 @@ def collect_hidden_states_at_tokens(
         with runner.invoke(prompts) as invoker:
             
             indices = invoker.input["input_ids"].numpy()
-            
+
             if isinstance(tokens[0], str):
                 # for each prompt find the index of token_idx
                 target_idx = np.array([np.where((i  == t)) for i in indices for t in tokenized_idx]).reshape((len(prompts),-1))
+            elif callable(tokens[0]):
+                tokens = tokens[0]
+                target_idx = np.array([tokens(i, tokenizer=model.tokenizer) for i in indices]).reshape((len(prompts),-1)).astype(np.int64)
             else:
                 target_idx = np.array(tokens*len(prompts)).reshape(len(prompts), -1)
             
@@ -193,7 +196,7 @@ def insert_patch(
     prompts : Union[List[str],str],
     patch : torch.Tensor,
     layers_to_patch : Union[List[int],int],
-    tokens_to_patch : Union[List[str],List[int],str,int],
+    tokens_to_patch : Union[List[str],List[int],str,int, Callable],
     patch_mode : str = "add",
     collect_hidden_states : bool = True,
     custom_decoder : Union[None, torch.nn.Module] = None,
@@ -209,7 +212,7 @@ def insert_patch(
     patch should have shape [model_n_layer, num_prompts, num_tokens_to_patch, n_embd]
     """
     prompts, tokens_to_patch, layers_to_patch = map(arg_to_list, [prompts, tokens_to_patch, layers_to_patch])
-    if patch.shape != (len(model.transformer.h), len(prompts), len(tokens_to_patch), model.config.hidden_size):
+    if not callable(tokens_to_patch[0]) and patch.shape != (len(model.transformer.h), len(prompts), len(tokens_to_patch), model.config.hidden_size):
         raise ValueError(f"Patch shape {patch.shape} is incorrect, requires {len(model.transformer.h), len(prompts), len(tokens_to_patch), model.config.hidden_size}")
     if patch_mode not in ["sub", "add", "subst"]:
         raise NotImplementedError(f"Patch mode {patch_mode} not implemented")
@@ -231,6 +234,9 @@ def insert_patch(
             if isinstance(tokens_to_patch[0], str):
                 # for each prompt find the index of token_idx
                 target_idx = np.array([np.where((i  == t)) for i in indices for t in tokenized_to_patch]).reshape((len(prompts),-1))
+            elif callable(tokens_to_patch[0]):
+                tokens_to_patch = tokens_to_patch[0]
+                target_idx = np.array([tokens_to_patch(i, tokenizer=model.tokenizer) for i in indices]).reshape((len(prompts),-1))
             else:
                 target_idx = np.array(tokens_to_patch*len(prompts)).reshape(len(prompts), -1)
             

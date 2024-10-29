@@ -67,6 +67,8 @@ for subdir in glob.glob(f"{results_dir}/*"):
             "fit_count": eval_res.get("total",0),
             "tokens_patched": args["tokens_to_patch"],
             "layers_patched": args["layers_to_patch"],
+            "evaldir_path": args["evaldir"],
+            "steering_tensor_path": args["steering_tensor"],
         }
         # round all numbers to 3 decimal places
         for k,v in row.items():

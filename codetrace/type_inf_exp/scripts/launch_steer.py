@@ -18,6 +18,9 @@ from codetrace.type_inf_exp.steering_utils import filter_prompts
 import json
 from nnsight import LanguageModel
 import torch
+import importlib
+import sys
+from codetrace.utils import parse_callable
 
 def filter_oom(batch):
     new_batch = []
@@ -26,21 +29,27 @@ def filter_oom(batch):
             new_batch.append(b)
     return new_batch
 
-def make_steering_data_splits(args):
+def make_steering_data_splits(
+        model:str,
+        datadir:str,
+        source_dataset:str,
+        seed:int=None,
+        shuffle:bool=True,
+):
     """
     Generates fit test splits and saves to disk in shared steering_data directory.
     Logs data info to directory.
     """
     print("[STEP 1] Generating fit test splits...")
-    if os.path.exists(f"{args.datadir}/correct") and os.path.exists(f"{args.datadir}/incorrect"):
+    if os.path.exists(f"{datadir}/correct") and os.path.exists(f"{datadir}/incorrect"):
         print("Correct and incorrect splits already exist, skipping...")
         return
     
-    ds = datasets.load_dataset(args.source_dataset, split="train")
+    ds = datasets.load_dataset(source_dataset, split="train")
     print(ds)
     
-    if args.shuffle:
-        ds = ds.shuffle(seed=args.seed)
+    if shuffle:
+        ds = ds.shuffle(seed=seed)
     
     # filter out too large prompts for OOM
     batches = get_batches_fast(ds, cpu_count())
@@ -53,11 +62,11 @@ def make_steering_data_splits(args):
     ds = datasets.Dataset.from_generator(yielder)
 
     if "<FILL>" in ds["fim_program"][0]:
-        args.fim_placeholder = True
+        fim_placeholder = True
     else:
-        args.fim_placeholder = False
+        fim_placeholder = False
     
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(model)
     if "mutated_program" not in ds.column_names:
         correct, incorrect, incorrect_eval = fit_test_split_completions(ds,tokenizer, args)
     else:
@@ -229,8 +238,13 @@ def run_layer_ablation(args):
         # # incorrect eval
         # _eval(model, diff_tensor, False, args)
     
-
+                          
 def main(args):
+    # parse callable from tokens_to_patch if it exists
+    if getattr(args, "tokens_to_patch", None) != None:
+        # check if args.tokens_to_patch is an importable function
+        args.tokens_to_patch = parse_callable(args.tokens_to_patch)
+        
     if args.action == "make_steering_data_splits":
         make_steering_data_splits(args)
     elif args.action == "make_steering_tensor":

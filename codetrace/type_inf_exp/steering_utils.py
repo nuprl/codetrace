@@ -10,7 +10,7 @@ from collections import Counter
 import pickle
 import json
 import datasets
-from typing import List, Union
+from typing import List, Union, Callable
 from codetrace.interp_utils import (
     collect_hidden_states,
     collect_hidden_states_at_tokens,
@@ -71,7 +71,7 @@ def batched_insert_patch_logit(
     prompts : Union[List[str],str],
     patch : torch.Tensor,
     layers_to_patch : List[int],
-    tokens_to_patch : Union[List[str],List[int],str,int],
+    tokens_to_patch : Union[List[str],List[int],str,int, Callable],
     patch_mode : str = "add",
     batch_size : int = 5,
     outfile: str = None,

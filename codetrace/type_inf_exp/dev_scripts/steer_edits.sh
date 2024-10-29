@@ -3,18 +3,14 @@
 edits=()
 edits+=("rename_types" "rename_vars" "all_renames" "all_mutations" "delete_annotation" "types_and_delete" "vars_and_delete")
 
+# FILL HERE
 SOURCE_DATASET="franlucc/ts_<EDIT>_may3_seed0_starcoderbase-1b_typechecked"
 DATADIR="/mnt/ssd/franlucc/projects/codetrace/data/starcoderbase-1b/typescript/may3_seed0_typechecked"
 EXPDIR="/mnt/ssd/franlucc/projects/codetrace/results/starcoderbase-1b/typescript/may3_seed0_typechecked"
 MODEL="/mnt/ssd/arjun/models/starcoderbase-1b"
-
-LANG=""
-if [[ $SOURCE_DATASET == *"/ts_"* ]]; then
-    LANG="ts"
-fi
-if [[ $SOURCE_DATASET == *"/py_"* ]]; then
-    LANG="py"
-fi
+UNIQ_LOG_ID=""
+BATCHSIZE=4
+# END FILL
 
 for edit in "${edits[@]}"; do
     echo "Running steering pipeline for $edit"
@@ -26,7 +22,7 @@ for edit in "${edits[@]}"; do
     --tensor_name steering_tensor-2000.pt \
     --expdir $EXPDIR/$edit  \
     --max_size 2000 \
-    --batchsize 10 \
+    --batchsize $BATCHSIZE \
     --rand_steering_tensor \
-    --seed 42 >> steering_pipeline_${LANG}_${edit}.out 2>&1
+    --seed 42 >> steering_pipeline_${edit}_${UNIQ_LOG_ID}.out 2>&1
 done

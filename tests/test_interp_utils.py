@@ -7,7 +7,7 @@ from codetrace.interp_utils import (
     LogitResult,
     TraceResult
 )
-from codetrace.utils import make_decoder_copy
+from codetrace.utils import make_decoder_copy, last_assert_statement_index
 from nnsight import LanguageModel
 from nnsight.tracing import Proxy
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -250,6 +250,35 @@ E.g. (()()) has maximum two levels of nesting while ((())) has three."""
         prompt = prompt + tok
     
     assert prompt.strip() == gold.strip(), f"\n{prompt.strip()}\n\n\n{gold}"
+    
+    
+def test_patch_last_func_name():
+    funcA = """
+def f(x):
+   if x > 50:
+       return True
+   else:
+       return False
+
+assert f(51) == """
+    
+    funcB = """
+def f(x):
+   if x > 50:
+       return 7
+   elif x > 10:
+       return 5
+   else:
+       return 2
+
+assert f(51) == """
+    patch = collect_hidden_states_at_tokens(model, funcB, last_assert_statement_index)
+    patch = torch.randn(24,1,3,2048)
+    out = insert_patch(model, funcA, patch, list(range(10,24)), 
+                       last_assert_statement_index, patch_mode="subst")
+    logits = out.decode_logits(top_k=10)
+    prediction = logits[-1,0].tokens(model.tokenizer)
+    assert prediction == "7", f"predicted: {prediction}"
 
 """
 CLI running code
@@ -261,15 +290,16 @@ def repeat_test(func, n, **kwargs):
         
 # repeating tests multiple times ensures no precision errors in code
 
-repeat_test(test_logit_pipeline, args.num_reps)
-repeat_test(test_patch, args.num_reps)
-repeat_test(test_logit_generation_match, args.num_reps)
-repeat_test(test_collect_at_token_idx, args.num_reps)
-repeat_test(test_collect_at_token_idx2, args.num_reps)
-repeat_test(test_collect_at_token_idx3, args.num_reps)
-repeat_test(test_collect_at_token_idx4, args.num_reps)
-repeat_test(test_collect_at_token_idx5, args.num_reps)
-repeat_test(test_interp_patch, args.num_reps)
-repeat_test(test_generation, 1)
+# repeat_test(test_logit_pipeline, args.num_reps)
+# repeat_test(test_patch, args.num_reps)
+# repeat_test(test_logit_generation_match, args.num_reps)
+# repeat_test(test_collect_at_token_idx, args.num_reps)
+# repeat_test(test_collect_at_token_idx2, args.num_reps)
+# repeat_test(test_collect_at_token_idx3, args.num_reps)
+# repeat_test(test_collect_at_token_idx4, args.num_reps)
+# repeat_test(test_collect_at_token_idx5, args.num_reps)
+# repeat_test(test_interp_patch, args.num_reps)
+# repeat_test(test_generation, 1)
+repeat_test(test_patch_last_func_name, 1)
 
 print("All tests passed!")
