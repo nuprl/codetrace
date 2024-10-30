@@ -163,18 +163,17 @@ def insert_patch(
     with model.trace() as tracer:
         with tracer.invoke(prompts) as invoker:
             inputs = invoker.inputs[0]["input_ids"]
+            mask = target_fn(inputs)
             hidden_states = []
-
             for layer in range(len(model.transformer.h)):
                 hs = model.transformer.h[layer].output[0]
-                mask = target_fn(inputs)
+                
                 if layer in layers_to_patch:
-                    raise NotImplementedError("Patching with masked fill is broken.")
                     new_hs = masked_fill(
                         hs, mask.to(hs.device), patch[layer,:]
                     )
                     for prompt_idx in range(hs.shape[0]):
-                        model.transformer.h[layer].output[0][prompt_idx] = new_hs[prompt_idx]
+                        model.transformer.h[layer].output[0][prompt_idx,:,:] = new_hs[prompt_idx,:]
 
                     # for i in range(hs.shape[0]):
                     #     model.transformer.h[layer].output[0][i,:,:] = patch[layer,i,:]

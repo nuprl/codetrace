@@ -20,6 +20,7 @@ def masked_fill(src: torch.Tensor, mask:torch.BoolTensor, patch:torch.Tensor) ->
         mask = einops.repeat(mask, "p t -> p t d", d=src.shape[-1])
     if not (src.shape == mask.shape and mask.shape == patch.shape):
         raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}, patch {patch.shape}")
+    
     return torch.mul(src, ~mask) + torch.mul(mask, patch)
 
 def masked_get(src: torch.Tensor, mask:torch.BoolTensor) -> torch.Tensor:
@@ -37,8 +38,11 @@ def mask_target_tokens(
     **kwargs
 ) -> torch.BoolTensor:
     tokens = tokenizer(tokens, return_tensors="pt")["input_ids"].squeeze()
-    mask = functools.reduce(lambda a,b: a|b, [input_ids == i for i in tokens])
-    return mask
+    if tokens.ndim == 0:
+        return input_ids == tokens.item()
+    else:
+        mask = functools.reduce(lambda a,b: a|b, [input_ids == i for i in tokens])
+        return mask > 0
 
 def mask_target_idx(
     input_ids: torch.Tensor, #shape[n_prompts, n_toks, dim]
@@ -47,7 +51,7 @@ def mask_target_idx(
 ) -> torch.BoolTensor:
     indices = torch.Tensor(indices).to(dtype=torch.int64)
     mask = torch.zeros_like(input_ids).index_fill(1, indices, 1)
-    return mask
+    return mask > 0
 
 def top_k_top_p_filtering(
     logits: torch.Tensor,
@@ -87,11 +91,11 @@ def predict(model, tokenizer, prompts):
     last_tokens = [ tokenizer.decode(token) for token in last_token_ids ]
     return last_tokens
 
-def make_decoder_copy(modelname:str) -> torch.nn.Module:
+def make_decoder_copy(modelname:str, dtype:torch.dtype) -> torch.nn.Module:
     """
     Make a copy of the model's decoder on cpu
     """
-    model = AutoModelForCausalLM.from_pretrained(modelname).to("cpu")
+    model = AutoModelForCausalLM.from_pretrained(modelname).to("cpu", dtype=dtype)
     decoder = deepcopy(model.lm_head)
     norm = deepcopy(model.transformer.ln_f)
     del model

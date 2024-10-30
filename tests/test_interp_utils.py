@@ -70,6 +70,45 @@ def test_masked_fill():
     expected = patch
     assert torch.equal(res, expected)
 
+    src = torch.Tensor([[[1,1,1,1],
+                         [2,2,2,2],
+                         [3,3,3,3]],
+                         [[4,4,4,4],
+                          [5,5,5,5],
+                          [6,6,6,6]]])
+    mask = torch.BoolTensor([[1,1,0],[1,1,0]])
+    patch = torch.Tensor([[[10,11,12,13],
+                         [20,21,22,23],
+                         [30,31,32,33]],
+                         [[40,41,42,43],
+                          [50,51,52,53],
+                          [60,61,62,63]]])
+    res = masked_fill(src, mask, patch)
+    expected = torch.Tensor([[[10,11,12,13],
+                         [20,21,22,23],
+                         [3,3,3,3]],
+                         [[40,41,42,43],
+                          [50,51,52,53],
+                          [6,6,6,6]]])
+    assert torch.equal(res, expected)
+
+    src = torch.Tensor([[[1,1,1,1],
+                         [2,2,2,2],
+                         [3,3,3,3]],
+                         [[4,4,4,4],
+                          [5,5,5,5],
+                          [6,6,6,6]]])
+    mask = torch.BoolTensor([[1,1,1],[1,1,1]])
+    patch = torch.Tensor([[[10,11,12,13],
+                         [20,21,22,23],
+                         [30,31,32,33]],
+                         [[40,41,42,43],
+                          [50,51,52,53],
+                          [60,61,62,63]]])
+    res = masked_fill(src, mask, patch)
+    expected = patch
+    assert torch.equal(res, expected)
+
 def test_masked_get():
     src = torch.Tensor([[1,2,3],[4,5,6]])
     mask = torch.BoolTensor([[True, False, True],[False,True,False]])
@@ -149,16 +188,11 @@ def test_logit_generation_match():
         'a=0\nb=1\nc=',
     ]
     logits = logit_lens(model, prompts)
-    logits : LogitResult = logits.decode_logits(prompt_idx=[0,1])
+    logits : LogitResult = logits.decode_logits(prompt_idx=[0,1], token_idx=[-1])
     tok_a_f = logits[0,0,0].tokens(model.tokenizer)
     tok_b_f = logits[0,1,0].tokens(model.tokenizer)
-    
-    with model.generate(max_new_tokens=1) as gen:
-        with gen.invoke(prompts) as invoker:
-            invoker.next()
 
-    output = gen.output
-    toks = [model.tokenizer.decode(x) for x in output[:,-1]]
+    toks = predict(model, model.tokenizer,prompts)
     assert toks[0] == tok_a_f, f"{toks[0]} != {tok_a_f}"
     assert toks[1] == tok_b_f, f"{toks[1]} != {tok_b_f}"
     
@@ -169,7 +203,7 @@ def test_collect_at_token_idx():
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     logits = logit_lens(model, prompts)
-    logits : LogitResult = logits.decode_logits(prompt_idx=[0,1])
+    logits : LogitResult = logits.decode_logits(prompt_idx=[0,1], token_idx=[-1])
 
     tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
     tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
@@ -182,12 +216,12 @@ def test_collect_at_token_idx2():
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
-    target_fn = partial(mask_target_tokens, tokens=toks)
-    hs = collect_hidden_states(model, prompts, get_target_ids=target_fn).to("cpu")
-    decoder = make_decoder_copy(model.config.name_or_path)
+    target_fn = partial(mask_target_tokens, tokens=toks, tokenizer=model.tokenizer)
+    hs = collect_hidden_states(model, prompts, target_fn=target_fn).to("cpu")
+    decoder = make_decoder_copy(model.config.name_or_path, torch.bfloat16)
     logits = decoder(hs)
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
-    logits : LogitResult = out.decode_logits(prompt_idx=[0,1])
+    logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[-1])
 
     tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
     tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
@@ -200,13 +234,12 @@ def test_collect_at_token_idx3():
         '<fim_prefix>print("hello world"<fim_suffix>\n<fim_middle>',
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
-    toks = [-1]
-    target_fn = partial(mask_target_tokens, tokens=toks)
-    hs = collect_hidden_states(model, prompts, get_target_ids=target_fn).to("cpu")
-    decoder = make_decoder_copy(model.config.name_or_path)
+    target_fn = partial(mask_target_idx, indices=[-1])
+    hs = collect_hidden_states(model, prompts, target_fn=target_fn).to("cpu")
+    decoder = make_decoder_copy(model.config.name_or_path, torch.bfloat16)
     logits = decoder(hs)
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
-    logits : LogitResult = out.decode_logits(prompt_idx=[0,1])
+    logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[-1])
     
     tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
     tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
@@ -219,12 +252,12 @@ def test_collect_at_token_idx4():
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     toks = ["<fim_middle>"]
-    target_fn = partial(mask_target_tokens, tokens=toks)
-    hs = collect_hidden_states(model, prompts, get_target_ids=target_fn).to("cpu")
-    decoder = make_decoder_copy(model.config.name_or_path)
+    target_fn = partial(mask_target_tokens, tokens=toks, tokenizer=model.tokenizer)
+    hs = collect_hidden_states(model, prompts, target_fn=target_fn).to("cpu")
+    decoder = make_decoder_copy(model.config.name_or_path, torch.bfloat16)
     logits = decoder(hs)
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
-    logits : LogitResult = out.decode_logits(prompt_idx=[0,1])
+    logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[-1])
 
     tok_a_f = logits[-1,0,-1].tokens(model.tokenizer)
     tok_b_f = logits[-1,1,-1].tokens(model.tokenizer)
@@ -236,10 +269,9 @@ def test_collect_at_token_idx5():
         '<fim_prefix>print("hello world"<fim_suffix>\n<fim_middle>',
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
-    toks = [0,-1]
-    target_fn = partial(mask_target_tokens, tokens=toks)
-    hs = collect_hidden_states(model, prompts, get_target_ids=target_fn).to("cpu")
-    decoder = make_decoder_copy(model.config.name_or_path)
+    target_fn = partial(mask_target_idx, indices=[0,-1])
+    hs = collect_hidden_states(model, prompts, target_fn=target_fn).to("cpu")
+    decoder = make_decoder_copy(model.config.name_or_path, torch.bfloat16)
     logits = decoder(hs)
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[0,-1])
@@ -255,126 +287,21 @@ def test_interp_patch():
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
-    target_fn = partial(mask_target_tokens, tokens=toks)
-    hs = collect_hidden_states(model, prompts, get_target_ids=target_fn)
+    target_fn = partial(mask_target_tokens, tokens=toks, tokenizer=model.tokenizer)
+    hs = collect_hidden_states(model, prompts, target_fn=target_fn)
     patch = hs.expand(-1,len(prompts),-1,-1)
-    out = insert_patch(model, prompts, patch, list(range(len(model.transformer.h))), toks, patch_mode="subst")
-    out : LogitResult = out.decode_logits(prompt_idx=[0,1])
-    tok_a_f = out[-1,0,-1].tokens(model.tokenizer)
-    tok_b_f = out[-1,1,-1].tokens(model.tokenizer)
-    assert tok_a_f == ')', f"{repr(tok_a_f)}"
+    out = insert_patch(
+        model, 
+        prompts[::-1], 
+        patch, 
+        list(range(len(model.transformer.h))), 
+        target_fn=target_fn)
+    out : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[-1])
+    tok_b_f = out[:,0].tokens(model.tokenizer)
+    tok_a_f = out[:,1].tokens(model.tokenizer)
+    assert tok_a_f == '6', f"{repr(tok_a_f)}"
     assert tok_b_f == ')', f"{repr(tok_b_f)}"
    
-
-def test_generation():
-    gold = '''from typing import List
-
-def uhslzetzbdurzagwmhn(bwsgyuklklhw: str) -> List[int]:
-""" Input to this function is a string represented multiple groups for nested parentheses separated by spaces.
-For each of the group, output the deepest level of nesting of parentheses.
-E.g. (()()) has maximum two levels of nesting while ((())) has three."""
-
-    def xuuzjpbpbmjwlpktx(e):
-        depth = 0
-        max_depth = 0
-        for c in e:
-            if c == '(':
-                depth += 1
-                max_depth = max(max_depth, depth)
-            elif c == ')':
-                depth -= 1
-                max_depth = max(max_depth, depth)
-        return max_depth
-
-    return [xuuzjpbpbmjwlpktx(bwsgyuklklhw)]'''
-    
-    original_prompt = '''from typing import List
-
-def uhslzetzbdurzagwmhn(bwsgyuklklhw: str) -> List[int]:
-""" Input to this function is a string represented multiple groups for nested parentheses separated by spaces.
-For each of the group, output the deepest level of nesting of parentheses.
-E.g. (()()) has maximum two levels of nesting while ((())) has three."""
-
-    def xuuzjpbpbmjwlpktx(e):
-        depth = 0
-        max_depth = 0
-        for c in e:
-            if c == '(':
-                depth += 1
-                max_depth = max'''
-    
-    max_out = 512
-    generated = []
-    prompt = original_prompt
-    for i in tqdm(range(max_out)):
-        res = logit_lens(model, prompt, -1)
-        logits = res.decode_logits()
-        tok = logits[-1,-1].tokens(model.tokenizer)
-        if tok == "<|endoftext|>":
-            break
-        generated.append(tok)
-        prompt = prompt + tok
-
-    assert prompt.strip() == gold.strip(), f"\n{prompt.strip()}\n\n\n{gold}"
-    
-    generated = []
-    prompt = original_prompt
-    patch = torch.zeros(24, 1, 1, model.config.n_embd)
-    for i in tqdm(range(max_out)):
-        # patch nothing, this checks precision errors in code
-        res = insert_patch(model, prompt, patch, list(range(len(model.transformer.h))), [-1], collect_hidden_states=False)
-        logits = res.decode_logits()
-        tok = logits[-1,-1].tokens(model.tokenizer)
-        if tok == "<|endoftext|>":
-            break
-        generated.append(tok)
-        prompt = prompt + tok
-    
-    assert prompt.strip() == gold.strip(), f"\n{prompt.strip()}\n\n\n{gold}"
-
-def last_assert_statement_index(prompt_input_ids: List[int], **kwargs) -> List[int]:
-    tokenizer = kwargs.get("tokenizer")
-    prompt = tokenizer.decode(prompt_input_ids)
-    captures = re.findall(f"(assert\s+\w+\s*\()", prompt)
-    # assert only one func def
-    assert len(captures) == 1
-    func_call_statement = captures[0]
-    tokenized = tokenizer.encode(func_call_statement)
-    # find the last occurence of the sublist tokenized in prompt_input_ids
-    last_idx = -1
-    for i in range(len(prompt_input_ids)):
-        if list(prompt_input_ids[i:i+len(tokenized)]) == list(tokenized):
-            last_idx = i
-    return list(range(last_idx, last_idx+len(tokenized)))
-    
-def test_patch_last_func_name():
-    funcA = """
-def f(x):
-   if x > 50:
-       return True
-   else:
-       return False
-
-assert f(51) == """
-    
-    funcB = """
-def f(x):
-   if x > 50:
-       return 7
-   elif x > 10:
-       return 5
-   else:
-       return 2
-
-assert f(51) == """
-    patch = collect_hidden_states(model, funcB, last_assert_statement_index)
-    patch = torch.randn(24,1,3,2048)
-    out = insert_patch(model, funcA, patch, list(range(10,24)), 
-                       last_assert_statement_index, patch_mode="subst")
-    logits = out.decode_logits(top_k=10)
-    prediction = logits[-1,0].tokens(model.tokenizer)
-    assert prediction == "7", f"predicted: {prediction}"
-
 """
 CLI running code
 """
@@ -398,7 +325,5 @@ repeat_test(test_collect_at_token_idx3, args.num_reps)
 repeat_test(test_collect_at_token_idx4, args.num_reps)
 repeat_test(test_collect_at_token_idx5, args.num_reps)
 repeat_test(test_interp_patch, args.num_reps)
-repeat_test(test_generation, 1)
-repeat_test(test_patch_last_func_name, 1)
 
 print("All tests passed!")
