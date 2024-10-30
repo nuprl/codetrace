@@ -1,22 +1,16 @@
 """
 Interp utils
 """
-import sys
-import os
 import torch
-from tqdm import tqdm
+import nnsight
 from nnsight import LanguageModel, util
 from nnsight.tracing.Proxy import Proxy
 from typing import List, Union, Callable
 import transformers
-from codetrace.utils import top_k_top_p_filtering
+from codetrace.utils import top_k_top_p_filtering, pos_indexing, masked_get, masked_fill, lm_decode
 import numpy as np
-
-def arg_to_list(x):
-    return x if isinstance(x, list) else [x]
-
-def arg_to_literal(x, n):
-    return x if x >= 0 else n + x
+import functools
+import einops
 
 class LogitResult:
     """
@@ -27,14 +21,12 @@ class LogitResult:
         self, 
         token_indices : torch.Tensor, 
         probabilities : torch.Tensor,
-        is_log : bool = False
     ):
         self.token_indices = token_indices
         self.probabilities = probabilities
-        self.is_log = is_log
         
     def __getitem__(self, idx):
-        return LogitResult(self.token_indices[idx], self.probabilities[idx], self.is_log)
+        return LogitResult(self.token_indices[idx], self.probabilities[idx])
     
     def tokens(self, tokenizer : transformers.PreTrainedTokenizer) -> List[str]:
         """
@@ -53,7 +45,7 @@ class TraceResult:
     Arguments:
         logits : torch.Tensor
             logits from model, have shape [n_layer, n_prompt, n_tokens, n_vocab]
-        layer_idxs : Union[List[int],int]
+        layer_idxs : List[int]
             from which model layers the logits were collected
         model_n_layer : int
             number of layers in model
@@ -74,7 +66,7 @@ class TraceResult:
     def __init__(
         self, 
         logits : torch.Tensor, 
-        layer_idxs : Union[List[int],int],
+        layer_idxs : List[int],
         model_n_layer : int,
         hidden_states : torch.Tensor = None,
         custom_decoder : Union[None, torch.nn.Module] = None
@@ -87,15 +79,15 @@ class TraceResult:
         del(logits)
         self.n_layers = model_n_layer
         # if layer idxs are negative indexing, convert to positive index
-        self._layer_idx = [arg_to_literal(i, n=model_n_layer) for i in arg_to_list(layer_idxs)]
+        self._layer_idx = [pos_indexing(i, n=model_n_layer) for i in layer_idxs]
         self.custom_decoder = custom_decoder
         
     def decode_logits(
         self, 
+        prompt_idx : List[int],
+        token_idx : List[int],
         top_k : int = 1,
-        layers : Union[List[int],int] = -1,
-        prompt_idx : Union[List[int],int] = 0,
-        token_idx : Union[List[int],int] = -1,
+        layers : List[int] = [-1],
         do_log_probs : bool = False,
         top_p : float = 1.0
     ) -> LogitResult:
@@ -104,11 +96,11 @@ class TraceResult:
         NOTE: layers will index the literal layer index, not the index in the list. This means
         -1 corresponds to the last layer model_n_layer - 1.
         """
-        layers, token_idx, prompt_idx = map(arg_to_list, [layers, token_idx, prompt_idx])
-        # following will throw error if index is not present:
-        layers = [self._layer_idx.index(arg_to_literal(i, n=self.n_layers)) for i in layers]
-        token_idx = [arg_to_literal(i, self._logits.shape[2]) for i in token_idx]
-        
+        # following will throw error if index is not present in collected layer logits:
+        layers = [self._layer_idx.index(pos_indexing(i, n=self.n_layers)) for i in layers]
+        # get ind
+        token_idx = [pos_indexing(i, self._logits.shape[2]) for i in token_idx]
+
         # select logits while maintaining len(shape) = 4
         logits = self._logits[layers][:,prompt_idx][:,:,token_idx]
         
@@ -116,201 +108,118 @@ class TraceResult:
             logits = self.custom_decoder(logits)
         
         logits = top_k_top_p_filtering(logits, top_k, top_p, do_log_probs)
-        return LogitResult(logits.indices, logits.values, do_log_probs)
-
+        return LogitResult(logits.indices, logits.values)
 
 def collect_hidden_states(
     model : LanguageModel,
-    prompts : Union[List[str],str],
-    layers : List[int] = None
+    prompts : List[str],
+    layers : List[int] = None,
+    target_fn : Callable = None,
 ) -> List[torch.Tensor]:
     """
     Collect hidden states for each prompt. 
-    Optionally, collect hidden states at specific layers.
+    Optionally, collect hidden states at specific layers, or at certain
+    token positions given by target_fn.
     """
-    prompts = arg_to_list(prompts)
     if layers is None:
         layers = list(range(len(model.transformer.h)))
 
-    with model.forward() as runner:
-        with runner.invoke(prompts) as invoker:
-            hidden_states = torch.stack([
-                model.transformer.h[layer_idx].output[0] # output is a tuple of (hidden_states, present)
-                for layer_idx in layers
-            ],dim=0).save()
+    with model.trace() as tracer:
+        with tracer.invoke(prompts) as invoker:
+            hidden_states = []
+            for layer_idx in layers:
+                # output is a tuple of (hidden_states, present)
+                hs = model.transformer.h[layer_idx].output[0]
+                if target_fn:
+                    # mask shape: [n_prompts, n_toks]
+                    mask = target_fn(invoker.inputs[0]["input_ids"])
+                    hs = masked_get(hs, mask)
+                hidden_states.append(hs)
+
+        hidden_states = torch.stack(hidden_states, dim=0).save() 
             
     hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
     return hidden_states
 
-
-def collect_hidden_states_at_tokens(
-    model : LanguageModel,
-    prompts : Union[List[str],str],
-    tokens : Union[List[int],int,List[str],str, Callable],
-    layers : List[int] = None,
-) -> torch.Tensor:
-    """
-    Collect hidden states for each prompt at specific tokens.
-    Optionally, collect hidden states at specific layers.
-    
-    NOTE:
-    tokens can be interpreted in two ways
-    - str: select the index of this token in the tokenized prompt. 
-        Assumes token appears exactly once in prompt, will throw error if token not found OR if multiple occurences.
-    - int: select this index in the tokenized prompt
-    """
-    prompts, tokens = map(arg_to_list, [prompts, tokens])
-    if layers is None:
-        layers = list(range(len(model.transformer.h)))
-    if isinstance(tokens[0], str):
-        tokenized_idx = [model.tokenizer.encode(t)[0] for t in tokens]
-
-    with model.forward() as runner:
-        with runner.invoke(prompts) as invoker:
-            
-            indices = invoker.input["input_ids"].numpy()
-
-            if isinstance(tokens[0], str):
-                # for each prompt find the index of token_idx
-                target_idx = np.array([np.where((i  == t)) for i in indices for t in tokenized_idx]).reshape((len(prompts),-1))
-            elif callable(tokens[0]):
-                tokens = tokens[0]
-                target_idx = np.array([tokens(i, tokenizer=model.tokenizer) for i in indices]).reshape((len(prompts),-1)).astype(np.int64)
-            else:
-                target_idx = np.array(tokens*len(prompts)).reshape(len(prompts), -1)
-            
-            hidden_states = [
-                    model.transformer.h[layer_idx].output[0]
-                    for layer_idx in layers
-                ]
-                
-            hidden_states = torch.stack(hidden_states, dim=0).save() 
-            
-    hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
-    th = torch.tensor(target_idx).to(hidden_states.device)
-    hidden_states = torch.stack([hidden_states[:,i,th[i],:] for i in range(len(prompts))], dim = 1)
-    return hidden_states
-
+@torch.no_grad
 def insert_patch(
     model : LanguageModel,
-    prompts : Union[List[str],str],
-    patch : torch.Tensor,
-    layers_to_patch : Union[List[int],int],
-    tokens_to_patch : Union[List[str],List[int],str,int, Callable],
-    patch_mode : str = "add",
-    collect_hidden_states : bool = True,
-    custom_decoder : Union[None, torch.nn.Module] = None,
+    prompts : List[str],
+    patch : torch.Tensor, # [n_layer, n_prompt, n_tokens, hdim]
+    layers_to_patch : List[int],
+    target_fn : Callable,
+    collect_hidden_states : bool = True
 ) -> TraceResult:
     """
     Insert patch at layers and tokens
-    NOTE:
-    tokens can be interpreted in two ways
-    - str: select the index of this token in the tokenized prompt. 
-        Assumes token appears exactly once in prompt, will throw error if token not found OR if multiple occurences.
-    - int: select this index in the tokenized prompt
-    
     patch should have shape [model_n_layer, num_prompts, num_tokens_to_patch, n_embd]
     """
-    prompts, tokens_to_patch, layers_to_patch = map(arg_to_list, [prompts, tokens_to_patch, layers_to_patch])
-    if not callable(tokens_to_patch[0]) and patch.shape != (len(model.transformer.h), len(prompts), len(tokens_to_patch), model.config.hidden_size):
-        raise ValueError(f"Patch shape {patch.shape} is incorrect, requires {len(model.transformer.h), len(prompts), len(tokens_to_patch), model.config.hidden_size}")
-    if patch_mode not in ["sub", "add", "subst"]:
-        raise NotImplementedError(f"Patch mode {patch_mode} not implemented")
-    
-    if isinstance(tokens_to_patch[0], str):
-        tokenized_to_patch = [model.tokenizer.encode(t)[0] for t in tokens_to_patch]
-    
-    def decode(x : torch.Tensor) -> torch.Tensor:
-        if custom_decoder is not None:
-            return x
-        else:
-            return model.lm_head(model.transformer.ln_f(x))
-    
-    with model.forward() as runner:
-        with runner.invoke(prompts) as invoker:
-            
-            indices = invoker.input["input_ids"].numpy()
-            
-            if isinstance(tokens_to_patch[0], str):
-                # for each prompt find the index of token_idx
-                target_idx = np.array([np.where((i  == t)) for i in indices for t in tokenized_to_patch]).reshape((len(prompts),-1))
-            elif callable(tokens_to_patch[0]):
-                tokens_to_patch = tokens_to_patch[0]
-                target_idx = np.array([tokens_to_patch(i, tokenizer=model.tokenizer) for i in indices]).reshape((len(prompts),-1))
-            else:
-                target_idx = np.array(tokens_to_patch*len(prompts)).reshape(len(prompts), -1)
-            
-            # apply patch to hidden states at target_idx for each prompt
+    if collect_hidden_states:
+        collect_range = list(range(len(model.transformer.h)))
+    else:
+        collect_range = [-1]
+
+    patch = patch.to(model.device)
+    with model.trace() as tracer:
+        with tracer.invoke(prompts) as invoker:
+            inputs = invoker.inputs[0]["input_ids"]
+            hidden_states = []
+
             for layer in range(len(model.transformer.h)):
+                hs = model.transformer.h[layer].output[0]
+                mask = target_fn(inputs)
                 if layer in layers_to_patch:
-                    
-                    def apply_patch(x : torch.Tensor) -> torch.Tensor:
-                        # grab layer patch
-                        layer_patch = patch[layer]
-                        
-                        for i in range(len(prompts)):
-                            # grab prompt patch
-                            prompt_patch = layer_patch[[i]]
-                            if patch_mode == "subst":
-                                x[[i],target_idx[i],:] = prompt_patch
-                            elif patch_mode == "add":
-                                x[[i],target_idx[i],:] += prompt_patch
-                            elif patch_mode == "sub":
-                                x[[i],target_idx[i],:] -= prompt_patch
-                    
-                    apply_patch(model.transformer.h[layer].output[0])
-            
-            if collect_hidden_states:
-                collect_range = list(range(len(model.transformer.h)))
-            else:
-                collect_range = [-1]
-                   
-            hidden_states = torch.stack([
-                model.transformer.h[layer_idx].output[0]
-                for layer_idx in collect_range
-            ],dim=0).save()
-        
-            logits = decode(hidden_states).save()
-            
+                    raise NotImplementedError("Patching with masked fill is broken.")
+                    new_hs = masked_fill(
+                        hs, mask.to(hs.device), patch[layer,:]
+                    )
+                    for prompt_idx in range(hs.shape[0]):
+                        model.transformer.h[layer].output[0][prompt_idx] = new_hs[prompt_idx]
+
+                    # for i in range(hs.shape[0]):
+                    #     model.transformer.h[layer].output[0][i,:,:] = patch[layer,i,:]
+
+                if layer in collect_range:
+                    hidden_states.append(model.transformer.h[layer].output[0])
+
+            hidden_states = torch.stack(hidden_states,dim=0).save()
+            logits = lm_decode(model, hidden_states, True).save()
+            final_logits = model.lm_head.output.save()
+    
     hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
     logits = util.apply(logits, lambda x: x.value, Proxy)
-    
-    return TraceResult(logits, collect_range, len(model.transformer.h), hidden_states=hidden_states, custom_decoder=custom_decoder)
+    final_logits = util.apply(final_logits, lambda x: x.value, Proxy)
+    assert torch.equal(logits[-1], final_logits), f"{logits[-1]} != {final_logits}"
+    return TraceResult(logits, collect_range, len(model.transformer.h), hidden_states=hidden_states)
     
             
 def logit_lens(
     model : LanguageModel,
-    prompts : Union[List[str],str],
-    layers : Union[List[int],int] = None,
-    apply_norm : bool = True,
+    prompts : List[str],
+    layers : List[int] = None,
     store_hidden_states : bool = False
 ) -> TraceResult:
     """
     Apply logit lens to prompts
     """
-    prompts = arg_to_list(prompts)
     if layers is None:
         layers = list(range(len(model.transformer.h)))
     else:
-        layers = arg_to_list(layers)
-        layers = [arg_to_literal(x, len(model.transformer.h)) for x in layers]
-        
-    def decode(x : torch.Tensor) -> torch.Tensor:
-        if apply_norm:
-            x = model.transformer.ln_f(x)
-        return model.lm_head(x)
+        layers = [pos_indexing(x, len(model.transformer.h)) for x in layers]
     
-    with model.forward() as runner:
-        with runner.invoke(prompts) as invoker:
-
+    with model.trace() as tracer:
+        with tracer.invoke(prompts) as invoker:
             hidden_states = torch.stack([
                 model.transformer.h[layer_idx].output[0]
                 for layer_idx in layers
             ],dim=0).save()
-                
-            logits = decode(hidden_states).save()
+            
+            logits = lm_decode(model, hidden_states, True).save()
+            final_logits = model.lm_head.output.save()
 
     logits = util.apply(logits, lambda x: x.value, Proxy)
+    final_logits = util.apply(final_logits, lambda x: x.value, Proxy)
+    assert torch.equal(logits[-1], final_logits)
     
     if store_hidden_states:
         hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
@@ -322,8 +231,8 @@ def logit_lens(
 def custom_lens(
     model : LanguageModel,
     decoder : torch.nn.Module,
-    prompts : Union[List[str],str],
-    layers : Union[int,List[int]],
+    prompts : List[str],
+    layers : List[int],
     activations : torch.Tensor = None,
     k : int = 1
 ) -> List[str]:
@@ -331,8 +240,6 @@ def custom_lens(
     Apply custom lens to model activations for prompt at (layer, token)
     Note: for original decoder, load transformer version of model and copy
     """
-    layers, prompts = map(arg_to_list, [layers, prompts])
-
     if activations is None:
         activations = collect_hidden_states(model,prompts,layers=layers)
     else:
