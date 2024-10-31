@@ -91,7 +91,7 @@ def predict(model, tokenizer, prompts):
     last_tokens = [ tokenizer.decode(token) for token in last_token_ids ]
     return last_tokens
 
-def make_decoder_copy(modelname:str, dtype:torch.dtype) -> torch.nn.Module:
+def copy_decoder(modelname:str, dtype:torch.dtype) -> torch.nn.Module:
     """
     Make a copy of the model's decoder on cpu
     """

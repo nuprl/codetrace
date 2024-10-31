@@ -14,13 +14,49 @@ from codetrace.fast_utils import get_batches_fast, batched_do_func
 from multiprocessing import cpu_count
 from tqdm import tqdm
 import datasets
-from codetrace.type_inf_exp.steering_utils import filter_prompts
 import json
 from nnsight import LanguageModel
 import torch
 import importlib
 import sys
 from codetrace.utils import parse_callable
+import pandas as pd
+
+def filter_prompts(
+    dataset : datasets.Dataset,
+    dedup_prog_threshold : int,
+    dedup_type_threshold : int
+) -> datasets.Dataset:
+    """
+    Balance prompts s.t. there is a balanced distribution of labels (program ids and/or types).
+    """
+    # if -1, set to the max value, aka do not dedup
+    if dedup_prog_threshold == -1:
+        dedup_prog_threshold = len(dataset)
+    if dedup_type_threshold == -1:
+        dedup_type_threshold = len(dataset)
+        
+    # get count of labels
+    labels = dataset["fim_type"]
+    
+    hexsha_count = {h:0 for h in dataset["hexsha"]}
+    label_count = {label : 0 for label in labels}
+    balanced_prompts = []
+    for _,ex in tqdm(enumerate(dataset), desc="Deduping dataset",total=len(dataset)):
+        if label_count[ex["fim_type"]] >= dedup_type_threshold and hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: 
+            # if label and hexsha are already at threshold, break
+            break
+        elif label_count[ex["fim_type"]] >= dedup_type_threshold or hexsha_count[ex["hexsha"]] >= dedup_prog_threshold:
+            # if hexsha is at threshold, continue
+            continue
+        
+        balanced_prompts.append(ex)
+        label_count[ex["fim_type"]] += 1
+        hexsha_count[ex["hexsha"]] += 1
+
+    df = pd.DataFrame(balanced_prompts)
+    ds = datasets.Dataset.from_pandas(df)
+    return ds
 
 def filter_oom(batch):
     new_batch = []

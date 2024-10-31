@@ -1,7 +1,7 @@
 import datasets
 from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
-from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt
+from codetrace.parsing_utils import STARCODER_FIM, placeholder_to_std_fmt
 import json
 from argparse import ArgumentParser
 import pandas as pd
@@ -9,6 +9,8 @@ from multiprocessing import cpu_count
 from tqdm import tqdm
 from collections import Counter
 from codetrace.fast_utils import get_batches_fast, batched_do_func
+import torch
+import os
 
 # filter by 1 token answer
 def filter_1tok(batch, tokenizer):
@@ -18,6 +20,10 @@ def filter_1tok(batch, tokenizer):
             new_batch.append(b)
     return new_batch
     
+def num_available_devices():
+    device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
+    return len([i for i in device_list if i != ","])
+
 def main(args):
     """
     NOTE: completions are 1 token. A completion is correct if it matches the type annotation exactly.
@@ -26,6 +32,7 @@ def main(args):
     dataset = args.prompt_ds
     model = args.model
     new_name = args.new_ds_name
+    os.makedirs(new_name, exist_ok=True)
 
     # get model basename
     model_name = model.split("/")[-1]
@@ -33,12 +40,10 @@ def main(args):
 
     ds = datasets.load_dataset(dataset, split="train")
     ds = ds.shuffle()
-    if args.max_size > -1:
-        ds = ds.select(range(args.max_size))
 
     params = SamplingParams(temperature=0, max_tokens=1)
 
-    llm = LLM(model)
+    llm = LLM(model, dtype=args.dtype, tensor_parallel_size=num_available_devices())
     tokenizer = AutoTokenizer.from_pretrained(model)
 
     batches = get_batches_fast(ds, cpu_count())
@@ -48,6 +53,8 @@ def main(args):
             yield ex
         
     ds = datasets.Dataset.from_generator(yielder)
+    if args.max_size > -1:
+        ds = ds.select(range(args.max_size))
 
     prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in ds]
                     
@@ -61,31 +68,35 @@ def main(args):
 
             for j,output in enumerate(generations):
                 generated_text = output.outputs[0].text.strip()
-                completions.append({**ds[i+j], 
-                                    "generated_text": generated_text, 
-                                    "correct": generated_text == ds[i+j]["fim_type"].strip(),
-                                    "model" : model_name})
+                completions.append({
+                    **ds[i+j], 
+                    "generated_text": generated_text, 
+                    "correct": generated_text == ds[i+j]["fim_type"].strip(),
+                    "model" : model_name
+                })
                 
             if n % 50 == 0 and n > 0:
                 # save every n batches
                 print(f"Saving {n}th batch")
                 new_ds = datasets.Dataset.from_pandas(pd.DataFrame(completions))
-                new_ds.push_to_hub(new_name)
+                new_ds.save_to_disk(new_name)
 
     else:
         generations = llm.generate(prompts, params)
 
         for i,output in enumerate(generations):
             generated_text = output.outputs[0].text.strip()
-            completions.append({**ds[i], 
-                                "generated_text": generated_text, 
-                                "correct": generated_text == ds[i]["fim_type"].strip(),
-                                "model" : model_name})
+            completions.append({
+                **ds[i], 
+                "generated_text": generated_text, 
+                "correct": generated_text == ds[i]["fim_type"].strip(),
+                "model" : model_name
+            })
 
         
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(completions))
     print(new_ds)
-    new_ds.push_to_hub(new_name)
+    new_ds.save_to_disk(new_name)
     print(Counter(new_ds["correct"]))
 
 if __name__ == "__main__":
@@ -94,5 +105,6 @@ if __name__ == "__main__":
     parser.add_argument("--prompt-ds", type=str, required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--max-size", type=int, default=-1)
+    parser.add_argument("--dtype", choices=[torch.bfloat16, torch.float32], default=torch.bfloat16)
     args = parser.parse_args()
     main(args)

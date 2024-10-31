@@ -1,5 +1,5 @@
-from codetrace.type_inf_exp.steering_utils import batched_get_averages, batched_insert_patch_logit, filter_prompts
-from codetrace.utils import placeholder_to_std_fmt, STARCODER_FIM
+from codetrace.type_inf_exp.batched_utils import batched_get_averages, batched_insert_patch_logit
+from codetrace.utils import placeholder_to_std_fmt, STARCODER_FIM, keep_columns
 from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
@@ -182,8 +182,7 @@ def steer(
                 args.patch_mode,
                 args.batch_size,
                 args.steering_outfile,
-                solutions=eval_solutions,
-                custom_decoder=custom_decoder)
+                solutions=eval_solutions)
     steering_results = []
     for i,tok in enumerate(predictions):
         ex = incorrect_eval[i]
