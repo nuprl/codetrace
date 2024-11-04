@@ -1,5 +1,5 @@
 from codetrace.type_inf_exp.batched_utils import batched_get_averages, batched_insert_patch_logit
-from codetrace.utils import placeholder_to_std_fmt, STARCODER_FIM, keep_columns
+from codetrace.utils import placeholder_to_std_fmt, get_model_fim, keep_columns
 from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
@@ -160,7 +160,8 @@ def steer(
     
     """
     if "<FILL>" in incorrect_eval["fim_program"][0]:
-        eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect_eval]
+        eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], get_model_fim(model.config.name_or_path)) 
+                        for ex in incorrect_eval]
     else:
         eval_prompts = [ex["fim_program"] for ex in incorrect_eval]
     eval_solutions = [ex["fim_type"] for ex in incorrect_eval]
@@ -211,8 +212,9 @@ def get_steering_tensor(model, correct, incorrect, args):
         print(f"Diff tensor shape: {diff_tensor.shape}")
     else:
         if args.fim_placeholder:
-            correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in correct]
-            incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in incorrect]
+            model_fim = get_model_fim(model.config.name_or_path)
+            correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], model_fim) for ex in correct]
+            incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], model_fim) for ex in incorrect]
         else:
             correct_prompts = [ex["fim_program"] for ex in correct]
             incorrect_prompts = [ex["fim_program"] for ex in incorrect]

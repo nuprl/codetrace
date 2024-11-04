@@ -3,7 +3,7 @@ import torch
 import datasets
 from tqdm import tqdm
 from torch.utils.data.dataloader import default_collate
-from codetrace.utils import placeholder_to_std_fmt, STARCODER_FIM
+from codetrace.utils import placeholder_to_std_fmt, get_model_fim
 from argparse import ArgumentParser
 from sklearn.model_selection import train_test_split
 from transformers import get_scheduler
@@ -120,12 +120,13 @@ def main(args):
     # prep items with tokenizer
     prompts = ds[args.items]
     labels = ds[args.labels]
-    prompts = [placeholder_to_std_fmt(p, STARCODER_FIM)+l for (p,l) in list(zip(prompts, labels))]
+    model_fim = get_model_fim(args.model)
+    prompts = [placeholder_to_std_fmt(p, model_fim)+l for (p,l) in list(zip(prompts, labels))]
     train_items = tokenizer(prompts, return_tensors="pt", padding=True).input_ids
     
     ood_prompts = ood_ds[args.items]
     ood_labels = ood_ds[args.labels]
-    ood_prompts = [placeholder_to_std_fmt(p, STARCODER_FIM)+l for (p,l) in list(zip(ood_prompts, ood_labels))]
+    ood_prompts = [placeholder_to_std_fmt(p, model_fim)+l for (p,l) in list(zip(ood_prompts, ood_labels))]
     ood_items = tokenizer(ood_prompts, return_tensors="pt", padding=True).input_ids
         
     train_ds, val_ds = train_test_split(train_items, test_size=args.test_size)

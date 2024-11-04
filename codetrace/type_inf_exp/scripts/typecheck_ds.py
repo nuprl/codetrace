@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 import argparse
 import datasets
-from codetrace.parsing_utils import PY_PARSER, TS_PARSER, STARCODER_FIM
+from codetrace.parsing_utils import PY_PARSER, TS_PARSER, get_model_fim
 from tqdm import tqdm
 import subprocess
 from typing import List, Dict

@@ -1,12 +1,13 @@
 import datasets
 from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
-from codetrace.parsing_utils import STARCODER_FIM, placeholder_to_std_fmt
+from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt
 import json
 from argparse import ArgumentParser
 import pandas as pd
 from multiprocessing import cpu_count
 from tqdm import tqdm
+from codetrace.utils import num_available_devices
 from collections import Counter
 from codetrace.fast_utils import get_batches_fast, batched_do_func
 import torch
@@ -16,13 +17,9 @@ import os
 def filter_1tok(batch, tokenizer):
     new_batch = []
     for b in batch:
-        if len(tokenizer.encode(b["fim_type"])) == 1:
+        if len(tokenizer(b["fim_type"], add_special_tokens=False)["input_ids"]) == 1:
             new_batch.append(b)
     return new_batch
-    
-def num_available_devices():
-    device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
-    return len([i for i in device_list if i != ","])
 
 def main(args):
     """
@@ -56,7 +53,7 @@ def main(args):
     if args.max_size > -1:
         ds = ds.select(range(args.max_size))
 
-    prompts = [placeholder_to_std_fmt(ex["fim_program"], STARCODER_FIM) for ex in ds]
+    prompts = [placeholder_to_std_fmt(ex["fim_program"], get_model_fim(args.model)) for ex in ds]
                     
     completions = []
     if len(prompts) > 10000:
@@ -75,7 +72,7 @@ def main(args):
                     "model" : model_name
                 })
                 
-            if n % 50 == 0 and n > 0:
+            if n % 10 == 0 and n > 0:
                 # save every n batches
                 print(f"Saving {n}th batch")
                 new_ds = datasets.Dataset.from_pandas(pd.DataFrame(completions))

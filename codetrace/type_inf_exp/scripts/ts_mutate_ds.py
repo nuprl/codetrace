@@ -1,7 +1,7 @@
 import datasets
 import argparse
 from codetrace.type_inf_exp import ts_mutator
-from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt, lang_to_parser, lang_to_builder
+from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt, lang_to_parser, lang_to_builder
 import pandas as pd
 from multiprocessing import cpu_count
 from transformers import AutoTokenizer
@@ -10,11 +10,14 @@ from vllm import LLM, SamplingParams
 from tqdm import tqdm
 from codetrace.fast_utils import get_batches_fast, batched_do_func
 import os
+from codetrace.utils import num_available_devices
 
-def filter_incorrect(ds: datasets.Dataset, 
-                      llm: LLM,
-                      new_ds_name,
-                      batch_size = 10000) -> datasets.Dataset:
+def filter_incorrect(
+    ds: datasets.Dataset, 
+    llm: LLM,
+    new_ds_name,
+    batch_size = 10000
+) -> datasets.Dataset:
     """
     Filter out examples where the model's prediction is incorrect. Truncate generation and
     solution at 1 token
@@ -22,7 +25,8 @@ def filter_incorrect(ds: datasets.Dataset,
     tokenizer = llm.get_tokenizer().tokenizer
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
-    ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["mutated_program"], STARCODER_FIM),
+    model_fim = get_model_fim(llm.llm_engine.get_model_config().hf_config.name_or_path)
+    ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["mutated_program"], model_fim),
                             "solution":tokenizer.decode(tokenizer.encode(x["fim_type"])[0])}, desc="Prepping prompts")
     prompts = ds["prompt"]
 
@@ -101,9 +105,7 @@ def main(args):
         ds = datasets.load_dataset(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
         
     if "do_completions" in args.actions:
-        tps = 1
-        if isinstance(args.gpu, list):
-            tps = len(args.gpu)
+        tps = num_available_devices()
         print(f"Serving VLLM across {tps} GPUs.")
         llm = LLM(args.model, tensor_parallel_size=tps)
         if tps > 1:
@@ -124,7 +126,6 @@ if __name__ == "__main__":
     parser.add_argument("--mutations", type=str, required=True, nargs="+", choices=["mutation_rename_type",
                                                                                     "mutation_rename_vars",
                                                                                     "mutation_delete_annotation"])
-    parser.add_argument("--gpu", type=int, nargs="+", required=True)
     
     parser.add_argument("--no-caching", action="store_true", default=True)
     parser.add_argument("--split", type=str, default="train")
@@ -135,7 +136,6 @@ if __name__ == "__main__":
     if args.no_caching:
         datasets.disable_caching()
         print("Caching enabled?:", datasets.is_caching_enabled())
-    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(g) for g in args.gpu])
     print("Gpu:", os.environ["CUDA_VISIBLE_DEVICES"])
     main(args)
 

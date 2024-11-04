@@ -104,7 +104,17 @@ class FimObj:
     
 fim_placeholder = "<FILL>"      
 STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
+# https://github.com/gonglinyuan/safim/blob/main/model_utils.py
+CODELLAMA_FIM = FimObj("<PRE>", " <SUF>"," <MID>", fim_placeholder)
 
+def get_model_fim(model_name:str) -> FimObj:
+    if "starcoder" in model_name.lower():
+        return STARCODER_FIM
+    elif "codellama" in model_name.lower():
+        return CODELLAMA_FIM
+    else:
+        raise NotImplementedError(f"Not supported FIM model: {model_name}")
+    
 def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
     """
     Take a prompt in fill format and convert it to standard format
@@ -175,8 +185,6 @@ def test_captures():
     assert len(captures) == 1, captures
     assert captures[0].text.decode("utf-8") == "func", captures
 
-
-test_captures()
 def replace_between_bytes(
     text : Union[str,bytes],
     start_byte : int, 

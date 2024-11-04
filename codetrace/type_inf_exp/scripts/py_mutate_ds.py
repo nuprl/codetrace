@@ -9,8 +9,8 @@ from codetrace.fast_utils import get_batches_fast, batched_do_func
 from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations
 import os
 from codetrace.type_inf_exp import py_mutator 
-from codetrace.parsing_utils import STARCODER_FIM, placeholder_to_std_fmt
-from codetrace.utils import load, save
+from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt
+from codetrace.utils import load, save, num_available_devices
 
 def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 60000) -> datasets.Dataset:
     """
@@ -20,8 +20,9 @@ def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 6
     tokenizer = llm.get_tokenizer()._tokenizer
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
+    model_fim = get_model_fim(llm.llm_engine.get_model_config().hf_config.name_or_path)
     ds = ds.map(lambda x: {
-        "prompt" : placeholder_to_std_fmt(x["mutated_program"], STARCODER_FIM),
+        "prompt" : placeholder_to_std_fmt(x["mutated_program"], model_fim),
         "solution": x["fim_type"]
     }, desc="Prepping prompts")
     
@@ -88,9 +89,7 @@ def main(args):
         ds = load(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
         
     if "do_completions" in args.actions:
-        tps = 1
-        if isinstance(args.gpu, list):
-            tps = len(args.gpu)
+        tps = num_available_devices()
         print(f"Serving VLLM across {tps} GPUs.")
         llm = LLM(args.model, tensor_parallel_size=tps)
         
@@ -124,9 +123,5 @@ if __name__ == "__main__":
     if args.no_caching:
         datasets.disable_caching()
         print("Caching enabled?:", datasets.is_caching_enabled())
-    if args.gpu != None:
-        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(g) for g in args.gpu])
-        print("Gpu:", os.environ["CUDA_VISIBLE_DEVICES"])
-    else:
-        args.gpu = int(os.environ["CUDA_VISIBLE_DEVICES"])
+    print("Gpu:", os.environ["CUDA_VISIBLE_DEVICES"])
     main(args)

@@ -10,6 +10,10 @@ from typing import List
 import functools
 import os
 
+def num_available_devices():
+    device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
+    return len([i for i in device_list if i != ","])
+
 def load(ds: str, split:str=None) -> datasets.Dataset:
     if os.path.exists(ds):
         ds = datasets.load_from_disk(ds)
