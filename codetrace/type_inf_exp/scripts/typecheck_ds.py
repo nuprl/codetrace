@@ -3,18 +3,16 @@ import shutil
 from pathlib import Path
 import argparse
 import datasets
-import pandas as pd
-from codetrace.utils import PY_PARSER, TS_PARSER, STARCODER_FIM
+from codetrace.parsing_utils import PY_PARSER, TS_PARSER, STARCODER_FIM
 from tqdm import tqdm
 import subprocess
 from typing import List, Dict
 import tempfile
 import hashlib
 from codetrace.fast_utils import batched_do_func, get_batches_fast
+from codetrace.utils import load, save
 from multiprocessing import cpu_count
 import glob
-import random
-import numpy as np
 import re
 import shutil
 import json
@@ -152,24 +150,18 @@ def main(args):
     else:
         parser = TS_PARSER
 
-    if args.local_dataset:
-        ds = datasets.load_from_disk(args.dsname)
-    else:
-        ds = datasets.load_dataset(args.dsname, split="train")
-        
+    ds = load(args.dsname, args.split)
+
     if args.max_size > -1:
         ds = ds.shuffle(42).select(range(args.max_size))
 
     batches = get_batches_fast(ds, cpu_count())
     result = batched_do_func(batches, cpu_count(), filter_typecheck_batch, 
                              colname=args.column_name, lang=args.lang, do_log=args.do_log)
-    def yielder():
-        for ex in tqdm(result, desc="Yielding", total=len(result)):
-            yield ex
-    
-    ds_new = datasets.Dataset.from_generator(yielder)
+
+    ds_new = datasets.Dataset.from_list(result)
     print(ds_new)
-    ds_new.push_to_hub(args.new_ds_name, private=True)
+    ds_new.save_to_disk(args.new_ds_name)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
@@ -177,8 +169,7 @@ if __name__=="__main__":
     parser.add_argument("--lang", choices=["py", "ts"], required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--column-name", type=str, required=True)
-    
-    parser.add_argument("--local-dataset", action="store_true", default=False)
+    parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--npm-location", type=str, default="~/.npm_packages")
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--do-log", action="store_true", default=False)

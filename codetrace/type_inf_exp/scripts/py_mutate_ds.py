@@ -9,22 +9,29 @@ from codetrace.fast_utils import get_batches_fast, batched_do_func
 from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations
 import os
 from codetrace.type_inf_exp import py_mutator 
-from codetrace.utils import STARCODER_FIM, placeholder_to_std_fmt
+from codetrace.parsing_utils import STARCODER_FIM, placeholder_to_std_fmt
+from codetrace.utils import load, save
 
 def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 60000) -> datasets.Dataset:
     """
     Filter out examples where the model's prediction is incorrect. Truncate generation and
     solution at 1 token
     """
-    tokenizer = llm.get_tokenizer().tokenizer
+    tokenizer = llm.get_tokenizer()._tokenizer
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
-    ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["mutated_program"], STARCODER_FIM),
-                            "solution":tokenizer.decode(tokenizer.encode(x["fim_type"])[0])}, desc="Prepping prompts")
+    ds = ds.map(lambda x: {
+        "prompt" : placeholder_to_std_fmt(x["mutated_program"], STARCODER_FIM),
+        "solution": x["fim_type"]
+    }, desc="Prepping prompts")
     
     prompts = ds["prompt"]
     # batch generations so we can save them early
-    for b,i in tqdm(enumerate(range(0, len(ds), batch_size)), desc="Filtering out incorrect mutations", total=len(ds) // batch_size):
+    for b,i in tqdm(
+        enumerate(range(0, len(ds), batch_size)), 
+        desc="Filtering out incorrect mutations", 
+        total=len(ds) // batch_size
+    ):
         use_tqdm = (b == 0)
         generations = llm.generate(prompts[i:i+batch_size], params, use_tqdm=use_tqdm)
 
@@ -36,10 +43,10 @@ def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 6
         # save every
         print(f"Len new_ds: {len(new_ds)}")
         new_ds_hf = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-        new_ds_hf.push_to_hub(new_ds_name, private=True)
+        save(new_ds_hf, new_ds_name, private=True)
     
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-    new_ds.push_to_hub(new_ds_name, private=True)
+    save(new_ds_hf, new_ds_name, private=True)
     new_ds = new_ds.remove_columns(["prompt", "solution"])
     return new_ds
 
@@ -62,7 +69,7 @@ def preprocess_then_mutate(batch, mutations, correct_bool = True):
 
 def main(args):
     if "do_mutate" in args.actions:
-        ds = datasets.load_dataset(args.completions_ds, split=args.split)
+        ds = load(args.completions_ds, split=args.split)
         if args.max_size > -1:
             ds = ds.shuffle(seed=args.seed).select(range(args.max_size))
         mutations = [getattr(py_mutator, m) for m in args.mutations]
@@ -76,9 +83,9 @@ def main(args):
                 
         ds = datasets.Dataset.from_generator(_yielder)
         print(ds)
-        ds.push_to_hub(args.new_ds_name + "_" + args.model_name + "_unfiltered", private=True)
+        save(ds, args.new_ds_name + "_" + args.model_name + "_unfiltered")
     else:
-        ds = datasets.load_dataset(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
+        ds = load(args.new_ds_name + "_" + args.model_name + "_unfiltered", split=args.split)
         
     if "do_completions" in args.actions:
         tps = 1
@@ -94,7 +101,7 @@ def main(args):
             batchsize = 10000
         ds = filter_incorrect(ds, llm, args.new_ds_name + "_" + args.model_name, batch_size=batchsize)
         print(ds)
-        ds.push_to_hub(args.new_ds_name + "_" + args.model_name, private=True)
+        save(ds, args.new_ds_name + "_" + args.model_name)
 
 # TODO remove comments or change pyright settings to ignore commenst (surprisingly, it doesnt)
 if __name__ == "__main__":

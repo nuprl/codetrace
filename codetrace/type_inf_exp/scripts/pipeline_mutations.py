@@ -45,14 +45,15 @@ def pipeline(args):
         # step 1: run mutation
         mutate_args = args
         mutate_args.mutations = mut_combo
-        mutate_args.new_ds_name = f"{args.hf_prefix}/{mutated_ds_name}"
+        mutate_args.new_ds_name = f"{args.exp_dir}/{mutated_ds_name}"
         mutate_args.actions = ["do_mutate", "do_completions"]
-        mutate_args.split = "train"
+        mutate_args.split = args.split
         mutate_args.gpu = str(os.environ["CUDA_VISIBLE_DEVICES"])
         mutate_args.correct_bool = True
         
         print(f"Running mutations for: {mutate_args.new_ds_name}_{args.model_name}")
         
+        # if combo_to_name(mut_combo) != "rename_types":
         mutate_main(mutate_args)
         
         print(f"Running typechecking for: {mutate_args.new_ds_name}_{args.model_name}")
@@ -63,6 +64,7 @@ def pipeline(args):
                                     "column_name":"mutated_program",
                                     "local_dataset":False,
                                     "max_size":-1,
+                                    "split":None,
                                     "npm_location":os.environ["NPM_PACKAGES"],
                                     "do_log" : False})
         
@@ -75,8 +77,7 @@ if __name__=="__main__":
     parser.add_argument("--lang", type=str, required=True, choices=["py", "ts"])
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--unique-id", type=str, required=True)
-    parser.add_argument("--hf-prefix", type=str, required=True)
-    parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument("--exp-dir", type=str, required=True)
     parser.add_argument("--do-only-combos", type=str, nargs="+", default=None,
                         choices=["all_mutations", 
                                  "rename_types", 
@@ -96,6 +97,7 @@ if __name__=="__main__":
     parser.add_argument("--model-name", type=str, default=None)
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--no-caching", action="store_true", default=False)
+    parser.add_argument("--split", type=str, default=None)
     args = parser.parse_args()
     
     if args.no_caching:

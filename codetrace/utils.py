@@ -8,6 +8,23 @@ import re
 import einops
 from typing import List
 import functools
+import os
+
+def load(ds: str, split:str=None) -> datasets.Dataset:
+    if os.path.exists(ds):
+        ds = datasets.load_from_disk(ds)
+    else:
+        ds = datasets.load_dataset(ds)
+    if split:
+        ds = ds[split]
+    return ds
+
+def save(ds: datasets.Dataset, path:str, **kwargs):
+    if len(path.split("/")) > 2:
+        # hack for if I should save to disk
+        ds.save_to_disk(path)
+    else:
+        ds.push_to_hub(path, **kwargs)
 
 def lm_decode(model, x : torch.Tensor, do_norm: bool) -> torch.Tensor:
     if do_norm:

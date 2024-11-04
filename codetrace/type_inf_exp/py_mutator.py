@@ -1,15 +1,6 @@
 import tree_sitter
-from codetrace.utils import replace_between_bytes, get_captures, PY_PARSER, PY_LANGUAGE
-import datasets
-from collections import defaultdict
-from vllm import LLM, SamplingParams
+from codetrace.parsing_utils import replace_between_bytes, get_captures, PY_PARSER
 import random
-from tqdm import tqdm
-import pandas as pd
-import re
-import sys
-from multiprocessing import cpu_count
-from argparse import ArgumentParser
 from typing import List, Tuple, Union, Callable
 from dataclasses import dataclass
 import random
@@ -79,7 +70,7 @@ CLASS_NAMES = """(class_definition name: (identifier) @id)"""
 
 ####
 
-PY_IDENTIFIER_QUERY = """((identifier) @name)""" # this also captures types
+PY_IDENTIFIER_QUERY = """((identifier) @id)""" # this also captures types
 PY_TYPE_IDENTIFIER_QUERY = """[
   (typed_parameter type:
       (type (identifier) @id))
@@ -93,10 +84,10 @@ FUNCTION_PARAMS = """
 
     ]
 """
-FUNCTION_NAME = """(function_definition name: ((identifier) @fname))"""
+FUNCTION_NAME = """(function_definition name: ((identifier) @id))"""
 PY_VARIABLE_DECLARATION_QUERY = FUNCTION_PARAMS + FUNCTION_NAME
 
-PY_ATTRIBUTE_IDENTIFIER_QUERY = """(attribute attribute: (identifier) @attr_id)"""
+PY_ATTRIBUTE_IDENTIFIER_QUERY = """(attribute attribute: (identifier) @id)"""
 
 #NOTE: the following captures include colon and identifier (if present)
 # eg. cap(n : int) = n : int, cap(-> n) = -> n
@@ -161,13 +152,13 @@ def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]], **kwa
     We assume the program does not naturally contain variables with this format
     """
     # map names to captures
-    all_names = set([x[0].text for x in var_captures])
+    all_names = set([x.text for x in var_captures])
     # map name to new name
     name_to_new_name = {name : bytes(f"__tmp{i}","utf-8") for i, name in enumerate(all_names)}
     mutations = []
     for capture in var_captures:
         location = TreeSitterLocation(capture)
-        replacement = name_to_new_name[capture[0].text]
+        replacement = name_to_new_name[capture.text]
         mutation = Mutation(location, replacement)
         mutations.append(mutation)
     return mutations
@@ -187,7 +178,7 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]], **kw
     We assume the program does not naturally contain types with format __typ{type_index}
     """
     # map names to captures
-    all_names = set([x[0].text for x in type_captures])
+    all_names = set([x.text for x in type_captures])
     # map names to new names
     name_to_new_name = {name : bytes(f"__typ{i}","utf-8") for i, name in enumerate(all_names)}
     
@@ -195,18 +186,19 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]], **kw
     do_not_prefix = set()
     for capture in type_captures:
         location = TreeSitterLocation(capture)
-        replacement = name_to_new_name[capture[0].text]
+        replacement = name_to_new_name[capture.text]
         
-        if needs_alias(capture[0].text, kwargs["import_statement_names"]):
+        if needs_alias(capture.text, kwargs["import_statement_names"]):
             # make new type alias
-            prefix = replacement + b" = " + capture[0].text
+            prefix = replacement + b" = " + capture.text
         else:
             prefix = None
         mutation = Mutation(location, replacement, prefix)
         mutations.append(mutation)
     return mutations
 
-def mutation_delete_annotation(annotation_captures : List[Tuple[tree_sitter.Node,str]], **kwargs)-> List[Mutation]:
+def mutation_delete_annotation(
+    annotation_captures : List[Tuple[tree_sitter.Node,str]], **kwargs)-> List[Mutation]:
     """
     Delete the type annotations from captures
     """
@@ -223,12 +215,12 @@ def add_type_aliases_after_imports(code: bytes, type_aliases : List[bytes]) -> b
     NOTE:we assume all imports are at the top of the file
     """
     type_aliases = b"\n".join(type_aliases) + b"\n\n"
-    captures = get_captures(code, IMPORT_STATEMENT_QUERY, "py")
+    captures = get_captures(code, IMPORT_STATEMENT_QUERY, "py", "import_statement")
     if len(captures) == 0:
         return type_aliases + code
     # find the last import statement
-    last_import = max(captures, key=lambda x: x[0].end_byte)
-    new_code = code[:last_import[0].end_byte] + b"\n" + type_aliases + code[last_import[0].end_byte:]
+    last_import = max(captures, key=lambda x: x.end_byte)
+    new_code = code[:last_import.end_byte] + b"\n" + type_aliases + code[last_import.end_byte:]
     return new_code
 
 def apply_mutations(program : str, mutations : List[Mutation]) -> str:
@@ -304,9 +296,11 @@ def random_mutate_sequential(
     return new_program
 
 
-def postprocess_py_annotation(node_capture : Tuple[tree_sitter.Node, str],
-                              target_char : bytes,
-                              shift_amt : int) -> Tuple[tree_sitter.Node, str]:
+def postprocess_py_annotation(
+    node_capture : tree_sitter.Node,
+    target_char : bytes,
+    shift_amt : int
+) -> tree_sitter.Node:
     """
     Postprocess the annotation node by applying a shift to the node from the target character. 
     Captured annotations contain var id and type id, for example:
@@ -315,51 +309,55 @@ def postprocess_py_annotation(node_capture : Tuple[tree_sitter.Node, str],
         : int
     Thus, need to shift node location + text
     """
-    text = node_capture[0].text
+    text = node_capture.text
     # find the index of the colon
     index = text.index(target_char)
     # count num bytes to shift
     shift = index + shift_amt
     # shift the node
-    new_start_byte = node_capture[0].start_byte + shift
-    new_start_point = (node_capture[0].start_point[0], node_capture[0].start_point[1] + shift)
+    new_start_byte = node_capture.start_byte + shift
+    new_start_point = (node_capture.start_point[0], node_capture.start_point[1] + shift)
     new_text = text[shift:]
     
     # edit node
     TSNodeAlias = namedtuple("TSNodeAlias", ["start_byte", "end_byte", "start_point", "end_point", "text"])
-    new_node = TSNodeAlias(new_start_byte, node_capture[0].end_byte, new_start_point, node_capture[0].end_point, new_text)
-    node_capture = (new_node, node_capture[1])
-    assert node_capture[0].text == new_text, f"Text mismatch: {node_capture[0].text} != {new_text}"
-    
+    new_node = TSNodeAlias(new_start_byte, node_capture.end_byte, new_start_point, node_capture.end_point, new_text)
+    node_capture = new_node
+    assert node_capture.text == new_text, f"Text mismatch: {node_capture.text} != {new_text}"
     return node_capture
 
-def postprocess_py_return_type(node_capture : Tuple[tree_sitter.Node, str], byte_program : bytes) -> Tuple[tree_sitter.Node, str]:
+def postprocess_py_return_type(
+    node_capture : tree_sitter.Node,
+    byte_program : bytes
+) -> tree_sitter.Node:
     """
     Return types in tree sitter don't include the ->, so we need to add it back
     """
-    text = node_capture[0].text
+    text = node_capture.text
     # find the first index of '->' starting from the end
-    index = byte_program[:node_capture[0].start_byte].rfind(b"->")
+    index = byte_program[:node_capture.start_byte].rfind(b"->")
     
     new_start_byte = index
-    shift = index - node_capture[0].start_byte
-    new_start_point = (node_capture[0].start_point[0], node_capture[0].start_point[1] + shift)
-    new_text = byte_program[index:node_capture[0].end_byte]
+    shift = index - node_capture.start_byte
+    new_start_point = (node_capture.start_point[0], node_capture.start_point[1] + shift)
+    new_text = byte_program[index:node_capture.end_byte]
     
     # edit node
     TSNodeAlias = namedtuple("TSNodeAlias", ["start_byte", "end_byte", "start_point", "end_point", "text"])
-    new_node = TSNodeAlias(new_start_byte, node_capture[0].end_byte, new_start_point, node_capture[0].end_point, new_text)
-    node_capture = (new_node, node_capture[1])
-    assert node_capture[0].text == new_text, f"Text mismatch: {node_capture[0].text} != {new_text}"
-    
+    new_node = TSNodeAlias(new_start_byte, node_capture.end_byte, new_start_point, node_capture.end_point, new_text)
+    node_capture = new_node
+    assert node_capture.text == new_text, f"Text mismatch: {node_capture.text} != {new_text}"
     return node_capture
 
-def is_in_capture_range(node : tree_sitter.Node, captures : List[Tuple[tree_sitter.Node, str]]) -> bool:
+def is_in_capture_range(
+    node : tree_sitter.Node,
+    captures : List[Tuple[tree_sitter.Node, str]]
+) -> bool:
     """
     Check if the node is in the range of any of the captures.
     """
     for capture in captures:
-        if node.start_byte >= capture[0].start_byte and node.end_byte <= capture[0].end_byte:
+        if node.start_byte >= capture.start_byte and node.end_byte <= capture.end_byte:
             return True
     return False
 
@@ -385,16 +383,16 @@ def random_mutate(
     # do not rename or delete these types
     types_blacklist = [bytes(fim_type,"utf-8"), 
                        bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
-    import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, language="py")
+    import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
     # -----------------------
     # get SELECT captures for target nodes that we can mutate
     program_bytes = bytes(program, "utf-8")
     tree = PY_PARSER.parse(program_bytes)
 
-    var_rename_captures = get_captures(tree, PY_VARIABLE_DECLARATION_QUERY, language="py")
-    return_types_captures = get_captures(tree, RETURN_TYPES, language="py")
-    class_names = get_captures(tree, CLASS_NAMES, language="py")
-    type_annotations_captures = get_captures(tree, PY_TYPE_ANNOTATIONS_QUERY, language="py")
+    var_rename_captures = get_captures(tree, PY_VARIABLE_DECLARATION_QUERY, "py", "id")
+    return_types_captures = get_captures(tree, RETURN_TYPES, "py", "id")
+    class_names = get_captures(tree, CLASS_NAMES, "py", "id")
+    type_annotations_captures = get_captures(tree, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation")
     
     type_rename_captures = [postprocess_py_annotation(x, b":", 1) for x in type_annotations_captures] + class_names + return_types_captures
     remove_annotations_captures = [postprocess_py_annotation(x, b":", 0) for x in type_annotations_captures] 
@@ -413,37 +411,40 @@ def random_mutate(
     
     # -----------------------
     # find ALL ADDITIONAL locations that contain targets
-    var_rename_targets = set([x[0].text for x in var_rename_captures])
-    type_rename_targets = set([x[0].text for x in type_rename_captures])
+    var_rename_targets = set([x.text for x in var_rename_captures])
+    type_rename_targets = set([x.text for x in type_rename_captures])
     
-    all_id_captures = get_captures(tree, PY_IDENTIFIER_QUERY, language="py")
-    all_attribute_ids = get_captures(tree, PY_ATTRIBUTE_IDENTIFIER_QUERY, language="py")
-    attribute_names = set([x[0].text for x in all_attribute_ids])
-    import_statement_names = b"\n".join([x[0].text for x in import_statements])
-    var_rename_full_captures = [x for x in all_id_captures 
-                                # rename all ids that match target
-                                if x[0].text in var_rename_targets
-                                # don't rename attributes
-                                and not x[0].text in attribute_names #TODO: do we want to rename attributes?
-                                # don't rename built-ins because no alias supported for vars
-                                and not x[0].text.decode("utf-8") in dir(builtins)+dir(typing)
-                                # don't rename anything in import statements because no alias supported for vars
-                                and not x[0].text in import_statement_names
-                                ]
-    type_rename_full_captures = [x for x in all_id_captures
-                                # rename all that match target
-                                if x[0].text in type_rename_targets
-                                # don't rename attributes
-                                and not x[0].text in attribute_names #TODO: do we want to rename attributes?
-                                # don't rename forbidden types
-                                and x[0].text not in types_blacklist
-                                # don't rename if in range of import statements 
-                                # NOTE: we can rename text in import statements because of alias support, but not the actual imports
-                                and not is_in_capture_range(x[0], import_statements)
-                                ]
-    remove_annotations_captures = [x for x in remove_annotations_captures  
-                                   if (x[0].text.replace(b":",b"").replace(b"->",b"").strip() not in types_blacklist
-                                    )]
+    all_id_captures = get_captures(tree, PY_IDENTIFIER_QUERY, "py", "id")
+    all_attribute_ids = get_captures(tree, PY_ATTRIBUTE_IDENTIFIER_QUERY, "py", "id")
+    attribute_names = set([x.text for x in all_attribute_ids])
+    import_statement_names = b"\n".join([x.text for x in import_statements])
+    var_rename_full_captures = [
+        x for x in all_id_captures 
+        # rename all ids that match target
+        if x.text in var_rename_targets
+        # don't rename attributes
+        and not x.text in attribute_names #TODO: do we want to rename attributes?
+        # don't rename built-ins because no alias supported for vars
+        and not x.text.decode("utf-8") in dir(builtins)+dir(typing)
+        # don't rename anything in import statements because no alias supported for vars
+        and not x.text in import_statement_names
+    ]
+    type_rename_full_captures = [
+        x for x in all_id_captures
+        # rename all that match target
+        if x.text in type_rename_targets
+        # don't rename attributes
+        and not x.text in attribute_names #TODO: do we want to rename attributes?
+        # don't rename forbidden types
+        and x.text not in types_blacklist
+        # don't rename if in range of import statements 
+        # NOTE: we can rename text in import statements because of alias support, but not the actual imports
+        and not is_in_capture_range(x, import_statements)
+    ]
+    remove_annotations_captures = [
+        x for x in remove_annotations_captures  
+            if (x.text.replace(b":",b"").replace(b"->",b"").strip() not in types_blacklist
+        )]
     
     # -----------------------
     # Apply the selected mutations

@@ -1,27 +1,13 @@
-import pandas as pd
-import datasets
 import tree_sitter
+import tree_sitter_python as tspython
+import tree_sitter_typescript as tstypescript
 from tree_sitter import Language, Parser
-import torch
-from collections import namedtuple
-from pathlib import Path
 from typing import List, Union
-from copy import deepcopy
-from transformers import AutoModelForCausalLM
-import re
 
-REPO_ROOT = Path(__file__).parent.parent
-Language.build_library(
-    f"{REPO_ROOT}/build/my-languages.so",
-    [f"{REPO_ROOT}/tree-sitter-typescript/typescript",f"{REPO_ROOT}/tree-sitter-python"],
-)
-TS_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "typescript")
-TS_PARSER = Parser()
-TS_PARSER.set_language(TS_LANGUAGE)
-
-PY_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "python")
-PY_PARSER = Parser()
-PY_PARSER.set_language(PY_LANGUAGE)
+PY_LANGUAGE = Language(tspython.language())
+PY_PARSER = Parser(PY_LANGUAGE)
+TS_LANGUAGE = Language(tstypescript.language_typescript())
+TS_PARSER = Parser(TS_LANGUAGE)
 
 lang_to_parser = {"typescript" : TS_PARSER, "python" : PY_PARSER, "py" : PY_PARSER, "ts" : TS_PARSER}
 lang_to_builder = {"typescript" : TS_LANGUAGE, "python" : PY_LANGUAGE, "py" : PY_LANGUAGE, "ts" : TS_LANGUAGE}
@@ -156,8 +142,9 @@ def unfim(text : str, fim : FimObj) -> str:
 
 def get_captures(
     prompt : Union[str,tree_sitter.Tree, bytes], 
-    query: Union[str, tree_sitter.binding.Query],
-    language : str = "typescript"
+    query: Union[str, tree_sitter.Query],
+    language : str,
+    key: str
 ) -> List[tree_sitter.Node]:
     """
     Get captures for a prompt given a query
@@ -176,8 +163,20 @@ def get_captures(
         query = lang.query(query)
         
     captures = query.captures(tree.root_node)
-    return captures
+    if captures != {}:
+        return captures[key]
+    else:
+        return []
 
+def test_captures():
+    prompt = "def func:"
+    query="((identifier) @name)"
+    captures = get_captures(prompt, query, "python", "name")
+    assert len(captures) == 1, captures
+    assert captures[0].text.decode("utf-8") == "func", captures
+
+
+test_captures()
 def replace_between_bytes(
     text : Union[str,bytes],
     start_byte : int, 
