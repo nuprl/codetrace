@@ -92,8 +92,7 @@ async def main(
     new_ds = []
     progress_bar = tqdm(desc="Collected mutated programs", total=num_examples)
     for i, item in tqdm(enumerate(ds), desc="Iterating over candidates"):
-        solution = item.pop("fim_type")
-        mut_prompts = mutation_generator(item.pop("fim_program"), solution, mutations, model_fim)
+        mut_prompts = mutation_generator(item["fim_program"], item["fim_type"], mutations, model_fim)
         results_generators = []
         for mut in mut_prompts:
             request_id = uuid.uuid4().int
@@ -101,7 +100,7 @@ async def main(
             results_generators.append(request)
 
         async for prompt,generated_text in iterate_async_requests(results_generators):
-            if generated_text.strip() != solution:
+            if generated_text.strip() != item["fim_type"]:
                 new_ds.append({**item, 
                     "mutated_program": std_to_placeholder_fmt(prompt, model_fim), 
                     "mutated_generated_text": generated_text})
@@ -120,6 +119,7 @@ async def main(
             break
 
     new_ds = datasets.Dataset.from_list(new_ds)
+    print(new_ds["fim_type"], new_ds["mutated_generated_text"])
     save(new_ds, new_ds_name + "_" + model.split("/")[-1])
 
 if __name__ == "__main__":
