@@ -10,7 +10,7 @@ from vllm import LLM, SamplingParams
 from tqdm import tqdm
 from codetrace.fast_utils import get_batches_fast, batched_do_func
 import os
-from codetrace.utils import num_available_devices
+from codetrace.utils import num_available_devices, get_vllm_config
 
 def filter_incorrect(
     ds: datasets.Dataset, 
@@ -25,7 +25,7 @@ def filter_incorrect(
     tokenizer = llm.get_tokenizer().tokenizer
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
-    model_fim = get_model_fim(llm.llm_engine.get_model_config().hf_config.name_or_path)
+    model_fim = get_model_fim(get_vllm_config(llm).name_or_path)
     ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["mutated_program"], model_fim),
                             "solution":tokenizer.decode(tokenizer.encode(x["fim_type"])[0])}, desc="Prepping prompts")
     prompts = ds["prompt"]

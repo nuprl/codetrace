@@ -10,7 +10,7 @@ from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations
 import os
 from codetrace.type_inf_exp import py_mutator 
 from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt
-from codetrace.utils import load, save, num_available_devices
+from codetrace.utils import load, save, num_available_devices, get_vllm_config
 
 def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 60000) -> datasets.Dataset:
     """
@@ -20,7 +20,7 @@ def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 6
     tokenizer = llm.get_tokenizer()._tokenizer
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
-    model_fim = get_model_fim(llm.llm_engine.get_model_config().hf_config.name_or_path)
+    model_fim = get_model_fim(get_vllm_config(llm).name_or_path)
     ds = ds.map(lambda x: {
         "prompt" : placeholder_to_std_fmt(x["mutated_program"], model_fim),
         "solution": x["fim_type"]

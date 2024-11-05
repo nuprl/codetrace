@@ -1,12 +1,13 @@
 import tree_sitter
 from codetrace.parsing_utils import replace_between_bytes, get_captures, PY_PARSER
 import random
-from typing import List, Tuple, Union, Callable
+from typing import List, Tuple, Union, Callable, Generator
 from dataclasses import dataclass
 import random
 import typing
 import builtins
 from collections import namedtuple
+import itertools as it
 """
 https://github.com/nvim-treesitter/nvim-treesitter/blob/master/queries/python/highlights.scm
 Random mutation code.
@@ -380,10 +381,6 @@ def random_mutate(
     # to prevent tree-sitter error:
     program = program.replace("<FILL>", "_CodetraceSpecialPlaceholder_")
     
-    # do not rename or delete these types
-    types_blacklist = [bytes(fim_type,"utf-8"), 
-                       bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
-    import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
     # -----------------------
     # get SELECT captures for target nodes that we can mutate
     program_bytes = bytes(program, "utf-8")
@@ -405,17 +402,119 @@ def random_mutate(
         return random.sample(x, n)
     
     #  random subset of captures
-    var_rename_captures = select_random_subset(var_rename_captures)
-    type_rename_captures = select_random_subset(type_rename_captures)
-    remove_annotations_captures = select_random_subset(remove_annotations_captures)
+    var_rename = select_random_subset(var_rename_captures)
+    type_rename = select_random_subset(type_rename_captures)
+    remove_annotations = select_random_subset(remove_annotations_captures)
     
     # -----------------------
     # find ALL ADDITIONAL locations that contain targets
+    
+    var_rename_all, type_rename_all, remove_annotations_all = find_all_locs(
+        program,
+        fim_type,
+        var_rename,
+        type_rename,
+        remove_annotations
+    )
+    
+    # -----------------------
+    # Apply random combinations of mutations
+    
+    new_program, all_mutations = try_apply_mutations(
+        program,
+        mutations,
+        var_rename_all,
+        type_rename_all,
+        remove_annotations_all
+    )
+    
+    if debug_seed is not None:
+        return new_program, all_mutations
+    
+    return new_program
+
+def all_combinations(*iterables)->Generator:
+    for iter in iterables:
+        random.shuffle(iter)
+    acc = {i:[] for i in range(len(iterables))}
+    while any([len(iter) > 0 for iter in iterables]):
+        for _id,iter in enumerate(iterables):
+            if len(iter) > 0:
+                acc[_id].append(iter.pop())
+                yield [acc[i] for i in range(len(iterables))]
+
+def incremental_mutate(
+    program : str, 
+    fim_type : str,
+    mutations : List[Callable]
+) -> Generator:
+    """
+    Apply incremental combination of random mutations to the program.
+    """
+    # to prevent tree-sitter error:
+    program = program.replace("<FILL>", "_CodetraceSpecialPlaceholder_")
+    
+    # -----------------------
+    # get SELECT captures for target nodes that we can mutate
+    program_bytes = bytes(program, "utf-8")
+    tree = PY_PARSER.parse(program_bytes)
+
+    var_rename_captures = get_captures(tree, PY_VARIABLE_DECLARATION_QUERY, "py", "id")
+    return_types_captures = get_captures(tree, RETURN_TYPES, "py", "id")
+    class_names = get_captures(tree, CLASS_NAMES, "py", "id")
+    type_annotations_captures = get_captures(tree, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation")
+    
+    type_rename_captures = [postprocess_py_annotation(x, b":", 1) for x in type_annotations_captures] + class_names + return_types_captures
+    remove_annotations_captures = [postprocess_py_annotation(x, b":", 0) for x in type_annotations_captures] 
+    remove_annotations_captures +=  [postprocess_py_return_type(x, program_bytes) for x in return_types_captures]
+
+    all_combos = all_combinations(
+        var_rename_captures,
+        type_rename_captures,
+        remove_annotations_captures,
+    )
+
+    for (var_rename, type_rename, remove_annotations) in all_combos:
+        # -----------------------
+        # find ALL ADDITIONAL locations that contain targets
+        
+        var_rename_all, type_rename_all, remove_annotations_all = find_all_locs(
+            program,
+            fim_type,
+            var_rename,
+            type_rename,
+            remove_annotations
+        )
+        
+        # -----------------------
+        # Apply random combinations of mutations
+        
+        new_program, _ = try_apply_mutations(
+            program,
+            mutations,
+            var_rename_all,
+            type_rename_all,
+            remove_annotations_all
+        )
+        yield new_program
+
+
+def find_all_locs(
+    program:str,
+    fim_type:str,
+    var_rename_captures: List[tree_sitter.Node],
+    type_rename_captures: List[tree_sitter.Node],
+    remove_annotations_captures: List[tree_sitter.Node]
+) -> Tuple[tree_sitter.Node]:
     var_rename_targets = set([x.text for x in var_rename_captures])
     type_rename_targets = set([x.text for x in type_rename_captures])
     
-    all_id_captures = get_captures(tree, PY_IDENTIFIER_QUERY, "py", "id")
-    all_attribute_ids = get_captures(tree, PY_ATTRIBUTE_IDENTIFIER_QUERY, "py", "id")
+    # do not rename or delete these types
+    types_blacklist = [bytes(fim_type,"utf-8"), 
+                       bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
+    import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
+    all_id_captures = get_captures(program, PY_IDENTIFIER_QUERY, "py", "id")
+    all_attribute_ids = get_captures(program, PY_ATTRIBUTE_IDENTIFIER_QUERY, "py", "id")
     attribute_names = set([x.text for x in all_attribute_ids])
     import_statement_names = b"\n".join([x.text for x in import_statements])
     var_rename_full_captures = [
@@ -445,10 +544,18 @@ def random_mutate(
         x for x in remove_annotations_captures  
             if (x.text.replace(b":",b"").replace(b"->",b"").strip() not in types_blacklist
         )]
-    
-    # -----------------------
-    # Apply the selected mutations
-    
+    return var_rename_full_captures, type_rename_full_captures, remove_annotations_captures
+
+def try_apply_mutations(
+    program:str,
+    mutations:List[callable],
+    var_rename_full_captures: List[tree_sitter.Node],
+    type_rename_full_captures: List[tree_sitter.Node],
+    remove_annotations_captures: List[tree_sitter.Node],
+)-> Tuple[str, List[callable]]:
+    import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
+    import_statement_names = b"\n".join([x.text for x in import_statements])
+
     func_name_to_args = {
         "mutation_rename_vars" : var_rename_full_captures,
         "mutation_rename_type" : type_rename_full_captures,
@@ -460,31 +567,50 @@ def random_mutate(
         captures = func_name_to_args[m.__name__]
         if len(captures) == 0:
             # if any out of the selected mutations has no captures, return None
-            return None
+            return None,[]
         all_mutations += m(captures, import_statement_names=import_statement_names)
     
     # actually modify the program
     new_program = apply_mutations(program, all_mutations)
     if new_program == program:
         # no mods applied, return None
-        return None
+        return None, []
     
     # sometimes the placeholder can be deleted, for example in nested type annotations,
     # so here's a safety check
     if not "_CodetraceSpecialPlaceholder_" in new_program:
-        return None
+        return None, []
     
     new_program = new_program.replace("_CodetraceSpecialPlaceholder_", "<FILL>")
+    return new_program, all_mutations
     
-    if debug_seed is not None:
-        return new_program, all_mutations
-    
-    return new_program
-
 
 def iter_apply_random_mutations(iterable, mutations : List[Callable]):
     """
     Apply random combination of mutations
+    """
+    new_ds = []
+    
+    for i, ex in enumerate(iterable):
+        new_program = None
+        program = ex["fim_program"]
+        fim_type = ex["fim_type"]
+        
+        tries = 0
+        while new_program is None and tries < 10:
+            tries += 1
+            new_program = random_mutate_sequential(program, fim_type, mutations)
+        if new_program is None:
+            continue
+
+        new_ds.append({"mutated_program": new_program, 
+                       "mutations" : [m.__name__ for m in mutations], **ex})
+    
+    return new_ds
+
+def iter_incremental_mutations(iterable, mutations : List[Callable]):
+    """
+    Apply all combination of mutations
     """
     new_ds = []
     

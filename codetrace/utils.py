@@ -10,6 +10,9 @@ from typing import List
 import functools
 import os
 
+def get_vllm_config(llm):
+    return llm.llm_engine.get_model_config().hf_config
+
 def num_available_devices():
     device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
     return len([i for i in device_list if i != ","])
