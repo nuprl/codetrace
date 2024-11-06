@@ -11,7 +11,10 @@ import functools
 import os
 
 def get_vllm_config(llm):
-    return llm.llm_engine.get_model_config().hf_config
+    if hasattr(llm, "llm_engine"):
+        return llm.llm_engine.get_model_config().hf_config
+    else:
+        return llm.get_model_config().hf_config
 
 def num_available_devices():
     device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
