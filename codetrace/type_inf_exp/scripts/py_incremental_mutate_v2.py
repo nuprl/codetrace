@@ -1,42 +1,46 @@
-from concurrent.futures import ProcessPoolExecutor
-from functools import partial
+
 from collections import defaultdict
 import asyncio
-from fastapi.responses import StreamingResponse
 import datasets
 import argparse
 import uuid
-from aiomultiprocess import Pool
 import random
 from multiprocessing import cpu_count
-from vllm import LLM, AsyncLLMEngine, SamplingParams, AsyncEngineArgs
+from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from vllm.outputs import RequestOutput
+import csv
 from tqdm import tqdm
-from codetrace.fast_utils import get_batches_fast, batched_do_func
 from codetrace.type_inf_exp.py_mutator import incremental_mutate
 import os
 from codetrace.type_inf_exp import py_mutator 
 from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt, FimObj, std_to_placeholder_fmt
-from codetrace.utils import load, save, num_available_devices, get_vllm_config
+from codetrace.utils import load, save, num_available_devices
 from typing import List, Tuple, Generator,AsyncGenerator,Union
-import itertools as it
 from dataclasses import dataclass
-import multiprocessing
-import aiohttp
+import threading
 os.environ["VLLM_LOGGING_LEVEL"] = "ERROR"
 
-class ShutdownQueue(asyncio.Queue):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.shutdown_flag = False
+# # from python 3.13
+# class ShutdownQueue(asyncio.Queue):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self.mutex = threading.Lock()
+#         self.not_empty = threading.Condition(self.mutex)
+#         self.not_full = threading.Condition(self.mutex)
+#         self.all_tasks_done = threading.Condition(self.mutex)
 
-    def shutdown(self):
-        self.shutdown_flag = True
-
-    def get(self):
-        if self.shutdown_flag:
-            raise asyncio.Empty
-        return super().get()
+#     def shutdown(self):
+#         with self.mutex:
+#             self.shutdown = True
+#             while self.qsize():
+#                 self._get()
+#                 if self.unfinished_tasks > 0:
+#                     self.unfinished_tasks -= 1
+#             # release all blocked threads in `join()`
+#             self.all_tasks_done.notify_all()
+#             # All getters need to re-check queue-empty to raise ShutDown
+#             self.not_empty.notify_all()
+#             self.not_full.notify_all()
 
 @dataclass
 class ResultGeneratorWrapper:
@@ -72,12 +76,17 @@ def mutation_generator(
     prompt:str,
     fim_type:str,
     mutations:List[str],
-    model_fim:FimObj
+    model_fim:FimObj,
+    max_n:int=50 # abandon robust prompts
 )->Generator:
     mut_prompts = incremental_mutate(prompt, fim_type, mutations)
+    i = 0
     for mp in mut_prompts:
         if mp != None:
             yield placeholder_to_std_fmt(mp, model_fim)
+            i += 1
+            if i>max_n:
+                break
 
 async def launch_generation(
     request_generator: ResultGeneratorWrapper
@@ -98,36 +107,55 @@ async def launch_generation(
 async def request_producer(
     ds: datasets.Dataset,
     queue: asyncio.Queue,
+    stop_event: threading.Event,
     llm: AsyncLLMEngine,
     mutations: List[callable],
     model_fim:FimObj
 ):
     sampling_params = SamplingParams(temperature=0, max_tokens=1)
     for idx,item in tqdm(enumerate(ds), desc="Producing requests", total=len(ds)):
+        if stop_event.is_set():
+            break
         mut_prompts = mutation_generator(item["fim_program"], item["fim_type"], mutations, model_fim)
         for mut in mut_prompts:
             request_id = uuid.uuid4().int
             request = llm.generate(mut, sampling_params, request_id=request_id)
             async for gen in launch_generation(ResultGeneratorWrapper(idx, request, request_id)):
                 await queue.put(gen)
+                
+    # no more examples to mine, stop with what we have
+    stop_event.set()
+
+def temp_save(log_path:str, data:dict):
+    path = f"{log_path}.csv"
+    file_exists = os.path.isfile(path)
+    with open(path,mode="a", newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=data.keys())
+
+        # Write the header only if the file is new (doesn't exist yet)
+        if not file_exists:
+            writer.writeheader()
+
+        # Append the dictionary as a new row
+        writer.writerow(data)
+
 
 async def request_consumer(
     ds: datasets.Dataset,
     queue: asyncio.Queue,
+    result_queue: asyncio.Queue,
+    stop_event: threading.Event,
     llm: AsyncLLMEngine,
     num_examples:int,
-    model_fim:FimObj
+    model_fim:FimObj,
+    log_path:str
 )-> datasets.Dataset:
-    new_ds = []
     done_idx = set()
     idx_to_request_ids = defaultdict(list)
     consume_bar = tqdm(desc="Consuming requests")
     progress_bar = tqdm(range(num_examples), desc="Items")
-    while len(new_ds) < num_examples:
+    while result_queue.empty() and result_queue.qsize() < num_examples and not stop_event.is_set():
         result= await queue.get()
-
-        if len(new_ds) >= num_examples:
-            break
 
         dataset_idx = result.dataset_idx
         idx_to_request_ids[dataset_idx].append(result.request_id)
@@ -135,30 +163,34 @@ async def request_consumer(
         if dataset_idx in done_idx:
             abort_request_ids(llm,idx_to_request_ids[dataset_idx])
             continue
-
+        
         prompt = result.prompt
         generated_text = result.generated
         if generated_text.strip() != ds[dataset_idx]["fim_type"]:
-            new_ds.append({
-                **ds[dataset_idx], 
+            data = {
+                **ds[dataset_idx],
+                "item_idx":result._output_idx,
                 "mutated_program": std_to_placeholder_fmt(prompt, model_fim), 
                 "mutated_generated_text": generated_text
-            })
+            }
+            await result_queue.put(data)
             abort_request_ids(llm,idx_to_request_ids[dataset_idx])
             done_idx.add(dataset_idx)
             progress_bar.update(1)
-        
+            # temporary save
+            temp_save(log_path,data)
+    
         # give producer generation some more time randomly, in practice this speeds
         # things up because GPU utilization is driven up
-        await asyncio.sleep(random.uniform(0.1,2))
+        await asyncio.sleep(random.uniform(1,5))
         # done
         consume_bar.update(1)
         queue.task_done()
 
-    queue.shutdown()
+    stop_event.set()
     consume_bar.close()
     progress_bar.close()
-    return datasets.Dataset.from_list(new_ds)
+    return result_queue
 
 async def main(
     completions_ds:str,
@@ -198,21 +230,23 @@ async def main(
     generating a request, we can process the previous one. This maximises gpu utilization
     while retrieving results.
     """
-    queue = ShutdownQueue()
-    new_ds = []
+    queue = asyncio.Queue()
+    stop_event = threading.Event()
+    result_queue = asyncio.Queue()
 
-    producer_task = asyncio.create_task(request_producer(ds,queue,llm,mutations,model_fim))
-    consumer_task = asyncio.create_task(request_consumer(ds,queue,llm,num_examples,model_fim))
+    producer_task = asyncio.create_task(request_producer(ds,queue,stop_event,llm,mutations,model_fim))
+    consumer_task = asyncio.create_task(request_consumer(ds,queue,result_queue,stop_event,llm,num_examples,model_fim, new_ds_name))
     await asyncio.gather(producer_task, consumer_task)
-    await queue.join()
 
-    new_ds = consumer_task.result()
-    consumer_task.cancel()
+    new_ds = []
+    while not result_queue.empty():
+        result = await result_queue.get()
+        new_ds.append(result)
+        result_queue.task_done()
+
+    new_ds = datasets.Dataset.from_list(new_ds)
     print(new_ds)
-    print(new_ds["mutated_generated_text"])
     save(new_ds, new_ds_name)
-    abort_all_requests(llm)
-
 
 
 if __name__ == "__main__":

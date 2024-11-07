@@ -145,10 +145,6 @@ def main(args):
     """
     For each ood_steering_ds/steering_ds in list-o-dirs, run parser. Collect % of parsing programs.
     """
-    if args.lang == "py":
-        parser = PY_PARSER
-    else:
-        parser = TS_PARSER
 
     ds = load(args.dsname, args.split)
 

@@ -108,11 +108,13 @@ class TreeSitterLocation:
     start_point : Tuple[int, int]
     end_point : Tuple[int, int]
     
-    def __init__(self, tree_sitter_capture : Union[tree_sitter.Node, Tuple[tree_sitter.Node, str]]):
-        if isinstance(tree_sitter_capture, tuple):
-            tree_sitter_node, _ = tree_sitter_capture
-        else:
-            tree_sitter_node = tree_sitter_capture
+    def __init__(self, tree_sitter_node : tree_sitter.Node):
+
+        # print(tree_sitter_capture, type(tree_sitter_capture))
+        # if isinstance(tree_sitter_capture, tuple):
+        #     tree_sitter_node, _ = tree_sitter_capture
+        # else:
+        # tree_sitter_node = tree_sitter_capture
         self.start_byte = tree_sitter_node.start_byte
         self.end_byte = tree_sitter_node.end_byte
         self.start_point = tree_sitter_node.start_point
