@@ -47,7 +47,7 @@ def run_typechecker(d, lang, do_log=False):
                 text=True,
             ).stdout
         except Exception as e:
-            print("Error in typechecking...")
+            print(f"Error in typechecking...{e}")
             outs = "\n".join([f"{f} - error: {e}" for f in files])
         
     elif lang == "ts":
@@ -67,7 +67,7 @@ def run_typechecker(d, lang, do_log=False):
                 ).stderr
                 outs.append(out)
             except Exception as e:
-                print("Error in typechecking...")
+                print(f"Error in typechecking...{e}")
                 outs.append(f"{tsfile}: error {e}")
 
         outs = "\n".join(outs)
@@ -115,7 +115,7 @@ def run_typechecker(d, lang, do_log=False):
     return filemap
 
     
-def filter_typecheck_batch(examples: List[dict], colname, lang, do_log=False) -> List[dict]:
+def filter_typecheck_batch(examples: List[dict], colname, lang, do_log=False, logdir:str="/tmp") -> List[dict]:
     filtered = []
     hexsha_to_ex = {}
     with tempfile.TemporaryDirectory() as tempdir:
@@ -126,6 +126,8 @@ def filter_typecheck_batch(examples: List[dict], colname, lang, do_log=False) ->
             name = os.path.join(tempdir, hexsha + f".{lang}")
             with open(name, "w") as f:
                 f.write(program)
+            if do_log:
+                log(f"{logdir}/{name.split('/')[-1]}", program)
 
         with open(f"{tempdir}/pyright_config.json", "w") as f:
             json.dump(pyright_config, f)
@@ -153,7 +155,7 @@ def main(args):
 
     batches = get_batches_fast(ds, cpu_count())
     result = batched_do_func(batches, cpu_count(), filter_typecheck_batch, 
-                             colname=args.column_name, lang=args.lang, do_log=args.do_log)
+                             colname=args.column_name, lang=args.lang, do_log=args.do_log, logdir=args.logdir)
 
     ds_new = datasets.Dataset.from_list(result)
     print(ds_new)
@@ -164,16 +166,15 @@ if __name__=="__main__":
     parser.add_argument("--dsname", type=str, required=True)
     parser.add_argument("--lang", choices=["py", "ts"], required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
-    parser.add_argument("--column-name", type=str, required=True)
+    parser.add_argument("--column-name", type=str, required=True, help="column with fim program to typecheck")
     parser.add_argument("--split", type=str, default=None)
-    parser.add_argument("--npm-location", type=str, default="~/.npm_packages")
     parser.add_argument("--max-size", type=int, default=-1)
-    parser.add_argument("--do-log", action="store_true", default=False)
+    parser.add_argument("--do-log", action="store_true")
     args = parser.parse_args()
             
-    os.environ["NPM_PACKAGES"] = args.npm_location
-    assert os.path.exists(Path(args.npm_location)), "Please pass a path to npm package location"
+    assert os.path.exists(Path(os.environ["NPM_PACKAGES"])), "Please pass a path to npm package location"
     
+    logdir=None
     if args.do_log:
         # warn user it will overwrite previous logs
         print("[WARNING] Overwriting previous logs")
@@ -181,5 +182,6 @@ if __name__=="__main__":
         if os.path.exists(logdir) and os.path.isdir(logdir):
             shutil.rmtree(logdir)
         os.makedirs(logdir, exist_ok=True)
+    args.logdir=logdir
 
     main(args)

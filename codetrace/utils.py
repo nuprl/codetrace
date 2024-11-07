@@ -22,7 +22,10 @@ def num_available_devices():
 
 def load(ds: str, split:str=None) -> datasets.Dataset:
     if os.path.exists(ds):
-        ds = datasets.load_from_disk(ds)
+        if ds.endswith(".csv"):
+            ds = datasets.Dataset.from_csv(ds)
+        else:
+            ds = datasets.load_from_disk(ds)
     else:
         ds = datasets.load_dataset(ds)
     if split:

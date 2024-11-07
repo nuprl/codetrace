@@ -20,28 +20,6 @@ from dataclasses import dataclass
 import threading
 os.environ["VLLM_LOGGING_LEVEL"] = "ERROR"
 
-# # from python 3.13
-# class ShutdownQueue(asyncio.Queue):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.mutex = threading.Lock()
-#         self.not_empty = threading.Condition(self.mutex)
-#         self.not_full = threading.Condition(self.mutex)
-#         self.all_tasks_done = threading.Condition(self.mutex)
-
-#     def shutdown(self):
-#         with self.mutex:
-#             self.shutdown = True
-#             while self.qsize():
-#                 self._get()
-#                 if self.unfinished_tasks > 0:
-#                     self.unfinished_tasks -= 1
-#             # release all blocked threads in `join()`
-#             self.all_tasks_done.notify_all()
-#             # All getters need to re-check queue-empty to raise ShutDown
-#             self.not_empty.notify_all()
-#             self.not_full.notify_all()
-
 @dataclass
 class ResultGeneratorWrapper:
     dataset_idx:int
@@ -85,7 +63,7 @@ def mutation_generator(
         if mp != None:
             yield placeholder_to_std_fmt(mp, model_fim)
             i += 1
-            if i>max_n:
+            if max_n>0 and i>max_n:
                 break
 
 async def launch_generation(
@@ -124,6 +102,7 @@ async def request_producer(
                 await queue.put(gen)
                 
     # no more examples to mine, stop with what we have
+    await asyncio.sleep(6+0) # let consumer finish
     stop_event.set()
 
 def temp_save(log_path:str, data:dict):
@@ -154,25 +133,29 @@ async def request_consumer(
     idx_to_request_ids = defaultdict(list)
     consume_bar = tqdm(desc="Consuming requests")
     progress_bar = tqdm(range(num_examples), desc="Items")
-    while result_queue.empty() and result_queue.qsize() < num_examples and not stop_event.is_set():
+    while result_queue.qsize() < num_examples and not stop_event.is_set():
         result= await queue.get()
 
         dataset_idx = result.dataset_idx
         idx_to_request_ids[dataset_idx].append(result.request_id)
 
         if dataset_idx in done_idx:
+            # since requests come asynchronously, keep aborting procesed items
             abort_request_ids(llm,idx_to_request_ids[dataset_idx])
             continue
         
         prompt = result.prompt
         generated_text = result.generated
-        if generated_text.strip() != ds[dataset_idx]["fim_type"]:
-            data = {
+        data = {
                 **ds[dataset_idx],
                 "item_idx":result._output_idx,
                 "mutated_program": std_to_placeholder_fmt(prompt, model_fim), 
                 "mutated_generated_text": generated_text
             }
+        # temporary save
+        temp_save(log_path + "_log",data)
+
+        if generated_text.strip() != ds[dataset_idx]["fim_type"]:
             await result_queue.put(data)
             abort_request_ids(llm,idx_to_request_ids[dataset_idx])
             done_idx.add(dataset_idx)
@@ -182,7 +165,7 @@ async def request_consumer(
     
         # give producer generation some more time randomly, in practice this speeds
         # things up because GPU utilization is driven up
-        await asyncio.sleep(random.uniform(1,5))
+        await asyncio.sleep(random.uniform(0,2.5))
         # done
         consume_bar.update(1)
         queue.task_done()
@@ -224,6 +207,10 @@ async def main(
     llm.log_requests = log_requests    
     model_fim = get_model_fim(model)
 
+    # init log files
+    for file_path in [f"{new_ds_name}.csv", f"{new_ds_name}_log.csv"]:
+        if os.path.exists(file_path):
+            os.remove(file_path)
     """
     For each prompt, generate N mutation combinations until one breaks the model,
     then go onto the next prompt. Do this asynchronously so while model is
