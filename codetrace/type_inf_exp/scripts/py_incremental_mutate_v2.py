@@ -102,13 +102,13 @@ async def request_producer(
                 await queue.put(gen)
                 
     # no more examples to mine, stop with what we have
-    await asyncio.sleep(6+0) # let consumer finish
+    await asyncio.sleep(60) # let consumer finish
     stop_event.set()
 
 def temp_save(log_path:str, data:dict):
     path = f"{log_path}.csv"
     file_exists = os.path.isfile(path)
-    with open(path,mode="a", newline='') as file:
+    with open(path,mode="a", newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=data.keys())
 
         # Write the header only if the file is new (doesn't exist yet)
@@ -165,7 +165,7 @@ async def request_consumer(
     
         # give producer generation some more time randomly, in practice this speeds
         # things up because GPU utilization is driven up
-        await asyncio.sleep(random.uniform(0,2.5))
+        await asyncio.sleep(random.uniform(0.1,2.5))
         # done
         consume_bar.update(1)
         queue.task_done()

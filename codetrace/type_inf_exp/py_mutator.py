@@ -193,7 +193,7 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]], **kw
         
         if needs_alias(capture.text, kwargs["import_statement_names"]):
             # make new type alias
-            prefix = replacement + b" = " + capture.text
+            prefix = replacement + b" : TypeAlias = " + capture.text
         else:
             prefix = None
         mutation = Mutation(location, replacement, prefix)
@@ -217,7 +217,8 @@ def add_type_aliases_after_imports(code: bytes, type_aliases : List[bytes]) -> b
     Add type aliases to the prefix after the last import statement
     NOTE:we assume all imports are at the top of the file
     """
-    type_aliases = b"\n".join(type_aliases) + b"\n\n"
+    import_typ_alias = b"from typing import TypeAlias\n"
+    type_aliases = import_typ_alias + b"\n".join(type_aliases) + b"\n\n"
     captures = get_captures(code, IMPORT_STATEMENT_QUERY, "py", "import_statement")
     if len(captures) == 0:
         return type_aliases + code

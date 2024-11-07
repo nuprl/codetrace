@@ -92,28 +92,46 @@ def run_typechecker(d, lang, do_log=False):
                     log(f"{logdir}/{cur_file}", content)
                     log(f"{logdir}/{cur_file.replace('.'+lang,'.log')}", cur_lines)
                 # get new file
-                filemap[filename_in_line] = 0
+                filemap[filename_in_line] = {"count":0, "errors":[]}
                 cur_file = filename_in_line
                 cur_lines = ""
         
         if (len(cur_file) > 0  and lang == "py" and "- error:" in line and 
             not '- error: Import "' in line
             and not "unknown import symbol" in line
+            and not "Position-only parameter not allowed after parameter that is not position-only" in line
             and not 'Expression of type "None" cannot be assigned to return type' in line
             and not 'is not a known member of "None"' in line):
             cur_lines += line + "\n"
-            filemap[cur_file] += 1
+            filemap[cur_file]["count"] += 1
+            filemap[cur_file]["errors"].append(line)
         elif (len(cur_file) > 0 and lang == "ts" and ": error" in line 
             and not "Cannot find module" in line
             and not "Invalid module name in augmentation" in line):
             cur_lines += line + "\n"
-            filemap[cur_file] += 1
+            filemap[cur_file]["count"] += 1
+            filemap[cur_file]["errors"].append(line)
             
     for filename in files:
         if filename.split("/")[-1] not in filemap:
-            filemap[filename.split("/")[-1]] = 0
+            filemap[filename.split("/")[-1]] = {"count":0, "errors":[]}
     return filemap
 
+def wrap(err:str, n_chars:int):
+    res = ""
+    for idx in range(0,len(err), n_chars):
+        res += err[idx:idx+n_chars] + "\n"
+    return res
+
+def _format_error_list(
+    error_list: List[str]
+)-> str:
+    col_len = 80
+    delim = f"\n#{'='*col_len}\n"
+    res = ""
+    for err in error_list:
+        res += wrap(err,col_len).strip() + delim
+    return res
     
 def filter_typecheck_batch(examples: List[dict], colname, lang, do_log=False, logdir:str="/tmp") -> List[dict]:
     filtered = []
@@ -136,9 +154,13 @@ def filter_typecheck_batch(examples: List[dict], colname, lang, do_log=False, lo
         if typecheck_map is None:
             return []
 
-        for hexsha, num_errors in typecheck_map.items():
+        for hexsha, dikt in typecheck_map.items():
+            num_errors = dikt["count"]
+            error_list = dikt["errors"]
             if num_errors == 0:
                 filtered.append(hexsha.replace(f".{lang}",""))
+            elif do_log:
+                log(f"{logdir}/errors_{name.split('/')[-1]}", _format_error_list(error_list))
     
     return [hexsha_to_ex[hexsha] for hexsha in filtered]
 
@@ -149,6 +171,7 @@ def main(args):
     """
 
     ds = load(args.dsname, args.split)
+    print(ds)
 
     if args.max_size > -1:
         ds = ds.shuffle(42).select(range(args.max_size))
