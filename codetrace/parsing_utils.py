@@ -106,12 +106,17 @@ fim_placeholder = "<FILL>"
 STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
 # https://github.com/gonglinyuan/safim/blob/main/model_utils.py
 CODELLAMA_FIM = FimObj("<PRE>", " <SUF>"," <MID>", fim_placeholder)
+# note the order changes in deepseek
+# https://huggingface.co/deepseek-ai/deepseek-coder-6.7b-base
+DEEPSEEK_FIM = FimObj("<|fim▁begin|>", "<|fim▁hole|>","<|fim▁end|>", fim_placeholder)
 
 def get_model_fim(model_name:str) -> FimObj:
     if "starcoder" in model_name.lower():
         return STARCODER_FIM
     elif "codellama" in model_name.lower():
         return CODELLAMA_FIM
+    elif "deepseek" in model_name.lower():
+        return DEEPSEEK_FIM
     else:
         raise NotImplementedError(f"Not supported FIM model: {model_name}")
     

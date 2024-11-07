@@ -32,7 +32,7 @@ def main(args):
     os.makedirs(new_name, exist_ok=True)
 
     # get model basename
-    model_name = model.split("/")[-1]
+    model_name = os.path.basename(model)
     print(f"Model: {model_name}")
 
     ds = datasets.load_dataset(dataset, split="train")

@@ -166,7 +166,6 @@ def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]], **kwa
         mutations.append(mutation)
     return mutations
 
-
 def needs_alias(typ: bytes, import_statements : bytes) -> bool:
     # if type is a builtin or typing, needs alias
     # if a type is in imports, needs alias
@@ -545,8 +544,8 @@ def find_all_locs(
     ]
     remove_annotations_captures = [
         x for x in remove_annotations_captures  
-            if (x.text.replace(b":",b"").replace(b"->",b"").strip() not in types_blacklist
-        )]
+            if (x.text.replace(b":",b"").replace(b"->",b"").strip() != bytes("_CodetraceSpecialPlaceholder_", "utf-8"))
+    ]
     return var_rename_full_captures, type_rename_full_captures, remove_annotations_captures
 
 def try_apply_mutations(

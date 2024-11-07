@@ -127,7 +127,8 @@ async def request_consumer(
     llm: AsyncLLMEngine,
     num_examples:int,
     model_fim:FimObj,
-    log_path:str
+    log_path:str,
+    candidate_fn:callable
 )-> datasets.Dataset:
     done_idx = set()
     idx_to_request_ids = defaultdict(list)
@@ -155,7 +156,7 @@ async def request_consumer(
         # temporary save
         temp_save(log_path + "_log",data)
 
-        if generated_text.strip() != ds[dataset_idx]["fim_type"]:
+        if candidate_fn(generated_text.strip(),ds[dataset_idx]["fim_type"]):
             await result_queue.put(data)
             abort_request_ids(llm,idx_to_request_ids[dataset_idx])
             done_idx.add(dataset_idx)
@@ -190,6 +191,11 @@ async def main(
     ds = load(completions_ds, split=split).shuffle()
     mutations = [getattr(py_mutator, m) for m in mutations]
 
+    if correct_bool:
+        candidate_fn = (lambda x,y: x!=y)
+    else:
+        candidate_fn = (lambda x,y: x==y)
+
     # filter dataset candidates
     ds = ds.filter(lambda x: x["correct"] == correct_bool, num_proc=cpu_count(), desc="Filtering candidates")
     if max_size > -1:
@@ -222,7 +228,8 @@ async def main(
     result_queue = asyncio.Queue()
 
     producer_task = asyncio.create_task(request_producer(ds,queue,stop_event,llm,mutations,model_fim))
-    consumer_task = asyncio.create_task(request_consumer(ds,queue,result_queue,stop_event,llm,num_examples,model_fim, new_ds_name))
+    consumer_task = asyncio.create_task(request_consumer(ds,queue,result_queue,stop_event,llm,
+                                                         num_examples,model_fim, new_ds_name,candidate_fn))
     await asyncio.gather(producer_task, consumer_task)
 
     new_ds = []
@@ -248,10 +255,12 @@ if __name__ == "__main__":
                                                                                     "mutation_delete_annotation"])
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--max-size", type=int, default=-1)
-    parser.add_argument("--correct-bool", type=bool, default=True)
+    parser.add_argument("--do-incorrect", action="store_true")
     parser.add_argument("--log-requests", action="store_true")
     args = parser.parse_args().__dict__
+    args["correct_bool"] = not args.pop("do_incorrect", True)
     datasets.disable_caching()
+    print("Correct:", args["correct_bool"])
     print("Caching enabled?:", datasets.is_caching_enabled())
     print("Gpu:", os.environ["CUDA_VISIBLE_DEVICES"])
     asyncio.run(main(**args))
