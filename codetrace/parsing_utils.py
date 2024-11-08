@@ -108,7 +108,7 @@ STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeh
 CODELLAMA_FIM = FimObj("<PRE>", " <SUF>"," <MID>", fim_placeholder)
 # note the order changes in deepseek
 # https://huggingface.co/deepseek-ai/deepseek-coder-6.7b-base
-DEEPSEEK_FIM = FimObj("<|fim▁begin|>", "<|fim▁hole|>","<|fim▁end|>", fim_placeholder)
+DEEPSEEK_FIM = FimObj("<｜fim▁begin｜>", "<｜fim▁hole｜>","<｜fim▁end｜>", fim_placeholder)
 
 def get_model_fim(model_name:str) -> FimObj:
     if "starcoder" in model_name.lower():
