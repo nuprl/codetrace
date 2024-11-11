@@ -17,7 +17,6 @@ def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 6
     Filter out examples where the model's prediction is incorrect. Truncate generation and
     solution at 1 token
     """
-    tokenizer = llm.get_tokenizer()._tokenizer
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
     model_fim = get_model_fim(get_vllm_config(llm).name_or_path)
@@ -43,8 +42,9 @@ def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 6
                 
         # save every
         print(f"Len new_ds: {len(new_ds)}")
-        new_ds_hf = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-        save(new_ds_hf, new_ds_name, private=True)
+        if len(new_ds) > 0:
+            new_ds_hf = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
+            save(new_ds_hf, new_ds_name, private=True)
     
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
     save(new_ds_hf, new_ds_name, private=True)
@@ -91,13 +91,13 @@ def main(args):
     if "do_completions" in args.actions:
         tps = num_available_devices()
         print(f"Serving VLLM across {tps} GPUs.")
-        llm = LLM(args.model, tensor_parallel_size=tps)
+        llm = LLM(args.model, tensor_parallel_size=tps, tokenizer=args.tokenizer, dtype="bfloat16")
         
         if tps > 1:
             # still want to save some intermediate completions
-            batchsize = 10000*tps
+            batchsize = 1000*tps
         else:
-            batchsize = 10000
+            batchsize = 1000
         ds = filter_incorrect(ds, llm, args.new_ds_name + "_" + args.model_name, batch_size=batchsize)
         print(ds)
         save(ds, args.new_ds_name + "_" + args.model_name)
@@ -107,6 +107,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--model", type=str, required=True)
+    parser.add_argument("--tokenizer", type=str, required=True)
     parser.add_argument("--model-name", type=str, required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--mutations", type=str, required=True, nargs="+", choices=["mutation_rename_type",
@@ -114,10 +115,10 @@ if __name__ == "__main__":
                                                                                     "mutation_delete_annotation"])
     parser.add_argument("--gpu", type=int, nargs="+", default=None)
     parser.add_argument("--no-caching", action="store_true", default=False)
-    parser.add_argument("--split", type=str, default="train")
+    parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--correct-bool", type=bool, default=True)
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--actions", nargs="+", choices=["do_completions", "do_mutate"], default=["do_completions", "do_mutate"])
     args = parser.parse_args()
     if args.no_caching:

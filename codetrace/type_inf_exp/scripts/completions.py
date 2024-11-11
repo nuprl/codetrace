@@ -29,19 +29,20 @@ def main(args):
     dataset = args.prompt_ds
     model = args.model
     new_name = args.new_ds_name
+    tokenizer_name=args.tokenizer if args.tokenizer else model
     os.makedirs(new_name, exist_ok=True)
 
     # get model basename
-    model_name = os.path.basename(model)
+    model_name = args.model_name if args.model_name else os.path.basename(model)
     print(f"Model: {model_name}")
 
-    ds = datasets.load_dataset(dataset, split="train")
+    ds = datasets.load_dataset(dataset, split=args.split)
     ds = ds.shuffle()
 
     params = SamplingParams(temperature=0, max_tokens=1)
 
-    llm = LLM(model, dtype=args.dtype, tensor_parallel_size=num_available_devices())
-    tokenizer = AutoTokenizer.from_pretrained(model)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    llm = LLM(model, dtype=args.dtype, tensor_parallel_size=num_available_devices(), tokenizer=tokenizer_name)
 
     batches = get_batches_fast(ds, cpu_count())
     data = batched_do_func(batches, cpu_count(), filter_1tok, tokenizer=tokenizer)
@@ -56,6 +57,8 @@ def main(args):
     prompts = [placeholder_to_std_fmt(ex["fim_program"], get_model_fim(args.model)) for ex in ds]
                     
     completions = []
+    num_correct=0
+    num_processed=0
     if len(prompts) > 10000:
         print("Doing batch generations")
         batch_size = 1000
@@ -65,12 +68,17 @@ def main(args):
 
             for j,output in enumerate(generations):
                 generated_text = output.outputs[0].text.strip()
+                correct = generated_text == ds[i+j]["fim_type"].strip()
                 completions.append({
                     **ds[i+j], 
                     "generated_text": generated_text, 
-                    "correct": generated_text == ds[i+j]["fim_type"].strip(),
+                    "correct": correct,
                     "model" : model_name
                 })
+                num_processed +=1
+                if correct:
+                    num_correct += 1
+                    print(f"Num correct {num_correct} / {num_processed} = {num_correct/num_processed}")
                 
             if n % 10 == 0 and n > 0:
                 # save every n batches
@@ -83,13 +91,17 @@ def main(args):
 
         for i,output in enumerate(generations):
             generated_text = output.outputs[0].text.strip()
+            correct = generated_text == ds[i]["fim_type"].strip()
             completions.append({
                 **ds[i], 
                 "generated_text": generated_text, 
-                "correct": generated_text == ds[i]["fim_type"].strip(),
+                "correct": correct,
                 "model" : model_name
             })
-
+            num_processed +=1
+            if correct:
+                num_correct += 1
+                print(f"Num correct {num_correct} / {num_processed} = {num_correct/num_processed}")
         
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(completions))
     print(new_ds)
@@ -102,6 +114,9 @@ if __name__ == "__main__":
     parser.add_argument("--prompt-ds", type=str, required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--max-size", type=int, default=-1)
+    parser.add_argument("--split",type=str,default="train")
     parser.add_argument("--dtype", choices=[torch.bfloat16, torch.float32], default=torch.bfloat16)
+    parser.add_argument("--model-name", default=None)
+    parser.add_argument("--tokenizer", default=None)
     args = parser.parse_args()
     main(args)

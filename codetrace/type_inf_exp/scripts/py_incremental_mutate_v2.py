@@ -55,7 +55,7 @@ def mutation_generator(
     fim_type:str,
     mutations:List[str],
     model_fim:FimObj,
-    max_n:int=50 # abandon robust prompts
+    max_n:int=10 # abandon robust prompts
 )->Generator:
     mut_prompts = incremental_mutate(prompt, fim_type, mutations)
     i = 0
@@ -73,14 +73,15 @@ async def launch_generation(
         prompt = request_output.prompt
         assert prompt is not None
         for out_idx,output in enumerate(request_output.outputs):
-            yield ResultWrapper(
-                request_generator.dataset_idx,
-                prompt,
-                output.text, 
-                request_output, 
-                request_output.request_id, 
-                out_idx
-            )
+            if output.text != "" and output.text != None:
+                yield ResultWrapper(
+                    request_generator.dataset_idx,
+                    prompt,
+                    output.text, 
+                    request_output, 
+                    request_output.request_id, 
+                    out_idx
+                )
 
 async def request_producer(
     ds: datasets.Dataset,
@@ -179,6 +180,7 @@ async def request_consumer(
 async def main(
     completions_ds:str,
     model:str,
+    tokenizer:str,
     dtype:str,
     new_ds_name:str,
     num_examples:int,
@@ -192,9 +194,9 @@ async def main(
     mutations = [getattr(py_mutator, m) for m in mutations]
 
     if correct_bool:
-        candidate_fn = (lambda x,y: x!=y)
+        candidate_fn = (lambda x,y: x.strip()!=y.strip())
     else:
-        candidate_fn = (lambda x,y: x==y)
+        candidate_fn = (lambda x,y: x.strip()==y.strip())
 
     # filter dataset candidates
     ds = ds.filter(lambda x: x["correct"] == correct_bool, num_proc=cpu_count(), desc="Filtering candidates")
@@ -207,7 +209,8 @@ async def main(
     engine_args = AsyncEngineArgs(
         model=model, 
         tensor_parallel_size=tps,
-        dtype=dtype
+        dtype=dtype,
+        tokenizer=model if not tokenizer else tokenizer
     )
     llm = AsyncLLMEngine.from_engine_args(engine_args)
     llm.log_requests = log_requests    
@@ -247,6 +250,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--model", type=str, required=True)
+    parser.add_argument("--tokenizer", type=str, default=None)
     parser.add_argument("--dtype", type=str, required=True, choices=["bfloat16", "float32"])
     parser.add_argument("--new-ds-name", type=str, required=True)
     parser.add_argument("--num-examples","-n", type=int, required=True)

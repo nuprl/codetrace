@@ -1,5 +1,5 @@
 from argparse import Namespace, ArgumentParser
-from launch_steer import main as main_steer
+from codetrace.type_inf_exp.scripts.launch_steer import main as main_steer
 import datasets
 import torch
 
@@ -12,7 +12,7 @@ def pipeline(args):
         "source_dataset": args.source_dataset,
         "max_size": -1,
         "shuffle": True,
-        "do_fit_matching_pairs": True,
+        # "do_fit_matching_pairs": True,
         "dedup_type_threshold": 25,
         "dedup_prog_threshold": 3,
         "test_size": 0.2,
@@ -101,7 +101,7 @@ if __name__=="__main__":
     parser.add_argument("--expdir", type=str, required=True)
     parser.add_argument("--max_size", type=int, required=True)
     parser.add_argument("--batchsize", type=int, required=True)
-    parser.add_argument("--seed", type=int, required=True) # default 42
+    parser.add_argument("--seed", type=int, default=None) # default 42
     
     parser.add_argument("--evaldir", type=str, required=False, default=None)
     parser.add_argument("--rand_steering_tensor", action="store_true", default=None)

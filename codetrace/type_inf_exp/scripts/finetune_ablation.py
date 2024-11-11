@@ -3,11 +3,12 @@ import torch
 import datasets
 from tqdm import tqdm
 from torch.utils.data.dataloader import default_collate
-from codetrace.utils import placeholder_to_std_fmt, get_model_fim
+from codetrace.parsing_utils import placeholder_to_std_fmt, get_model_fim
 from argparse import ArgumentParser
 from sklearn.model_selection import train_test_split
 from transformers import get_scheduler
 from torch.optim import AdamW
+import wandb
 """
 Based on https://huggingface.co/blog/codeparrot
 """
@@ -65,7 +66,7 @@ def train_loop(model, train_dataloader, eval_dataloader, ood_evaldataloader, arg
                                 num_training_steps=args.n_epochs * len(train_dataloader))
     
     evaluate(model, eval_dataloader, False, args)
-    evaluate(model, ood_evaldataloader, True, args)
+    # evaluate(model, ood_evaldataloader, True, args)
     
     model.train()
     total_steps = 0
@@ -88,9 +89,9 @@ def train_loop(model, train_dataloader, eval_dataloader, ood_evaldataloader, arg
 
         # save each epoch
         eval_loss, perplexity = evaluate(model, eval_dataloader, False, args)
-        ood_eval_loss, ood_perplexity = evaluate(model, ood_evaldataloader,True, args)
+        # ood_eval_loss, ood_perplexity = evaluate(model, ood_evaldataloader,True, args)
         print(f"Epoch {epoch} eval loss: {eval_loss}, eval perplexity: {perplexity}")
-        print(f"Epoch {epoch} ood eval loss: {ood_eval_loss}, ood eval perplexity: {ood_perplexity}")
+        # print(f"Epoch {epoch} ood eval loss: {ood_eval_loss}, ood eval perplexity: {ood_perplexity}")
         model.save_pretrained(args.checkpoints_dir + f"/checkpoint_{epoch}")
         model.train()
     
@@ -104,8 +105,8 @@ def main(args):
         args.logger = wandb
         wandb.init(project=args.project_name)
     
-    device = f"cuda:{args.gpu}"
-    model = AutoModelForCausalLM.from_pretrained(args.model)
+    # device = f"cuda:{args.gpu}"
+    model = AutoModelForCausalLM.from_pretrained(args.model).to("cuda")
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
@@ -113,9 +114,9 @@ def main(args):
     # filter oom
     ds = ds.filter(lambda x: len(x["fim_program"]) < 8000)
     ds = ds.shuffle(seed=42)
-    ood_ds = datasets.load_dataset(args.ood_ds, split="train")
-    ood_ds = ood_ds.filter(lambda x: len(x["fim_program"]) < 8000)
-    ood_ds = ood_ds.shuffle(seed=42)
+    # ood_ds = datasets.load_dataset(args.ood_ds, split="train")
+    # ood_ds = ood_ds.filter(lambda x: len(x["fim_program"]) < 8000)
+    # ood_ds = ood_ds.shuffle(seed=42)
     
     # prep items with tokenizer
     prompts = ds[args.items]
@@ -124,37 +125,37 @@ def main(args):
     prompts = [placeholder_to_std_fmt(p, model_fim)+l for (p,l) in list(zip(prompts, labels))]
     train_items = tokenizer(prompts, return_tensors="pt", padding=True).input_ids
     
-    ood_prompts = ood_ds[args.items]
-    ood_labels = ood_ds[args.labels]
-    ood_prompts = [placeholder_to_std_fmt(p, model_fim)+l for (p,l) in list(zip(ood_prompts, ood_labels))]
-    ood_items = tokenizer(ood_prompts, return_tensors="pt", padding=True).input_ids
+    # ood_prompts = ood_ds[args.items]
+    # ood_labels = ood_ds[args.labels]
+    # ood_prompts = [placeholder_to_std_fmt(p, model_fim)+l for (p,l) in list(zip(ood_prompts, ood_labels))]
+    # ood_items = tokenizer(ood_prompts, return_tensors="pt", padding=True).input_ids
         
     train_ds, val_ds = train_test_split(train_items, test_size=args.test_size)
     
     if args.max_size > -1:
         train_ds = train_ds[:args.max_size]
         val_ds = val_ds[:args.eval_max_size]
-        ood_items = ood_items[:args.eval_max_size]
+        # ood_items = ood_items[:args.eval_max_size]
 
     # cast to device
-    model = model.to(device)
+    model = model.to("cuda")
         
     train_ds = torch.utils.data.DataLoader(train_ds, 
                                            batch_size=args.batch_size,
-                                           collate_fn=lambda x: default_collate(x).to(device),
+                                           collate_fn=lambda x: default_collate(x).to("cuda"),
                                             shuffle=True)
     val_ds = torch.utils.data.DataLoader(val_ds, 
                                          batch_size=args.batch_size,
-                                         collate_fn=lambda x: default_collate(x).to(device),
+                                         collate_fn=lambda x: default_collate(x).to("cuda"),
                                         shuffle=True)
-    ood_evaldataloader = torch.utils.data.DataLoader(ood_items,
-                                                    batch_size=args.batch_size,
-                                                    collate_fn=lambda x: default_collate(x).to(device),
-                                                    shuffle=True)
+    # ood_evaldataloader = torch.utils.data.DataLoader(ood_items,
+    #                                                 batch_size=args.batch_size,
+    #                                                 collate_fn=lambda x: default_collate(x).to(device),
+    #                                                 shuffle=True)
     print("Train size, val size:", len(train_ds), len(val_ds))
-    print("OOD eval size:", len(ood_evaldataloader))
+    # print("OOD eval size:", len(ood_evaldataloader))
     
-    train_loop(model, train_ds, val_ds, ood_evaldataloader, args)
+    train_loop(model, train_ds, val_ds, None, args)
     if args.do_log:
         wandb.finish()
         
@@ -162,7 +163,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--model", type=str, default="/home/arjun/models/starcoderbase-1b")
     parser.add_argument("--ds", type=str, required=True)
-    parser.add_argument("--ood_ds", type=str, required=True)
+    # parser.add_argument("--ood_ds", type=str, required=True)
     parser.add_argument("--labels", type=str, default="fim_type")
     parser.add_argument("--items", type=str, default="fim_program")
     parser.add_argument("--test_size", type=float, default=0.2)
@@ -183,7 +184,7 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoints_dir", type=str, required=True)
     parser.add_argument("--do-log", action="store_true", default=False)
     parser.add_argument("--project-name", type=str, default=None)
-    parser.add_argument("--gpu", type=int, required=True)
+    # parser.add_argument("--gpu", type=int, required=True)
     args = parser.parse_args()
     main(args)
     

@@ -10,6 +10,7 @@ from codetrace.type_inf_exp.steering import (
 )
 from pathlib import Path
 import os 
+from codetrace.utils import load
 from codetrace.fast_utils import get_batches_fast, batched_do_func
 from multiprocessing import cpu_count
 from tqdm import tqdm
@@ -19,7 +20,7 @@ from nnsight import LanguageModel
 import torch
 import importlib
 import sys
-from codetrace.utils import parse_callable
+# from codetrace.utils import parse_callable
 import pandas as pd
 
 def filter_prompts(
@@ -66,11 +67,16 @@ def filter_oom(batch):
     return new_batch
 
 def make_steering_data_splits(
-        model:str,
-        datadir:str,
-        source_dataset:str,
-        seed:int=None,
-        shuffle:bool=True,
+    model:str,
+    datadir:str,
+    source_dataset:str,
+    seed:int=None,
+    shuffle:bool=True,
+    max_size:int=None,
+    test_size:float=0.1,
+    dedup_prog_threshold:int=-1,
+    dedup_type_threshold:int=-1,
+    split=None
 ):
     """
     Generates fit test splits and saves to disk in shared steering_data directory.
@@ -81,7 +87,7 @@ def make_steering_data_splits(
         print("Correct and incorrect splits already exist, skipping...")
         return
     
-    ds = datasets.load_dataset(source_dataset, split="train")
+    ds = load(source_dataset, split=split)
     print(ds)
     
     if shuffle:
@@ -104,23 +110,23 @@ def make_steering_data_splits(
     
     tokenizer = AutoTokenizer.from_pretrained(model)
     if "mutated_program" not in ds.column_names:
-        correct, incorrect, incorrect_eval = fit_test_split_completions(ds,tokenizer, args)
+        correct, incorrect, incorrect_eval = fit_test_split_completions(ds,tokenizer, test_size)
     else:
-        correct, incorrect, incorrect_eval = fit_test_split(ds,tokenizer, args)
+        correct, incorrect, incorrect_eval = fit_test_split(ds,tokenizer, test_size)
         
-    if args.dedup_type_threshold > -1 or args.dedup_prog_threshold > -1:
-        assert args.shuffle, "Please select shuffle when deduping dataset."
-        correct = filter_prompts(correct, args.dedup_prog_threshold, args.dedup_type_threshold)
-        incorrect = filter_prompts(incorrect, args.dedup_prog_threshold, args.dedup_type_threshold)
+    if dedup_type_threshold > -1 or dedup_prog_threshold > -1:
+        assert shuffle, "Please select shuffle when deduping dataset."
+        correct = filter_prompts(correct, dedup_prog_threshold, dedup_type_threshold)
+        incorrect = filter_prompts(incorrect, dedup_prog_threshold, dedup_type_threshold)
         if incorrect_eval != None:
-            incorrect_eval = filter_prompts(incorrect_eval, args.dedup_prog_threshold, args.dedup_type_threshold)
-        
-    if args.max_size > 0:
-        assert args.shuffle, "Please select shuffle when truncating dataset."
-        correct = correct.select(range(min(args.max_size, len(correct))))
-        incorrect = incorrect.select(range(min(args.max_size, len(incorrect))))
+            incorrect_eval = filter_prompts(incorrect_eval, dedup_prog_threshold, dedup_type_threshold)
+
+    if max_size > 0:
+        assert shuffle, "Please select shuffle when truncating dataset."
+        correct = correct.select(range(min(max_size, len(correct))))
+        incorrect = incorrect.select(range(min(max_size, len(incorrect))))
         if incorrect_eval != None:
-            incorrect_eval = incorrect_eval.select(range(min(args.max_size, len(incorrect_eval))))
+            incorrect_eval = incorrect_eval.select(range(min(max_size, len(incorrect_eval))))
     
     
     # [DONE WITH SPLITS, LOG INFO AND SAVE]
@@ -133,14 +139,14 @@ def make_steering_data_splits(
     info_ood = get_data_info(incorrect_eval, "incorrect_ood")
     
     # save splits to disk
-    os.makedirs(args.datadir, exist_ok=True)
-    correct.save_to_disk(f"{args.datadir}/correct")
-    incorrect.save_to_disk(f"{args.datadir}/incorrect")
+    os.makedirs(datadir, exist_ok=True)
+    correct.save_to_disk(f"{datadir}/correct")
+    incorrect.save_to_disk(f"{datadir}/incorrect")
     if incorrect_eval:
-        incorrect_eval.save_to_disk(f"{args.datadir}/incorrect_ood")
+        incorrect_eval.save_to_disk(f"{datadir}/incorrect_ood")
 
     # save data info
-    with open(f"{args.datadir}/data_info.json", "w") as f:
+    with open(f"{datadir}/data_info.json", "w") as f:
         info = [info_incorrect, info_correct, info_ood]
         # add types in info_eval that are not in info_incorrect
         if len(info_ood) > 0:
@@ -279,16 +285,18 @@ def main(args):
     # parse callable from tokens_to_patch if it exists
     if getattr(args, "tokens_to_patch", None) != None:
         # check if args.tokens_to_patch is an importable function
-        args.tokens_to_patch = parse_callable(args.tokens_to_patch)
-        
-    if args.action == "make_steering_data_splits":
-        make_steering_data_splits(args)
-    elif args.action == "make_steering_tensor":
-        make_steering_tensor(args)
-    elif args.action == "run_steering":
-        run_steering(args)
-    elif args.action == "layer_ablation":
-        run_layer_ablation(args)
+        # args.tokens_to_patch = parse_callable(args.tokens_to_patch)
+        raise NotImplementedError("No parse callable")
+    
+    action = args.__dict__.pop("action")  
+    if action == "make_steering_data_splits":
+        make_steering_data_splits(**args.__dict__)
+    elif action == "make_steering_tensor":
+        make_steering_tensor(**args.__dict__)
+    elif action == "run_steering":
+        run_steering(**args.__dict__)
+    elif action == "layer_ablation":
+        run_layer_ablation(**args.__dict__)
     else:
         raise ValueError("""Invalid action, please choose from:
                         \t- make_steering_data_splits

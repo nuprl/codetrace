@@ -124,7 +124,6 @@ for plang in $LANGUAGES; do
             mutate $mutants $plang $COMPLETIONS_DIR $MUTATION_DIR $CURR_GPU; \
             echo "[2] Typechecking"; \
             typecheck $MUTATION_DIR $plang "${MUTATION_DIR}_typechecked" &
-            unset CUDA_VISIBLE_DEVICES
         fi
     done
     export CUDA_VISIBLE_DEVICES=$ALL_GPUS

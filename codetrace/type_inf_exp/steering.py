@@ -1,5 +1,6 @@
 from codetrace.type_inf_exp.batched_utils import batched_get_averages, batched_insert_patch_logit
-from codetrace.utils import placeholder_to_std_fmt, get_model_fim, keep_columns
+from codetrace.parsing_utils import placeholder_to_std_fmt, get_model_fim
+from codetrace.utils import keep_columns
 from einops import rearrange
 from argparse import ArgumentParser, Namespace
 from collections import Counter
@@ -48,7 +49,7 @@ def make_source_program_ood(
         
     ood_incorrect = get_field_subset(incorrect, "hexsha", test_len, reverse=False)
     ood_incorrect = datasets.Dataset.from_pandas(pd.DataFrame(ood_incorrect))
-
+    print(ood_incorrect)
     ood_hexshas = set(ood_incorrect["hexsha"])
     
     def _keep_condition(x):
@@ -61,18 +62,18 @@ def make_source_program_ood(
 
 
 def get_ood(
-        correct: str, 
-        incorrect: str,
-        test_size: float, 
-        do_fit_matching_pairs:bool,
-        ood_fn = make_source_program_ood
-    ):
+    correct: str, 
+    incorrect: str,
+    test_size: float, 
+    do_fit_matching_pairs:bool,
+    ood_fn = make_source_program_ood
+):
     """
     Applies an OOD function to correct and incorrect prompts.
     Filters correct and incorrect prompts based on OOD and matching pairs.
     """
     if test_size > 0:
-        correct, incorrect, ood = ood_fn(correct, incorrect,args)
+        correct, incorrect, ood = ood_fn(correct, incorrect, test_size)
     else:
         ood = None
         
@@ -86,7 +87,7 @@ def get_ood(
     return correct, incorrect, ood
 
                          
-def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
+def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, test_size:float, **kwargs):
     """
     For CAA and Completions datasets (equivalent)
     """
@@ -104,9 +105,10 @@ def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, args):
         
     correct = dataset.filter(lambda x : x["correct"] == True, desc="Getting correct subset")
     incorrect = dataset.filter(lambda x : x["correct"] == False, desc="Getting incorrect subset")
-    return get_ood(correct, incorrect, args)
+    print(correct, incorrect)
+    return get_ood(correct, incorrect, test_size, True, **kwargs)
     
-def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
+def fit_test_split(dataset : datasets.Dataset, tokenizer, test_size:float, **kwargs):
     """
     For mutated datasets
     """
@@ -114,7 +116,7 @@ def fit_test_split(dataset : datasets.Dataset, tokenizer, args):
     incorrect = keep_columns(dataset, ["mutated_program","fim_type","hexsha"])
     incorrect = incorrect.rename_columns({"mutated_program": "fim_program"})
     
-    return get_ood(correct, incorrect, args)
+    return get_ood(correct, incorrect, test_size, True, **kwargs)
 
 
 def steer_on_ds(model, diff_tensor, incorrect, ood_flag, args):
