@@ -5,7 +5,7 @@ from transformers import AutoTokenizer
 from tqdm import tqdm
 from functools import partial
 from typing import Callable
-from codetrace.fast_utils import get_batches_fast, batched_do_func
+from codetrace.fast_utils import get_batches_fast, batched_apply
 from typing import List
 import os
 from pathlib import Path
@@ -101,7 +101,7 @@ def multiprocess(ds, args):
         ds_chunk=ds.shard(args.num_chunks, i)
         batches = get_batches_fast(ds_chunk, args.num_proc)
         del ds_chunk
-        results = batched_do_func(batches, args.num_proc, _process_prompts, query_str=TS_QUERY_FUNC_TYPES, do_remove_comments=args.do_remove_comments)
+        results = batched_apply(batches, args.num_proc, _process_prompts, query_str=TS_QUERY_FUNC_TYPES, do_remove_comments=args.do_remove_comments)
         print(f"Length of ds: {len(results)}")
         def yielder():
             for ex in tqdm(results, desc="Yielding", total=len(results)):
@@ -115,7 +115,7 @@ def multiprocess(ds, args):
 
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
         batches = get_batches_fast(results, args.num_proc)
-        ds = batched_do_func(batches, args.num_proc, batch_filter_is_one_token, tokenizer=tokenizer)
+        ds = batched_apply(batches, args.num_proc, batch_filter_is_one_token, tokenizer=tokenizer)
         print(f"Length of ds: {len(ds)}")
         def yielder():
             for ex in tqdm(ds, desc="Yielding", total=len(ds)):

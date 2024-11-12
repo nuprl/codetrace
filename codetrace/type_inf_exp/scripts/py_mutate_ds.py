@@ -5,7 +5,7 @@ from multiprocessing import cpu_count
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 from tqdm import tqdm
-from codetrace.fast_utils import get_batches_fast, batched_do_func
+from codetrace.fast_utils import make_batches, batched_apply
 from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations
 import os
 from codetrace.type_inf_exp import py_mutator 
@@ -75,8 +75,8 @@ def main(args):
             ds = ds.shuffle(seed=args.seed).select(range(args.max_size))
         mutations = [getattr(py_mutator, m) for m in args.mutations]
         
-        batches = get_batches_fast(ds, cpu_count())
-        results = batched_do_func(batches, cpu_count(), preprocess_then_mutate, mutations=mutations, correct_bool=args.correct_bool)
+        batches = make_batches(ds, cpu_count())
+        results = batched_apply(batches, cpu_count(), preprocess_then_mutate, mutations=mutations, correct_bool=args.correct_bool)
 
         def _yielder():
             for ex in tqdm(results, desc="Yielding", total=len(results)):

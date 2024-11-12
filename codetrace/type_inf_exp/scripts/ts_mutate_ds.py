@@ -8,7 +8,7 @@ from transformers import AutoTokenizer
 import torch
 from vllm import LLM, SamplingParams
 from tqdm import tqdm
-from codetrace.fast_utils import get_batches_fast, batched_do_func
+from codetrace.fast_utils import make_batches, batched_apply
 import os
 from codetrace.utils import num_available_devices, get_vllm_config
 
@@ -91,8 +91,8 @@ def main(args):
             ds = ds.shuffle(seed=42).select(range(args.max_size))
         mutations = [getattr(ts_mutator, m) for m in args.mutations]
         
-        batches = get_batches_fast(ds, cpu_count())
-        results = batched_do_func(batches, cpu_count(), preprocess_then_mutate, mutations=mutations, correct_bool=args.correct_bool)
+        batches = make_batches(ds, cpu_count())
+        results = batched_apply(batches, cpu_count(), preprocess_then_mutate, mutations=mutations, correct_bool=args.correct_bool)
 
         def _yielder():
             for ex in tqdm(results, desc="Yielding", total=len(results)):

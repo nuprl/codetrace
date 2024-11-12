@@ -88,19 +88,43 @@ class FimObj:
         self,
         fim_prefix : str,
         fim_suffix : str,
-        fim_token : str,
+        fim_middle : str,
         fim_placeholder : str
     ):
         self.prefix = fim_prefix
         self.suffix = fim_suffix
-        self.token = fim_token
+        self.middle = fim_middle
         self.placeholder = fim_placeholder
         
     def __str__(self):
-        return f"FimObj(prefix={self.prefix}, suffix={self.suffix}, token={self.token}, placeholder={self.placeholder})"
+        return f"FimObj(prefix={self.prefix}, suffix={self.suffix}, middle={self.middle}, placeholder={self.placeholder})"
     
     def to_list(self):
-        return [self.prefix, self.suffix, self.token, self.placeholder]
+        return [self.prefix, self.suffix, self.middle, self.placeholder]
+    
+    def placeholder_to_fim(self, prompt:str)->str:
+        assert self.is_placeholder(prompt) and not self.is_fim(prompt), \
+            f"Prompt is not in fim placeholder format: {self.placeholder}!"
+        parts = prompt.split(self.placeholder)
+        prompt = self.prefix + parts[0] + self.suffix + parts[1] + self.middle
+        return prompt
+    
+    def fim_to_placeholder(self, prompt:str)->str:
+        assert self.is_fim(prompt) and not self.is_placeholder(prompt), "Prompt is not in fim format!"
+        return prompt.replace(self.prefix, "").replace(self.suffix, self.placeholder).replace(self.middle,"")
+
+    def unfim(self, prompt:str) -> str:
+        assert self.is_fim(prompt) and not self.is_placeholder(prompt), "Prompt is not in fim format!"
+        prefix = prompt.split(self.prefix)[-1].split(self.suffix)[0]
+        suffix = prompt.split(self.suffix)[-1].split(self.middle)[0]
+        middle = prompt.split(self.middle)[-1]
+        return prefix+middle+suffix
+    
+    def is_placeholder(self, prompt:str)->bool:
+        return self.placeholder in prompt
+    
+    def is_fim(self, prompt:str)->bool:
+        return all([t in prompt for t in [self.prefix, self.suffix, self.middle]])
     
 fim_placeholder = "<FILL>"      
 STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
@@ -119,41 +143,6 @@ def get_model_fim(model_name:str) -> FimObj:
         return DEEPSEEK_FIM
     else:
         raise NotImplementedError(f"Not supported FIM model: {model_name}")
-    
-def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
-    """
-    Take a prompt in fill format and convert it to standard format
-    
-    >>> "def func(n : <FILL>)"
-    "<prefix>def func(n : <suffix>)<fim_token>"
-    """
-    parts = prompt.split(fim.placeholder)
-    if len(parts) != 2:
-        raise ValueError(f"Prompt does not contain a fim placeholder: {fim.placeholder}")
-    prompt = fim.prefix + parts[0] + fim.suffix + parts[1] + fim.token
-    return prompt
-
-def std_to_placeholder_fmt(prompt : str, fim : FimObj) -> str:
-    """
-    Take a prompt in standard format and convert it to fill format
-    
-    >>> "<prefix>def func(n : <suffix>)<fim_token>"
-    "def func(n : <FILL>)"
-    
-    """
-    new_prompt = prompt.replace(fim.prefix, "").replace(fim.suffix, fim.placeholder).replace(fim.token,"")
-    if fim.placeholder not in new_prompt:
-        raise ValueError(f"Prompt does not contain a fim placeholder: {fim.placeholder}")
-    return new_prompt
-
-def unfim(text : str, fim : FimObj) -> str:
-    """
-    Remove fim special tokens and unscramble
-    """
-    prefix = text.split(fim.prefix)[-1].split(fim.suffix)[0]
-    suffix = text.split(fim.suffix)[-1].split(fim.token)[0]
-    middle = text.split(fim.token)[-1]
-    return prefix+middle+suffix
 
 def get_captures(
     prompt : Union[str,tree_sitter.Tree, bytes], 
@@ -182,13 +171,6 @@ def get_captures(
         return captures[key]
     else:
         return []
-
-def test_captures():
-    prompt = "def func:"
-    query="((identifier) @name)"
-    captures = get_captures(prompt, query, "python", "name")
-    assert len(captures) == 1, captures
-    assert captures[0].text.decode("utf-8") == "func", captures
 
 def replace_between_bytes(
     text : Union[str,bytes],
@@ -228,3 +210,21 @@ def find_between_bytes(
         if text[i:i+len(target)] == target:
             return i
     return -1
+
+# PYTESTS
+
+def test_captures():
+    prompt = "def func:"
+    query="((identifier) @name)"
+    captures = get_captures(prompt, query, "python", "name")
+    assert len(captures) == 1, captures
+    assert captures[0].text.decode("utf-8") == "func", captures
+
+def test_fim():
+    prompt = "hi my name is <FILL>! Nice to meet you"
+    fim_prompt = STARCODER_FIM.placeholder_to_fim(prompt)
+    unfimmed_prompt = STARCODER_FIM.unfim(fim_prompt + "George")
+    placeholder_prompt = STARCODER_FIM.fim_to_placeholder(fim_prompt)
+    assert placeholder_prompt == "hi my name is <FILL>! Nice to meet you"
+    assert unfimmed_prompt == "hi my name is George! Nice to meet you"
+    assert fim_prompt == f"{STARCODER_FIM.prefix}hi my name is {STARCODER_FIM.suffix}! Nice to meet you{STARCODER_FIM.middle}"

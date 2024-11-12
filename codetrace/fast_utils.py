@@ -1,47 +1,57 @@
 import multiprocessing
 from tqdm import tqdm
 import datasets
-from typing import List
+from typing import List, Iterable,Any,Callable
 """
 Fast parallel utils for processing data in batches.
 Faster than huggingface multiproc map/filter.
 """
-    
-def batched_do_func(
-    batches : List[List[any]], 
+def batched_apply(
+    batches : List[List[Any]], 
     num_proc : int, 
-    func : callable, 
+    func : Callable, 
     **func_kwargs
-):
+) -> List[Any]:
     """
     Apply a function to batches of data in parallel.
     A batch is a list of data.
     """
     pool = multiprocessing.Pool(num_proc)
-    
+    disable_tqdm = func_kwargs.pop("disable_tqdm",False)
+
     async_out_batches = []
-    for i, batch in tqdm(enumerate(batches), desc="Processing batches", total=len(batches)):
+    for i, batch in enumerate(batches):
         async_out = pool.apply_async(func, args=(batch,), kwds=func_kwargs)
         async_out_batches.append(async_out)
     
     results = []
-    for i in tqdm(range(len(async_out_batches)), desc="Getting results", total=len(async_out_batches)):
+    for i in tqdm(
+        range(len(async_out_batches)),
+        desc="Applying",
+        total=len(async_out_batches),
+        disable=disable_tqdm
+    ):
         results += async_out_batches[i].get()
             
     pool.close()
     pool.join()
     return results
 
-def _collect_index(itr, si, ei):
+def _collect_index(itr: Iterable, si:int, ei:int) -> Iterable:
     if isinstance(itr, datasets.Dataset):
         return [itr[i] for i in range(si, ei)] # faster
     else:
         return itr[si:ei]
     
-def get_batches_fast(iterable, num_proc : int):
+def make_batches(
+    iterable:Iterable, 
+    num_proc : int,
+    disable_tqdm: bool = True
+) -> List[Iterable]:
     """
     Makes batches of data for parallel processing.
     Is parallelized for speed on large datasets.
+    Does not preserve order.
     """
     len_iter = len(iterable)
     batch_size = len_iter // num_proc
@@ -51,17 +61,19 @@ def get_batches_fast(iterable, num_proc : int):
     async_out_batches = []
     
     i=0
-    progress_bar = tqdm(total=num_proc, desc="Making batches")
     while i < len_iter:
         end_index = min(i + batch_size, len_iter)
         async_out = pool.apply_async(_collect_index, args=(iterable, i, end_index))
         async_out_batches.append(async_out)
         i = end_index
-        progress_bar.update(1)
-    progress_bar.close()
     
     batches = []
-    for j in tqdm(range(len(async_out_batches)), desc="Getting batches", total=len(async_out_batches)):
+    for j in tqdm(
+        range(len(async_out_batches)),
+        desc="Batching",
+        total=len(async_out_batches),
+        disable=disable_tqdm
+    ):
         batches.append(async_out_batches[j].get())
         
     pool.close()

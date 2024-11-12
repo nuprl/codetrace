@@ -1,316 +1,378 @@
-from codetrace.type_inf_exp.batched_utils import batched_get_averages, batched_insert_patch_logit
-from codetrace.parsing_utils import placeholder_to_std_fmt, get_model_fim
-from codetrace.utils import keep_columns
-from einops import rearrange
-from argparse import ArgumentParser, Namespace
+import numpy as np
 from collections import Counter
-import sys
-import json
-import pandas as pd
-from multiprocessing import cpu_count
+import torch
+from pathlib import Path
+from codetrace.parsing_utils import FimObj, get_model_fim
 import datasets
 import os
-import torch
-from typing import List
+from typing import Union, Tuple,List,Dict,Any,Optional,Callable
+from codetrace.utils import load, save, mask_target_tokens, keep_columns
+from nnsight import LanguageModel
+from codetrace.type_inf_exp.batched_utils import batched_get_averages, batched_insert_patch_logit
+from functools import partial
+from codetrace.fast_utils import batched_apply, make_batches
+import itertools as it
+from tqdm import tqdm
+from sklearn.model_selection import train_test_split
 
-def get_field_subset(
-        incorrect: datasets.Dataset, 
-        field: str, 
-        test_len: int, 
-        reverse: True
-    ):
+def balance_prompts(
+    dataset : datasets.Dataset,
+    dedup_prog_threshold : int,
+    dedup_type_threshold : int,
+    disable_tqdm:bool = False
+) -> datasets.Dataset:
     """
-    Return a subset of incorrect prompts that have the least/most count of field.
-    stop when test_len is reached.
+    Balance prompts s.t. there is a balanced distribution of labels (program ids and/or types).
     """
-    # set aside some incorrect prompts
-    field_counts = Counter(incorrect[field])
-    # accumulate from the least/most count until threshold test_size is achieved
-    sorted_field = sorted(list(incorrect), key= lambda x : field_counts[x[field]], reverse=reverse)
-    f_subset = []
-    for x in sorted_field:
-        f_subset.append(x)
-        if len(f_subset) > test_len:
+    # if -1, set to the max value, aka do not dedup
+    if dedup_prog_threshold == -1:
+        dedup_prog_threshold = len(dataset)
+    if dedup_type_threshold == -1:
+        dedup_type_threshold = len(dataset)
+        
+    # get count of labels
+    labels = dataset["fim_type"]
+    
+    hexsha_count = {h:0 for h in dataset["hexsha"]}
+    label_count = {label : 0 for label in labels}
+    balanced_prompts = []
+    for _,ex in tqdm(enumerate(dataset), desc="Deduping dataset",total=len(dataset), disable=disable_tqdm):
+        if label_count[ex["fim_type"]] >= dedup_type_threshold and hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: 
+            # if label and hexsha are already at threshold, break
             break
-    return f_subset
+        elif label_count[ex["fim_type"]] >= dedup_type_threshold or hexsha_count[ex["hexsha"]] >= dedup_prog_threshold:
+            # if hexsha is at threshold, continue
+            continue
+        
+        balanced_prompts.append(ex)
+        label_count[ex["fim_type"]] += 1
+        hexsha_count[ex["hexsha"]] += 1
 
-def make_source_program_ood(
-        correct, 
-        incorrect, 
-        test_size:float
+    ds = datasets.Dataset.from_list(balanced_prompts)
+    return ds
+
+def subtract_avg(hidden_states:torch.Tensor) -> torch.Tensor:
+    # [n_layer, n_prompt, n_tokens, n_vocab]
+    """
+    At prompt dim, subtract pairs of prompts; finally, compute the mean
+    """
+    # even and odd indices
+    even_indices = torch.arange(0, hidden_states.shape[1], step=2)
+    odd_indices = torch.arange(1, hidden_states.shape[1], step=2)
+
+    # subtract odd idx from even
+    hidden_states[:, even_indices] -= hidden_states[:, odd_indices]
+
+    # compute mean
+    mean_even = hidden_states[:, even_indices].mean(dim=1)
+    return mean_even
+
+def prepare_prompts(
+    data: List[Dict[str,Any]],
+    fim_obj:FimObj
+)->List[str]:
+    return list(it.chain.from_iterable(
+                    map(lambda x:(fim_obj.placeholder_to_fim(x["fim_program"]),
+                                fim_obj.placeholder_to_fim(x["mutated_program"])), data),
+                    )
+                )
+    
+def multiproc_prepare_prompts(fim_programs:List[Dict[str,Any]], fim_obj:FimObj, nproc:int=2)->List[str]:
+    batches = make_batches(fim_programs, nproc, disable_tqdm=True)
+    return batched_apply(batches, nproc, prepare_prompts, disable_tqdm=True, fim_obj=fim_obj)
+
+class SteeringManager:
+    """
+    This class bundles methods for steering, saving and running 
+    the type inference experiment given a model, a save dir and
+    steering candidates (neg-pos pairs). 
+    """
+
+    def __init__(
+        self,
+        model:LanguageModel,
+        candidates_ds: str,
+        cache_dir: Path,
+        steer_split_path: Optional[str]=None,
+        test_split_path: Optional[str]=None,
+        steering_tensor_path: Optional[str]=None,
+        max_num_candidates:int=-1,
+        token_mask_fn:Optional[Callable]=None
     ):
-    """
-    OOD should have different set of source programs
-    """
-    if test_size > 1:
-        test_len = test_size
-    else:
-        test_len = int(len(incorrect) * test_size)
-        
-    ood_incorrect = get_field_subset(incorrect, "hexsha", test_len, reverse=False)
-    ood_incorrect = datasets.Dataset.from_pandas(pd.DataFrame(ood_incorrect))
-    print(ood_incorrect)
-    ood_hexshas = set(ood_incorrect["hexsha"])
-    
-    def _keep_condition(x):
-        return x["hexsha"] not in ood_hexshas
-    
-    correct = correct.filter(_keep_condition, desc="Filtering ood")
-    incorrect = incorrect.filter(_keep_condition, desc="Filtering ood")
-    
-    return correct, incorrect, ood_incorrect
+        self.model=model
+        self.tokenizer=model.tokenizer
+        self.fim_obj=get_model_fim(model.config.name_or_path)
+        self.candidates_ds = load(candidates_ds)
+        if max_num_candidates > -1:
+            self.candidates_ds = self.candidates_ds.select(range(max_num_candidates))
+        self.cache_dir = cache_dir
+        if not token_mask_fn:
+            # default patch on fim middle
+            token_mask_fn = partial(mask_target_tokens, tokens=[self.fim_obj.middle], tokenizer=self.tokenizer),
+        self.token_mask_fn = token_mask_fn
+        # try load cached if it exists
+        self.test_split : Optional[datasets.Dataset] = self.load_data(test_split_path)
+        self.steer_split : Optional[datasets.Dataset] = self.load_data(steer_split_path)
+        self.steering_tensor : Optional[torch.Tensor] = self.load_tensor(steering_tensor_path)
 
+        os.makedirs(self.cache_dir, exist_ok=True)
 
-def get_ood(
-    correct: str, 
-    incorrect: str,
-    test_size: float, 
-    do_fit_matching_pairs:bool,
-    ood_fn = make_source_program_ood
-):
-    """
-    Applies an OOD function to correct and incorrect prompts.
-    Filters correct and incorrect prompts based on OOD and matching pairs.
-    """
-    if test_size > 0:
-        correct, incorrect, ood = ood_fn(correct, incorrect, test_size)
-    else:
-        ood = None
-        
-    # does correct need same exact programs as incorrect?
-    if do_fit_matching_pairs:
-        intersection = set(incorrect["hexsha"]).intersection(set(correct["hexsha"]))
-        incorrect = incorrect.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count(), desc="Filtering ood")
-        correct = correct.filter(lambda x : x["hexsha"] in intersection, num_proc=cpu_count(), desc="Filtering ood")
-        assert set(incorrect["hexsha"]) == set(correct["hexsha"])
-        
-    return correct, incorrect, ood
+    def save_data(self, data:datasets.Dataset, path:str):
+        """
+        Saves data to self.cache_dir / path
+        """
+        subpath = Path(os.path.join(self.cache_dir, path))
+        if not os.path.exists(subpath):
+            save(data, subpath)
 
-                         
-def fit_test_split_completions(dataset : datasets.Dataset, tokenizer, test_size:float, **kwargs):
-    """
-    For CAA and Completions datasets (equivalent)
-    """
-    def _is_correct_sanity_check(x, tokenizer):
-        toks_generated = tokenizer.encode(x["generated_text"])
-        solution_toks = tokenizer.encode(x["fim_type"])
-        if len(toks_generated) == 0:
-            return False
+    def load_data(self, path:str, split:Optional[str]=None) -> Optional[datasets.Dataset]:
+        """
+        Loads data from self.cache_dir / path
+        """
+        try:
+            return load(os.path.join(self.cache_dir,path), split=split)
+        except:
+            return None
+    
+    def save_tensor(self, tensor:torch.Tensor, path:str):
+        """
+        Saves tensor to self.cache_dir / path
+        """
+        torch.save(tensor,os.path.join(self.cache_dir, path))
+
+    def load_tensor(self, path:str) -> Optional[torch.Tensor]:
+        """
+        Loads tensor from self.cache_dir / path
+        """
+        fullpath=os.path.join(self.cache_dir, path)
+        if os.path.exists(fullpath):
+            return torch.load(fullpath)
         else:
-            return toks_generated[0] == solution_toks[0]
-        
-    if "generated_text" in dataset.column_names:
-        # recompute "correct" sanity check
-        dataset = dataset.map(lambda x : {**x, "correct" : _is_correct_sanity_check(x, tokenizer)}, desc="Sanity Recomputing correct")
-        
-    correct = dataset.filter(lambda x : x["correct"] == True, desc="Getting correct subset")
-    incorrect = dataset.filter(lambda x : x["correct"] == False, desc="Getting incorrect subset")
-    print(correct, incorrect)
-    return get_ood(correct, incorrect, test_size, True, **kwargs)
-    
-def fit_test_split(dataset : datasets.Dataset, tokenizer, test_size:float, **kwargs):
-    """
-    For mutated datasets
-    """
-    correct = keep_columns(dataset, ["fim_program", "fim_type", "hexsha"])
-    incorrect = keep_columns(dataset, ["mutated_program","fim_type","hexsha"])
-    incorrect = incorrect.rename_columns({"mutated_program": "fim_program"})
-    
-    return get_ood(correct, incorrect, test_size, True, **kwargs)
+            return None
 
+    def steer_test_splits(
+        self,
+        test_size:Union[float,int],
+        dedup_prog_threshold:int, # 3 suggested
+        dedup_type_threshold:int, # 25 suggested
+        shuffle:bool=True,
+        seed:Optional[int]=None
+    )-> Tuple[datasets.Dataset]:
+        """
+        Split candidates into a steering and test split.
+        Ensure that source programs in test are not in steer
+        and viceversa using the program id to sort.
 
-def steer_on_ds(model, diff_tensor, incorrect, ood_flag, args):
-    """
-    Given model, a steering tensor, and a dataset of incorrect prompts, steer on the dataset.
-    Logs results to args.outdir
-    
-    NOTE: while this function makes cache files for predictions, the functionality
-    to restart steering from a cache file (for example after unexpected crash) has not been implemented yet
-    """ 
-    if os.path.exists(f"{args.expdir}/{ood_flag}steering_results_ds"):
-        print(f"...Loading steering results from {args.expdir}/{ood_flag}steering_results_ds...")
-        steering_ds = datasets.load_from_disk(f"{args.expdir}/{ood_flag}steering_results_ds")
-    else:
-        print(f"...Applying patch to {ood_flag}incorrect prompts...")
-        incorrect = datasets.Dataset.from_pandas(pd.DataFrame(incorrect))
-        args.steering_outfile = f"{args.expdir}/{ood_flag}steering_predictions.json"
-        steering_ds = steer(model,
-                            incorrect,
-                            diff_tensor, 
-                            args)
-        steering_ds.save_to_disk(f"{args.expdir}/{ood_flag}steering_results_ds")
-        # remove cache files
-        os.remove(args.steering_outfile)
-    
-    df = steering_ds.to_pandas()
-    df = df[["steered_generation","fim_type","correct_steer", "hexsha"]]
-    # sort by fim_type
-    df = df.sort_values(by="fim_type")
-    df.to_csv(f"{args.expdir}/{ood_flag}steering_results.csv")
-    
-    log_results(steering_ds, args, f"{args.expdir}/{ood_flag}eval_readme.json")
-
-
-def steer(
-    model,
-    incorrect_eval,
-    diff_tensor,
-    args
-):
-    """
-    Given a model, a steering tensor, and a dataset of incorrect prompts, steer on the dataset.
-    
-    """
-    if "<FILL>" in incorrect_eval["fim_program"][0]:
-        eval_prompts = [placeholder_to_std_fmt(ex["fim_program"], get_model_fim(model.config.name_or_path)) 
-                        for ex in incorrect_eval]
-    else:
-        eval_prompts = [ex["fim_program"] for ex in incorrect_eval]
-    eval_solutions = [ex["fim_type"] for ex in incorrect_eval]
-        
-    if args.custom_decoder is not False:
-        decoder = torch.load(args.custom_decoder)
-        weight = decoder["weight"]
-        linear_layer = torch.nn.Linear(in_features=weight.shape[1], out_features=weight.shape[0])
-        linear_layer.weight.data = weight
-        custom_decoder = linear_layer.to("cpu")
-    else:
-        custom_decoder = None
-        
-    predictions = batched_insert_patch_logit(model, 
-                eval_prompts, 
-                diff_tensor, 
-                args.layers_to_patch,
-                args.tokens_to_patch,
-                args.patch_mode,
-                args.batch_size,
-                args.steering_outfile,
-                solutions=eval_solutions)
-    steering_results = []
-    for i,tok in enumerate(predictions):
-        ex = incorrect_eval[i]
-        steering_results.append({"steered_generation" : tok, 
-                            "correct_steer" : ex["fim_type"] == tok.strip(),
-                            **ex})
+        Arguments:
+            test_size: int for number of test programs. float for portion of test programs.
+            dedup_prog_threshold: max number of duplicate source programs that should be
+                present in the splits.
+            dedup_type_threshold: max number of duplicate type_labels that should be
+                present in the splits.
+            shuffle: whether to shuffle candidates
+            seed: for deterministic shuffling
+        """
+        if not self.test_split and not self.steer_split:
+            steer_split,test_split = _steer_test_split(
+                self.candidates_ds,
+                test_size=test_size,
+                shuffle=shuffle,
+                seed=seed,
+                separate_by_column="hexsha"
+            )
+            if dedup_prog_threshold > -1 or dedup_type_threshold > -1:
+                steer_split = balance_prompts(steer_split, dedup_prog_threshold, dedup_type_threshold)
+                test_split = balance_prompts(steer_split, dedup_prog_threshold, dedup_type_threshold)
             
-    steering_ds = datasets.Dataset.from_pandas(pd.DataFrame(steering_results))
-    return steering_ds
+            if test_size < 0:
+                test_size *= len(self.candidates_ds)
+            train_size = len(self.candidates_ds) - test_size
+            test_size = min(len(test_split), test_size)
+            train_size = min(len(steer_split), train_size)
 
+            self.steer_split = steer_split.select(range(train_size))
+            self.test_split = test_split.select(range(test_size))
 
-def get_steering_tensor(model, correct, incorrect, args):
-    """
-    Given a model, a dataset of correct and incorrect prompts, and args, return a steering tensor
-    from the average of the incorrect prompts and the average of the correct prompts.
+        return self.steer_split, self.test_split
+
+    def create_steering_tensor(
+        self,
+        batch_size:int
+    ) -> torch.Tensor:
+        """
+        Collects activations of steering split in a batched manner, subtracting
+        negative and positive steering items and averaging result as it goes.
+        """
+        if not self.steer_split:
+            raise ValueError("Please create a steer split before attempting to steer.")
+        if batch_size % 2 != 0:
+            raise ValueError("Please provide a batch_size divisible by pairs")
+        
+        if not self.steering_tensor:
+            dataloader = torch.utils.data.DataLoader(
+                self.steer_split,
+                batch_size,
+                collate_fn=partial(prepare_prompts, fim_obj=self.fim_obj)
+            )
+            self.steering_tensor = batched_get_averages(
+                self.model,
+                dataloader,
+                batch_size=batch_size,
+                target_fn=partial(mask_target_tokens, tokens=[self.fim_obj.middle], tokenizer=self.tokenizer),
+                average_fn=subtract_avg,
+                outfile=os.path.join(self.cache_dir, "cached_steering_tensor")
+            )
+        return self.steering_tensor
     
-    NOTE: while this function makes cache files for the correct/incorrect average tensor computation, the functionality
-    to restart computing averga vectors from the cache files (for example after unexpected crash) has not been implemented yet
-    """
-    basename = args.steering_tensor_name.replace(".pt","")
-    
-    # load steering tensor if it exists, load it, otherwise create it
-    if os.path.exists(f"{args.datadir}/{args.steering_tensor_name}"):
-        print(f"Loading steering tensor from {args.datadir}...")
-        diff_tensor = torch.load(f"{args.datadir}/{args.steering_tensor_name}")
-        print(f"Diff tensor shape: {diff_tensor.shape}")
-    else:
-        if args.fim_placeholder:
-            model_fim = get_model_fim(model.config.name_or_path)
-            correct_prompts = [placeholder_to_std_fmt(ex["fim_program"], model_fim) for ex in correct]
-            incorrect_prompts = [placeholder_to_std_fmt(ex["fim_program"], model_fim) for ex in incorrect]
+    def steer(
+        self,
+        split:str,
+        layers_to_steer:List[int],
+        batch_size:int,
+    )-> datasets.Dataset:
+        """
+        Evaluate the steering tensor on
+        """
+        if not self.steering_tensor:
+            raise ValueError("Please create a steering tensor before attempting to steer.")
+        if split == "steer":
+            ds = self.steer_split
+        elif split == "test":
+            ds = self.test_split
         else:
-            correct_prompts = [ex["fim_program"] for ex in correct]
-            incorrect_prompts = [ex["fim_program"] for ex in incorrect]
-            
-        if os.path.exists(f"{args.datadir}/{basename}_correct_avg.pt"):
-            print(f"Loading correct avg tensor from {args.datadir}...")
-            correct_avg_tensor = torch.load(f"{args.datadir}/{basename}_correct_avg.pt")
-        else:
-            print(f"Creating correct avg tensor...")
-            correct_avg_tensor = batched_get_averages(model, 
-                                                    correct_prompts,
-                                                    args.tokens_to_patch,
-                                                    batch_size=args.batch_size,
-                                                    outfile=f"{args.datadir}/{basename}_correct_avg")
-            # save tensor
-            torch.save(correct_avg_tensor, f"{args.datadir}/{basename}_correct_avg.pt")
-            # remove cache files
-            os.remove(f"{args.datadir}/{basename}_correct_avg.pkl")
-            os.remove(f"{args.datadir}/{basename}_correct_avg.json")
-            
-        if os.path.exists(f"{args.datadir}/{basename}_incorrect_avg.pt"):
-            print(f"Loading incorrect avg tensor from {args.datadir}...")
-            incorrect_avg_tensor = torch.load(f"{args.datadir}/{basename}_incorrect_avg.pt")
-        else:
-            print(f"Creating incorrect avg tensor...")
-            incorrect_avg_tensor = batched_get_averages(model,
-                                                        incorrect_prompts,
-                                                        args.tokens_to_patch,
-                                                        batch_size=args.batch_size,
-                                                        outfile=f"{args.datadir}/{basename}_incorrect_avg")
-            # save tensor
-            torch.save(incorrect_avg_tensor, f"{args.datadir}/{basename}_incorrect_avg.pt")
-            # remove cache files
-            os.remove(f"{args.datadir}/{basename}_incorrect_avg.pkl")
-            os.remove(f"{args.datadir}/{basename}_incorrect_avg.json")
-            
-        diff_tensor = correct_avg_tensor - incorrect_avg_tensor
-        diff_tensor = rearrange(diff_tensor, "l t d -> l 1 t d") # [n_layers, n_prompts, n_tokens, n_embd]
-
-        print(f"Diff tensor shape after transform: {diff_tensor.shape}")
+            raise ValueError("Can only specify to steer either on the steer or test split.")
         
-    return diff_tensor
+        dataloader = torch.utils.data.DataLoader(
+            ds["mutated_program"],
+            batch_size,
+            collate_fn=(lambda x: list(map(self.fim_obj.placeholder_to_fim, x)))
+        )
+        solutions = list(ds["fim_type"])
+        predictions = batched_insert_patch_logit(
+            self.model,
+            dataloader,
+            self.steering_tensor,
+            layers_to_steer,
+            target_fn=self.token_mask_fn,
+            batch_size=batch_size,
+            outfile=os.path.join(self.cache_dir, f"cached_steering_{split}"),
+            solutions=solutions
+        )
+        ds["steered_predictions"] = predictions
+        return ds
 
-def get_data_info(ds, name) -> json:
+def _steer_test_split(
+    ds: datasets.Dataset,
+    test_size: Union[int, float],
+    shuffle:bool,
+    seed:Optional[int],
+    separate_by_column: str,
+)-> Tuple[datasets.Dataset, datasets.Dataset]:
     """
-    Give some information about how balanced the ds is
+    referenced from huggingface stratified_shuffle_split_generate_indices
     """
-    if ds is None:
-        return {"name":"No ood set", "length" : -1, "hexsha_counts" : {}, "type_counts" : {}}
-    count_hex = Counter(ds["hexsha"])
-    count_type = Counter(ds["fim_type"])
-    len_ds = len(ds)
-    return {"name":name, "length" : len_ds, "hexsha_counts" : count_hex, "type_counts" : count_type}
+    counter = Counter(ds[separate_by_column])
+    ds = ds.map(lambda x: {**x, "_label": x[separate_by_column] if counter[x[separate_by_column]] > 1 else None},
+                                        num_proc=10)
+    ds = ds.class_encode_column("_label", include_nulls=True)
+    if shuffle:
+        ds = ds.shuffle(seed=seed)
+
+    unique_labels = np.unique(ds[separate_by_column])
+    train_labels, test_labels = train_test_split(unique_labels, test_size=test_size)
+
+    train_ds = ds.filter(lambda x: x[separate_by_column] in train_labels, num_proc=10)
+    test_ds = ds.filter(lambda x: x[separate_by_column] in test_labels, num_proc=10)
+    return train_ds, test_ds
 
 
-def log_results(steering_ds,  args, outfile):
-    correct_steer = steering_ds.filter(lambda x : x["correct_steer"] == True, desc="Counting correct steers")
-    metric = f"{len(correct_steer)} / {len(steering_ds)} = {len(correct_steer) / len(steering_ds)}"
-    print(metric)
-    steering_df_by_type = accuracy_per_type(steering_ds)
-    
-    per_type_res = []
-    for dikt in steering_df_by_type.to_dict('records'):
-        d = {}
-        for k,v in dikt.items():
-            if str(k[1]) == "":
-                d[k[0]] = v
-            else:
-                d[k[1]] = v
-        per_type_res.append(d)
+"""
+PYTESTS
+"""
 
-    with open(outfile, "w") as f:
-        results = {
-            "num_success" : len(correct_steer),
-            "total": len(steering_ds),
-            "accuracy": len(correct_steer) / len(steering_ds),
-            "results_per_type": per_type_res
-        }
-        json.dump(results, f, indent=4)
-        
+def test_subtract_avg():
+    x = torch.Tensor(
+        [
+            # layer0
+            [
+                # prompt 0
+                [[1,2],[3,4],[5,6]],
+                # prompt 1
+                [[1,2],[3,4],[5,6]],
+            ],
 
-def accuracy_per_type(steering_ds):
-    """
-    Given a dataset of completions after steering, calculate accuracy per type.
-    """
-    # calculate accuracy per type
-    steering_df = steering_ds.to_pandas()
-    # cast correct_steer to int (0 if False, 1 if True)
-    steering_df["correct_steer"] = steering_df["correct_steer"].astype(int)
-    steering_df_by_type = steering_df.groupby("fim_type")
-    steering_df_by_type = steering_df_by_type.agg({"correct_steer" : ["sum", "count"]}).reset_index()
-    # make df of accuracy per type
-    steering_df_by_type["accuracy"] = (steering_df_by_type[("correct_steer", "sum")] / 
-                                       steering_df_by_type[("correct_steer", "count")])
-    # normalize groups
-    steering_df_by_type = steering_df_by_type.sort_values(by="accuracy", ascending=False)
-    return steering_df_by_type.reset_index()
+            # layer1
+            [
+                # prompt 0
+                [[1,2],[3,4],[5,6]],
+                # prompt 1
+                [[-1,-2],[-3,-4],[-5,-6]],
+            ],
+            # layer2
+            [
+                # prompt 0
+                [[1,2],[3,4],[5,6]],
+                # prompt 1
+                [[1,-2],[3,-4],[-5,6]],
+            ],
+        ]
+    )
+    output = subtract_avg(x)
+    expected = torch.Tensor(
+        [
+            # layer0
+            [
+                [0,0],[0,0],[0,0],
+            ],
+
+            # layer1
+            [
+                # prompt 0
+                [2,4],[6,8],[10,12],
+            ],
+            # layer2
+            [
+                [0,4],[0,8],[10,0],
+            ],
+        ]).to(dtype=torch.float)
+    assert torch.equal(output, expected), f"{output} != {expected}"
+
+def test_prepare_prompts():
+    prompts = [
+        {"fim_program":"my name is <FILL> !","mutated_program":"my name is NOT <FILL> !"},
+        {"fim_program":"my job is <FILL> !","mutated_program":"my job is NOT <FILL> !"},
+        {"fim_program":"my house is <FILL> !","mutated_program":"my house is NOT <FILL> !"},
+        {"fim_program":"my car is <FILL> !","mutated_program":"my car is NOT <FILL> !"},
+    ]
+    fim_obj = get_model_fim("starcoder")
+    output = prepare_prompts(prompts, fim_obj)
+    expected = []
+    for i in prompts:
+        expected.append(fim_obj.placeholder_to_fim(i["fim_program"]))
+        expected.append(fim_obj.placeholder_to_fim(i["mutated_program"]))
+    assert output == expected, f"{output}!={expected}"
+
+def test_stratify():
+    data = [{"hexsha":0},
+            {"hexsha":1},
+            {"hexsha":2},
+            {"hexsha":3},
+            {"hexsha":4},
+            {"hexsha":5},
+            {"hexsha":5},
+            {"hexsha":5},
+            {"hexsha":6},
+            {"hexsha":6},
+            {"hexsha":7}]
+    ds = datasets.Dataset.from_list(data)
+    steer_split,test_split = _steer_test_split(
+        ds,
+        4,
+        True,
+        None,
+        "hexsha"
+    )
+    steer_split = [x["hexsha"] for x in steer_split]
+    test_split = [x["hexsha"] for x in test_split]
+    print(steer_split, test_split)
+    assert set(steer_split).intersection(set(test_split)) == set(), f"{steer_split} - {test_split}"

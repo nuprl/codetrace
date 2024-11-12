@@ -9,7 +9,7 @@ import subprocess
 from typing import List, Dict
 import tempfile
 import hashlib
-from codetrace.fast_utils import batched_do_func, get_batches_fast
+from codetrace.fast_utils import batched_apply, make_batches
 from codetrace.utils import load, save
 from multiprocessing import cpu_count
 import glob
@@ -176,8 +176,8 @@ def main(args):
     if args.max_size > -1:
         ds = ds.shuffle(42).select(range(args.max_size))
 
-    batches = get_batches_fast(ds, cpu_count())
-    result = batched_do_func(batches, cpu_count(), filter_typecheck_batch, 
+    batches = make_batches(ds, cpu_count())
+    result = batched_apply(batches, cpu_count(), filter_typecheck_batch, 
                              colname=args.column_name, lang=args.lang, do_log=args.do_log, logdir=args.logdir)
 
     ds_new = datasets.Dataset.from_list(result)

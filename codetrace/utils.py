@@ -6,9 +6,18 @@ from copy import deepcopy
 from transformers import AutoModelForCausalLM
 import re
 import einops
-from typing import List
+from typing import List,Union
 import functools
 import os
+from pathlib import Path
+
+def get_lm_layers(model):
+    if hasattr(model, "transformer"):
+        return model.transformer.h
+    elif hasattr(model, "model"):
+        return model.model.layers
+    else:
+        raise NotImplementedError("Model type not supported")
 
 def get_vllm_config(llm):
     if hasattr(llm, "llm_engine"):
@@ -20,22 +29,18 @@ def num_available_devices():
     device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
     return len([i for i in device_list if i != ","])
 
-def load(ds: str, split:str=None) -> datasets.Dataset:
-    if os.path.exists(ds):
-        if ds.endswith(".csv"):
-            ds = datasets.Dataset.from_csv(ds)
-        else:
-            ds = datasets.load_from_disk(ds)
+def load(ds: str, split:str=None, **kwargs) -> datasets.Dataset:
+    if ds.endswith(".csv"):
+        ds = datasets.Dataset.from_csv(ds,**kwargs)
+    elif os.path.exists(ds):
+        ds = datasets.load_from_disk(ds,**kwargs)
     else:
-        ds = datasets.load_dataset(ds)
-    if split:
-        ds = ds[split]
-    return ds
+        ds = datasets.load_dataset(ds,**kwargs)
+    return ds[split] if split else ds
 
-def save(ds: datasets.Dataset, path:str, **kwargs):
-    if len(path.split("/")) > 2:
-        # hack for if I should save to disk
-        ds.save_to_disk(path)
+def save(ds: datasets.Dataset, path:Union[str,Path], **kwargs):
+    if isinstance(path, Path):
+        ds.save_to_disk(str(path), **kwargs)
     else:
         ds.push_to_hub(path, **kwargs)
 
@@ -108,7 +113,7 @@ def top_k_top_p_filtering(
     logit_tuple = TopkTuple(indices=sorted_indices, values=logits)
     return logit_tuple
 
-def predict(model, tokenizer, prompts):
+def predict(model, tokenizer, prompts: Union[List[str],str])->List[str]:
     inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(model.device)
     model.eval()
     with torch.no_grad():
@@ -132,11 +137,11 @@ def copy_decoder(modelname:str, dtype:torch.dtype) -> torch.nn.Module:
     decoder = torch.nn.Sequential(norm, decoder).to("cpu")
     return decoder
 
-def keep_columns(ds, cols):
+def keep_columns(ds: datasets.Dataset, cols:List[str]) -> datasets.Dataset:
     columns = [c for c in ds.column_names if c not in cols]
     return ds.remove_columns(columns)
 
-def dedup_ds_by_key(ds, key):
+def dedup_ds_by_key(ds: datasets.Dataset, key:str) -> datasets.Dataset:
     """
     Dedup ds by key. Picks the first occurence of key.
     """
@@ -148,7 +153,7 @@ def dedup_ds_by_key(ds, key):
             seen.add(x[key])
     return datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
 
-def pos_indexing(x: int, n: int):
+def pos_indexing(x: int, n: int) -> int:
     """
     Given a possibly negative index X over range N,
     turn to a positive index

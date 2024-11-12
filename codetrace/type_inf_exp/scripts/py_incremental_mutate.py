@@ -6,7 +6,6 @@ import uuid
 from multiprocessing import cpu_count
 from vllm import LLM, AsyncLLMEngine, SamplingParams, AsyncEngineArgs
 from tqdm import tqdm
-from codetrace.fast_utils import get_batches_fast, batched_do_func
 from codetrace.type_inf_exp.py_mutator import incremental_mutate
 import os
 from codetrace.type_inf_exp import py_mutator 

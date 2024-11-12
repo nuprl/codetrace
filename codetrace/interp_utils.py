@@ -2,15 +2,11 @@
 Interp utils
 """
 import torch
-import nnsight
 from nnsight import LanguageModel, util
 from nnsight.tracing.Proxy import Proxy
 from typing import List, Union, Callable
 import transformers
-from codetrace.utils import top_k_top_p_filtering, pos_indexing, masked_get, masked_fill, lm_decode
-import numpy as np
-import functools
-import einops
+from codetrace.utils import top_k_top_p_filtering, pos_indexing, masked_get, masked_fill, lm_decode, get_lm_layers
 
 class LogitResult:
     """
@@ -36,7 +32,6 @@ class LogitResult:
             raise ValueError(f"token_indices must be 1d")
 
         return tokenizer.decode(self.token_indices.flatten().numpy())
-
 
 class TraceResult:
     """
@@ -110,6 +105,7 @@ class TraceResult:
         logits = top_k_top_p_filtering(logits, top_k, top_p, do_log_probs)
         return LogitResult(logits.indices, logits.values)
 
+@torch.no_grad
 def collect_hidden_states(
     model : LanguageModel,
     prompts : List[str],
@@ -122,14 +118,14 @@ def collect_hidden_states(
     token positions given by target_fn.
     """
     if layers is None:
-        layers = list(range(len(model.transformer.h)))
+        layers = list(range(len(get_lm_layers(model))))
 
     with model.trace() as tracer:
         with tracer.invoke(prompts) as invoker:
             hidden_states = []
             for layer_idx in layers:
                 # output is a tuple of (hidden_states, present)
-                hs = model.transformer.h[layer_idx].output[0]
+                hs = get_lm_layers(model)[layer_idx].output[0]
                 if target_fn:
                     # mask shape: [n_prompts, n_toks]
                     mask = target_fn(invoker.inputs[0]["input_ids"])
@@ -155,7 +151,7 @@ def insert_patch(
     patch should have shape [model_n_layer, num_prompts, num_tokens_to_patch, n_embd]
     """
     if collect_hidden_states:
-        collect_range = list(range(len(model.transformer.h)))
+        collect_range = list(range(len(get_lm_layers(model))))
     else:
         collect_range = [-1]
 
@@ -165,21 +161,18 @@ def insert_patch(
             inputs = invoker.inputs[0]["input_ids"]
             mask = target_fn(inputs)
             hidden_states = []
-            for layer in range(len(model.transformer.h)):
-                hs = model.transformer.h[layer].output[0]
+            for layer in range(len(get_lm_layers(model))):
+                hs = get_lm_layers(model)[layer].output[0]
                 
                 if layer in layers_to_patch:
-                    new_hs = masked_fill(
+                    patched_hs = masked_fill(
                         hs, mask.to(hs.device), patch[layer,:]
                     )
                     for prompt_idx in range(hs.shape[0]):
-                        model.transformer.h[layer].output[0][prompt_idx,:,:] = new_hs[prompt_idx,:]
-
-                    # for i in range(hs.shape[0]):
-                    #     model.transformer.h[layer].output[0][i,:,:] = patch[layer,i,:]
+                        get_lm_layers(model)[layer].output[0][prompt_idx,:,:] = patched_hs[prompt_idx,:]
 
                 if layer in collect_range:
-                    hidden_states.append(model.transformer.h[layer].output[0])
+                    hidden_states.append(get_lm_layers(model)[layer].output[0])
 
             hidden_states = torch.stack(hidden_states,dim=0).save()
             logits = lm_decode(model, hidden_states, True).save()
@@ -189,9 +182,9 @@ def insert_patch(
     logits = util.apply(logits, lambda x: x.value, Proxy)
     final_logits = util.apply(final_logits, lambda x: x.value, Proxy)
     assert torch.equal(logits[-1], final_logits), f"{logits[-1]} != {final_logits}"
-    return TraceResult(logits, collect_range, len(model.transformer.h), hidden_states=hidden_states)
-    
-            
+    return TraceResult(logits, collect_range, len(get_lm_layers(model)), hidden_states=hidden_states)
+
+@torch.no_grad    
 def logit_lens(
     model : LanguageModel,
     prompts : List[str],
@@ -202,14 +195,14 @@ def logit_lens(
     Apply logit lens to prompts
     """
     if layers is None:
-        layers = list(range(len(model.transformer.h)))
+        layers = list(range(len(get_lm_layers(model))))
     else:
-        layers = [pos_indexing(x, len(model.transformer.h)) for x in layers]
+        layers = [pos_indexing(x, len(get_lm_layers(model))) for x in layers]
     
     with model.trace() as tracer:
         with tracer.invoke(prompts) as invoker:
             hidden_states = torch.stack([
-                model.transformer.h[layer_idx].output[0]
+                get_lm_layers(model)[layer_idx].output[0]
                 for layer_idx in layers
             ],dim=0).save()
             
@@ -222,11 +215,11 @@ def logit_lens(
     
     if store_hidden_states:
         hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
-        return TraceResult(logits, layers, len(model.transformer.h), hidden_states=hidden_states)
+        return TraceResult(logits, layers, len(get_lm_layers(model)), hidden_states=hidden_states)
     else: 
-        return TraceResult(logits, layers, model_n_layer=len(model.transformer.h))
+        return TraceResult(logits, layers, model_n_layer=len(get_lm_layers(model)))
     
-
+@torch.no_grad
 def custom_lens(
     model : LanguageModel,
     decoder : torch.nn.Module,

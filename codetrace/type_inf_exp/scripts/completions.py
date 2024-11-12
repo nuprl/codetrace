@@ -9,7 +9,7 @@ from multiprocessing import cpu_count
 from tqdm import tqdm
 from codetrace.utils import num_available_devices
 from collections import Counter
-from codetrace.fast_utils import get_batches_fast, batched_do_func
+from codetrace.fast_utils import get_batches_fast, batched_apply
 import torch
 import os
 
@@ -45,7 +45,7 @@ def main(args):
     llm = LLM(model, dtype=args.dtype, tensor_parallel_size=num_available_devices(), tokenizer=tokenizer_name)
 
     batches = get_batches_fast(ds, cpu_count())
-    data = batched_do_func(batches, cpu_count(), filter_1tok, tokenizer=tokenizer)
+    data = batched_apply(batches, cpu_count(), filter_1tok, tokenizer=tokenizer)
     def yielder():
         for ex in tqdm(data, desc="Yielding", total=len(data)):
             yield ex
