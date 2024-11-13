@@ -138,6 +138,7 @@ STARCODER_FIM = FimObj(
     "<fim_middle>",
     fim_placeholder,
     {"<fim_prefix>":1, "<fim_suffix>":3,"<fim_middle>":2})
+
 # https://github.com/gonglinyuan/safim/blob/main/model_utils.py
 CODELLAMA_FIM = FimObj(
     "<PRE>", 
@@ -145,6 +146,7 @@ CODELLAMA_FIM = FimObj(
     " <MID>", 
     fim_placeholder,
     {"<PRE>":32007, " <SUF>":32008," <MID>":32009}) #TODO: why the space??
+
 # note the order changes in deepseek
 # https://huggingface.co/deepseek-ai/deepseek-coder-6.7b-base
 DEEPSEEK_FIM = FimObj(

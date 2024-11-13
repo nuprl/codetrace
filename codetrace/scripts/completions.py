@@ -2,9 +2,7 @@ import datasets
 from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
 from codetrace.parsing_utils import get_model_fim
-import json
 from argparse import ArgumentParser
-import pandas as pd
 from multiprocessing import cpu_count
 from tqdm import tqdm
 from codetrace.utils import num_available_devices, get_vllm_config
@@ -56,39 +54,36 @@ def main(args):
     params = SamplingParams(temperature=0, max_tokens=1)
 
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
-    llm = LLM(args.model, dtype=args.dtype, tensor_parallel_size=num_available_devices(), tokenizer=tokenizer)
+    llm = LLM(args.model, dtype=args.dtype, tensor_parallel_size=num_available_devices(), tokenizer=args.tokenizer)
 
     # filter 1 tok
     batches = make_batches(ds, cpu_count())
     data = batched_apply(batches, cpu_count(), filter_1tok, tokenizer=tokenizer)
-    def yielder():
-        for ex in tqdm(data, desc="Yielding", total=len(data)):
-            yield ex
-        
-    ds = datasets.Dataset.from_generator(yielder)
+    ds = datasets.Dataset.from_list(data)
     if args.max_size > -1:
         ds = ds.select(range(args.max_size))
 
     # generate
     model_fim = get_model_fim(args.model)                    
     
-    if len(prompts) < 10000:
+    # batch generations because of cpu ops in vllm
+    if len(ds) < 10000:
         prompts = [model_fim.placeholder_to_fim(ex["fim_program"]) for ex in ds]
         completions = generate_completions(llm,prompts,params,ds)
     else:
-        # batch generations because of cpu ops in vllm
         print("Doing batch generations")
         completions = []
         batch_size = 1000
         
-        for batch_index, ds_idx in tqdm(enumerate(range(0,len(ds), batch_size)), desc="Batch generations", total=len(prompts)//batch_size):
+        for batch_index, ds_idx in tqdm(enumerate(range(0,len(ds), batch_size)), 
+                                        desc="Batch generations", total=len(ds)//batch_size):
             ds_batch = ds.select(range(ds_idx, min(ds_idx+batch_size, len(ds))))
             batch_prompts = [model_fim.placeholder_to_fim(ex["fim_program"]) for ex in ds_batch]
             batch_completions = generate_completions(llm,batch_prompts,params,ds_batch)
             completions += batch_completions
             
-            if batch_index % 10 == 0 and batch_index > 0:
-                # save every n batches
+            if batch_index > 0:
+                # save every batch
                 print(f"Saving {batch_index}th batch")
                 new_ds = datasets.Dataset.from_list(completions)
                 new_ds.save_to_disk(args.new_ds_name)
