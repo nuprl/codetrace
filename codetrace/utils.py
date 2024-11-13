@@ -6,11 +6,26 @@ from copy import deepcopy
 from transformers import AutoModelForCausalLM
 import re
 import einops
-from typing import List,Union
+from typing import List,Union,Callable
 import functools
 import os
 from pathlib import Path
+import torch
 
+def get_reduction(reduction:Union[Callable,str])->Callable:
+    if isinstance(reduction,str):
+        return getattr(torch, reduction)
+    else:
+        return reduction
+
+def apply_reduction(tensor:torch.Tensor, reduction:Union[Callable,str], **kwargs)->torch.Tensor:
+    reduction = get_reduction(reduction)
+    x = reduction(tensor, **kwargs)
+    if hasattr(x, "values"):
+        return x.values
+    else:
+        return x
+    
 def get_lm_layers(model):
     if hasattr(model, "transformer"):
         return model.transformer.h
@@ -18,7 +33,21 @@ def get_lm_layers(model):
         return model.model.layers
     else:
         raise NotImplementedError("Model type not supported")
+    
+def get_lm_final_norm(model):
+    if hasattr(model, "transformer"):
+        return model.transformer.ln_f
+    elif hasattr(model, "model"):
+        return model.model.norm
+    else:
+        raise NotImplementedError("Model type not supported")
 
+def get_lm_head(model):
+    if hasattr(model, "transformer") or hasattr(model, "model"):
+        return model.lm_head
+    else:
+        raise NotImplementedError("Model type not supported")
+    
 def get_vllm_config(llm):
     if hasattr(llm, "llm_engine"):
         return llm.llm_engine.get_model_config().hf_config
@@ -46,8 +75,8 @@ def save(ds: datasets.Dataset, path:Union[str,Path], **kwargs):
 
 def lm_decode(model, x : torch.Tensor, do_norm: bool) -> torch.Tensor:
     if do_norm:
-        x = model.transformer.ln_f(x)
-    return model.lm_head(x)
+        x = get_lm_final_norm(model)(x)
+    return get_lm_head(model)(x)
 
 def masked_fill(src: torch.Tensor, mask:torch.BoolTensor, patch:torch.Tensor) -> torch.Tensor:
     # mask shape is [n_prompt, n_tok], change to [n_prompt, n_tok, dim]
@@ -57,6 +86,15 @@ def masked_fill(src: torch.Tensor, mask:torch.BoolTensor, patch:torch.Tensor) ->
         raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}, patch {patch.shape}")
     
     return torch.mul(src, ~mask) + torch.mul(mask, patch)
+
+def masked_add(src: torch.Tensor, mask:torch.BoolTensor, patch:torch.Tensor) -> torch.Tensor:
+    # mask shape is [n_prompt, n_tok], change to [n_prompt, n_tok, dim]
+    if mask.shape != src.shape:
+        mask = einops.repeat(mask, "p t -> p t d", d=src.shape[-1])
+    if not (src.shape == mask.shape and mask.shape == patch.shape):
+        raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}, patch {patch.shape}")
+    
+    return src + torch.mul(mask, patch)
 
 def masked_get(src: torch.Tensor, mask:torch.BoolTensor) -> torch.Tensor:
     # mask shape is [n_prompt, n_tok], change to [n_prompt, n_tok, dim]
@@ -68,16 +106,20 @@ def masked_get(src: torch.Tensor, mask:torch.BoolTensor) -> torch.Tensor:
 
 def mask_target_tokens(
     input_ids: torch.Tensor, #shape[n_prompts, n_toks, dim]
-    tokens: List[str],
-    tokenizer,
+    token_ids: Union[torch.Tensor, list[int]],
     **kwargs
 ) -> torch.BoolTensor:
-    tokens = tokenizer(tokens, return_tensors="pt")["input_ids"].squeeze()
-    if tokens.ndim == 0:
-        return input_ids == tokens.item()
+    token_ids = torch.Tensor(token_ids)
+    device = kwargs.pop("device", None)
+    if token_ids.ndim == 0:
+        target = input_ids == token_ids.item()
     else:
-        mask = functools.reduce(lambda a,b: a|b, [input_ids == i for i in tokens])
-        return mask > 0
+        mask = functools.reduce(lambda a,b: a|b, [input_ids == i for i in token_ids])
+        target = mask > 0
+    
+    if device:
+        target = target.to(device)
+    return target
 
 def mask_target_idx(
     input_ids: torch.Tensor, #shape[n_prompts, n_toks, dim]

@@ -7,9 +7,10 @@ from codetrace.interp_utils import (
     TraceResult
 )
 from codetrace.utils import (
-    make_decoder_copy,
+    copy_decoder,
     masked_fill,
     masked_get,
+    masked_add,
     mask_target_tokens,
     mask_target_idx,
     predict
@@ -27,7 +28,7 @@ parser = ArgumentParser()
 parser.add_argument("--modelname", type=str, default="bigcode/starcoderbase-1b")
 parser.add_argument("--num_reps", type=int, default=10)
 args = parser.parse_args()
-model = LanguageModel(args.modelname, device_map="cuda", torch_dtype=torch.bfloat16)
+model = LanguageModel(args.modelname, device_map="cuda", torch_dtype=torch.bfloat16, dispatch=True)
 
 """
 tests
@@ -109,6 +110,63 @@ def test_masked_fill():
     expected = patch
     assert torch.equal(res, expected)
 
+
+def test_masked_add():
+    src = torch.Tensor([[1,2,3],[4,5,6]])
+    mask = torch.BoolTensor([[True, False, True],[False,True,False]])
+    patch = torch.Tensor([[10,20,30],[40,50,60]])
+    res = masked_add(src, mask, patch)
+    expected = torch.Tensor(
+        [[11,2,33],
+         [4,55,6]]
+    )
+    assert torch.equal(res, expected), f"{res}!={expected}"
+
+    src = torch.Tensor([[1,2,3],[4,5,6]])
+    mask = torch.BoolTensor([[1,1,1],[1,1,1]])
+    patch = torch.Tensor([[10,20,30],[40,50,60]])
+    res = masked_add(src, mask, patch)
+    expected = torch.Tensor([[11,22,33],[44,55,66]])
+    assert torch.equal(res, expected), f"{res}!={expected}"
+
+    src = torch.Tensor([[[1,1,1,1],
+                         [2,2,2,2],
+                         [3,3,3,3]],
+                         [[4,4,4,4],
+                          [5,5,5,5],
+                          [6,6,6,6]]])
+    mask = torch.BoolTensor([[1,1,0],[1,1,0]])
+    patch = torch.Tensor([[[10,11,12,13],
+                         [20,21,22,23],
+                         [30,31,32,33]],
+                         [[40,41,42,43],
+                          [50,51,52,53],
+                          [60,61,62,63]]])
+    res = masked_add(src, mask, patch)
+    expected = torch.Tensor([[[11,12,13,14],
+                         [22,23,24,25],
+                         [3,3,3,3]],
+                         [[44,45,46,47],
+                          [55,56,57,58],
+                          [6,6,6,6]]])
+    assert torch.equal(res, expected), f"{res}!={expected}"
+
+    src = torch.Tensor([[[1,1,1,1],
+                         [2,2,2,2],
+                         [3,3,3,3]],
+                         [[4,4,4,4],
+                          [5,5,5,5],
+                          [6,6,6,6]]])
+    mask = torch.BoolTensor([[1,1,1],[1,1,1]])
+    expected = torch.Tensor([[[11,12,13,14],
+                         [22,23,24,25],
+                         [33,34,35,36]],
+                         [[44,45,46,47],
+                          [55,56,57,58],
+                          [66,67,68,69]]])
+    res = masked_add(src, mask, patch)
+    assert torch.equal(res, expected), f"{res}!={expected}"
+
 def test_masked_get():
     src = torch.Tensor([[1,2,3],[4,5,6]])
     mask = torch.BoolTensor([[True, False, True],[False,True,False]])
@@ -127,7 +185,8 @@ def test_mask_target_token():
     ]
     input_ids = model.tokenizer(prompts, return_tensors="pt")["input_ids"]
     assert input_ids.shape == (2, 3)
-    result = mask_target_tokens(input_ids, tokens, model.tokenizer)
+    token_ids = model.tokenizer(tokens, return_tensors="pt")["input_ids"]
+    result = mask_target_tokens(input_ids, token_ids)
     expected = torch.BoolTensor([
         [True, True, False],
         [False, True, False]
@@ -151,7 +210,8 @@ def test_mask_target_idx():
 
 def patch_clean_to_corrupt(model, clean, corrupt, indices_or_tokens):
     if isinstance(indices_or_tokens[0], str):
-        targets = partial(mask_target_tokens, tokens=indices_or_tokens, tokenizer=model.tokenizer)
+        indices = model.tokenizer(indices_or_tokens, return_tensors="pt")["input_ids"]
+        targets = partial(mask_target_tokens, token_ids=indices)
     else:
         targets = partial(mask_target_idx, indices=indices_or_tokens)
 
@@ -216,9 +276,10 @@ def test_collect_at_token_idx2():
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
-    target_fn = partial(mask_target_tokens, tokens=toks, tokenizer=model.tokenizer)
+    token_ids = model.tokenizer(toks, return_tensors="pt")["input_ids"]
+    target_fn = partial(mask_target_tokens, token_ids=token_ids)
     hs = collect_hidden_states(model, prompts, target_fn=target_fn).to("cpu")
-    decoder = make_decoder_copy(model.config.name_or_path, torch.bfloat16)
+    decoder = copy_decoder(model.config.name_or_path, torch.bfloat16)
     logits = decoder(hs)
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[-1])
@@ -236,7 +297,7 @@ def test_collect_at_token_idx3():
     ]
     target_fn = partial(mask_target_idx, indices=[-1])
     hs = collect_hidden_states(model, prompts, target_fn=target_fn).to("cpu")
-    decoder = make_decoder_copy(model.config.name_or_path, torch.bfloat16)
+    decoder = copy_decoder(model.config.name_or_path, torch.bfloat16)
     logits = decoder(hs)
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[-1])
@@ -252,9 +313,10 @@ def test_collect_at_token_idx4():
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     toks = ["<fim_middle>"]
-    target_fn = partial(mask_target_tokens, tokens=toks, tokenizer=model.tokenizer)
+    indices = model.tokenizer(toks, return_tensors="pt")["input_ids"]
+    target_fn = partial(mask_target_tokens, token_ids=indices)
     hs = collect_hidden_states(model, prompts, target_fn=target_fn).to("cpu")
-    decoder = make_decoder_copy(model.config.name_or_path, torch.bfloat16)
+    decoder = copy_decoder(model.config.name_or_path, torch.bfloat16)
     logits = decoder(hs)
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[-1])
@@ -271,7 +333,7 @@ def test_collect_at_token_idx5():
     ]
     target_fn = partial(mask_target_idx, indices=[0,-1])
     hs = collect_hidden_states(model, prompts, target_fn=target_fn).to("cpu")
-    decoder = make_decoder_copy(model.config.name_or_path, torch.bfloat16)
+    decoder = copy_decoder(model.config.name_or_path, torch.bfloat16)
     logits = decoder(hs)
     out : TraceResult = TraceResult(logits, list(range(len(model.transformer.h))), len(model.transformer.h))
     logits : LogitResult = out.decode_logits(prompt_idx=[0,1], token_idx=[0,-1])
@@ -287,7 +349,8 @@ def test_interp_patch():
         "<fim_prefix>a=6\nb=6\nc=<fim_suffix><fim_middle>",
     ]
     toks = ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]
-    target_fn = partial(mask_target_tokens, tokens=toks, tokenizer=model.tokenizer)
+    indices = model.tokenizer(toks, return_tensors="pt")["input_ids"]
+    target_fn = partial(mask_target_tokens, token_ids=indices)
     hs = collect_hidden_states(model, prompts, target_fn=target_fn)
     patch = hs.expand(-1,len(prompts),-1,-1)
     out = insert_patch(
@@ -312,11 +375,12 @@ def repeat_test(func, n, **kwargs):
         
 # repeating tests multiple times ensures no precision errors in code
 
-repeat_test(test_logit_pipeline, args.num_reps)
 test_masked_fill()
+test_masked_add()
 test_masked_get()
 test_mask_target_idx()
 test_mask_target_token()
+repeat_test(test_logit_pipeline, args.num_reps)
 repeat_test(test_patch, args.num_reps)
 repeat_test(test_logit_generation_match, args.num_reps)
 repeat_test(test_collect_at_token_idx, args.num_reps)

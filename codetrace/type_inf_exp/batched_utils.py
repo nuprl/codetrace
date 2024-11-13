@@ -3,6 +3,7 @@ Steering utils:
 - batched patch requests
 - prompt filtering
 """
+import einops
 from nnsight import LanguageModel
 import torch
 from tqdm import tqdm
@@ -15,20 +16,27 @@ from codetrace.interp_utils import (
     TraceResult,
     LogitResult
 )
+from torchtyping import TensorType
 
 def batched_get_averages(
     model: LanguageModel,
     prompts : Union[List[str], torch.utils.data.DataLoader],
-    target_fn: Callable,
-    batch_size=5,
+    target_fn : Optional[Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"]],
+                    TensorType[bool, "n_layer","n_prompt","n_tokens","hdim"]]] = None,
+    batch_size:int =5,
     average_fn: Callable = (lambda x: x.mean(dim=1)),
     outfile: Optional[str] = None,
     layers: Optional[List[int]] = None,
+    reduction: Optional[Union[str, Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"],List[int]],
+                                    TensorType[float, "n_layer","n_prompt","(reduced_n_toks)","hdim"]]]]= None
 ) -> torch.Tensor:
     """
     Get averages of activations at all layers for prompts. Select activations according to mask
     produced by target_fn. Batches the prompts to
     avoid memory issues. If an outfile is passed, will cache the hidden states to the outfile.
+
+    reduction: provide an einops reduction function for reducing the collected activation to
+            save gpu memory.
     """
     # batch prompts according to batch size
     if isinstance(prompts, torch.utils.data.DataLoader):
@@ -40,12 +48,11 @@ def batched_get_averages(
         layers = range(model.config.num_hidden_layers)
     hidden_states = []
     for i,batch in tqdm(enumerate(prompt_batches), desc="Batch average", total=len(prompt_batches)):
-        hs = collect_hidden_states(model, batch,layers, target_fn).cpu()
+        hs = collect_hidden_states(model, batch,layers, target_fn, reduction=reduction).cpu()
         hs_mean = average_fn(hs) # batch size mean
         hidden_states.append(hs_mean)
         if outfile is not None:
-            with open(outfile+".pkl", "wb") as f:
-                pickle.dump(hidden_states, f)
+            torch.save(torch.stack(hidden_states, dim=0), outfile+".pt")
             with open(outfile+".json", "w") as f:
                 json.dump({"batch_size" : batch_size, "batch_idx" : i, "prompts" : list(prompt_batches)}, f)
         
@@ -60,13 +67,20 @@ def _percent_success(predictions_so_far, solutions):
         if sol == pred:
             correct += 1
     return correct / len(solutions)
-    
+
+def _resize_patch(
+    patch:TensorType[float, "n_layer","n_patch_tokens","hdim"],
+    batch_size:int
+)->TensorType:
+    return einops.repeat(patch, "l t d -> l p t d", p=batch_size)
+
 def batched_insert_patch_logit(
     model : LanguageModel,
     prompts : Union[List[str], torch.utils.data.DataLoader],
-    patch : torch.Tensor,
+    patch : TensorType[float,"n_layer","n_patch_tokens","hdim"],
     layers_to_patch : List[int],
     target_fn : Callable,
+    patch_fn:Callable,
     batch_size : int = 5,
     outfile: str = None,
     solutions : Union[List[str],str, None] = None,
@@ -83,18 +97,22 @@ def batched_insert_patch_logit(
     predictions =[]
     for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
         # repeat patch in dim 1 to match batch len
-        prompt_len = batch.shape[1]
+        if isinstance(batch, List):
+            bsize = len(batch)
+        else:
+            bsize = batch.shape[1]
         res : TraceResult = insert_patch(
             model, 
             batch, 
-            patch.repeat(1,prompt_len,1,1),
+            _resize_patch(patch, bsize),
             layers_to_patch, 
             target_fn=target_fn,
+            patch_fn=patch_fn,
             collect_hidden_states=False, # don't need hidden states, prevent oom
         )
-        logits : LogitResult = res.decode_logits(prompt_idx=list(range(prompt_len)), layers=[-1], token_idx=[-1])
+        logits : LogitResult = res.decode_logits(prompt_idx=list(range(bsize)), layers=[-1], token_idx=[-1])
 
-        for j in range(prompt_len):
+        for j in range(bsize):
             tok = logits[-1,j].tokens(model.tokenizer).strip()
             predictions.append(tok)
             

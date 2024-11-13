@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from collections import Counter
 import torch
@@ -6,7 +7,7 @@ from codetrace.parsing_utils import FimObj, get_model_fim
 import datasets
 import os
 from typing import Union, Tuple,List,Dict,Any,Optional,Callable
-from codetrace.utils import load, save, mask_target_tokens, keep_columns
+from codetrace.utils import load, save, mask_target_tokens, keep_columns, mask_target_idx, masked_add
 from nnsight import LanguageModel
 from codetrace.type_inf_exp.batched_utils import batched_get_averages, batched_insert_patch_logit
 from functools import partial
@@ -64,7 +65,7 @@ def subtract_avg(hidden_states:torch.Tensor) -> torch.Tensor:
     hidden_states[:, even_indices] -= hidden_states[:, odd_indices]
 
     # compute mean
-    mean_even = hidden_states[:, even_indices].mean(dim=1)
+    mean_even = hidden_states[:, even_indices].mean(dim=1, keepdim=True)
     return mean_even
 
 def prepare_prompts(
@@ -97,7 +98,8 @@ class SteeringManager:
         test_split_path: Optional[str]=None,
         steering_tensor_path: Optional[str]=None,
         max_num_candidates:int=-1,
-        token_mask_fn:Optional[Callable]=None
+        token_mask_fn:Optional[Callable]=None,
+        reduction:Optional[Callable]=None,
     ):
         self.model=model
         self.tokenizer=model.tokenizer
@@ -108,8 +110,12 @@ class SteeringManager:
         self.cache_dir = cache_dir
         if not token_mask_fn:
             # default patch on fim middle
-            token_mask_fn = partial(mask_target_tokens, tokens=[self.fim_obj.middle], tokenizer=self.tokenizer),
+            token_mask_fn = partial(mask_target_tokens, token_ids=[self.fim_obj.get_token_ids(self.fim_obj.middle)])
+            # token_mask_fn = partial(mask_target_idx, indices=[-1])
+            reduction = "max"
+        self.patch_fn = masked_add
         self.token_mask_fn = token_mask_fn
+        self.reduction = reduction
         # try load cached if it exists
         self.test_split : Optional[datasets.Dataset] = self.load_data(test_split_path)
         self.steer_split : Optional[datasets.Dataset] = self.load_data(steer_split_path)
@@ -208,7 +214,7 @@ class SteeringManager:
         if batch_size % 2 != 0:
             raise ValueError("Please provide a batch_size divisible by pairs")
         
-        if not self.steering_tensor:
+        if self.steering_tensor == None:
             dataloader = torch.utils.data.DataLoader(
                 self.steer_split,
                 batch_size,
@@ -218,7 +224,8 @@ class SteeringManager:
                 self.model,
                 dataloader,
                 batch_size=batch_size,
-                target_fn=partial(mask_target_tokens, tokens=[self.fim_obj.middle], tokenizer=self.tokenizer),
+                target_fn=self.token_mask_fn,
+                reduction=self.reduction,
                 average_fn=subtract_avg,
                 outfile=os.path.join(self.cache_dir, "cached_steering_tensor")
             )
@@ -229,11 +236,13 @@ class SteeringManager:
         split:str,
         layers_to_steer:List[int],
         batch_size:int,
+        do_random_ablation:bool=False
     )-> datasets.Dataset:
         """
-        Evaluate the steering tensor on
+        Evaluate the steering tensor on data.
+        If do_random_ablation is set, will run a random steering tensor.
         """
-        if not self.steering_tensor:
+        if self.steering_tensor == None:
             raise ValueError("Please create a steering tensor before attempting to steer.")
         if split == "steer":
             ds = self.steer_split
@@ -242,6 +251,13 @@ class SteeringManager:
         else:
             raise ValueError("Can only specify to steer either on the steer or test split.")
         
+        if do_random_ablation:
+            steering_tensor = torch.zeros_like(self.steering_tensor)
+            # steering_tensor.normal_(mean=self.steering_tensor.mean(), std=self.steering_tensor.std())
+            steering_tensor.random_(math.floor(self.steering_tensor.min().item()), math.ceil(self.steering_tensor.max().item()))
+        else:
+            steering_tensor = self.steering_tensor
+
         dataloader = torch.utils.data.DataLoader(
             ds["mutated_program"],
             batch_size,
@@ -251,14 +267,15 @@ class SteeringManager:
         predictions = batched_insert_patch_logit(
             self.model,
             dataloader,
-            self.steering_tensor,
+            steering_tensor,
             layers_to_steer,
             target_fn=self.token_mask_fn,
             batch_size=batch_size,
             outfile=os.path.join(self.cache_dir, f"cached_steering_{split}"),
-            solutions=solutions
+            solutions=solutions,
+            patch_fn=self.patch_fn
         )
-        ds["steered_predictions"] = predictions
+        ds = ds.add_column("steered_predictions",predictions)
         return ds
 
 def _steer_test_split(
@@ -322,19 +339,20 @@ def test_subtract_avg():
         [
             # layer0
             [
-                [0,0],[0,0],[0,0],
+                [[0,0],[0,0],[0,0]],
             ],
 
             # layer1
             [
                 # prompt 0
-                [2,4],[6,8],[10,12],
+                [[2,4],[6,8],[10,12]],
             ],
             # layer2
             [
-                [0,4],[0,8],[10,0],
+                [[0,4],[0,8],[10,0]],
             ],
         ]).to(dtype=torch.float)
+    print(x.shape, expected.shape, output.shape)
     assert torch.equal(output, expected), f"{output} != {expected}"
 
 def test_prepare_prompts():

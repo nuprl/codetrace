@@ -1,12 +1,23 @@
 """
 Interp utils
 """
+from functools import partial
 import torch
-from nnsight import LanguageModel, util
+from nnsight import LanguageModel
+import nnsight
 from nnsight.tracing.Proxy import Proxy
-from typing import List, Union, Callable
+from typing import List, Union, Callable, Optional
 import transformers
-from codetrace.utils import top_k_top_p_filtering, pos_indexing, masked_get, masked_fill, lm_decode, get_lm_layers
+from codetrace.utils import (
+    top_k_top_p_filtering,
+    pos_indexing,
+    masked_get,
+    masked_fill,
+    lm_decode,
+    get_lm_layers,
+    apply_reduction
+)
+from torchtyping import TensorType
 
 class LogitResult:
     """
@@ -15,13 +26,13 @@ class LogitResult:
     """
     def __init__(
         self, 
-        token_indices : torch.Tensor, 
-        probabilities : torch.Tensor,
+        token_indices : TensorType[int, "n_layer","n_prompt","n_tokens","top_k"], 
+        probabilities : TensorType[float, "n_layer","n_prompt","n_tokens","top_k"], 
     ):
         self.token_indices = token_indices
         self.probabilities = probabilities
         
-    def __getitem__(self, idx):
+    def __getitem__(self, idx:int) -> "LogitResult":
         return LogitResult(self.token_indices[idx], self.probabilities[idx])
     
     def tokens(self, tokenizer : transformers.PreTrainedTokenizer) -> List[str]:
@@ -60,10 +71,10 @@ class TraceResult:
     
     def __init__(
         self, 
-        logits : torch.Tensor, 
+        logits : TensorType[float, "n_layer","n_prompt","n_tokens","n_vocab"], 
         layer_idxs : List[int],
         model_n_layer : int,
-        hidden_states : torch.Tensor = None,
+        hidden_states : TensorType[float, "n_layer","n_prompt","n_tokens","n_vocab"] = None,
         custom_decoder : Union[None, torch.nn.Module] = None
     ):
         self._logits = logits.detach().cpu()
@@ -110,12 +121,24 @@ def collect_hidden_states(
     model : LanguageModel,
     prompts : List[str],
     layers : List[int] = None,
-    target_fn : Callable = None,
-) -> List[torch.Tensor]:
+    target_fn : Optional[Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"]],
+                        TensorType[bool, "n_layer","n_prompt","n_tokens","hdim"]]] = None,
+    reduction: Optional[Union[str, Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"],List[int]],
+                                    TensorType[float, "n_layer","n_prompt","(reduced_n_toks)","hdim"]]]]= None
+) -> TensorType[float, "n_layer","n_prompt","(n_tokens)","hdim"]:
     """
     Collect hidden states for each prompt. 
     Optionally, collect hidden states at specific layers, or at certain
     token positions given by target_fn.
+
+    Arguments:
+        model: LM to collect from
+        prompts: prompts to collect from
+        layers: layers to collect from
+        target_fn: a function that takes an activation and produces a mask over the indices
+            indicating which indices should be collected and which not.
+        reduction: provide an einops reduction function for reducing the collected activation to
+            save gpu memory.
     """
     if layers is None:
         layers = list(range(len(get_lm_layers(model))))
@@ -126,34 +149,53 @@ def collect_hidden_states(
             for layer_idx in layers:
                 # output is a tuple of (hidden_states, present)
                 hs = get_lm_layers(model)[layer_idx].output[0]
-                if target_fn:
+                if target_fn != None:
                     # mask shape: [n_prompts, n_toks]
                     mask = target_fn(invoker.inputs[0]["input_ids"])
                     hs = masked_get(hs, mask)
+                    if reduction:
+                        hs = apply_reduction(hs, reduction, dim=1)
                 hidden_states.append(hs)
 
         hidden_states = torch.stack(hidden_states, dim=0).save() 
             
-    hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
+    hidden_states = nnsight.util.apply(hidden_states, lambda x: x.value, Proxy)
     return hidden_states
+
+@torch.no_grad
+def _prepare_patch(
+    patch:Union[TensorType[float,"n_prompt","n_tokens_to_patch","hdim"],
+                TensorType[float,"n_prompt","n_tokens","hdim"]],
+    n_tokens:int,
+)->TensorType[float, "n_prompt","n_tokens","hdim"]:
+    if patch.ndim == 4:
+        return patch
+    else:
+        # pad left side with 0's s.t. n_tokens_to_patch == n_tokens
+        return torch.nn.functional.pad(patch, (0,0,n_tokens - patch.shape[1],0))
 
 @torch.no_grad
 def insert_patch(
     model : LanguageModel,
     prompts : List[str],
-    patch : torch.Tensor, # [n_layer, n_prompt, n_tokens, hdim]
+    patch : TensorType[float, "n_layer","n_prompt","n_tokens_to_patch","hdim"],
     layers_to_patch : List[int],
-    target_fn : Callable,
-    collect_hidden_states : bool = True
+    target_fn : Optional[Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"]],
+                        TensorType[bool, "n_layer","n_prompt","n_tokens","hdim"]]] = None,
+    collect_hidden_states : bool = True,
+    patch_fn: Optional[Callable[[TensorType[float], TensorType[bool],TensorType[float]],
+                        TensorType[bool, "n_layer","n_prompt","n_tokens","hdim"]]] = None,
 ) -> TraceResult:
     """
     Insert patch at layers and tokens
-    patch should have shape [model_n_layer, num_prompts, num_tokens_to_patch, n_embd]
     """
+    if not patch_fn:
+        patch_fn = masked_fill
+
     if collect_hidden_states:
         collect_range = list(range(len(get_lm_layers(model))))
     else:
-        collect_range = [-1]
+        collect_range = [len(get_lm_layers(model))-1]
 
     patch = patch.to(model.device)
     with model.trace() as tracer:
@@ -161,13 +203,13 @@ def insert_patch(
             inputs = invoker.inputs[0]["input_ids"]
             mask = target_fn(inputs)
             hidden_states = []
+            # iter over all layers
             for layer in range(len(get_lm_layers(model))):
                 hs = get_lm_layers(model)[layer].output[0]
                 
                 if layer in layers_to_patch:
-                    patched_hs = masked_fill(
-                        hs, mask.to(hs.device), patch[layer,:]
-                    )
+                    layer_patch = _prepare_patch(patch[layer], mask.shape[1]).to(model.device)
+                    patched_hs = patch_fn(hs, mask.to(model.device), layer_patch)
                     for prompt_idx in range(hs.shape[0]):
                         get_lm_layers(model)[layer].output[0][prompt_idx,:,:] = patched_hs[prompt_idx,:]
 
@@ -178,9 +220,9 @@ def insert_patch(
             logits = lm_decode(model, hidden_states, True).save()
             final_logits = model.lm_head.output.save()
     
-    hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
-    logits = util.apply(logits, lambda x: x.value, Proxy)
-    final_logits = util.apply(final_logits, lambda x: x.value, Proxy)
+    hidden_states = nnsight.util.apply(hidden_states, lambda x: x.value, Proxy)
+    logits = nnsight.util.apply(logits, lambda x: x.value, Proxy)
+    final_logits = nnsight.util.apply(final_logits, lambda x: x.value, Proxy)
     assert torch.equal(logits[-1], final_logits), f"{logits[-1]} != {final_logits}"
     return TraceResult(logits, collect_range, len(get_lm_layers(model)), hidden_states=hidden_states)
 
@@ -209,12 +251,12 @@ def logit_lens(
             logits = lm_decode(model, hidden_states, True).save()
             final_logits = model.lm_head.output.save()
 
-    logits = util.apply(logits, lambda x: x.value, Proxy)
-    final_logits = util.apply(final_logits, lambda x: x.value, Proxy)
+    logits = nnsight.util.apply(logits, lambda x: x.value, Proxy)
+    final_logits = nnsight.util.apply(final_logits, lambda x: x.value, Proxy)
     assert torch.equal(logits[-1], final_logits)
     
     if store_hidden_states:
-        hidden_states = util.apply(hidden_states, lambda x: x.value, Proxy)
+        hidden_states = nnsight.util.apply(hidden_states, lambda x: x.value, Proxy)
         return TraceResult(logits, layers, len(get_lm_layers(model)), hidden_states=hidden_states)
     else: 
         return TraceResult(logits, layers, model_n_layer=len(get_lm_layers(model)))
@@ -225,7 +267,7 @@ def custom_lens(
     decoder : torch.nn.Module,
     prompts : List[str],
     layers : List[int],
-    activations : torch.Tensor = None,
+    activations : Optional[TensorType[float, "n_layer","n_prompt","n_tokens","hdim"]] = None,
     k : int = 1
 ) -> List[str]:
     """

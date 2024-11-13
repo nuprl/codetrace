@@ -2,7 +2,7 @@ import tree_sitter
 import tree_sitter_python as tspython
 import tree_sitter_typescript as tstypescript
 from tree_sitter import Language, Parser
-from typing import List, Union
+from typing import List, Union,Dict
 
 PY_LANGUAGE = Language(tspython.language())
 PY_PARSER = Parser(PY_LANGUAGE)
@@ -89,15 +89,20 @@ class FimObj:
         fim_prefix : str,
         fim_suffix : str,
         fim_middle : str,
-        fim_placeholder : str
+        fim_placeholder : str,
+        token_ids: Dict[str, int]
     ):
         self.prefix = fim_prefix
         self.suffix = fim_suffix
         self.middle = fim_middle
         self.placeholder = fim_placeholder
-        
+        self.token_ids = token_ids
+    
     def __str__(self):
         return f"FimObj(prefix={self.prefix}, suffix={self.suffix}, middle={self.middle}, placeholder={self.placeholder})"
+    
+    def get_token_ids(self, key:str):
+        return self.token_ids[key]
     
     def to_list(self):
         return [self.prefix, self.suffix, self.middle, self.placeholder]
@@ -127,12 +132,27 @@ class FimObj:
         return all([t in prompt for t in [self.prefix, self.suffix, self.middle]])
     
 fim_placeholder = "<FILL>"      
-STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
+STARCODER_FIM = FimObj(
+    "<fim_prefix>",
+    "<fim_suffix>",
+    "<fim_middle>",
+    fim_placeholder,
+    {"<fim_prefix>":1, "<fim_suffix>":3,"<fim_middle>":2})
 # https://github.com/gonglinyuan/safim/blob/main/model_utils.py
-CODELLAMA_FIM = FimObj("<PRE>", " <SUF>"," <MID>", fim_placeholder)
+CODELLAMA_FIM = FimObj(
+    "<PRE>", 
+    " <SUF>",
+    " <MID>", 
+    fim_placeholder,
+    {"<PRE>":32007, " <SUF>":32008," <MID>":32009}) #TODO: why the space??
 # note the order changes in deepseek
 # https://huggingface.co/deepseek-ai/deepseek-coder-6.7b-base
-DEEPSEEK_FIM = FimObj("<｜fim▁begin｜>", "<｜fim▁hole｜>","<｜fim▁end｜>", fim_placeholder)
+DEEPSEEK_FIM = FimObj(
+    "<｜fim▁begin｜>", 
+    "<｜fim▁hole｜>",
+    "<｜fim▁end｜>", 
+    fim_placeholder,
+    {"<｜fim▁begin｜>":32016, "<｜fim▁hole｜>":32015,"<｜fim▁end｜>":32017})
 
 def get_model_fim(model_name:str) -> FimObj:
     if "starcoder" in model_name.lower():

@@ -1,3 +1,4 @@
+import torch
 from codetrace.type_inf_exp.steering import SteeringManager
 from argparse import ArgumentParser
 from nnsight import LanguageModel
@@ -10,10 +11,30 @@ def evaluate(results_ds) -> Dict:
     df = results_ds.to_pandas()
     df["steer_success"] = df["steered_predictions"] == df["fim_type"]
     return {
-        "num_succ": df["steer_success"].sum(),
-        "total": df["steer_success"].count(),
-        "mean_succ": df["steer_success"].mean()
+        "num_succ": float(df["steer_success"].sum()),
+        "total": float(df["steer_success"].count()),
+        "mean_succ": float(df["steer_success"].mean())
     }
+
+def run_steer(
+    smanager:SteeringManager,
+    split_name:str,
+    layers:List[int],
+    patch_batchsize:int,
+    do_random_ablation:bool
+):
+    results_ds = smanager.steer(split_name, layers, patch_batchsize, do_random_ablation=do_random_ablation)
+    if do_random_ablation:
+        flag = "_rand"
+    else:
+        flag=""
+
+    # 4. analyze and save results
+    smanager.save_data(results_ds, f"{split_name}_steering_results{flag}")
+    evaluation = evaluate(results_ds)
+    print(evaluation)
+    with open(os.path.join(smanager.cache_dir, f"{split_name}_results{flag}.json"),"w") as fp:
+        json.dump(evaluation, fp, indent=3)
 
 def main(
     model:str,
@@ -29,7 +50,7 @@ def main(
     max_num_candidates:int,
     test_size:int
 ):
-    model = LanguageModel(model, torch_dtype=dtype,device_map="cuda")
+    model = LanguageModel(model, torch_dtype=dtype,device_map="cuda",dispatch=True)
     smanager = SteeringManager(
         model,
         candidates,
@@ -49,15 +70,15 @@ def main(
     steering_tensor = smanager.create_steering_tensor(collect_batchsize)
     smanager.save_tensor(steering_tensor, tensor_name)
 
-    # 3. run steering on test
-    results_ds = smanager.steer("test", layers, patch_batchsize )
+    # # 3. run steering on test
+    run_steer(smanager, "test", layers, patch_batchsize, False)
 
-    # 4. analyze and save results
-    smanager.save_data(results_ds, "test_steering_results")
-    evaluation = evaluate(results_ds)
-    print(evaluation)
-    with open(os.path.join(output_dir, "test_eval.json")) as fp:
-        json.dumps(evaluation, fp, indent=4)
+    # 4. run steering on test with random tensor
+    run_steer(smanager, "test", layers, patch_batchsize, True)
+
+    # # 5. run steering on steer
+    run_steer(smanager, "steer", layers, patch_batchsize, False)
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -69,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--collect-batchsize", "-b1",type=int, default=4)
     parser.add_argument("--patch-batchsize", "-b2",type=int, default=2)
     parser.add_argument("--dtype", choices=["bfloat16","float32"],default="bfloat16")
-    parser.add_argument("--max-num-candidates","-n",type=int, default=2000)
+    parser.add_argument("--max-num-candidates","-n",type=int, default=-1)
     parser.add_argument("--test-size", type=int,default=500)
 
     parser.add_argument("--overwrite", action="store_true")
