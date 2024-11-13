@@ -1,5 +1,4 @@
-import torch
-from codetrace.type_inf_exp.steering import SteeringManager
+from codetrace.steering import SteeringManager
 from argparse import ArgumentParser
 from nnsight import LanguageModel
 from typing import List,Dict

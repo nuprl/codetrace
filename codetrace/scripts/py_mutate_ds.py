@@ -6,10 +6,10 @@ from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 from tqdm import tqdm
 from codetrace.fast_utils import make_batches, batched_apply
-from codetrace.type_inf_exp.py_mutator import iter_apply_random_mutations
+from codetrace.py_mutator import iter_apply_random_mutations
 import os
-from codetrace.type_inf_exp import py_mutator 
-from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt
+from codetrace import py_mutator 
+from codetrace.parsing_utils import get_model_fim
 from codetrace.utils import load, save, num_available_devices, get_vllm_config
 
 def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 60000) -> datasets.Dataset:
@@ -21,7 +21,7 @@ def filter_incorrect(ds: datasets.Dataset, llm: LLM, new_ds_name, batch_size = 6
     new_ds = []
     model_fim = get_model_fim(get_vllm_config(llm).name_or_path)
     ds = ds.map(lambda x: {
-        "prompt" : placeholder_to_std_fmt(x["mutated_program"], model_fim),
+        "prompt" : model_fim.placeholder_to_fim(x["mutated_program"]),
         "solution": x["fim_type"]
     }, desc="Prepping prompts")
     

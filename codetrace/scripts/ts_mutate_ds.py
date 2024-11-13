@@ -1,7 +1,7 @@
 import datasets
 import argparse
-from codetrace.type_inf_exp import ts_mutator
-from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt, lang_to_parser, lang_to_builder
+from codetrace import ts_mutator
+from codetrace.parsing_utils import get_model_fim, lang_to_parser, lang_to_builder
 import pandas as pd
 from multiprocessing import cpu_count
 from transformers import AutoTokenizer
@@ -26,7 +26,7 @@ def filter_incorrect(
     params = SamplingParams(temperature=0, max_tokens=1)
     new_ds = []
     model_fim = get_model_fim(get_vllm_config(llm).name_or_path)
-    ds = ds.map(lambda x: {"prompt" : placeholder_to_std_fmt(x["mutated_program"], model_fim),
+    ds = ds.map(lambda x: {"prompt" : model_fim.placeholder_to_fim(x["mutated_program"]),
                             "solution":tokenizer.decode(tokenizer.encode(x["fim_type"])[0])}, desc="Prepping prompts")
     prompts = ds["prompt"]
 

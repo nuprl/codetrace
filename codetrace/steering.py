@@ -9,7 +9,7 @@ import os
 from typing import Union, Tuple,List,Dict,Any,Optional,Callable
 from codetrace.utils import load, save, mask_target_tokens, keep_columns, mask_target_idx, masked_add
 from nnsight import LanguageModel
-from codetrace.type_inf_exp.batched_utils import batched_get_averages, batched_insert_patch_logit
+from codetrace.batched_utils import batched_get_averages, batched_insert_patch_logit
 from functools import partial
 from codetrace.fast_utils import batched_apply, make_batches
 import itertools as it

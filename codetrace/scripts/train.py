@@ -13,7 +13,7 @@ from accelerate.utils import DataLoaderConfiguration
 from accelerate import Accelerator
 import datasets 
 from typing import List, Dict,Any
-from codetrace.parsing_utils import FimObj, get_model_fim, placeholder_to_std_fmt
+from codetrace.parsing_utils import FimObj, get_model_fim
 
 @dataclass
 class TrainingArgs:
@@ -59,7 +59,7 @@ def evaluate(model, accelerator, eval_dataloader):
     return {"total_eval_loss": tot_eval_loss, "mean_eval_loss": tot_eval_loss / len(eval_dataloader)}
 
 def custom_collate_fn(data:List[Dict[str,Any]], tokenizer:AutoTokenizer, fim_obj:FimObj):
-    inputs = [placeholder_to_std_fmt(d["fim_program"], fim_obj) for d in data]
+    inputs = [fim_obj.placeholder_to_fim(d["fim_program"]) for d in data]
     labels = [d["fim_type"] for d in data]
     inputs = tokenizer(inputs, return_tensors="pt", padding=True, padding_side="left")
     labels = tokenizer(labels, return_tensors="pt", padding=False, add_special_tokens=False)
