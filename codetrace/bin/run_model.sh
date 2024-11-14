@@ -33,12 +33,13 @@ if [ ! -d "$mutations_ds" ]; then
 fi
 
 # 3. do steering
+echo "Layers ${LAYERS}"
 steering_dir="${OUTPUT_DIR}/${LANG}_${MUTATION}_results"
 python3 -m codetrace.scripts.launch_steer \
     --model $MODEL \
     --candidates $mutations_ds \
     --output-dir $steering_dir \
-    --layers="$layers" \
+    --layers="$LAYERS" \
     --steer-name "steering_split" \
     --test-name "test_split" \
     --tensor-name "steering_tensor.pt" \

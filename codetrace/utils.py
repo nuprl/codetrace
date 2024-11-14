@@ -116,6 +116,7 @@ def mask_target_tokens(
         mask = functools.reduce(lambda a,b: a|b, [input_ids == i for i in token_ids])
         target = mask > 0
     
+    device = kwargs.pop("device", None)
     if device:
         target = target.to(device)
     return target

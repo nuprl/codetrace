@@ -81,13 +81,13 @@ if __name__ == "__main__":
     parser.add_argument("--model",type=str, required=True)
     parser.add_argument("--candidates", type=str,required=True)
     parser.add_argument("--output-dir", type=str, required=True)
-    parser.add_argument("--layers", nargs="+", type=int, required=True)
+    parser.add_argument("--layers", type=str, required=True)
 
     # naming
     parser.add_argument("--steer-name", required=True)
     parser.add_argument("--test-name", required=True)
     parser.add_argument("--tensor-name", required=True)
-    
+
     parser.add_argument("--collect-batchsize", "-b1",type=int, default=4)
     parser.add_argument("--patch-batchsize", "-b2",type=int, default=2)
     parser.add_argument("--dtype", choices=["bfloat16","float32"],default="bfloat16")
@@ -98,4 +98,6 @@ if __name__ == "__main__":
     args = parser.parse_args().__dict__
     if args.pop("overwrite", None) and os.path.exists(args["output_dir"]):
         rmtree(args["output_dir"])
+    args["layers"] = [int(l.strip()) for l in args["layers"].split(',') if l != ""]
+    print(f"Layers: {args['layers']}")
     main(**args)
