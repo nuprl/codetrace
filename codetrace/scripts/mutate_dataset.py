@@ -25,7 +25,7 @@ def get_mutations(key: str, lang: str) -> Callable:
 def filter_incorrect(
     ds: datasets.Dataset,
     llm: LLM,
-    new_ds_name:str,
+    new_ds_name:Union[str,Path],
     batch_size:int = 10000
 ) -> datasets.Dataset:
     """
@@ -58,10 +58,10 @@ def filter_incorrect(
         print(f"Len new_ds: {len(new_ds)}")
         if len(new_ds) > 0:
             new_ds_hf = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-            save_dataset(new_ds_hf, new_ds_name, private=True)
+            save_dataset(new_ds_hf, new_ds_name)
     
     new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-    save_dataset(new_ds_hf, new_ds_name, private=True)
+    save_dataset(new_ds_hf, new_ds_name)
     new_ds = new_ds.remove_columns(["prompt", "solution"])
     return new_ds
 
@@ -70,9 +70,7 @@ def py_preprocess(iterable, correct_bool = True):
     Preprocess the dataset
     - Take only correct examples
     """
-    def _condition(x):
-        return x["correct"] == correct_bool 
-    
+    _condition = (lambda x: x["correct"] == correct_bool)
     if isinstance(iterable, datasets.Dataset):
         return iterable.filter(_condition, desc="Preprocess")
     else:
@@ -128,7 +126,7 @@ def main(
     ds = datasets.Dataset.from_list(results)
     save_dataset(ds, Path(new_ds_name + "_unfiltered"))
     
-    ds = filter_incorrect(ds, model, new_ds_name, batch_size=batch_size)
+    ds = filter_incorrect(ds, model, Path(new_ds_name), batch_size=batch_size)
     print(ds)
     save_dataset(ds, Path(new_ds_name))
 
@@ -140,7 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--tokenizer", type=str, required=True)
     parser.add_argument("--lang", choices=["py","ts"], required=True)
-    parser.add_argument("--mutations", type=str, required=True, nargs="+", choices=["type","vars","delete"])
+    parser.add_argument("--mutations", type=str, required=True)
     
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--max-size", type=int, default=-1)
@@ -148,6 +146,15 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=None)
     
     args = parser.parse_args()
+
+    # check muts
+    args.mutations = [m.strip() for m in args.mutations.split(',') if m != ""]
+    choices = ["types","vars","delete"]
+    for m in args.mutations:
+        if not m in choices:
+            raise NotImplementedError(f"Only accepts {choices} mutations, got {args.mutations}")
+    print(f"Mutations: {args.mutations}")
+    
     datasets.disable_caching()
     print("Gpu:", os.environ["CUDA_VISIBLE_DEVICES"])
 

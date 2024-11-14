@@ -1,5 +1,5 @@
 import tree_sitter
-from codetrace.utils import replace_between_bytes, get_captures, TS_PARSER, typescript_builtin_objects
+from codetrace.parsing_utils import replace_between_bytes, get_captures, TS_PARSER, typescript_builtin_objects
 import random
 from typing import List, Tuple, Union, Callable
 from dataclasses import dataclass
