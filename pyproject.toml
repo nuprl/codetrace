@@ -5,3 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "codetrace"
 version = "0.0.1"
+
+[tool.setuptools]
+packages = ["codetrace"]
+
