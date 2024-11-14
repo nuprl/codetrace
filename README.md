@@ -1,6 +1,6 @@
 # Installation
 
-TS install for boa - not needed ATM
+TS install for boa
 ```
 // install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
@@ -23,12 +23,3 @@ In jupyer `kernel.json` add env var, then restart vscode.
 ```
 "env": {"PYTHONPATH": "/path/to/your/package:$PYTHONPATH"}`
 ```
-
-Starcoder modeling needs to be adapted to nnsight.
-
-# Overview
-
-# TODOs
-
-- generate more python mutated examples [X]
-- rerun typescript [ONGOING] 
