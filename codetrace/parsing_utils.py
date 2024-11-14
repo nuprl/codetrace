@@ -73,6 +73,15 @@ CODELLAMA_FIM = FimObj("<PRE>", " <SUF>"," <MID>", fim_placeholder,
 DEEPSEEK_FIM = FimObj("<｜fim▁begin｜>", "<｜fim▁hole｜>", "<｜fim▁end｜>", fim_placeholder,
                       {"<｜fim▁begin｜>":32016, "<｜fim▁hole｜>":32015,"<｜fim▁end｜>":32017})
 
+# Based on https://huggingface.co/Qwen/Qwen2.5-Coder-7B/blob/main/tokenizer_config.json
+QWEN_FIM = FimObj(
+    "<|fim_prefix>",
+    "<|fim_suffix>",
+    "<|fim_middle>",
+    fim_placeholder,
+    { "<|fim_prefix>": 151659, "<|fim_suffix>": 151661, "<|fim_middle>": 151660 }
+)
+
 def get_model_fim(model_name:str) -> FimObj:
     if "starcoder" in model_name.lower():
         return STARCODER_FIM
@@ -80,6 +89,8 @@ def get_model_fim(model_name:str) -> FimObj:
         return CODELLAMA_FIM
     elif "deepseek" in model_name.lower():
         return DEEPSEEK_FIM
+    elif "qwen" in model_name.lower():
+        return QWEN_FIM
     else:
         raise NotImplementedError(f"Not supported FIM model: {model_name}")
 
