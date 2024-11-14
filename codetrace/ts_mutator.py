@@ -1,15 +1,6 @@
 import tree_sitter
 from codetrace.utils import replace_between_bytes, get_captures, TS_PARSER, typescript_builtin_objects
-import datasets
-from collections import defaultdict
-from vllm import LLM, SamplingParams
 import random
-from tqdm import tqdm
-import pandas as pd
-import re
-import sys
-from multiprocessing import cpu_count
-from argparse import ArgumentParser
 from typing import List, Tuple, Union, Callable
 from dataclasses import dataclass
 import random
@@ -77,18 +68,17 @@ class Mutation:
     prefix : Union[bytes, None] = None
     
     def __repr__(self):
+        prefix = "None"
         if self.prefix is not None:
             prefix = str(self.prefix)
-        else:
-            prefix = "None"
             
         return f"""Mutation(
-        {self.location.__repr__()},
-        replacement={str(self.byte_replacement)},
-        prefix={prefix}
-    )"""
+                {self.location.__repr__()},
+                replacement={str(self.byte_replacement)},
+                prefix={prefix}
+            )"""
 
-def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutation]:
+def rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutation]:
     """
     Make mutations for renaming vraiables in VAR_CAPTURES.
     NOTE: new name cannot exist elsewhere in the program, must be different in format from type names.
@@ -107,7 +97,6 @@ def mutation_rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]]) -> Li
         mutations.append(mutation)
     return mutations
 
-
 def needs_alias(node : tree_sitter.Node) -> bool:
     """
     Whether the node, when renamed, will need a type alias to be added to the program.
@@ -117,7 +106,7 @@ def needs_alias(node : tree_sitter.Node) -> bool:
     """
     return node.type == "predefined_type" or node.text.decode("utf-8") in typescript_builtin_objects
     
-def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutation]:
+def rename_types(type_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutation]:
     """
     Make mutations for renaming types. Assign a new name to each type in type_captures.
     If a type needs it, we create a new type alias for its renamed version.
@@ -131,16 +120,13 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> L
     name_to_new_name = {name : bytes(f"__typ{i}","utf-8") for i, name in enumerate(all_names)}
     
     mutations = []
-    do_not_prefix = set()
     for capture in type_captures:
         location = TreeSitterLocation(capture)
         replacement = name_to_new_name[capture[0].text]
         
-        if needs_alias(capture[0]):
-            # make new type alias
-            if capture[0].text.decode("utf-8") in typescript_builtin_objects:
+        if needs_alias(capture[0]) and capture[0].text.decode("utf-8") in typescript_builtin_objects:
                 prefix = b"class " + replacement + b" extends " + capture[0].text + b" {};"
-            else:
+        elif needs_alias(capture[0]):
                 prefix = b"type " + replacement + b" = " + capture[0].text + b";"
         else:
             prefix = None
@@ -148,7 +134,7 @@ def mutation_rename_type(type_captures : List[Tuple[tree_sitter.Node,str]]) -> L
         mutations.append(mutation)
     return mutations
 
-def mutation_delete_annotation(annotation_captures : List[Tuple[tree_sitter.Node,str]])-> List[Mutation]:
+def delete_annotations(annotation_captures : List[Tuple[tree_sitter.Node,str]])-> List[Mutation]:
     """
     Delete the type annotations from captures
     """
@@ -175,14 +161,14 @@ def apply_mutations(program : str, mutations : List[Mutation]) -> str:
     prefixes = []
     for mutation in mutations:
         byte_program = replace_between_bytes(byte_program, mutation.location.start_byte, mutation.location.end_byte, mutation.byte_replacement)
-        if mutation.prefix is not None:
+        if mutation.prefix != None:
             prefixes.append(mutation.prefix)
 
+    byte_program = byte_program.decode("utf-8")
     if len(prefixes) > 0:
         prefixes = "\n".join([p.decode("utf-8") for p in set(prefixes)]) + "\n\n"
-        return prefixes + byte_program.decode("utf-8")
-    else:
-        return byte_program.decode("utf-8")
+        byte_program = prefixes + byte_program
+    return byte_program
 
 def merge_nested_mutation(mutations : List[Mutation]) -> List[Mutation]:
     """
@@ -192,40 +178,34 @@ def merge_nested_mutation(mutations : List[Mutation]) -> List[Mutation]:
     new_mutations = []
     # work in pairs, if next capture is a superset of the current one, skip curr
     for (curr, prev) in zip(mutations, mutations[1:]):
-        if (curr.location.start_point[0] == prev.location.start_point[0] and 
+        if not (curr.location.start_point[0] == prev.location.start_point[0] and 
             curr.location.start_point[1] >= prev.location.start_point[1] and
             curr.location.end_point[0] == prev.location.end_point[0] and
             curr.location.end_point[1] <= prev.location.end_point[1]):
-            continue
-        else:
             new_mutations.append(curr)
             
     # add the last capture in all cases
     new_mutations.append(mutations[-1])       
     return new_mutations
 
-def random_mutate_sequential(
-    program : str, 
-    fim_type : str,
-    mutations : List[Callable],
-) -> str:
+def apply_random_mutations_by_kind(program : str, fim_type : str, mutations : List[Callable]) -> str:
     """
     Apply random combination of mutations to the program.
     NOTE: does rename variables first, then rename types, then delete
     """
     new_program = program
-    if mutation_rename_vars in mutations:
-        p = random_mutate(new_program, fim_type, [mutation_rename_vars])
+    if rename_vars in mutations:
+        p = random_mutate(new_program, fim_type, [rename_vars])
         if p != None:
             new_program = p
             
-    if mutation_rename_type in mutations:
-        p = random_mutate(new_program, fim_type, [mutation_rename_type])
+    if rename_types in mutations:
+        p = random_mutate(new_program, fim_type, [rename_types])
         if p != None:
             new_program = p
             
-    if mutation_delete_annotation in mutations:
-        p = random_mutate(new_program, fim_type, [mutation_delete_annotation])
+    if delete_annotations in mutations:
+        p = random_mutate(new_program, fim_type, [delete_annotations])
         if p != None:
             new_program = p
             
@@ -250,30 +230,20 @@ def is_constructor_param(x: tree_sitter.Node):
     name = x[0].parent.parent.parent.children_by_field_name("name")
     if len(name) > 0:
         return name[0].text == b"constructor"
-    else:
-        return False
+    return False
 
-def random_mutate(
-    program : str, 
-    fim_type : str,
-    mutations : List[Callable],
-    debug_seed : int = None
-) -> str:
+def random_mutate(program : str, fim_type : str, mutations : List[Callable], debug_seed : int = None) -> str:
     """
     Apply random combination of mutations to the program.
     Can provide a random seed DEBUG_SEED for debugging.
     NOTE: if debug_seed is -1, this is a special case where we do not select a random subset but
     and run the full set instead (DEGUB only)
     """
-    if debug_seed is not None:
-        random.seed(debug_seed)
-        
+    random.seed(debug_seed)
     # to prevent tree-sitter error:
     program = program.replace("<FILL>", "_CodetraceSpecialPlaceholder_")
-    
     # do not rename or delete these types
-    types_blacklist = [bytes(fim_type,"utf-8"), 
-                       bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
+    types_blacklist = [bytes(fim_type,"utf-8"), bytes("_CodetraceSpecialPlaceholder_", "utf-8")]
     
     # -----------------------
     # get SELECT captures for target nodes that we can mutate
@@ -299,9 +269,7 @@ def random_mutate(
     type_rename_targets = set([x[0].text.replace(b":",b"").strip() for x in type_rename_captures])
     
     all_id_captures = get_captures(tree, TS_IDENTIFIER_QUERY, language="ts")
-    all_type_id_captures = get_captures(tree, 
-                                        TS_TYPE_IDENTIFIER_QUERY + TS_PREDEFINED_TYPE_QUERY, 
-                                        language="ts")
+    all_type_id_captures = get_captures(tree,TS_TYPE_IDENTIFIER_QUERY + TS_PREDEFINED_TYPE_QUERY, language="ts")
     
     constructor_param_names = set([x[0].text for x in all_id_captures if is_constructor_param(x)])
     var_rename_full_captures = [x for x in all_id_captures 
@@ -318,25 +286,26 @@ def random_mutate(
                                 # don't rename forbidden types
                                 and x[0].text not in types_blacklist
                                 ]
-    remove_annotations_captures = [x for x in remove_annotations_captures  if (x[0].text.replace(b":",b"").strip() not in types_blacklist)]
+    remove_annotations_captures = [x for x in remove_annotations_captures  if 
+                                   (x[0].text.replace(b":",b"").strip() != bytes("_CodetraceSpecialPlaceholder_", "utf-8"))]
     
     # -----------------------
     # Apply the selected mutations
+
+    for captures in [var_rename_full_captures, type_rename_full_captures,remove_annotations_captures]:
+        # if any out of the selected mutations has no captures, return None
+        if len(captures) == 0:
+            return None,[]
     
-    func_name_to_args = {
-        "mutation_rename_vars" : var_rename_full_captures,
-        "mutation_rename_type" : type_rename_full_captures,
-        "mutation_delete_annotation" : remove_annotations_captures
-    }
     # collects mutations
     all_mutations = []
-    for m in mutations:
-        captures = func_name_to_args[m.__name__]
-        if len(captures) == 0:
-            # if any out of the selected mutations has no captures, return None
-            return None
-        all_mutations += m(func_name_to_args[m.__name__])
-    
+    if rename_vars in mutations:
+        all_mutations += rename_vars(var_rename_full_captures)
+    if rename_types in mutations:
+        all_mutations += rename_types(type_rename_full_captures)
+    if delete_annotations in mutations:
+        all_mutations += delete_annotations(remove_annotations_captures)
+
     # actually modify the program
     new_program = apply_mutations(program, all_mutations)
     if new_program == program:
@@ -353,27 +322,3 @@ def random_mutate(
         return new_program, all_mutations
     
     return new_program
-
-
-def iter_apply_random_mutations(iterable, mutations : List[Callable]):
-    """
-    Apply random combination of mutations
-    """
-    new_ds = []
-    
-    for i, ex in enumerate(iterable):
-        new_program = None
-        program = ex["fim_program"]
-        fim_type = ex["fim_type"]
-        
-        tries = 0
-        while new_program is None and tries < 10:
-            tries += 1
-            new_program = random_mutate_sequential(program, fim_type, mutations)
-        if new_program is None:
-            continue
-
-        new_ds.append({"mutated_program": new_program, 
-                       "mutations" : [m.__name__ for m in mutations], **ex})
-    
-    return new_ds

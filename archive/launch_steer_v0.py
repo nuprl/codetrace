@@ -10,7 +10,7 @@ from codetrace.type_inf_exp.steering import (
 )
 from pathlib import Path
 import os 
-from codetrace.utils import load
+from codetrace.utils import load_dataset
 from codetrace.fast_utils import get_batches_fast, batched_apply
 from multiprocessing import cpu_count
 from tqdm import tqdm
@@ -87,7 +87,7 @@ def make_steering_data_splits(
         print("Correct and incorrect splits already exist, skipping...")
         return
     
-    ds = load(source_dataset, split=split)
+    ds = load_dataset(source_dataset, split=split)
     print(ds)
     
     if shuffle:

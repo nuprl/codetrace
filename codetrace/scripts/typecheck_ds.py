@@ -3,14 +3,12 @@ import shutil
 from pathlib import Path
 import argparse
 import datasets
-from codetrace.parsing_utils import PY_PARSER, TS_PARSER, get_model_fim
-from tqdm import tqdm
 import subprocess
-from typing import List, Dict
+from typing import List, Dict, Any, Tuple
 import tempfile
 import hashlib
 from codetrace.fast_utils import batched_apply, make_batches
-from codetrace.utils import load, save
+from codetrace.utils import load_dataset, save_dataset
 from multiprocessing import cpu_count
 import glob
 import re
@@ -25,62 +23,69 @@ pyright_config = {
     "reportMissingModuleSource" : False,
 }
 
-def log(path, data):
+def log(path: str, data: Any):
     with open(path, "w") as f:
         f.write(data + "\n")
-        
 
-# from https://github.com/nuprl/MultiPL-T/
-def run_typechecker(d, lang, do_log=False):
-    logdir = f"{lang}_log"
+def found_error(lang:str, line:str) -> bool:
     if lang == "py":
-        files = list(glob.glob(f"{d}/*.py"))
+        return ("- error:" in line and not '- error: Import "' in line and not "unknown import symbol" in line 
+            and not "Position-only parameter not allowed after parameter that is not position-only" in line
+            and not 'Expression of type "None" cannot be assigned to return type' in line
+            and not 'is not a known member of "None"' in line)
+    elif lang == "ts":
+        return (": error" in line and not "Cannot find module" in line \
+                and not "Invalid module name in augmentation" in line)
+    else:
+        raise NotImplementedError("Supported languages are py and ts")
+
+def wrap(err:str, n_chars:int) -> str:
+    res = ""
+    for idx in range(0,len(err), n_chars):
+        res += err[idx:idx+n_chars] + "\n"
+    return res
+
+def typecheck_py(dir:str) -> Tuple[str, List[str]]:
+    files = list(glob.glob(f"{dir}/*.py"))
+    commands = ["pyright", "-p", "pyright_config.json","*"]
+    try:
+        outs = subprocess.run(commands, cwd=dir, capture_output=True, timeout=300, text=True).stdout
+    except Exception as e:
+        print(f"Error in typechecking...{e}")
+        outs = "\n".join([f"{f} - error: {e}" for f in files])
+    return outs,files
+
+def typecheck_ts(dir:str) -> Tuple[str, List[str]]:
+    outs = []
+    files = list(glob.glob(f"{dir}/*.ts"))
+    commands = ["npx", "--cache", str(os.environ["NPM_PACKAGES"]), "ts-node", 
+                "--compilerOptions", "{\"noImplicitAny\": false, \"strictNullChecks\": false}", 
+                "--typeCheck", tsfile],
+    for tsfile in files:
+        tsfile = tsfile.split("/")[-1]
         try:
-            outs = subprocess.run(
-                ["pyright",
-                 "-p", "pyright_config.json",
-                "*"
-                 ],
-                cwd=d,
-                capture_output=True,
-                timeout=300,
-                text=True,
-            ).stdout
+            out = subprocess.run(commands, cwd=dir, capture_output=True, timeout=120,text=True).stderr
+            outs.append(out)
         except Exception as e:
             print(f"Error in typechecking...{e}")
-            outs = "\n".join([f"{f} - error: {e}" for f in files])
-        
-    elif lang == "ts":
-        outs = []
-        files = list(glob.glob(f"{d}/*.ts"))
-        for tsfile in files:
-            tsfile = tsfile.split("/")[-1]
-            try:
-                out = subprocess.run(
-                    ["npx", "--cache", str(os.environ["NPM_PACKAGES"]), "ts-node", 
-                     "--compilerOptions", "{\"noImplicitAny\": false, \"strictNullChecks\": false}", 
-                     "--typeCheck", tsfile],
-                    cwd=d,
-                    capture_output=True,
-                    timeout=120,
-                    text=True,
-                ).stderr
-                outs.append(out)
-            except Exception as e:
-                print(f"Error in typechecking...{e}")
-                outs.append(f"{tsfile}: error {e}")
+            outs.append(f"{tsfile}: error {e}")
 
-        outs = "\n".join(outs)
+    return "\n".join(outs),files
+        
+# from https://github.com/nuprl/MultiPL-T/
+def run_typechecker(dir:str, lang:str, do_log:bool=False) -> Dict[str, Dict[str,str]]:
+    logdir = f"{lang}_log"
+    if lang == "py":
+        outs,files= typecheck_py(dir)
+    elif lang == "ts":
+        outs,files = typecheck_ts(dir)
     else:
         raise ValueError("Only ts and py langs supported")
         
-    cur_file = ""
-    cur_lines = ""
+    cur_file, cur_lines = "",""
     filemap = {}
-    lines = outs.split("\n")
-    regex = re.compile(f"^.*\.{lang}")
-    for i, line in enumerate(lines):
-        filename_in_line = re.findall(regex, line)
+    for _, line in enumerate(outs.split("\n")):
+        filename_in_line = re.findall(r"^.*\.{lang}".format(lang=lang), line)
         if len(filename_in_line) == 1:
             filename_in_line = filename_in_line[0].split("/")[-1]
             # found new file
@@ -96,18 +101,7 @@ def run_typechecker(d, lang, do_log=False):
                 cur_file = filename_in_line
                 cur_lines = ""
         
-        if (len(cur_file) > 0  and lang == "py" and "- error:" in line and 
-            not '- error: Import "' in line
-            and not "unknown import symbol" in line
-            and not "Position-only parameter not allowed after parameter that is not position-only" in line
-            and not 'Expression of type "None" cannot be assigned to return type' in line
-            and not 'is not a known member of "None"' in line):
-            cur_lines += line + "\n"
-            filemap[cur_file]["count"] += 1
-            filemap[cur_file]["errors"].append(line)
-        elif (len(cur_file) > 0 and lang == "ts" and ": error" in line 
-            and not "Cannot find module" in line
-            and not "Invalid module name in augmentation" in line):
+        if len(cur_file) > 0 and found_error(lang, line):
             cur_lines += line + "\n"
             filemap[cur_file]["count"] += 1
             filemap[cur_file]["errors"].append(line)
@@ -117,15 +111,7 @@ def run_typechecker(d, lang, do_log=False):
             filemap[filename.split("/")[-1]] = {"count":0, "errors":[]}
     return filemap
 
-def wrap(err:str, n_chars:int):
-    res = ""
-    for idx in range(0,len(err), n_chars):
-        res += err[idx:idx+n_chars] + "\n"
-    return res
-
-def _format_error_list(
-    error_list: List[str]
-)-> str:
+def _format_error_list(error_list: List[str])-> str:
     col_len = 80
     delim = f"\n#{'='*col_len}\n"
     res = ""
@@ -133,7 +119,7 @@ def _format_error_list(
         res += wrap(err,col_len).strip() + delim
     return res
     
-def filter_typecheck_batch(examples: List[dict], colname, lang, do_log=False, logdir:str="/tmp") -> List[dict]:
+def typecheck_batch(examples: List[dict], colname, lang, do_log=False, logdir:str="/tmp") -> List[dict]:
     filtered = []
     hexsha_to_ex = {}
     with tempfile.TemporaryDirectory() as tempdir:
@@ -164,32 +150,27 @@ def filter_typecheck_batch(examples: List[dict], colname, lang, do_log=False, lo
     
     return [hexsha_to_ex[hexsha] for hexsha in filtered]
 
-
-def main(args):
+def main(
+    ds: datasets.Dataset,
+    outpath: str,
+    **typechecker_args
+):
     """
     For each ood_steering_ds/steering_ds in list-o-dirs, run parser. Collect % of parsing programs.
     """
-
-    ds = load(args.dsname, args.split)
-    print(ds)
-
-    if args.max_size > -1:
-        ds = ds.shuffle(42).select(range(args.max_size))
-
     batches = make_batches(ds, cpu_count())
-    result = batched_apply(batches, cpu_count(), filter_typecheck_batch, 
-                             colname=args.column_name, lang=args.lang, do_log=args.do_log, logdir=args.logdir)
-
+    result = batched_apply(batches, cpu_count(), typecheck_batch, **typechecker_args)
     ds_new = datasets.Dataset.from_list(result)
     print(ds_new)
-    ds_new.save_to_disk(args.new_ds_name)
+    ds_new.save_to_disk(outpath)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dsname", type=str, required=True)
+    parser.add_argument("--input-ds", type=str, required=True)
     parser.add_argument("--lang", choices=["py", "ts"], required=True)
-    parser.add_argument("--new-ds-name", type=str, required=True)
+    parser.add_argument("--output-ds", type=str, required=True)
     parser.add_argument("--column-name", type=str, required=True, help="column with fim program to typecheck")
+
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--do-log", action="store_true")
@@ -205,6 +186,11 @@ if __name__=="__main__":
         if os.path.exists(logdir) and os.path.isdir(logdir):
             shutil.rmtree(logdir)
         os.makedirs(logdir, exist_ok=True)
-    args.logdir=logdir
 
-    main(args)
+    ds = load_dataset(args.input_ds, args.split)
+    print(ds)
+
+    if args.max_size > -1:
+        ds = ds.shuffle().select(range(args.max_size))
+
+    main(ds, args.output_ds, colname=args.column_name, lang=args.lang, do_log=args.do_log, logdir=logdir)

@@ -7,7 +7,7 @@ from codetrace.parsing_utils import FimObj, get_model_fim
 import datasets
 import os
 from typing import Union, Tuple,List,Dict,Any,Optional,Callable
-from codetrace.utils import load, save, mask_target_tokens, keep_columns, mask_target_idx, masked_add
+from codetrace.utils import load_dataset, save_dataset, mask_target_tokens, keep_columns, mask_target_idx, masked_add
 from nnsight import LanguageModel
 from codetrace.batched_utils import batched_get_averages, batched_insert_patch_logit
 from functools import partial
@@ -26,23 +26,16 @@ def balance_prompts(
     Balance prompts s.t. there is a balanced distribution of labels (program ids and/or types).
     """
     # if -1, set to the max value, aka do not dedup
-    if dedup_prog_threshold == -1:
-        dedup_prog_threshold = len(dataset)
-    if dedup_type_threshold == -1:
-        dedup_type_threshold = len(dataset)
-        
-    # get count of labels
-    labels = dataset["fim_type"]
-    
+    prog_maxn = len(dataset) if dedup_prog_threshold == -1 else dedup_prog_threshold
+    type_maxn = len(dataset) if dedup_type_threshold == -1 else dedup_type_threshold
+
     hexsha_count = {h:0 for h in dataset["hexsha"]}
-    label_count = {label : 0 for label in labels}
+    label_count = {label : 0 for label in dataset["fim_type"]}
     balanced_prompts = []
     for _,ex in tqdm(enumerate(dataset), desc="Deduping dataset",total=len(dataset), disable=disable_tqdm):
-        if label_count[ex["fim_type"]] >= dedup_type_threshold and hexsha_count[ex["hexsha"]] >= dedup_prog_threshold: 
-            # if label and hexsha are already at threshold, break
+        if hexsha_count[ex["hexsha"]] >= prog_maxn and label_count[ex["fim_type"]] >= type_maxn:
             break
-        elif label_count[ex["fim_type"]] >= dedup_type_threshold or hexsha_count[ex["hexsha"]] >= dedup_prog_threshold:
-            # if hexsha is at threshold, continue
+        elif label_count[ex["fim_type"]] >= prog_maxn or hexsha_count[ex["hexsha"]] >= type_maxn:
             continue
         
         balanced_prompts.append(ex)
@@ -68,10 +61,7 @@ def subtract_avg(hidden_states:torch.Tensor) -> torch.Tensor:
     mean_even = hidden_states[:, even_indices].mean(dim=1, keepdim=True)
     return mean_even
 
-def prepare_prompts(
-    data: List[Dict[str,Any]],
-    fim_obj:FimObj
-)->List[str]:
+def prepare_prompts(data: List[Dict[str,Any]],fim_obj:FimObj)->List[str]:
     return list(it.chain.from_iterable(
                     map(lambda x:(fim_obj.placeholder_to_fim(x["fim_program"]),
                                 fim_obj.placeholder_to_fim(x["mutated_program"])), data),
@@ -104,7 +94,7 @@ class SteeringManager:
         self.model=model
         self.tokenizer=model.tokenizer
         self.fim_obj=get_model_fim(model.config.name_or_path)
-        self.candidates_ds = load(candidates_ds)
+        self.candidates_ds = load_dataset(candidates_ds)
         if max_num_candidates > -1:
             self.candidates_ds = self.candidates_ds.select(range(max_num_candidates))
         self.cache_dir = cache_dir
@@ -129,14 +119,14 @@ class SteeringManager:
         """
         subpath = Path(os.path.join(self.cache_dir, path))
         if not os.path.exists(subpath):
-            save(data, subpath)
+            save_dataset(data, subpath)
 
     def load_data(self, path:str, split:Optional[str]=None) -> Optional[datasets.Dataset]:
         """
         Loads data from self.cache_dir / path
         """
         try:
-            return load(os.path.join(self.cache_dir,path), split=split)
+            return load_dataset(os.path.join(self.cache_dir,path), split=split)
         except:
             return None
     

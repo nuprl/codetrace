@@ -58,7 +58,7 @@ def num_available_devices():
     device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
     return len([i for i in device_list if i != ","])
 
-def load(ds: str, split:str=None, **kwargs) -> datasets.Dataset:
+def load_dataset(ds: str, split:str=None, **kwargs) -> datasets.Dataset:
     if ds.endswith(".csv"):
         ds = datasets.Dataset.from_csv(ds,**kwargs)
     elif os.path.exists(ds):
@@ -67,7 +67,7 @@ def load(ds: str, split:str=None, **kwargs) -> datasets.Dataset:
         ds = datasets.load_dataset(ds,**kwargs)
     return ds[split] if split else ds
 
-def save(ds: datasets.Dataset, path:Union[str,Path], **kwargs):
+def save_dataset(ds: datasets.Dataset, path:Union[str,Path], **kwargs):
     if isinstance(path, Path):
         ds.save_to_disk(str(path), **kwargs)
     else:
@@ -110,7 +110,6 @@ def mask_target_tokens(
     **kwargs
 ) -> torch.BoolTensor:
     token_ids = torch.Tensor(token_ids)
-    device = kwargs.pop("device", None)
     if token_ids.ndim == 0:
         target = input_ids == token_ids.item()
     else:

@@ -45,16 +45,11 @@ def main(args):
     NOTE: completions are 1 token. A completion is correct if it matches the type annotation exactly.
     Thus, fim_type must be 1 token.
     """
-    args.tokenizer=args.tokenizer if args.tokenizer else args.model
-    os.makedirs(args.new_ds_name, exist_ok=True)
-
-    ds = datasets.load_dataset(args.prompt_ds, split=args.split)
-    ds = ds.shuffle()
-
+    ds = datasets.load_dataset(args.prompt_ds, split=args.split).shuffle()
     params = SamplingParams(temperature=0, max_tokens=1)
-
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     llm = LLM(args.model, dtype=args.dtype, tensor_parallel_size=num_available_devices(), tokenizer=args.tokenizer)
+    model_fim = get_model_fim(args.model)
 
     # filter 1 tok
     batches = make_batches(ds, cpu_count())
@@ -63,9 +58,7 @@ def main(args):
     if args.max_size > -1:
         ds = ds.select(range(args.max_size))
 
-    # generate
-    model_fim = get_model_fim(args.model)                    
-    
+    # generate                  
     # batch generations because of cpu ops in vllm
     if len(ds) < 10000:
         prompts = [model_fim.placeholder_to_fim(ex["fim_program"]) for ex in ds]
@@ -75,8 +68,11 @@ def main(args):
         completions = []
         batch_size = 1000
         
-        for batch_index, ds_idx in tqdm(enumerate(range(0,len(ds), batch_size)), 
-                                        desc="Batch generations", total=len(ds)//batch_size):
+        for batch_index, ds_idx in tqdm(
+            enumerate(range(0,len(ds), batch_size)), 
+            desc="Batch generations", 
+            total=len(ds)//batch_size
+        ):
             ds_batch = ds.select(range(ds_idx, min(ds_idx+batch_size, len(ds))))
             batch_prompts = [model_fim.placeholder_to_fim(ex["fim_program"]) for ex in ds_batch]
             batch_completions = generate_completions(llm,batch_prompts,params,ds_batch)
@@ -90,8 +86,8 @@ def main(args):
                 print(Counter(new_ds["correct"]))
 
     new_ds = datasets.Dataset.from_list(completions)
-    print(new_ds)
     new_ds.save_to_disk(args.new_ds_name)
+    print(new_ds)
     print(Counter(new_ds["correct"]))
 
 if __name__ == "__main__":
@@ -99,10 +95,12 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, required=True)
     parser.add_argument("--prompt-ds", type=str, required=True)
     parser.add_argument("--new-ds-name", type=str, required=True)
+    
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--split",type=str,default="train")
     parser.add_argument("--dtype", choices=[torch.bfloat16, torch.float32], default=torch.bfloat16)
     parser.add_argument("--model-name", default=None)
     parser.add_argument("--tokenizer", default=None)
     args = parser.parse_args()
+    args.tokenizer=args.tokenizer if args.tokenizer else args.model
     main(args)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from codetrace.utils import load
+from codetrace.utils import load_dataset
 import os
 import wandb
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_scheduler
@@ -33,6 +33,12 @@ class TrainingArgs:
     def __init__(self,**kwargs):
         for k,v in kwargs.items():
             setattr(self, k, v)
+
+def prepare_tokenizer(model:str):
+    tokenizer = AutoTokenizer.from_pretrained(model)
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+    return tokenizer
 
 def save(model, dirpath, accelerator=None):
     if accelerator:
@@ -186,12 +192,7 @@ def train(
     # final model
     save(model,os.path.join(training_args.checkpoint_dir, f"ckpt_final_{(step+1)*training_args.num_epochs}"), accelerator)
     accelerator.end_training()
-    
-def prepare_tokenizer(model:str):
-    tokenizer = AutoTokenizer.from_pretrained(model)
-    if tokenizer.pad_token_id is None:
-        tokenizer.pad_token_id = tokenizer.eos_token_id
-    return tokenizer
+
 
 def main(args):
     wandb_mode = "online" if args.report_to == "wandb" else "offline"
@@ -211,7 +212,7 @@ def main(args):
     
     tokenizer = prepare_tokenizer(args.model)
     fim_obj = get_model_fim(args.model)
-    ds = load(args.dataset, args.split)
+    ds = load_dataset(args.dataset, args.split)
     ds = ds.train_test_split(args.eval_size)
     train_ds,eval_ds = ds["train"], ds["test"]
 

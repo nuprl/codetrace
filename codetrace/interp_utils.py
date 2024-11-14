@@ -1,13 +1,13 @@
 """
 Interp utils
 """
-from functools import partial
 import torch
 from nnsight import LanguageModel
 import nnsight
 from nnsight.tracing.Proxy import Proxy
-from typing import List, Union, Callable, Optional
+from typing import List, Union, Callable, Optional, TypeVar
 import transformers
+from torchtyping import TensorType
 from codetrace.utils import (
     top_k_top_p_filtering,
     pos_indexing,
@@ -17,18 +17,25 @@ from codetrace.utils import (
     get_lm_layers,
     apply_reduction
 )
-from torchtyping import TensorType
+
+"""
+Define some tensor types
+"""
+ActivationTensor = TypeVar(TensorType[float,"n_layer","n_prompt","n_tokens","hdim"])
+ReducedActivationTensor = TypeVar(TensorType[float,"n_layer","n_prompt","hdim"])
+LayerActivationTensor = TypeVar(TensorType[float, "n_prompt","n_tokens","hdim"])
+
+MaskTensor = TypeVar(TensorType[bool,"n_layer","n_prompt","n_tokens","hdim"])
+
+IndicesTensor = TypeVar(TensorType[int, "n_layer","n_prompt","n_tokens","top_k"])
+ProbabilitiesTensor = TypeVar(TensorType[float, "n_layer","n_prompt","n_tokens","top_k"], )
 
 class LogitResult:
     """
     Wrapper over logits and token indices.
     Tensors in shape: [n_layer, n_prompt, n_tokens, topk]
     """
-    def __init__(
-        self, 
-        token_indices : TensorType[int, "n_layer","n_prompt","n_tokens","top_k"], 
-        probabilities : TensorType[float, "n_layer","n_prompt","n_tokens","top_k"], 
-    ):
+    def __init__(self, token_indices : IndicesTensor, probabilities : ProbabilitiesTensor):
         self.token_indices = token_indices
         self.probabilities = probabilities
         
@@ -71,10 +78,10 @@ class TraceResult:
     
     def __init__(
         self, 
-        logits : TensorType[float, "n_layer","n_prompt","n_tokens","n_vocab"], 
+        logits : ActivationTensor, 
         layer_idxs : List[int],
         model_n_layer : int,
-        hidden_states : TensorType[float, "n_layer","n_prompt","n_tokens","n_vocab"] = None,
+        hidden_states : ActivationTensor = None,
         custom_decoder : Union[None, torch.nn.Module] = None
     ):
         self._logits = logits.detach().cpu()
@@ -121,11 +128,9 @@ def collect_hidden_states(
     model : LanguageModel,
     prompts : List[str],
     layers : List[int] = None,
-    target_fn : Optional[Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"]],
-                        TensorType[bool, "n_layer","n_prompt","n_tokens","hdim"]]] = None,
-    reduction: Optional[Union[str, Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"],List[int]],
-                                    TensorType[float, "n_layer","n_prompt","(reduced_n_toks)","hdim"]]]]= None
-) -> TensorType[float, "n_layer","n_prompt","(n_tokens)","hdim"]:
+    target_fn : Optional[Callable[[ActivationTensor],MaskTensor]] = None,
+    reduction: Optional[Union[str, Callable[[ActivationTensor,List[int]],ReducedActivationTensor]]]= None
+) -> Union[ReducedActivationTensor, ActivationTensor]:
     """
     Collect hidden states for each prompt. 
     Optionally, collect hidden states at specific layers, or at certain
@@ -163,11 +168,7 @@ def collect_hidden_states(
     return hidden_states
 
 @torch.no_grad
-def _prepare_patch(
-    patch:Union[TensorType[float,"n_prompt","n_tokens_to_patch","hdim"],
-                TensorType[float,"n_prompt","n_tokens","hdim"]],
-    n_tokens:int,
-)->TensorType[float, "n_prompt","n_tokens","hdim"]:
+def _prepare_patch(patch:Union[ReducedActivationTensor,ActivationTensor], n_tokens:int)->LayerActivationTensor:
     if patch.ndim == 4:
         return patch
     else:
@@ -178,13 +179,11 @@ def _prepare_patch(
 def insert_patch(
     model : LanguageModel,
     prompts : List[str],
-    patch : TensorType[float, "n_layer","n_prompt","n_tokens_to_patch","hdim"],
+    patch : Union[ReducedActivationTensor,ActivationTensor],
     layers_to_patch : List[int],
-    target_fn : Optional[Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"]],
-                        TensorType[bool, "n_layer","n_prompt","n_tokens","hdim"]]] = None,
+    target_fn : Optional[Callable[[ActivationTensor],MaskTensor]] = None,
     collect_hidden_states : bool = True,
-    patch_fn: Optional[Callable[[TensorType[float], TensorType[bool],TensorType[float]],
-                        TensorType[bool, "n_layer","n_prompt","n_tokens","hdim"]]] = None,
+    patch_fn: Optional[Callable[[ActivationTensor, MaskTensor, ActivationTensor],MaskTensor]] = None,
 ) -> TraceResult:
     """
     Insert patch at layers and tokens
@@ -267,7 +266,7 @@ def custom_lens(
     decoder : torch.nn.Module,
     prompts : List[str],
     layers : List[int],
-    activations : Optional[TensorType[float, "n_layer","n_prompt","n_tokens","hdim"]] = None,
+    activations : Optional[ActivationTensor] = None,
     k : int = 1
 ) -> List[str]:
     """

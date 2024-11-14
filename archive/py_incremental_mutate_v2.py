@@ -14,7 +14,7 @@ from codetrace.type_inf_exp.py_mutator import incremental_mutate
 import os
 from codetrace.type_inf_exp import py_mutator 
 from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt, FimObj, std_to_placeholder_fmt
-from codetrace.utils import load, save, num_available_devices
+from codetrace.utils import load_dataset, save_dataset, num_available_devices
 from typing import List, Tuple, Generator,AsyncGenerator,Union
 from dataclasses import dataclass
 import threading
@@ -190,7 +190,7 @@ async def main(
     correct_bool:bool=True,
     log_requests:bool=False
 ):
-    ds = load(completions_ds, split=split).shuffle()
+    ds = load_dataset(completions_ds, split=split).shuffle()
     mutations = [getattr(py_mutator, m) for m in mutations]
 
     if correct_bool:
@@ -243,7 +243,7 @@ async def main(
 
     new_ds = datasets.Dataset.from_list(new_ds)
     print(new_ds)
-    save(new_ds, new_ds_name)
+    save_dataset(new_ds, new_ds_name)
 
 
 if __name__ == "__main__":

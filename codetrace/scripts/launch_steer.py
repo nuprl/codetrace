@@ -23,16 +23,13 @@ def run_steer(
     do_random_ablation:bool
 ):
     results_ds = smanager.steer(split_name, layers, patch_batchsize, do_random_ablation=do_random_ablation)
-    if do_random_ablation:
-        flag = "_rand"
-    else:
-        flag=""
+    suffix = "_rand" if do_random_ablation else ""
 
     # 4. analyze and save results
-    smanager.save_data(results_ds, f"{split_name}_steering_results{flag}")
+    smanager.save_data(results_ds, f"{split_name}_steering_results{suffix}")
     evaluation = evaluate(results_ds)
     print(evaluation)
-    with open(os.path.join(smanager.cache_dir, f"{split_name}_results{flag}.json"),"w") as fp:
+    with open(os.path.join(smanager.cache_dir, f"{split_name}_results{suffix}.json"),"w") as fp:
         json.dump(evaluation, fp, indent=3)
 
 def main(
@@ -86,6 +83,11 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=str, required=True)
     parser.add_argument("--layers", nargs="+", type=int, required=True)
 
+    # naming
+    parser.add_argument("--steer-name", required=True)
+    parser.add_argument("--test-name", required=True)
+    parser.add_argument("--tensor-name", required=True)
+    
     parser.add_argument("--collect-batchsize", "-b1",type=int, default=4)
     parser.add_argument("--patch-batchsize", "-b2",type=int, default=2)
     parser.add_argument("--dtype", choices=["bfloat16","float32"],default="bfloat16")
@@ -93,11 +95,6 @@ if __name__ == "__main__":
     parser.add_argument("--test-size", type=int,default=500)
 
     parser.add_argument("--overwrite", action="store_true")
-    # naming
-    parser.add_argument("--steer-name", required=True)
-    parser.add_argument("--test-name", required=True)
-    parser.add_argument("--tensor-name", required=True)
-
     args = parser.parse_args().__dict__
     if args.pop("overwrite", None) and os.path.exists(args["output_dir"]):
         rmtree(args["output_dir"])

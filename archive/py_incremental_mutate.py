@@ -10,7 +10,7 @@ from codetrace.type_inf_exp.py_mutator import incremental_mutate
 import os
 from codetrace.type_inf_exp import py_mutator 
 from codetrace.parsing_utils import get_model_fim, placeholder_to_std_fmt, FimObj, std_to_placeholder_fmt
-from codetrace.utils import load, save, num_available_devices
+from codetrace.utils import load_dataset, save_dataset, num_available_devices
 from typing import List, Tuple, Generator,AsyncGenerator
 import itertools as it
 os.environ["VLLM_LOGGING_LEVEL"] = "ERROR"
@@ -63,7 +63,7 @@ async def main(
     log_requests:bool=False,
     save_every:int=100,
 ):
-    ds = load(completions_ds, split=split)
+    ds = load_dataset(completions_ds, split=split)
     if max_size > -1:
         ds = ds.shuffle().select(range(max_size))
     mutations = [getattr(py_mutator, m) for m in mutations]
@@ -109,7 +109,7 @@ async def main(
         
         # save
         if len(new_ds)>0 and i % save_every == 0:
-            save(datasets.Dataset.from_list(new_ds), new_ds_name + "_" + model.split("/")[-1])
+            save_dataset(datasets.Dataset.from_list(new_ds), new_ds_name + "_" + model.split("/")[-1])
 
         # end generation
         if len(new_ds) >= num_examples:
@@ -119,7 +119,7 @@ async def main(
 
     new_ds = datasets.Dataset.from_list(new_ds)
     print(new_ds["fim_type"], new_ds["mutated_generated_text"])
-    save(new_ds, new_ds_name + "_" + model.split("/")[-1])
+    save_dataset(new_ds, new_ds_name + "_" + model.split("/")[-1])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -9,27 +9,27 @@ import torch
 from tqdm import tqdm
 import pickle
 import json
-from typing import List, Union, Callable, Optional
+from typing import List, Union, Callable, Optional, TypeVar
 from codetrace.interp_utils import (
     collect_hidden_states,
     insert_patch,
     TraceResult,
-    LogitResult
+    LogitResult,
+    ReducedActivationTensor,
+    ActivationTensor,
+    MaskTensor
 )
-from torchtyping import TensorType
 
 def batched_get_averages(
     model: LanguageModel,
     prompts : Union[List[str], torch.utils.data.DataLoader],
-    target_fn : Optional[Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"]],
-                    TensorType[bool, "n_layer","n_prompt","n_tokens","hdim"]]] = None,
+    target_fn : Optional[Callable[[ActivationTensor],MaskTensor]] = None,
     batch_size:int =5,
     average_fn: Callable = (lambda x: x.mean(dim=1)),
     outfile: Optional[str] = None,
     layers: Optional[List[int]] = None,
-    reduction: Optional[Union[str, Callable[[TensorType[float,"n_layer","n_prompt","n_tokens","hdim"],List[int]],
-                                    TensorType[float, "n_layer","n_prompt","(reduced_n_toks)","hdim"]]]]= None
-) -> torch.Tensor:
+    reduction: Optional[Union[str, Callable[[ActivationTensor,List[int]],ReducedActivationTensor]]]= None
+) -> ActivationTensor:
     """
     Get averages of activations at all layers for prompts. Select activations according to mask
     produced by target_fn. Batches the prompts to
@@ -61,23 +61,10 @@ def batched_get_averages(
     print(f"Hidden states shape before avg: {hidden_states.shape}")
     return hidden_states.mean(dim=0)
 
-def _percent_success(predictions_so_far, solutions):
-    correct = 0
-    for pred,sol in zip(predictions_so_far, solutions[:len(predictions_so_far)]):
-        if sol == pred:
-            correct += 1
-    return correct / len(solutions)
-
-def _resize_patch(
-    patch:TensorType[float, "n_layer","n_patch_tokens","hdim"],
-    batch_size:int
-)->TensorType:
-    return einops.repeat(patch, "l t d -> l p t d", p=batch_size)
-
 def batched_insert_patch_logit(
     model : LanguageModel,
     prompts : Union[List[str], torch.utils.data.DataLoader],
-    patch : TensorType[float,"n_layer","n_patch_tokens","hdim"],
+    patch : ReducedActivationTensor,
     layers_to_patch : List[int],
     target_fn : Callable,
     patch_fn:Callable,
@@ -96,15 +83,12 @@ def batched_insert_patch_logit(
         prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
     predictions =[]
     for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
-        # repeat patch in dim 1 to match batch len
-        if isinstance(batch, List):
-            bsize = len(batch)
-        else:
-            bsize = batch.shape[1]
+        bsize = len(batch) if isinstance(batch, List) else batch.shape[1]
+
         res : TraceResult = insert_patch(
             model, 
             batch, 
-            _resize_patch(patch, bsize),
+            _resize_patch(patch, bsize), # repeat patch in dim 1 to match batch len
             layers_to_patch, 
             target_fn=target_fn,
             patch_fn=patch_fn,
@@ -115,18 +99,26 @@ def batched_insert_patch_logit(
         for j in range(bsize):
             tok = logits[-1,j].tokens(model.tokenizer).strip()
             predictions.append(tok)
-            
+        
+        # log
+        print("current_accuracy:", _percent_success(predictions, solutions))
         if outfile is not None:
             with open(outfile, "w") as f:
-                data = {"batch_size" : batch_size, "batch_idx" : i, "total_batches": len(prompt_batches), "predictions" : predictions}
-                if solutions is not None:
-                    curr_accuracy =  _percent_success(predictions, solutions)
-                    if i == 0:
-                        projected_accuracy = 0
-                    else:
-                        projected_accuracy = (len(prompt_batches) * curr_accuracy) / i
-                    json.dump({"current_accuracy" : curr_accuracy, "projected_accuracy": projected_accuracy, **data}, f, indent=4)
-                else:
-                    json.dump(data, f, indent=4)
+                data = {"batch_size" : batch_size, 
+                        "batch_idx" : i, 
+                        "total_batches": len(prompt_batches), 
+                        "predictions" : predictions}
+                json.dump(data, f, indent=4)
            
     return predictions
+
+
+def _percent_success(predictions_so_far, solutions):
+    correct = 0
+    for pred,sol in zip(predictions_so_far, solutions[:len(predictions_so_far)]):
+        if sol == pred:
+            correct += 1
+    return correct / len(solutions)
+
+def _resize_patch(patch:ReducedActivationTensor,batch_size:int)->ActivationTensor:
+    return einops.repeat(patch, "l t d -> l p t d", p=batch_size)
