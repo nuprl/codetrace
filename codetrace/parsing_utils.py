@@ -75,9 +75,9 @@ DEEPSEEK_FIM = FimObj("<｜fim▁begin｜>", "<｜fim▁hole｜>", "<｜fim▁en
 
 # Based on https://huggingface.co/Qwen/Qwen2.5-Coder-7B/blob/main/tokenizer_config.json
 QWEN_FIM = FimObj(
-    "<|fim_prefix>",
-    "<|fim_suffix>",
-    "<|fim_middle>",
+    "<|fim_prefix|>",
+    "<|fim_suffix|>",
+    "<|fim_middle|>",
     fim_placeholder,
     { "<|fim_prefix>": 151659, "<|fim_suffix>": 151661, "<|fim_middle>": 151660 }
 )
