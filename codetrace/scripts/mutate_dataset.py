@@ -5,13 +5,12 @@ from multiprocessing import cpu_count
 from vllm import LLM, SamplingParams
 from tqdm import tqdm
 from codetrace.fast_utils import make_batches, batched_apply
-from codetrace.py_mutator import map_random_mutations
 import os
 from codetrace import py_mutator, ts_mutator
 from codetrace.parsing_utils import get_model_fim, TS_LANGUAGE
 from codetrace.utils import load_dataset, save_dataset, num_available_devices, get_vllm_config
 from pathlib import Path
-from typing import List,Union,Callable
+from typing import List,Union,Callable,Dict,Any
 
 def get_mutations(key: str, lang: str) -> Callable:
     mod = py_mutator if lang == "py" else ts_mutator
@@ -43,7 +42,7 @@ def filter_incorrect(
     new_ds = []
     for batch_idx,i in tqdm(
         enumerate(range(0, len(ds), batch_size)), 
-        desc="Filtering out incorrect mutations", 
+        desc="Collecting breaking mutations", 
         total=len(ds) // batch_size
     ):
         use_tqdm = (batch_idx == 0)
@@ -65,21 +64,18 @@ def filter_incorrect(
     new_ds = new_ds.remove_columns(["prompt", "solution"])
     return new_ds
 
-def py_preprocess(iterable, correct_bool = True):
+def py_preprocess(data: Union[List, datasets.Dataset], correct_bool: bool = True) -> List[Dict[str,Any]]:
     """
     Preprocess the dataset
     - Take only correct examples
     """
     _condition = (lambda x: x["correct"] == correct_bool)
-    if isinstance(iterable, datasets.Dataset):
-        return iterable.filter(_condition, desc="Preprocess")
+    if isinstance(data, datasets.Dataset):
+        return data.filter(_condition, desc="Preprocess")
     else:
-        return filter(_condition, iterable)
+        return filter(_condition, data)
     
-def ts_preprocess(
-    data: Union[List, datasets.Dataset],
-    correct_bool: bool = True
-):
+def ts_preprocess(data: Union[List, datasets.Dataset],correct_bool: bool = True) -> List[Dict[str,Any]]:
     """
     Preprocess the dataset
     - Take only correct_bool examples
@@ -105,12 +101,13 @@ def _has_captures(prog: str, query: str) -> bool:
     captures = query.captures(tree.root_node)
     return len(captures) > 0
 
-def _mutate_batch(batch, mutations, lang, correct_bool = True):
+def _mutate_batch(batch: Union[List, datasets.Dataset], mutations:List[Callable], lang:str, correct_bool:bool = True):
     if lang == "py":
         post = py_preprocess(batch, correct_bool)
+        return py_mutator.map_random_mutations(post, mutations)
     else:
         post = ts_preprocess(batch, correct_bool)
-    return map_random_mutations(post, mutations)
+        return ts_mutator.map_random_mutations(post, mutations)
 
 def main(
     model: LLM,
