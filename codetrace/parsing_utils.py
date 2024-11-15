@@ -79,7 +79,7 @@ QWEN_FIM = FimObj(
     "<|fim_suffix|>",
     "<|fim_middle|>",
     fim_placeholder,
-    { "<|fim_prefix>": 151659, "<|fim_suffix>": 151661, "<|fim_middle>": 151660 }
+    { "<|fim_prefix|>": 151659, "<|fim_suffix|>": 151661, "<|fim_middle|>": 151660 }
 )
 
 def get_model_fim(model_name:str) -> FimObj:
