@@ -26,7 +26,7 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
         layers_underscored = layers.replace(",", "_")
         output_dir = f"results/steering-{lang}-{mutation_underscored}-{layers_underscored}-{model}"
 
-        if (Path(output_dir) / "test_results.json").exists():
+        if (Path(output_dir) / "test_results.json").exists() and (Path(output_dir) / "steer_results.json").exists() and (Path(output_dir) / "test_results_rand.json").exists():
             print(f"Skipping {output_dir} because it already exists")
             continue
 
