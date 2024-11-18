@@ -60,11 +60,11 @@ def typecheck_ts(dir:str) -> Tuple[str, List[str]]:
     files = list(glob.glob(f"{dir}/*.ts"))
     commands = ["npx", "--cache", str(os.environ["NPM_PACKAGES"]), "ts-node", 
                 "--compilerOptions", "{\"noImplicitAny\": false, \"strictNullChecks\": false}", 
-                "--typeCheck", tsfile],
+                "--typeCheck"]
     for tsfile in files:
         tsfile = tsfile.split("/")[-1]
         try:
-            out = subprocess.run(commands, cwd=dir, capture_output=True, timeout=120,text=True).stderr
+            out = subprocess.run(commands + [tsfile], cwd=dir, capture_output=True, timeout=120,text=True).stderr
             outs.append(out)
         except Exception as e:
             print(f"Error in typechecking...{e}")
@@ -146,7 +146,11 @@ def typecheck_batch(examples: List[dict], colname, lang, do_log=False, logdir:st
             if num_errors == 0:
                 filtered.append(hexsha.replace(f".{lang}",""))
             elif do_log:
-                log(f"{logdir}/errors_{name.split('/')[-1]}", _format_error_list(error_list))
+                item = hexsha_to_ex[hexsha.replace(f".{lang}","")]
+                original_prog,original_type = item["fim_program"], item["fim_type"]
+                original = original_prog.replace("<FILL>", original_type)
+                log(f"{logdir}/_original_{name.split('/')[-1]}", original)
+                log(f"{logdir}/_errors_{name.split('/')[-1]}", _format_error_list(error_list))
     
     return [hexsha_to_ex[hexsha] for hexsha in filtered]
 
