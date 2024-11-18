@@ -105,7 +105,6 @@ def main(
     ds = datasets.Dataset.from_list(results)
     save_dataset(ds, Path(new_ds_name + "_unfiltered"))
     
-    model = LLM(model, tensor_parallel_size=num_available_devices(), dtype="bfloat16")
     ds = filter_incorrect(ds, model, Path(new_ds_name), batch_size=batch_size)
     print(ds)
     save_dataset(ds, Path(new_ds_name))
@@ -152,8 +151,7 @@ if __name__ == "__main__":
     tps = num_available_devices()
     print(f"Serving VLLM across {tps} GPUs.")
     tokenizer=args.tokenizer if args.tokenizer else args.model
-    # llm = LLM(args.model, tensor_parallel_size=tps, tokenizer=tokenizer, dtype="bfloat16")
-    llm = args.model
+    llm = LLM(args.model, tensor_parallel_size=tps, tokenizer=tokenizer, dtype="bfloat16")
     batchsize = 1000*tps # still want to save some intermediate completions
     
     main(llm, ds, args.mutated_ds, args.lang, mutations, batchsize)
