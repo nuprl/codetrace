@@ -8,7 +8,7 @@ LAYERS=$5
 if [ "$LANG" = "py" ]; then
     SOURCE_DATASET="nuprl-staging/py_typeinf_fim"
 else
-    SOURCE_DATASET="franlucc/ts_typeinf_fim"
+    SOURCE_DATASET="nuprl-staging/ts_typeinf_fim"
 fi
 
 # 1. do completions
@@ -21,11 +21,17 @@ if [ ! -d "$completions_ds" ]; then
 fi
 
 # 2. do mutations
+
+# Example mutations: --mutations="vars,types,delete"
+# Choose any combination of [vars, types, delete] where:
+# - vars: rename variables
+# - types: rename types with aliases
+# - delete: remove type annotations
+
 mutations_ds="${OUTPUT_DIR}/${LANG}_${MUTATION}_mutations"
 if [ ! -d "$mutations_ds" ]; then
     python3 -m codetrace.scripts.mutate_dataset \
             --model $MODEL \
-            --tokenizer $MODEL \
             --mutated-ds $mutations_ds \
             --completions-ds $completions_ds \
             --lang $LANG \
@@ -33,7 +39,10 @@ if [ ! -d "$mutations_ds" ]; then
 fi
 
 # 3. do steering
-echo "Layers ${LAYERS}"
+
+# Example layers: --layers="10,11,12"
+
+echo "Layers ${LAYERS}" 
 steering_dir="${OUTPUT_DIR}/${LANG}_${MUTATION}_results"
 python3 -m codetrace.scripts.launch_steer \
     --model $MODEL \

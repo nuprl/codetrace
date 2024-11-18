@@ -23,17 +23,17 @@ TS_PROPERTY_IDENTIFIER_QUERY = """((property_identifier) @name)"""
 TS_PREDEFINED_TYPE_QUERY = """((predefined_type) @name)"""
  
 TS_VARIABLE_DECLARATION_QUERY = """
-(required_parameter pattern: (identifier) @func_param)
-(variable_declarator (identifier) @var_declaration)
-(function_declaration (identifier) @func_declaration)
+(required_parameter pattern: (identifier) @name)
+(variable_declarator (identifier) @name)
+(function_declaration (identifier) @name)
 """
 
 TS_TYPE_ANNOTATIONS_QUERY = """((type_annotation) @name)"""
 
 TS_PARAM_TYPES_QUERY = """
-(required_parameter pattern: (_) (type_annotation) @tp)
-(optional_parameter pattern: (_) (type_annotation) @tp)
-return_type: (type_annotation) @tp
+(required_parameter pattern: (_) (type_annotation) @name)
+(optional_parameter pattern: (_) (type_annotation) @name)
+return_type: (type_annotation) @name
 """
 
 class TreeSitterLocation:
@@ -86,13 +86,13 @@ def rename_vars(var_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Mutati
     We assume the program does not naturally contain variables with this format
     """
     # map names to captures
-    all_names = set([x[0].text for x in var_captures])
+    all_names = set([x.text for x in var_captures])
     # map name to new name
     name_to_new_name = {name : bytes(f"__tmp{i}","utf-8") for i, name in enumerate(all_names)}
     mutations = []
     for capture in var_captures:
         location = TreeSitterLocation(capture)
-        replacement = name_to_new_name[capture[0].text]
+        replacement = name_to_new_name[capture.text]
         mutation = Mutation(location, replacement)
         mutations.append(mutation)
     return mutations
@@ -115,19 +115,19 @@ def rename_types(type_captures : List[Tuple[tree_sitter.Node,str]]) -> List[Muta
     We assume the program does not naturally contain types with format __typ{type_index}
     """
     # map names to captures
-    all_names = set([x[0].text for x in type_captures])
+    all_names = set([x.text for x in type_captures])
     # map names to new names
     name_to_new_name = {name : bytes(f"__typ{i}","utf-8") for i, name in enumerate(all_names)}
     
     mutations = []
     for capture in type_captures:
         location = TreeSitterLocation(capture)
-        replacement = name_to_new_name[capture[0].text]
+        replacement = name_to_new_name[capture.text]
         
-        if needs_alias(capture[0]) and capture[0].text.decode("utf-8") in typescript_builtin_objects:
-                prefix = b"class " + replacement + b" extends " + capture[0].text + b" {};"
-        elif needs_alias(capture[0]):
-                prefix = b"type " + replacement + b" = " + capture[0].text + b";"
+        if needs_alias(capture) and capture.text.decode("utf-8") in typescript_builtin_objects:
+                prefix = b"class " + replacement + b" extends " + capture.text + b" {};"
+        elif needs_alias(capture):
+                prefix = b"type " + replacement + b" = " + capture.text + b";"
         else:
             prefix = None
         mutation = Mutation(location, replacement, prefix)
@@ -220,15 +220,16 @@ def is_constructor_param(x: tree_sitter.Node):
                 identifier
     """
     try:
-        parent_type = x[0].parent.parent.parent.type
+        parent_type = x.parent.parent.parent.type
     except:
         return False
     
     if parent_type != "method_definition":
         return False
     
-    name = x[0].parent.parent.parent.children_by_field_name("name")
+    name = x.parent.parent.parent.children_by_field_name("name")
     if len(name) > 0:
+        assert len(name) == 1
         return name[0].text == b"constructor"
     return False
 
@@ -248,9 +249,9 @@ def random_mutate(program : str, fim_type : str, mutations : List[Callable], deb
     # -----------------------
     # get SELECT captures for target nodes that we can mutate
     tree = TS_PARSER.parse(bytes(program, "utf-8"))
-    var_rename_captures = get_captures(tree, TS_VARIABLE_DECLARATION_QUERY, language="ts")
-    type_rename_captures = get_captures(tree, TS_TYPE_ANNOTATIONS_QUERY, language="ts")
-    remove_annotations_captures = get_captures(tree, TS_PARAM_TYPES_QUERY, language="ts")
+    var_rename_captures = get_captures(tree, TS_VARIABLE_DECLARATION_QUERY, "ts","name")
+    type_rename_captures = get_captures(tree, TS_TYPE_ANNOTATIONS_QUERY, "ts","name")
+    remove_annotations_captures = get_captures(tree, TS_PARAM_TYPES_QUERY, "ts","name")
     
     def select_random_subset(x):
         if debug_seed == -1 or len(x) == 0:
@@ -265,29 +266,29 @@ def random_mutate(program : str, fim_type : str, mutations : List[Callable], deb
     
     # -----------------------
     # find ALL ADDITIONAL locations that contain targets
-    var_rename_targets = set([x[0].text for x in var_rename_captures])
-    type_rename_targets = set([x[0].text.replace(b":",b"").strip() for x in type_rename_captures])
+    var_rename_targets = set([x.text for x in var_rename_captures])
+    type_rename_targets = set([x.text.replace(b":",b"").strip() for x in type_rename_captures])
     
-    all_id_captures = get_captures(tree, TS_IDENTIFIER_QUERY, language="ts")
-    all_type_id_captures = get_captures(tree,TS_TYPE_IDENTIFIER_QUERY + TS_PREDEFINED_TYPE_QUERY, language="ts")
+    all_id_captures = get_captures(tree, TS_IDENTIFIER_QUERY, "ts","name")
+    all_type_id_captures = get_captures(tree,TS_TYPE_IDENTIFIER_QUERY + TS_PREDEFINED_TYPE_QUERY, "ts","name")
     
-    constructor_param_names = set([x[0].text for x in all_id_captures if is_constructor_param(x)])
+    constructor_param_names = set([x.text for x in all_id_captures if is_constructor_param(x)])
     var_rename_full_captures = [x for x in all_id_captures 
                                 # rename all ids that match target
-                                if x[0].text in var_rename_targets
+                                if x.text in var_rename_targets
                                 # don't rename constructor params
-                                and not x[0].text in constructor_param_names
+                                and not x.text in constructor_param_names
                                 # don't rename built-ins
-                                and not x[0].text.decode("utf-8") in typescript_builtin_objects
+                                and not x.text.decode("utf-8") in typescript_builtin_objects
                                 ]
     type_rename_full_captures = [x for x in all_id_captures+all_type_id_captures 
                                  # rename all that match target
-                                if x[0].text in type_rename_targets
+                                if x.text in type_rename_targets
                                 # don't rename forbidden types
-                                and x[0].text not in types_blacklist
+                                and x.text not in types_blacklist
                                 ]
     remove_annotations_captures = [x for x in remove_annotations_captures  if 
-                                   (x[0].text.replace(b":",b"").strip() != bytes("_CodetraceSpecialPlaceholder_", "utf-8"))]
+                                   (x.text.replace(b":",b"").strip() != bytes("_CodetraceSpecialPlaceholder_", "utf-8"))]
     
     # -----------------------
     # Apply the selected mutations
@@ -295,7 +296,7 @@ def random_mutate(program : str, fim_type : str, mutations : List[Callable], deb
     for captures in [var_rename_full_captures, type_rename_full_captures,remove_annotations_captures]:
         # if any out of the selected mutations has no captures, return None
         if len(captures) == 0:
-            return None,[]
+            return None
     
     # collects mutations
     all_mutations = []

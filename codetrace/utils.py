@@ -58,20 +58,20 @@ def num_available_devices():
     device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
     return len([i for i in device_list if i != ","])
 
-def load_dataset(ds: str, split:str=None, **kwargs) -> datasets.Dataset:
+def load_dataset(ds: str, split:str=None, **hub_kwargs) -> datasets.Dataset:
     if ds.endswith(".csv"):
-        ds = datasets.Dataset.from_csv(ds,**kwargs)
+        ds = datasets.Dataset.from_csv(ds)
     elif os.path.exists(ds):
-        ds = datasets.load_from_disk(ds,**kwargs)
+        ds = datasets.load_from_disk(ds)
     else:
-        ds = datasets.load_dataset(ds,**kwargs)
+        ds = datasets.load_dataset(ds, **hub_kwargs)
     return ds[split] if split else ds
 
-def save_dataset(ds: datasets.Dataset, path:Union[str,Path], **kwargs):
+def save_dataset(ds: datasets.Dataset, path:Union[str,Path], **hub_kwargs):
     if isinstance(path, Path):
-        ds.save_to_disk(str(path), **kwargs)
+        ds.save_to_disk(str(path))
     else:
-        ds.push_to_hub(path, **kwargs)
+        ds.push_to_hub(path, **hub_kwargs)
 
 def lm_decode(model, x : torch.Tensor, do_norm: bool) -> torch.Tensor:
     if do_norm:

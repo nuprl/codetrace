@@ -7,7 +7,7 @@ from tqdm import tqdm
 from codetrace.fast_utils import make_batches, batched_apply
 import os
 from codetrace import py_mutator, ts_mutator
-from codetrace.parsing_utils import get_model_fim, TS_LANGUAGE
+from codetrace.parsing_utils import get_model_fim, TS_LANGUAGE, get_captures
 from codetrace.utils import load_dataset, save_dataset, num_available_devices, get_vllm_config
 from pathlib import Path
 from typing import List,Union,Callable,Dict,Any
@@ -63,51 +63,33 @@ def filter_incorrect(
     save_dataset(new_ds_hf, new_ds_name)
     new_ds = new_ds.remove_columns(["prompt", "solution"])
     return new_ds
-
-def py_preprocess(data: Union[List, datasets.Dataset], correct_bool: bool = True) -> List[Dict[str,Any]]:
+    
+def _preprocess(data: Union[List, datasets.Dataset],correct_bool: bool, lang: str) -> List[Dict[str,Any]]:
     """
     Preprocess the dataset
     - Take only correct examples
-    """
-    _condition = (lambda x: x["correct"] == correct_bool)
-    if isinstance(data, datasets.Dataset):
-        return data.filter(_condition, desc="Preprocess")
-    else:
-        return filter(_condition, data)
-    
-def ts_preprocess(data: Union[List, datasets.Dataset],correct_bool: bool = True) -> List[Dict[str,Any]]:
-    """
-    Preprocess the dataset
-    - Take only correct_bool examples
-    - TODO: currently do not support shorthands, so either unroll or remove 
+    - For ts, currently do not support shorthands, so either unroll or remove 
         shorthand_property_identifier, shorthand_property_identifier_pattern
     """
-    # remove examples with:
-    preproc_query = """
-    ((shorthand_property_identifier_pattern) @sp)
-    ((shorthand_property_identifier) @si)
-    """
-    preproc_query = TS_LANGUAGE.query(preproc_query)
-    _condition = (lambda x: (x["correct"] == correct_bool and 
-                             not _has_captures(x["fim_program"], preproc_query)))
+    if lang == "py":
+        _condition = (lambda x: x["correct"] == correct_bool)
+    else:
+        preproc_query = """
+        ((shorthand_property_identifier_pattern) @si)
+        ((shorthand_property_identifier) @si)
+        """
+        _condition = (lambda x: (x["correct"] == correct_bool and 
+                    len(get_captures(x["fim_program"], preproc_query, "ts","si")) == 0))
     
     if isinstance(data, datasets.Dataset):
         return data.filter(_condition, desc="Preprocess")
     else:
-        return list(map(_condition, data))
-
-def _has_captures(prog: str, query: str) -> bool:
-    tree = parser.parse(bytes(prog, "utf8"))
-    captures = query.captures(tree.root_node)
-    return len(captures) > 0
+        return list(filter(_condition, data))
 
 def _mutate_batch(batch: Union[List, datasets.Dataset], mutations:List[Callable], lang:str, correct_bool:bool = True):
-    if lang == "py":
-        post = py_preprocess(batch, correct_bool)
-        return py_mutator.map_random_mutations(post, mutations)
-    else:
-        post = ts_preprocess(batch, correct_bool)
-        return ts_mutator.map_random_mutations(post, mutations)
+    post = _preprocess(batch, correct_bool, lang)
+    mod = py_mutator if lang == "py" else ts_mutator
+    return mod.map_random_mutations(post, mutations)
 
 def main(
     model: LLM,
@@ -123,6 +105,7 @@ def main(
     ds = datasets.Dataset.from_list(results)
     save_dataset(ds, Path(new_ds_name + "_unfiltered"))
     
+    model = LLM(model, tensor_parallel_size=num_available_devices(), dtype="bfloat16")
     ds = filter_incorrect(ds, model, Path(new_ds_name), batch_size=batch_size)
     print(ds)
     save_dataset(ds, Path(new_ds_name))
@@ -133,11 +116,16 @@ if __name__ == "__main__":
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--mutated-ds", type=str, required=True)
     parser.add_argument("--model", type=str, required=True)
-    parser.add_argument("--tokenizer", type=str, required=True)
     parser.add_argument("--lang", choices=["py","ts"], required=True)
     parser.add_argument("--mutations", type=str, required=True)
-    
+
+    # dataset
+    parser.add_argument("--subset", type=str, default=None)
     parser.add_argument("--split", type=str, default=None)
+
+    # model
+    parser.add_argument("--tokenizer", type=str, default=None)
+
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--correct-bool", type=bool, default=True)
     parser.add_argument("--seed", type=int, default=None)
@@ -155,7 +143,7 @@ if __name__ == "__main__":
     datasets.disable_caching()
     print("Gpu:", os.environ["CUDA_VISIBLE_DEVICES"])
 
-    ds = load_dataset(args.completions_ds, split=args.split)
+    ds = load_dataset(args.completions_ds, split=args.split, name=args.subset)
     if args.max_size > -1:
         ds = ds.shuffle(seed=args.seed).select(range(args.max_size))
     
@@ -163,7 +151,9 @@ if __name__ == "__main__":
 
     tps = num_available_devices()
     print(f"Serving VLLM across {tps} GPUs.")
-    llm = LLM(args.model, tensor_parallel_size=tps, tokenizer=args.tokenizer, dtype="bfloat16")
+    tokenizer=args.tokenizer if args.tokenizer else args.model
+    # llm = LLM(args.model, tensor_parallel_size=tps, tokenizer=tokenizer, dtype="bfloat16")
+    llm = args.model
     batchsize = 1000*tps # still want to save some intermediate completions
-     
-    main(llm, ds, args.mutated_ds, args.lang,mutations, batchsize)
+    
+    main(llm, ds, args.mutated_ds, args.lang, mutations, batchsize)

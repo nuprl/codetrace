@@ -1,7 +1,8 @@
 from codetrace.steering import SteeringManager
+from codetrace.utils import load_dataset
 from argparse import ArgumentParser
 from nnsight import LanguageModel
-from typing import List,Dict
+from typing import List,Dict,Optional
 import json
 import os
 from shutil import rmtree
@@ -44,8 +45,11 @@ def main(
     collect_batchsize:int,
     patch_batchsize:int,
     max_num_candidates:int,
-    test_size:int
+    test_size:int,
+    subset:str,
+    split:Optional[str],
 ):
+    candidates = load_dataset(candidates, split=split,name=subset)
     model = LanguageModel(model, torch_dtype=dtype,device_map="cuda",dispatch=True)
     smanager = SteeringManager(
         model,
@@ -83,6 +87,10 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", type=str, required=True)
     parser.add_argument("--layers", type=str, required=True)
 
+    # dataset
+    parser.add_argument("--split", type=str, default=None)
+    parser.add_argument("--subset", type=str, default=None)
+
     # naming
     parser.add_argument("--steer-name", required=True)
     parser.add_argument("--test-name", required=True)
@@ -95,6 +103,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-size", type=int,default=500)
 
     parser.add_argument("--overwrite", action="store_true")
+
     args = parser.parse_args().__dict__
     if args.pop("overwrite", None) and os.path.exists(args["output_dir"]):
         rmtree(args["output_dir"])

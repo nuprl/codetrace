@@ -82,7 +82,7 @@ class SteeringManager:
     def __init__(
         self,
         model:LanguageModel,
-        candidates_ds: str,
+        candidates_ds: datasets.Dataset,
         cache_dir: Path,
         steer_split_path: Optional[str]=None,
         test_split_path: Optional[str]=None,
@@ -94,7 +94,7 @@ class SteeringManager:
         self.model=model
         self.tokenizer=model.tokenizer
         self.fim_obj=get_model_fim(model.config.name_or_path)
-        self.candidates_ds = load_dataset(candidates_ds)
+        self.candidates_ds = candidates_ds
         if max_num_candidates > -1:
             self.candidates_ds = self.candidates_ds.select(range(max_num_candidates))
         self.cache_dir = cache_dir

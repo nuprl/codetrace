@@ -10,7 +10,6 @@ from collections import Counter
 from codetrace.fast_utils import make_batches, batched_apply
 import torch
 from typing import List,Dict,Any
-import os
 
 # filter by 1 token answer
 def filter_1tok(batch:List[str], tokenizer) -> List[str]:
