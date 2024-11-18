@@ -7,37 +7,43 @@ from tqdm import tqdm
 from codetrace.utils import num_available_devices, get_vllm_config, request_vllm_generations
 from codetrace.fast_utils import make_batches, batched_apply
 import torch
-from typing import List,Dict,Any,Union, Optional
+from typing import List,Dict,Any,Union, Optional, Set
 import os
+from transformers import AutoTokenizer
+from hashlib import sha256
 
-def _success_rate(ds)->str:
+def hex_encode(s:str)->str:
+    return sha256(bytes(s, "utf-8")).hexdigest()
+
+def success_rate(ds)->str:
     df = ds.to_pandas()
     num_succ = df["correct"].sum()
     num_tot = df["correct"].count()
     mean = df["correct"].mean()*100
     return f"Success rate: {num_succ}/{num_tot} = {mean:.2f} %"
 
-# filter by 1 token answer
-def filter_1tok(batch:List[str], tokenizer) -> List[str]:
-    new_batch = []
-    for b in batch:
-        if len(tokenizer(b["fim_type"], add_special_tokens=False)["input_ids"]) == 1:
-            new_batch.append(b)
-    return new_batch
+def _filter_1tok(batch:List[Dict[str,Any]], key:str, exclude:set, tokenizer):
+    filtered = []
+    for item in batch:
+        if (not hex_encode(item[key]) in exclude) and \
+            len(tokenizer(item["fim_type"], add_special_tokens=False)["input_ids"]) == 1:
+            filtered.append(item)
+    return filtered
 
-def save_data_for_resume(ds:datasets.Dataset, path:str, seed:int):
-    ds.save_to_disk(path)
-    with open(f"{path}/seed.md", "w") as fp:
-        fp.write(seed)
-
-def try_resume_completions(path:str, seed:int) -> List[Dict[str,Any]]:
-    if os.path.exists(f"{path}/seed.md"):
-        with open(f"{path}/seed.md", "r") as fp:
-            saved_seed = fp.read()
-        if saved_seed == seed:
-            return list(datasets.load_from_disk(path))
-        
-    return []
+def filter_1tok(
+    ds: datasets.Dataset,
+    tokenizer,
+    blacklist:List[Dict[str,Any]]
+) -> datasets.Dataset:
+    key = "fim_program"
+    exclusion_set = set()
+    for item in blacklist:
+        exclusion_set.add(hex_encode(item[key]))
+    del(blacklist)
+    batches = make_batches(ds, cpu_count())
+    data = batched_apply(batches, cpu_count(), _filter_1tok, exclude=exclusion_set, key=key,
+                         tokenizer=tokenizer)
+    return datasets.Dataset.from_list(data)
 
 def generate_completions(
     llm:LLM,
@@ -62,26 +68,30 @@ def generate_completions(
 
 def main(
     llm: LLM,
+    tokenizer,
     ds: datasets.Dataset,
     new_ds_name:str,
     model_fim: Union[FimObj,FimChat],
     max_n: Optional[int] = None,
-    seed: Optional[int] = None
 ):
     """
     NOTE: completions are 1 token. A completion is correct if it matches the type annotation exactly.
     Thus, fim_type must be 1 token.
     """
-    # filter 1 tok
-    batches = make_batches(ds, cpu_count())
-    data = batched_apply(batches, cpu_count(), filter_1tok, tokenizer=llm.get_tokenizer())
-    ds = datasets.Dataset.from_list(data)
+    # resume from completions if they exist
+    completions = []
+    if os.path.exists(new_ds_name):
+        completions = datasets.load_from_disk(new_ds_name)
+
+    ds = filter_1tok(ds, tokenizer, completions)
+    completions = list(completions)
+
+    if max_n > -1:
+        ds = ds.select(range(max_n))
+    print(ds)
 
     # generate                  
     # batch generations because of cpu ops in vllm
-    completions = try_resume_completions(new_ds_name, seed)
-    ds = ds.select(range(len(completions), max_n))
-
     if len(ds) < 10000:
         prompts = [model_fim.placeholder_to_fim(ex["fim_program"]) for ex in ds]
         completions += generate_completions(llm,prompts,ds, True)
@@ -100,17 +110,16 @@ def main(
             batch_completions = generate_completions(llm,batch_prompts,ds_batch,use_tqdm)
             completions += batch_completions
             
-            if batch_index > 0:
-                # save every batch
-                print(f"Saving {batch_index}th batch")
-                new_ds = datasets.Dataset.from_list(completions)
-                save_data_for_resume(new_ds, new_ds_name, seed)
-                print(_success_rate(new_ds))
+            # save every batch
+            print(f"Saving {batch_index}th batch")
+            new_ds = datasets.Dataset.from_list(completions)
+            new_ds.save_to_disk(new_ds_name)
+            print(success_rate(new_ds))
 
     new_ds = datasets.Dataset.from_list(completions)
-    save_data_for_resume(new_ds, new_ds_name, seed)
+    new_ds.save_to_disk(new_ds_name)
     print(new_ds)
-    print(_success_rate(new_ds))
+    print(success_rate(new_ds))
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -124,14 +133,14 @@ if __name__ == "__main__":
     parser.add_argument("--model-name", default=None)
     parser.add_argument("--tokenizer", default=None)
 
-    # Seed + new_ds_name will be used for resumption
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=None)
 
     args = parser.parse_args()
-    args.tokenizer=args.tokenizer if args.tokenizer else args.model
 
+    args.tokenizer=args.tokenizer if args.tokenizer else args.model
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     ds = datasets.load_dataset(args.prompt_ds, split=args.split).shuffle(args.seed)
     llm = LLM(args.model, dtype=args.dtype, tensor_parallel_size=num_available_devices(), tokenizer=args.tokenizer)
     model_fim = get_model_fim(args.model)
-    max_n = len(ds) if args.max_size < 0 else args.max_size
-    main(llm, ds, model_fim, args.new_ds_name, max_n)
+
+    main(llm, tokenizer, ds, args.new_ds_name, model_fim, args.max_size)

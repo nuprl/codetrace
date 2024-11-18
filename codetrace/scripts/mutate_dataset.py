@@ -8,7 +8,7 @@ from codetrace.fast_utils import make_batches, batched_apply
 import os
 from codetrace import py_mutator, ts_mutator
 from codetrace.parsing_utils import get_model_fim, TS_LANGUAGE, get_captures
-from codetrace.utils import load_dataset, save_dataset, num_available_devices, get_vllm_config
+from codetrace.utils import load_dataset, save_dataset, num_available_devices, get_vllm_config, request_vllm_generations
 from pathlib import Path
 from typing import List,Union,Callable,Dict,Any
 
@@ -46,7 +46,8 @@ def filter_incorrect(
         total=len(ds) // batch_size
     ):
         use_tqdm = (batch_idx == 0)
-        generations = llm.generate(ds["prompt"][i:i+batch_size], params, use_tqdm=use_tqdm)
+        # generations = llm.generate(ds["prompt"][i:i+batch_size], params, use_tqdm=use_tqdm)
+        generations = request_vllm_generations(llm, ds["prompt"][i:i+batch_size], params, use_tqdm=use_tqdm)
 
         for j,output in enumerate(generations):
             generated_text = output.outputs[0].text.strip()

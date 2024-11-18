@@ -176,6 +176,7 @@ if __name__=="__main__":
     parser.add_argument("--column-name", type=str, required=True, help="column with fim program to typecheck")
 
     parser.add_argument("--split", type=str, default=None)
+    parser.add_argument("--subset", type=str, default=None)
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--do-log", action="store_true")
     args = parser.parse_args()
@@ -191,7 +192,7 @@ if __name__=="__main__":
             shutil.rmtree(logdir)
         os.makedirs(logdir, exist_ok=True)
 
-    ds = load_dataset(args.input_ds, args.split)
+    ds = load_dataset(args.input_ds, args.split, name=args.subset)
     print(ds)
 
     if args.max_size > -1:

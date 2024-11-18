@@ -6,11 +6,27 @@ from copy import deepcopy
 from transformers import AutoModelForCausalLM
 import re
 import einops
-from typing import List,Union,Callable
+from typing import List,Union,Callable, Dict
 import functools
 import os
 from pathlib import Path
 import torch
+
+def request_vllm_generations(
+    llm,
+    prompts:Union[List[str], List[List[Dict[str,str]]]],
+    sampling_params,
+    **kwargs
+):
+    if isinstance(prompts[0], str) or isinstance(prompts, str):
+        return llm.generate(prompts, sampling_params, **kwargs)
+    else:
+        # chat template
+        chat_template = llm.get_tokenizer().chat_template
+        if not chat_template:
+            raise ValueError("Model does not have chat template! Make sure you have the instruct version of the model.")
+        return llm.chat(prompts, sampling_params, chat_template=chat_template,
+                        continue_final_message=True, add_generation_prompt=False,**kwargs)
 
 def get_reduction(reduction:Union[Callable,str])->Callable:
     if isinstance(reduction,str):

@@ -100,8 +100,8 @@ class SteeringManager:
         self.cache_dir = cache_dir
         if not token_mask_fn:
             # default patch on fim middle
-            token_mask_fn = partial(mask_target_tokens, token_ids=[self.fim_obj.get_token_ids(self.fim_obj.middle)])
-            # token_mask_fn = partial(mask_target_idx, indices=[-1])
+            # token_mask_fn = partial(mask_target_tokens, token_ids=[self.fim_obj.get_token_ids(self.fim_obj.middle)])
+            token_mask_fn = partial(mask_target_idx, indices=[-1])
             reduction = "max"
         self.patch_fn = masked_add
         self.token_mask_fn = token_mask_fn

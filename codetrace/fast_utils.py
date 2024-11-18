@@ -29,7 +29,7 @@ def batched_apply(batches : List[List[Any]], num_proc : int, func : Callable, **
 
 def _collect_index(itr: Iterable, si:int, ei:int) -> Iterable:
     if isinstance(itr, datasets.Dataset):
-        return [itr[i] for i in range(si, ei)] # faster
+        return list(itr.select(range(si, ei))) # faster
     else:
         return itr[si:ei]
     
