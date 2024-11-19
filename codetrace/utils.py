@@ -9,9 +9,11 @@ from tqdm import tqdm
 import os
 from pathlib import Path
 import torch
+import functools
 from hashlib import sha256
 from codetrace.fast_utils import make_batches, batched_apply
 from multiprocessing import cpu_count
+import einops
 
 DataBatch = TypeVar(List[Dict[str,Any]])
 BlacklistFilterFn = TypeVar(Callable[[DataBatch, Set[str], str, Any], DataBatch])
