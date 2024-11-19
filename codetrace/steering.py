@@ -1,17 +1,18 @@
+from multiprocessing import cpu_count
 import math
 import numpy as np
 from collections import Counter
 import torch
 from pathlib import Path
-from codetrace.parsing_utils import FimObj, get_model_fim
+from codetrace.parsing_utils import FimObj, get_model_fim, FimChat
 import datasets
 import os
+from transformers import PreTrainedTokenizer
 from typing import Union, Tuple,List,Dict,Any,Optional,Callable
-from codetrace.utils import load_dataset, save_dataset, mask_target_tokens, keep_columns, mask_target_idx, masked_add
+from codetrace.utils import load_dataset, save_dataset, mask_target_idx, masked_add
 from nnsight import LanguageModel
 from codetrace.batched_utils import batched_get_averages, batched_insert_patch_logit
 from functools import partial
-from codetrace.fast_utils import batched_apply, make_batches
 import itertools as it
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
@@ -61,17 +62,10 @@ def subtract_avg(hidden_states:torch.Tensor) -> torch.Tensor:
     mean_even = hidden_states[:, even_indices].mean(dim=1, keepdim=True)
     return mean_even
 
-def prepare_prompts(data: List[Dict[str,Any]],fim_obj:FimObj)->List[str]:
-    return list(it.chain.from_iterable(
-                    map(lambda x:(fim_obj.placeholder_to_fim(x["fim_program"]),
-                                fim_obj.placeholder_to_fim(x["mutated_program"])), data),
-                    )
-                )
+def prepare_prompt_pairs(data: List[Dict[str,Any]], format_fn: Callable[[str], str])->List[str]:
+    preproc_fn = (lambda x: (format_fn(x["fim_program"]), format_fn(x["mutated_program"])))
+    return list(it.chain.from_iterable(map(preproc_fn, data)))
     
-def multiproc_prepare_prompts(fim_programs:List[Dict[str,Any]], fim_obj:FimObj, nproc:int=2)->List[str]:
-    batches = make_batches(fim_programs, nproc, disable_tqdm=True)
-    return batched_apply(batches, nproc, prepare_prompts, disable_tqdm=True, fim_obj=fim_obj)
-
 class SteeringManager:
     """
     This class bundles methods for steering, saving and running 
@@ -110,8 +104,18 @@ class SteeringManager:
         self.test_split : Optional[datasets.Dataset] = self.load_data(test_split_path)
         self.steer_split : Optional[datasets.Dataset] = self.load_data(steer_split_path)
         self.steering_tensor : Optional[torch.Tensor] = self.load_tensor(steering_tensor_path)
-
         os.makedirs(self.cache_dir, exist_ok=True)
+
+    def tokenize(self, prompt:str) -> str:
+        if isinstance(self.fim_obj, FimChat):
+            return self.tokenizer.apply_chat_template(
+                self.fim_obj.placeholder_to_fim(prompt), 
+                tokenize=False, 
+                add_generation_prompt=False,
+                continue_final_message=True
+            )
+        else:
+            return self.fim_obj.placeholder_to_fim(prompt)
 
     def save_data(self, data:datasets.Dataset, path:str):
         """
@@ -191,10 +195,7 @@ class SteeringManager:
 
         return self.steer_split, self.test_split
 
-    def create_steering_tensor(
-        self,
-        batch_size:int
-    ) -> torch.Tensor:
+    def create_steering_tensor(self, batch_size:int) -> torch.Tensor:
         """
         Collects activations of steering split in a batched manner, subtracting
         negative and positive steering items and averaging result as it goes.
@@ -208,7 +209,7 @@ class SteeringManager:
             dataloader = torch.utils.data.DataLoader(
                 self.steer_split,
                 batch_size,
-                collate_fn=partial(prepare_prompts, fim_obj=self.fim_obj)
+                collate_fn=partial(prepare_prompt_pairs, format_fn=self.tokenize)
             )
             self.steering_tensor = batched_get_averages(
                 self.model,
@@ -251,7 +252,7 @@ class SteeringManager:
         dataloader = torch.utils.data.DataLoader(
             ds["mutated_program"],
             batch_size,
-            collate_fn=(lambda x: list(map(self.fim_obj.placeholder_to_fim, x)))
+            collate_fn = (lambda x: list(map(self.tokenize, x)))
         )
         solutions = list(ds["fim_type"])
         predictions = batched_insert_patch_logit(
@@ -353,7 +354,7 @@ def test_prepare_prompts():
         {"fim_program":"my car is <FILL> !","mutated_program":"my car is NOT <FILL> !"},
     ]
     fim_obj = get_model_fim("starcoder")
-    output = prepare_prompts(prompts, fim_obj)
+    output = prepare_prompt_pairs(prompts, (lambda x: fim_obj.placeholder_to_fim(x)))
     expected = []
     for i in prompts:
         expected.append(fim_obj.placeholder_to_fim(i["fim_program"]))
@@ -384,3 +385,23 @@ def test_stratify():
     test_split = [x["hexsha"] for x in test_split]
     print(steer_split, test_split)
     assert set(steer_split).intersection(set(test_split)) == set(), f"{steer_split} - {test_split}"
+
+def test_prepare_chat_prompt():
+    from transformers import AutoTokenizer
+    fim_obj = get_model_fim("codellama_instruct")
+
+    program = f"""
+def is_palindrome(s: {fim_obj.placeholder}):
+    return s[::-1]==s
+""".strip()
+    
+    tokenizer = AutoTokenizer.from_pretrained("/mnt/ssd/arjun/models/codellama_7b_instruct")
+    output = tokenizer.apply_chat_template(fim_obj.placeholder_to_fim(program), tokenize=False, 
+                                           add_generation_prompt=False, continue_final_message=True)
+    expected = '''<s>[INST] Continue this program with the correct substitution for <FILL>:
+
+def is_palindrome(s: <FILL>):
+    return s[::-1]==s [/INST] def is_palindrome(s:'''
+    print(expected)
+    print(output)
+    assert output == expected, f"{output}!={expected}"

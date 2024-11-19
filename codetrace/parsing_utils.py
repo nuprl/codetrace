@@ -71,7 +71,6 @@ class FimChat(FimObj):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-    
     def chat_template(self) -> List[Dict[str,str]]:
         return [
             {"role":"user",

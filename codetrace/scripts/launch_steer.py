@@ -109,4 +109,5 @@ if __name__ == "__main__":
         rmtree(args["output_dir"])
     args["layers"] = [int(l.strip()) for l in args["layers"].split(',') if l != ""]
     print(f"Layers: {args['layers']}")
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     main(**args)
