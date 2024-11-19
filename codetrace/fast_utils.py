@@ -13,6 +13,7 @@ def batched_apply(batches : List[List[Any]], num_proc : int, func : Callable, **
     """
     pool = multiprocessing.Pool(num_proc)
     disable_tqdm = func_kwargs.pop("disable_tqdm",False)
+    desc = func_kwargs.pop("desc","Applying")
 
     async_out_batches = []
     for i, batch in enumerate(batches):
@@ -20,7 +21,7 @@ def batched_apply(batches : List[List[Any]], num_proc : int, func : Callable, **
         async_out_batches.append(async_out)
     
     results = []
-    for i in tqdm(range(len(async_out_batches)),desc="Applying",disable=disable_tqdm):
+    for i in tqdm(range(len(async_out_batches)),desc=desc,disable=disable_tqdm):
         results += async_out_batches[i].get()
             
     pool.close()

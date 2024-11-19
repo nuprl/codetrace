@@ -4,13 +4,58 @@ import torch
 from collections import namedtuple
 from copy import deepcopy
 from transformers import AutoModelForCausalLM
-import re
-import einops
-from typing import List,Union,Callable, Dict
-import functools
+from typing import List,Union,Callable, Dict, Any, TypeVar, Set, Optional
+from tqdm import tqdm
 import os
 from pathlib import Path
 import torch
+from hashlib import sha256
+from codetrace.fast_utils import make_batches, batched_apply
+from multiprocessing import cpu_count
+
+DataBatch = TypeVar(List[Dict[str,Any]])
+BlacklistFilterFn = TypeVar(Callable[[DataBatch, Set[str], str, Any], DataBatch])
+
+def hex_encode(s:str)->str:
+    return sha256(bytes(s, "utf-8")).hexdigest()
+
+def exclude_blacklisted(batch: DataBatch, sha256_blacklist: Set[Any], blacklist_key:str) -> DataBatch:
+    filtered = []
+    for item in batch:
+        if not hex_encode(item[blacklist_key]) in sha256_blacklist:
+            filtered.append(item)
+    return filtered
+
+def filter_with_blacklist(
+    ds: datasets.Dataset, 
+    blacklist_ds: Union[datasets.Dataset, DataBatch],
+    blacklist_key: str,
+    filter_fn: Optional[BlacklistFilterFn] = None,
+    **filter_kwargs
+) -> datasets.Dataset:
+    """
+    Apply a filtering function to dataset based on a blacklist.
+
+    Arguments
+        ds: dataset to filter
+        blacklist_ds: blacklisted items to filter out
+        blacklist_key: the column whose values are used to compare ds and blacklist_ds
+        filter_fn: the filter function, which receives a blacklist_key and sha256_blacklist kwargs
+
+    Important: NOTE that comparison between ds and blacklist_ds are made on the 
+        sha256 encoding of value of blacklist_key. This is to save memory.
+    """
+    if filter_fn is None:
+        filter_fn = exclude_blacklisted
+
+    exclusion_set = set()
+    for item in tqdm(blacklist_ds, desc="Creating blacklist for filter"):
+        exclusion_set.add(hex_encode(item[blacklist_key]))
+    
+    batches = make_batches(ds, cpu_count())
+    data = batched_apply(batches, cpu_count(), filter_fn, sha256_blacklist=exclusion_set, 
+                         blacklist_key=blacklist_key, **filter_kwargs)
+    return datasets.Dataset.from_list(data)
 
 def request_vllm_generations(
     llm,

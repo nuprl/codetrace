@@ -4,46 +4,32 @@ from codetrace.parsing_utils import get_model_fim, FimObj, FimChat
 from argparse import ArgumentParser
 from multiprocessing import cpu_count
 from tqdm import tqdm
-from codetrace.utils import num_available_devices, get_vllm_config, request_vllm_generations
-from codetrace.fast_utils import make_batches, batched_apply
+from codetrace.utils import (
+    num_available_devices,
+    get_vllm_config,
+    request_vllm_generations,
+    hex_encode,
+    filter_with_blacklist
+)
 import torch
 from typing import List,Dict,Any,Union, Optional, Set
 import os
 from transformers import AutoTokenizer
-from hashlib import sha256
 
-def hex_encode(s:str)->str:
-    return sha256(bytes(s, "utf-8")).hexdigest()
-
-def success_rate(ds)->str:
+def success_rate(ds: datasets.Dataset )->str:
     df = ds.to_pandas()
     num_succ = df["correct"].sum()
     num_tot = df["correct"].count()
     mean = df["correct"].mean()*100
     return f"Success rate: {num_succ}/{num_tot} = {mean:.2f} %"
 
-def _filter_1tok(batch:List[Dict[str,Any]], key:str, exclude:set, tokenizer):
+def _filter_1tok(batch: List[Dict[str,Any]], blacklist_key:str, sha256_blacklist: Set[Any], tokenizer):
     filtered = []
     for item in batch:
-        if (not hex_encode(item[key]) in exclude) and \
+        if (not hex_encode(item[blacklist_key]) in sha256_blacklist) and \
             len(tokenizer(item["fim_type"], add_special_tokens=False)["input_ids"]) == 1:
             filtered.append(item)
     return filtered
-
-def filter_1tok(
-    ds: datasets.Dataset,
-    tokenizer,
-    blacklist:List[Dict[str,Any]]
-) -> datasets.Dataset:
-    key = "fim_program"
-    exclusion_set = set()
-    for item in blacklist:
-        exclusion_set.add(hex_encode(item[key]))
-    del(blacklist)
-    batches = make_batches(ds, cpu_count())
-    data = batched_apply(batches, cpu_count(), _filter_1tok, exclude=exclusion_set, key=key,
-                         tokenizer=tokenizer)
-    return datasets.Dataset.from_list(data)
 
 def generate_completions(
     llm:LLM,
@@ -73,6 +59,7 @@ def main(
     new_ds_name:str,
     model_fim: Union[FimObj,FimChat],
     max_n: Optional[int] = None,
+    overwrite: Optional[bool] = None
 ):
     """
     NOTE: completions are 1 token. A completion is correct if it matches the type annotation exactly.
@@ -80,10 +67,11 @@ def main(
     """
     # resume from completions if they exist
     completions = []
-    if os.path.exists(new_ds_name):
+    if not overwrite and os.path.exists(new_ds_name):
         completions = datasets.load_from_disk(new_ds_name)
 
-    ds = filter_1tok(ds, tokenizer, completions)
+    ds = filter_with_blacklist(ds, completions, "fim_program", filter_fn=_filter_1tok, tokenizer=tokenizer,
+                               desc="Resuming from saved completions")
     completions = list(completions)
 
     if max_n > -1:
@@ -134,6 +122,7 @@ if __name__ == "__main__":
     parser.add_argument("--tokenizer", default=None)
 
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--overwrite", action="store_true")
 
     args = parser.parse_args()
 
@@ -143,4 +132,4 @@ if __name__ == "__main__":
     llm = LLM(args.model, dtype=args.dtype, tensor_parallel_size=num_available_devices(), tokenizer=args.tokenizer)
     model_fim = get_model_fim(args.model)
 
-    main(llm, tokenizer, ds, args.new_ds_name, model_fim, args.max_size)
+    main(llm, tokenizer, ds, args.new_ds_name, model_fim, args.max_size, args.overwrite)
