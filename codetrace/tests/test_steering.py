@@ -2,7 +2,8 @@ from codetrace.steering import (
     subtract_avg,
     get_model_fim,
     prepare_prompt_pairs,
-    _steer_test_split
+    _steer_test_split,
+    balance_prompts
 )
 import datasets
 import torch

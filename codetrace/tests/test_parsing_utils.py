@@ -1,4 +1,11 @@
-from codetrace.parsing_utils import get_captures, STARCODER_FIM, CODELLAMA_FIM_CHAT
+from codetrace.parsing_utils import (
+    get_captures,
+    STARCODER_FIM,
+    CODELLAMA_FIM_CHAT,
+    is_in_capture_range,
+    find_between_bytes,
+    replace_between_bytes,
+)
 
 def test_captures():
     prompt = "def func:"

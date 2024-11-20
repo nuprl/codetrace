@@ -4,13 +4,9 @@ import tree_sitter_typescript as tstypescript
 from tree_sitter import Language, Parser
 from typing import List,Union,Dict,Tuple
 
-PY_LANGUAGE = Language(tspython.language())
-PY_PARSER = Parser(PY_LANGUAGE)
-TS_LANGUAGE = Language(tstypescript.language_typescript())
-TS_PARSER = Parser(TS_LANGUAGE)
-
-lang_to_parser = {"typescript" : TS_PARSER, "python" : PY_PARSER, "py" : PY_PARSER, "ts" : TS_PARSER}
-lang_to_builder = {"typescript" : TS_LANGUAGE, "python" : PY_LANGUAGE, "py" : PY_LANGUAGE, "ts" : TS_LANGUAGE}
+"""
+Classes
+"""
 
 class FimObj:
     def __init__(
@@ -89,6 +85,16 @@ class FimChat(FimObj):
         program_prefix = prompt.split(self.placeholder)[0]
         return self._format_chat_template(prompt, program_prefix)
     
+"""
+Shared variables
+"""
+PY_LANGUAGE = Language(tspython.language())
+PY_PARSER = Parser(PY_LANGUAGE)
+TS_LANGUAGE = Language(tstypescript.language_typescript())
+TS_PARSER = Parser(TS_LANGUAGE)
+
+lang_to_parser = {"typescript" : TS_PARSER, "python" : PY_PARSER, "py" : PY_PARSER, "ts" : TS_PARSER}
+lang_to_builder = {"typescript" : TS_LANGUAGE, "python" : PY_LANGUAGE, "py" : PY_LANGUAGE, "ts" : TS_LANGUAGE}
 
 fim_placeholder = "<FILL>"      
 STARCODER_FIM = FimObj("<fim_prefix>","<fim_suffix>","<fim_middle>",fim_placeholder,
@@ -113,6 +119,10 @@ QWEN_FIM = FimObj(
     fim_placeholder,
     { "<|fim_prefix|>": 151659, "<|fim_suffix|>": 151661, "<|fim_middle|>": 151660 }
 )
+
+"""
+Methods
+"""
 
 def get_model_fim(model_name:str) -> FimObj:
     model_name = model_name.lower()
@@ -269,37 +279,3 @@ typescript_builtin_objects = [
     "Intl.Segmenter",
     "bigint"
 ]
-
-"""
-PYTESTS
-"""
-
-def test_captures():
-    prompt = "def func:"
-    query="((identifier) @name)"
-    captures = get_captures(prompt, query, "python", "name")
-    assert len(captures) == 1, captures
-    assert captures[0].text.decode("utf-8") == "func", captures
-
-def test_fim():
-    prompt = "hi my name is <FILL>! Nice to meet you"
-    fim_prompt = STARCODER_FIM.placeholder_to_fim(prompt)
-    unfimmed_prompt = STARCODER_FIM.unfim(fim_prompt + "George")
-    placeholder_prompt = STARCODER_FIM.fim_to_placeholder(fim_prompt)
-    assert placeholder_prompt == "hi my name is <FILL>! Nice to meet you"
-    assert unfimmed_prompt == "hi my name is George! Nice to meet you"
-    assert fim_prompt == f"{STARCODER_FIM.prefix}hi my name is {STARCODER_FIM.suffix}! Nice to meet you{STARCODER_FIM.middle}"
-
-def test_fimchat():
-    program = '''
-def is_palindrome(s: <FILL>) -> bool:
-    return s[::-1] == s
-'''.strip()
-    program_prefix = "def is_palindrome(s: <MID>"
-    result = CODELLAMA_FIM_CHAT.placeholder_to_fim(program)
-    expected = [
-        {"role": "user", "content": f"Continue this program with the correct type annotation after <MID>:\n\n{program}"},
-        {"role": "assistant", "content": program_prefix}
-    ]
-    assert result == expected
-    assert CODELLAMA_FIM_CHAT.chat_template() != expected
