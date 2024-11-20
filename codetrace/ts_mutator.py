@@ -1,5 +1,8 @@
 import tree_sitter
-from codetrace.parsing_utils import replace_between_bytes, get_captures, TS_PARSER, typescript_builtin_objects
+from codetrace.parsing_utils import (
+    replace_between_bytes, get_captures, Parser,
+    TS_LANGUAGE, TS_PARSER, typescript_builtin_objects
+)
 import random
 from typing import List, Tuple, Union, Callable
 from dataclasses import dataclass
@@ -323,22 +326,3 @@ def random_mutate(program : str, fim_type : str, mutations : List[Callable], deb
         return new_program, all_mutations
     
     return new_program
-
-def map_random_mutations(iterable, mutations : List[Callable]):
-    """
-    Apply random combination of mutations
-    """
-    mutation_names = [m.__name__ for m in mutations]
-    new_ds = []
-    for _, ex in enumerate(iterable):
-        new_program = None
-        program, fim_type= ex["fim_program"], ex["fim_type"]
-        tries = 0
-        while new_program is None and tries < 10:
-            tries += 1
-            new_program = apply_random_mutations_by_kind(program, fim_type, mutations)
-
-        if new_program != None:
-            new_ds.append({"mutated_program": new_program, "mutations" : mutation_names, **ex})
-    
-    return new_ds

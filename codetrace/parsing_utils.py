@@ -137,8 +137,8 @@ def get_captures(
     Get captures for a prompt given a query
     Ignores any captures whose parents match some pattern in ignore_parents
     """
-    parser = lang_to_parser[language]
     lang = lang_to_builder[language]
+    parser = lang_to_parser[language]
     if isinstance(prompt, str):
         tree = parser.parse(bytes( prompt, "utf8"))
     elif isinstance(prompt, tree_sitter.Tree):

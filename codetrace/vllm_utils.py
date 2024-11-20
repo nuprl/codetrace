@@ -1,7 +1,8 @@
 from typing import List,Union,Dict,Any, AsyncGenerator, Generator, Optional
+import os
+from tqdm import tqdm
 from vllm import AsyncLLMEngine, SamplingParams, AsyncEngineArgs, LLM
 from vllm.outputs import RequestOutput
-import os 
 
 def load_vllm(
     model:str,
@@ -68,3 +69,31 @@ def get_vllm_config(llm: Union[LLM,AsyncLLMEngine]) -> Dict[str,Any]:
         return llm.llm_engine.get_model_config().hf_config
     else:
         return llm.get_model_config().hf_config
+    
+async def generate_completions(
+    llm: AsyncLLMEngine,
+    batch: Dict[str,List[Any]],
+    batch_size: Optional[int] = None,
+    use_tqdm: Optional[bool] = None,
+    **kwargs
+) -> List[Dict[str,Any]]:
+    params = SamplingParams(temperature=0, max_tokens=1, n=1)
+    completions = []
+    
+    for id,prompt in tqdm(
+        enumerate(batch.pop("_prompt")), 
+        desc="Generating",
+        disable=not use_tqdm,
+        total=batch_size
+    ):
+        generated_promise = request_vllm_completions(llm, prompt, params, request_id=id, **kwargs)
+        async for output_promise in generated_promise:
+            id = output_promise.request_id
+            row = {k:batch[k][id] for k in batch.keys()}
+            generated_text = output_promise.outputs[0].text.strip()
+            completions.append({
+                    **row, 
+                    "_generated": generated_text,
+                })
+
+    return completions

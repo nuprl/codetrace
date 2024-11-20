@@ -1,26 +1,34 @@
-import datasets
-import argparse
-import pandas as pd
+import asyncio
+from argparse import ArgumentParser
 from multiprocessing import cpu_count
+import os
+from pathlib import Path
+import shutil
+from typing import List,Union,Callable,Dict,Any,Optional,TypeVar,Set
+import pandas as pd
+from transformers import AutoTokenizer, PreTrainedTokenizer
 from vllm import LLM, SamplingParams
 from tqdm import tqdm
-from codetrace.fast_utils import make_batches, batched_apply
-import os
+import datasets
+from datasets import IterableDataset
+import tree_sitter
 from codetrace import py_mutator, ts_mutator
-from codetrace.parsing_utils import get_model_fim, TS_LANGUAGE, get_captures
+from codetrace.parsing_utils import get_model_fim, get_captures, FimChat, FimObj
 from codetrace.utils import (
-    load_dataset, 
-    save_dataset, 
-    num_available_devices, 
-    get_vllm_config, 
-    request_vllm_generations,
-    hex_encode,
-    filter_with_blacklist
+    load_dataset,
+    num_available_devices,
+    hex_encode
 )
-from pathlib import Path
-from typing import List,Union,Callable,Dict,Any,Optional
+from vllm import AsyncLLMEngine
+from codetrace.vllm_utils import (
+    load_vllm,
+    generate_completions
+)
 
-def get_mutations(key: str, lang: str) -> Callable:
+PyMutateFn = TypeVar("PyMutateFn", bound=Callable[[List[tree_sitter.Node]], List[py_mutator.Mutation]])
+TsMutateFn = TypeVar("TsMutateFn", bound=Callable[[List[tree_sitter.Node]], List[ts_mutator.Mutation]])
+
+def get_mutations(key: str, lang: str) -> Union[TsMutateFn, PyMutateFn]:
     mod = py_mutator if lang == "py" else ts_mutator
     if key == "vars":
         return mod.rename_vars
@@ -29,112 +37,134 @@ def get_mutations(key: str, lang: str) -> Callable:
     else:
         return mod.delete_annotations
 
-def filter_incorrect(
-    ds: datasets.Dataset,
-    llm: LLM,
-    new_ds_name:Union[str,Path],
-    batch_size:int = 10000,
-    resume_from_completions: Optional[List[Dict[str,Any]]] = None
-) -> datasets.Dataset:
-    """
-    Filter out examples where the model's prediction is incorrect. Truncate generation and
-    solution at 1 token
-    """
-    model_fim = get_model_fim(get_vllm_config(llm).name_or_path)
-    params = SamplingParams(temperature=0, max_tokens=1)
-    ds = ds.map(lambda x: {
-            "prompt" : model_fim.placeholder_to_fim(x["mutated_program"]),
-            "solution": x["fim_type"]
-        }, desc="Prepping prompts")
-    
-    # batch generations so we can save them early
-    new_ds = (resume_from_completions or [])
+def _save(data: List[Dict[str,Any]], path:str, message:str):
+    print(message)
+    temp_path = Path(str(path) + "_temp")
+    new_ds = datasets.Dataset.from_list(data)
+    if os.path.exists(path):
+        existing_completions = datasets.load_from_disk(path)  
+        new_ds = datasets.concatenate_datasets([new_ds, existing_completions])
 
-    for batch_idx,i in tqdm(
-        enumerate(range(0, len(ds), batch_size)), 
-        desc="Collecting breaking mutations", 
-        total=len(ds) // batch_size
-    ):
-        use_tqdm = (batch_idx == 0)
-        # generations = llm.generate(ds["prompt"][i:i+batch_size], params, use_tqdm=use_tqdm)
-        generations = request_vllm_generations(llm, ds["prompt"][i:i+batch_size], params, use_tqdm=use_tqdm)
+    # workaround huggingface save_to_disk permissions
+    new_ds.save_to_disk(temp_path)
+    shutil.rmtree(path, ignore_errors=True)
+    shutil.move(temp_path, path)
+    shutil.rmtree(temp_path, ignore_errors=True)
+    print(f"Collected {len(new_ds)} candidates")
 
-        for j,output in enumerate(generations):
-            generated_text = output.outputs[0].text.strip()
-            if generated_text != ds[i+j]["solution"]:
-                new_ds.append({**ds[i+j],"mutated_generated_text": generated_text})
-                
-        # save every
-        print(f"Collected {len(new_ds)} candidates\n")
-        if len(new_ds) > 0:
-            new_ds_hf = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-            save_dataset(new_ds_hf, new_ds_name)
-    
-    new_ds = datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
-    save_dataset(new_ds_hf, new_ds_name)
-    new_ds = new_ds.remove_columns(["prompt", "solution"])
-    return new_ds
-    
-def _preprocess(data: Union[List, datasets.Dataset],correct_bool: bool, lang: str) -> List[Dict[str,Any]]:
+def _mutate_item(
+    program: str,
+    fim_type: str,
+    mutations: List[Union[PyMutateFn,TsMutateFn]],
+    mutate_fn: Callable[[str, str, List[Union[PyMutateFn,TsMutateFn]]], str]
+) -> str:
+    new_program = None
+    for _ in range(10):
+        new_program = mutate_fn(program, fim_type, mutations)
+        if new_program:
+            break
+    return new_program
+
+def _preprocess(
+    ds: IterableDataset, blacklist: Set[str],
+    model_fim: Union[FimObj,FimChat], tokenizer: PreTrainedTokenizer,
+    lang:str, mutations: List[str],batch_size:int
+) -> IterableDataset:
     """
-    Preprocess the dataset
-    - Take only correct examples
-    - For ts, currently do not support shorthands, so either unroll or remove 
-        shorthand_property_identifier, shorthand_property_identifier_pattern
+    Apply the following preprocessing steps asynchronously.
+    1. Select correct vanilla completions
+    2. For ts, remove programs with shorthands which our mutations do not support
+    3. Remove any programs that have already been mutated (in blacklist)
+    4. Apply random mutations to create mutated_program field
     """
     if lang == "py":
-        _condition = (lambda x: x["correct"] == correct_bool)
+        _condition = (lambda x: x["correct"])
+        mod = py_mutator
     else:
         preproc_query = """
         ((shorthand_property_identifier_pattern) @si)
         ((shorthand_property_identifier) @si)
         """
-        _condition = (lambda x: (x["correct"] == correct_bool and 
-                    len(get_captures(x["fim_program"], preproc_query, "ts","si")) == 0))
+        _condition = (lambda x: x["correct"] and 
+                      len(get_captures(x["fim_program"], preproc_query, "ts","si")) == 0)
+        mod = ts_mutator
     
-    if isinstance(data, datasets.Dataset):
-        return data.filter(_condition, desc="Preprocess")
-    else:
-        return list(filter(_condition, data))
+    mutations = [get_mutations(m, lang) for m in mutations]
+    mutation_names = [m.__name__ for m in mutations]
+    ds = ds.filter(lambda x: hex_encode(x["fim_program"]) not in blacklist and _condition(x))
+    ds = ds.map(lambda x: {**x, 
+            "mutation_names": mutation_names,
+            "mutated_program": _mutate_item(x["fim_program"], x["fim_type"], 
+                                        mutations, mod.apply_random_mutations_by_kind)})
+    
+    ds = ds.filter(lambda x: x["mutated_program"])
 
-def _mutate_batch(batch: Union[List, datasets.Dataset], mutations:List[Callable], lang:str, correct_bool:bool = True):
-    post = _preprocess(batch, correct_bool, lang)
-    mod = py_mutator if lang == "py" else ts_mutator
-    return mod.map_random_mutations(post, mutations)
+    if isinstance(model_fim, FimChat):
+        chat_template = tokenizer.get_chat_template()
+        _prompt_fmt = (lambda x: tokenizer.apply_chat_template(
+            model_fim.placeholder_to_fim(x), continue_final_message=True,
+            add_generation_prompt=False, tokenize=False, chat_template=chat_template
+        ))
+        ds = ds.map(lambda x: {**x, "_prompt": _prompt_fmt(x["mutated_program"])})
+    else:
+        ds = ds.map(lambda x: {**x, "_prompt": model_fim.placeholder_to_fim(x["mutated_program"])})
+
+    return ds
 
 def main(
-    model: LLM,
-    ds: datasets.Dataset,
-    new_ds_name: str,
+    llm: AsyncLLMEngine,
+    tokenizer: PreTrainedTokenizer,
+    ds: datasets.IterableDataset,
+    output_path: Path,
+    model_fim: Union[FimObj,FimChat],
+    batch_size: int,
+    model_name: str,
     lang:str,
-    mutations:List[Callable],
-    batch_size:int,
-    overwrite:Optional[bool] = None
+    mutations:List[str],
+    max_n: int
 ):
-    if not overwrite and os.path.exists(new_ds_name + "_unfiltered"):
-        ds = datasets.load_from_disk(new_ds_name + "_unfiltered")
-    else:
-        batches = make_batches(ds, cpu_count())
-        results = batched_apply(batches, cpu_count(), _mutate_batch, 
-                            lang=lang, mutations=mutations, correct_bool=args.correct_bool, desc="Mutating")
-        ds = datasets.Dataset.from_list(results)
-        save_dataset(ds, Path(new_ds_name + "_unfiltered"))
-    
-    # check if resuming from saved
-    existing_candidates = None
-    if not overwrite and os.path.exists(new_ds_name):
-        existing_candidates = datasets.load_from_disk(new_ds_name)
-        ds = filter_with_blacklist(ds, existing_candidates, "mutated_program", desc="Resuming from saved completions")
-        print(f"Collected {len(existing_candidates)} candidates\n")
+    mutations = [get_mutations(m, lang) for m in mutations]
 
-    ds = filter_incorrect(ds, model, Path(new_ds_name), batch_size=batch_size, 
-                          resume_from_completions=list(existing_candidates))
-    print(ds)
-    save_dataset(ds, Path(new_ds_name))
+    # resume from completions if they exist
+    completions, blacklist = [], set()
+    if os.path.exists(output_path):
+        completions = datasets.load_from_disk(output_path, keep_in_memory=False)
+        print(f"Resuming from {len(completions)} completions.")
+        for row in completions:
+            blacklist.add(hex_encode(row["fim_program"]))
 
+    # preprocess data
+    ds = _preprocess(ds, blacklist, model_fim, tokenizer, lang, mutations, batch_size)
+
+    # batch generations because of cpu ops in vllm
+    num_completed = 0
+    for i,batch in tqdm(enumerate(ds.iter(batch_size)), desc="Batch generations"):
+        batch_completions = asyncio.run(generate_completions(
+                                    llm,
+                                    batch,
+                                    batch_size,
+                                    use_tqdm=(i == 0)
+                                ))
+        breaking_mutations = []
+        for item in batch_completions:
+            correct = item["_generated"] == item["fim_type"]
+            if not correct:
+                breaking_mutations.append({**item, 
+                                        "mutated_generated_text": item["_generated"], 
+                                        "correct": False,
+                                        "model_name": model_name})
+        num_completed += len(breaking_mutations)
+        # save every batch
+        if len(breaking_mutations) > 0:
+            _save(breaking_mutations, output_path, f"Saving {i} batch")
+        if max_n > 0 and num_completed >= max_n:
+            break
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    assert os.environ.get("VLLM_LOGGING_LEVEL",None) == "ERROR", \
+        "Please set env var VLLM_LOGGING_LEVEL=ERROR"
+    
+    parser = ArgumentParser()
     parser.add_argument("--completions-ds", type=str, required=True)
     parser.add_argument("--mutated-ds", type=str, required=True)
     parser.add_argument("--model", type=str, required=True)
@@ -147,13 +177,17 @@ if __name__ == "__main__":
 
     # model
     parser.add_argument("--tokenizer", type=str, default=None)
+    parser.add_argument("--dtype", type=str, choices=["bfloat16","float32"], default="bfloat16")
 
+    parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--max-size", type=int, default=-1)
-    parser.add_argument("--correct-bool", type=bool, default=True)
     parser.add_argument("--seed", type=int, default=None)
     
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
+
+    if args.overwrite:
+        shutil.rmtree(Path(args.mutated_ds), ignore_errors=True)
 
     # check muts
     args.mutations = [m.strip() for m in args.mutations.split(',') if m != ""]
@@ -166,16 +200,15 @@ if __name__ == "__main__":
     datasets.disable_caching()
     print("Gpu:", os.environ["CUDA_VISIBLE_DEVICES"])
 
-    ds = load_dataset(args.completions_ds, split=args.split, name=args.subset)
-    if args.max_size > -1:
-        ds = ds.shuffle(seed=args.seed).select(range(args.max_size))
-    
-    mutations = [get_mutations(m, args.lang) for m in args.mutations]
+    args.tokenizer=args.tokenizer if args.tokenizer else args.model
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
 
-    tps = num_available_devices()
-    print(f"Serving VLLM across {tps} GPUs.")
-    tokenizer=args.tokenizer if args.tokenizer else args.model
-    llm = LLM(args.model, tensor_parallel_size=tps, tokenizer=tokenizer, dtype="bfloat16")
-    batchsize = 1000*tps # still want to save some intermediate completions
+    llm = load_vllm(args.model, args.dtype, num_available_devices(),
+                    tokenizer=args.tokenizer, async_inference=True)
+    model_fim = get_model_fim(args.model)
     
-    main(llm, ds, args.mutated_ds, args.lang, mutations, batchsize, args.overwrite)
+    ds = load_dataset(args.completions_ds, split=args.split, name=args.subset, streaming=True)
+    ds = ds.to_iterable_dataset() if isinstance(ds, datasets.Dataset) else ds
+    
+    main(llm, tokenizer, ds, Path(args.mutated_ds), model_fim, args.batch_size, args.model, 
+         args.lang, args.mutations, args.max_size)

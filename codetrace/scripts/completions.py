@@ -2,11 +2,11 @@ import shutil
 from argparse import ArgumentParser
 from pathlib import Path
 import asyncio
-from typing import List,Dict,Any,Union, Optional,Dict
+from typing import List,Dict,Any,Union,Dict
 import os
 import torch
 import datasets
-from vllm import AsyncLLMEngine, SamplingParams
+from vllm import AsyncLLMEngine
 from codetrace.parsing_utils import get_model_fim, FimObj, FimChat
 from transformers import AutoTokenizer, PreTrainedTokenizer
 from tqdm import tqdm
@@ -15,11 +15,11 @@ from codetrace.utils import (
     hex_encode
 )
 from codetrace.vllm_utils import (
-    request_vllm_completions,
+    generate_completions,
     load_vllm
 )
 
-def success_rate(ds: datasets.Dataset )->str:
+def success_rate(ds: datasets.Dataset) -> str:
     df = ds.to_pandas()
     num_succ = df["correct"].sum()
     num_tot = df["correct"].count()
@@ -28,32 +28,6 @@ def success_rate(ds: datasets.Dataset )->str:
 
 def is_1tok(fim_type: str, tokenizer: PreTrainedTokenizer) -> bool:
     return len(tokenizer(fim_type, add_special_tokens=False)["input_ids"]) == 1
-
-async def generate_completions(
-    llm: AsyncLLMEngine,
-    batch: Dict[str,List[Any]],
-    model_name: str,
-    batch_size:int,
-    use_tqdm: bool,
-    **kwargs
-) -> List[Dict[str,Any]]:
-    params = SamplingParams(temperature=0, max_tokens=1, n=1)
-    completions = []
-    
-    for id,prompt in tqdm(enumerate(batch.pop("_prompt")), desc="Generating", disable=not use_tqdm,
-                          total=batch_size):
-        generated_promise = request_vllm_completions(llm, prompt, params, request_id=id, **kwargs)
-        async for output_promise in generated_promise:
-            id = output_promise.request_id
-            row = {k:batch[k][id] for k in batch.keys()}
-            generated_text = output_promise.outputs[0].text.strip()
-            correct = generated_text == row["fim_type"].strip()
-            completions.append({
-                **row, "model_name":model_name, 
-                "generated_text": generated_text, "correct": correct
-            })
-
-    return completions
 
 def _save(data: List[Dict[str,Any]], path:str, message:str):
     print(message)
@@ -72,13 +46,13 @@ def _save(data: List[Dict[str,Any]], path:str, message:str):
 
 def main(
     llm: AsyncLLMEngine,
-    tokenizer:PreTrainedTokenizer,
+    tokenizer: PreTrainedTokenizer,
     ds: datasets.IterableDataset,
-    new_ds_path:Path,
+    new_ds_path: Path,
     model_fim: Union[FimObj,FimChat],
     batch_size: int,
     model_name: str,
-    max_n: Optional[int] = None
+    max_n: int
 ):
     # resume from completions if they exist
     completions, blacklist = [], set()
@@ -108,12 +82,15 @@ def main(
     num_completed = 0
     for i,batch in tqdm(enumerate(ds.iter(batch_size)), desc="Batch generations"):
         batch_completions = asyncio.run(generate_completions(
-            llm,
-            batch,
-            model_name,
-            batch_size,
-            use_tqdm=(i == 0)
-        ))
+                                        llm,
+                                        batch,
+                                        batch_size,
+                                        use_tqdm=(i == 0)
+                                    ))
+        batch_completions = [{**x, 
+                              "generated_text": x["_generated"],
+                              "correct": x["_generated"] == x["fim_type"], 
+                              "model_name": model_name} for x in batch_completions]
         num_completed += len(batch_completions)
         # save every batch
         _save(batch_completions, new_ds_path, f"Saving {i} batch")
