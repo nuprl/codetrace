@@ -123,8 +123,6 @@ def main(
     mutations:List[str],
     max_n: int
 ):
-    mutations = [get_mutations(m, lang) for m in mutations]
-
     # resume from completions if they exist
     completions, blacklist = [], set()
     if os.path.exists(output_path):
