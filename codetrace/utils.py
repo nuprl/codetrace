@@ -4,84 +4,26 @@ import torch
 from collections import namedtuple
 from copy import deepcopy
 from transformers import AutoModelForCausalLM
-from typing import List,Union,Callable, Dict, Any, TypeVar, Set, Optional
+from typing import List,Union,Callable, Dict, Any, TypeVar, Set, Generator
 from tqdm import tqdm
 import os
 from pathlib import Path
 import torch
 import functools
 from hashlib import sha256
-from codetrace.fast_utils import make_batches, batched_apply
 from multiprocessing import cpu_count
 import einops
-
-DataBatch = TypeVar(List[Dict[str,Any]])
-BlacklistFilterFn = TypeVar(Callable[[DataBatch, Set[str], str, Any], DataBatch])
-
-def hex_encode(s:str)->str:
+    
+def hex_encode(s: str) -> str:
     return sha256(bytes(s, "utf-8")).hexdigest()
 
-def exclude_blacklisted(batch: DataBatch, sha256_blacklist: Set[Any], blacklist_key:str) -> DataBatch:
-    filtered = []
-    for item in batch:
-        if not hex_encode(item[blacklist_key]) in sha256_blacklist:
-            filtered.append(item)
-    return filtered
-
-def filter_with_blacklist(
-    ds: datasets.Dataset, 
-    blacklist_ds: Union[datasets.Dataset, DataBatch],
-    blacklist_key: str,
-    filter_fn: Optional[BlacklistFilterFn] = None,
-    **filter_kwargs
-) -> datasets.Dataset:
-    """
-    Apply a filtering function to dataset based on a blacklist.
-
-    Arguments
-        ds: dataset to filter
-        blacklist_ds: blacklisted items to filter out
-        blacklist_key: the column whose values are used to compare ds and blacklist_ds
-        filter_fn: the filter function, which receives a blacklist_key and sha256_blacklist kwargs
-
-    Important: NOTE that comparison between ds and blacklist_ds are made on the 
-        sha256 encoding of value of blacklist_key. This is to save memory.
-    """
-    if filter_fn is None:
-        filter_fn = exclude_blacklisted
-
-    exclusion_set = set()
-    for item in tqdm(blacklist_ds, desc="Creating blacklist for filter"):
-        exclusion_set.add(hex_encode(item[blacklist_key]))
-    
-    batches = make_batches(ds, cpu_count())
-    data = batched_apply(batches, cpu_count(), filter_fn, sha256_blacklist=exclusion_set, 
-                         blacklist_key=blacklist_key, **filter_kwargs)
-    return datasets.Dataset.from_list(data)
-
-def request_vllm_generations(
-    llm,
-    prompts:Union[List[str], List[List[Dict[str,str]]]],
-    sampling_params,
-    **kwargs
-):
-    if isinstance(prompts[0], str) or isinstance(prompts, str):
-        return llm.generate(prompts, sampling_params, **kwargs)
-    else:
-        # chat template
-        chat_template = llm.get_tokenizer().chat_template
-        if not chat_template:
-            raise ValueError("Model does not have chat template! Make sure you have the instruct version of the model.")
-        return llm.chat(prompts, sampling_params, chat_template=chat_template,
-                        continue_final_message=True, add_generation_prompt=False,**kwargs)
-
-def get_reduction(reduction:Union[Callable,str])->Callable:
+def get_reduction(reduction: Union[Callable,str]) -> Callable:
     if isinstance(reduction,str):
         return getattr(torch, reduction)
     else:
         return reduction
 
-def apply_reduction(tensor:torch.Tensor, reduction:Union[Callable,str], **kwargs)->torch.Tensor:
+def apply_reduction(tensor: torch.Tensor, reduction: Union[Callable,str], **kwargs) -> torch.Tensor:
     reduction = get_reduction(reduction)
     x = reduction(tensor, **kwargs)
     if hasattr(x, "values"):
@@ -110,12 +52,6 @@ def get_lm_head(model):
         return model.lm_head
     else:
         raise NotImplementedError("Model type not supported")
-    
-def get_vllm_config(llm):
-    if hasattr(llm, "llm_engine"):
-        return llm.llm_engine.get_model_config().hf_config
-    else:
-        return llm.get_model_config().hf_config
 
 def num_available_devices():
     device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
