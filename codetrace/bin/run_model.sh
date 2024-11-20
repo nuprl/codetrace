@@ -5,6 +5,8 @@ LANG=$3
 MUTATION=$4
 LAYERS=$5
 
+export VLLM_LOGGING_LEVEL="ERROR"
+
 if [ "$LANG" = "py" ]; then
     SOURCE_DATASET="nuprl-staging/py_typeinf_fim"
 else
