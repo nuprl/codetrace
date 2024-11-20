@@ -24,7 +24,7 @@ MUTATIONSUNDERSCORED=$(echo $MUTATIONS | sed 's/,/_/g')
 python3 -m codetrace.scripts.mutate_dataset \
     --model /work/nvme/bcbj/models/$MODEL \
     --tokenizer /work/nvme/bcbj/models/$MODEL \
-    --completions-ds results/completions-$MODEL \
+    --completions-ds results/completions-$LANG-$MODEL \
     --mutated-ds results/mutations-$LANG-$MUTATIONSUNDERSCORED-$MODEL \
     --lang $LANG \
     --mutations=$MUTATIONS

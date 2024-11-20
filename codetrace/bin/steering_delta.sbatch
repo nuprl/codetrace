@@ -6,7 +6,7 @@
 #SBATCH --ntasks=8
 #SBATCH --mem=60G
 #SBATCH --gres=gpu:1
-#SBATCH --time=8:00:00
+#SBATCH --time=24:00:00
 
 # You must run this script in the codetrace directory and in an environment
 # in which it works.
