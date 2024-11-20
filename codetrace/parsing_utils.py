@@ -171,8 +171,9 @@ def replace_between_bytes(
     replacement : Union[str,bytes] = ""
 ) -> bytes:
     '''
-    Replace tree-sitter interval (start_point, end_point) from a string.
-    Inclusive of start_point and end_point
+    Replace a byte string at (start_byte, end_byte).
+    Inclusive of start_byte, exclusive of end_byte.
+    Note that tree sitter is exclusive of end_byte in its Node.
     '''
     if isinstance(replacement, str):
         replacement = replacement.encode("utf-8")
@@ -200,7 +201,8 @@ def find_between_bytes(
             return i
     return -1
 
-def is_in_capture_range(node : tree_sitter.Node, captures : List[Tuple[tree_sitter.Node, str]]) -> bool:
+def is_in_capture_range(
+    node: tree_sitter.Node, captures: List[tree_sitter.Node]) -> bool:
     """
     Check if the node is in the range of any of the captures.
     """

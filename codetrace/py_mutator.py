@@ -2,7 +2,7 @@ import tree_sitter
 from codetrace.parsing_utils import (
     get_captures, is_in_capture_range, PY_PARSER
 )
-from codetrace.base_mutator import AbstractMutator
+from codetrace.base_mutator import AbstractMutator, Mutation, TreeSitterLocation
 import random
 from typing import List, Tuple, Callable
 import random
@@ -96,14 +96,19 @@ PY_ATTRIBUTE_IDENTIFIER_QUERY = """(attribute attribute: (identifier) @id)"""
 # needs postprocessing
 PY_TYPE_ANNOTATIONS_QUERY = """((typed_parameter) @annotation)"""
 
-RETURN_TYPES = """  [
-        (function_definition return_type: 
-            (type (identifier) @id))
+RETURN_TYPES = """ (function_definition return_type: (type (_) @id))"""
 
-]"""
+PY_TOPLEVEL_CHILDREN = "(module (_) @root_children)"
 
+DummyTreeSitterNode = namedtuple("DummyTreeSitterNode", [
+                                        "start_byte", "end_byte", 
+                                        "start_point", "end_point", "text"])
 class PyMutator(AbstractMutator):
     
+    def is_import_statement(self, expr : tree_sitter.Node) -> bool:
+        print(expr.type)
+        return expr.type in IMPORT_STATEMENTS
+
     def needs_alias(self, typ: bytes, import_statements : bytes) -> bool:
         # if type is a builtin or typing, needs alias
         # if a type is in imports, needs alias
@@ -112,36 +117,57 @@ class PyMutator(AbstractMutator):
     def format_capture(self, capture: tree_sitter.Node, prefix: bytes, **kwargs) -> str:
         if self.needs_alias(capture.text, kwargs["import_statement_names"]):
             # make new type alias
-            prefix = prefix + b" : TypeAlias = " + capture.text
+            prefix = prefix + b'" : TypeAlias = "' + capture.text + '"'
         else:
             prefix = None
         return prefix
 
-    def add_type_aliases_after_imports(self, code: bytes, type_aliases : List[bytes]) -> bytes:
+    def add_type_aliases(self, code: bytes, type_aliases : List[bytes]) -> bytes:
         """
-        Add type aliases to the prefix after the last import statement
-        NOTE:we assume all imports are at the top of the file
+        Add type aliases to the prefix after the relevant import statement.
+        We assume there are either no imports, thus just add aliases at top,
+        or type aliases are imported/created, in which case we add them before the first
+        time they are ever used (if imported, place alias AFTER import
         """
         import_typ_alias = b"from typing import TypeAlias\n"
-        type_aliases = import_typ_alias + b"\n".join(type_aliases) + b"\n\n"
-        captures = get_captures(code, IMPORT_STATEMENT_QUERY, "py", "import_statement")
-        if len(captures) == 0:
-            return type_aliases + code
-        # find the last import statement
-        last_import = max(captures, key=lambda x: x.end_byte)
-        new_code = code[:last_import.end_byte] + b"\n" + type_aliases + code[last_import.end_byte:]
-        return new_code
+
+        # add before the first expression
+        expression = get_captures(code, PY_TOPLEVEL_CHILDREN, "py", "root_children")
+        # find the relevant FIRST expression to insert alias before
+        replacement_muts : List[Mutation] = []
+        for type_alias in type_aliases:
+            type_original = type_alias.rsplit(b'=')[-1].replace(b'"',b'').strip()
+            
+            for possible_match in expression:
+                if type_original in possible_match.text:
+                    if self.is_import_statement(possible_match):
+                        replacement = possible_match.text + b"\n" + type_alias
+                    else:
+                        replacement = type_alias + b"\n" + possible_match.text
+
+                    replacement_muts.append(Mutation(
+                                    TreeSitterLocation(possible_match),
+                                    byte_replacement=replacement
+                                ))
+                    break
+        
+        # none found, insert at top
+        if len(replacement_muts) == 0:
+            return import_typ_alias + b"\n".join(type_aliases) + b"\n" + code
+        # note we can only do this because we did not specify prefix, otherwise recursive loop
+        applied_muts = self.apply_mutations(code.decode("utf-8"), replacement_muts)
+        return import_typ_alias + bytes(applied_muts, "utf-8")
 
     def add_program_prefix(self, byte_program: bytes, prefixes: List[bytes]) -> bytes:
         prefixes = list(set(prefixes))
-        return self.add_type_aliases_after_imports(byte_program, prefixes)
+        return self.add_type_aliases(byte_program, prefixes)
 
     def postprocess_type_annotation(
         self,
         node_capture: tree_sitter.Node,
-        target_char: bytes, 
+        target_char: bytes, # ":"
         shift_amt : int
-    ) -> tree_sitter.Node:
+    ) -> DummyTreeSitterNode:
         """
         Postprocess the annotation node by applying a shift to the node from the target character. 
         Captured annotations contain var id and type id, for example:
@@ -161,8 +187,8 @@ class PyMutator(AbstractMutator):
         new_text = text[shift:]
         
         # edit node
-        TSNodeAlias = namedtuple("TSNodeAlias", ["start_byte", "end_byte", "start_point", "end_point", "text"])
-        new_node = TSNodeAlias(new_start_byte, node_capture.end_byte, new_start_point, node_capture.end_point, new_text)
+        new_node = DummyTreeSitterNode(new_start_byte, node_capture.end_byte, new_start_point, 
+                                       node_capture.end_point, new_text)
         node_capture = new_node
         assert node_capture.text == new_text, f"Text mismatch: {node_capture.text} != {new_text}"
         return node_capture
@@ -171,7 +197,7 @@ class PyMutator(AbstractMutator):
         self,
         node_capture: tree_sitter.Node,
         byte_program : bytes
-    ) -> tree_sitter.Node:
+    ) -> DummyTreeSitterNode:
         """
         Return types in tree sitter don't include the ->, so we need to add it back
         """
@@ -184,8 +210,8 @@ class PyMutator(AbstractMutator):
         new_text = byte_program[index:node_capture.end_byte]
         
         # edit node
-        TSNodeAlias = namedtuple("TSNodeAlias", ["start_byte", "end_byte", "start_point", "end_point", "text"])
-        new_node = TSNodeAlias(new_start_byte, node_capture.end_byte, new_start_point, node_capture.end_point, new_text)
+        new_node = DummyTreeSitterNode(new_start_byte, node_capture.end_byte, new_start_point, 
+                    node_capture.end_point, new_text)
         node_capture = new_node
         assert node_capture.text == new_text, f"Text mismatch: {node_capture.text} != {new_text}"
         return node_capture
@@ -219,7 +245,8 @@ class PyMutator(AbstractMutator):
         class_names = get_captures(tree, CLASS_NAMES, "py", "id")
         type_annotations_captures = get_captures(tree, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation")
         
-        type_rename_captures = [self.postprocess_type_annotation(x, b":", 1) for x in type_annotations_captures] + class_names + return_types_captures
+        type_rename_captures = [self.postprocess_type_annotation(x, b":", 1) for x in type_annotations_captures] \
+                        + class_names + return_types_captures
         remove_annotations_captures = [self.postprocess_type_annotation(x, b":", 0) for x in type_annotations_captures] 
         remove_annotations_captures +=  [self.postprocess_return_type(x, program_bytes) for x in return_types_captures]
         
@@ -247,15 +274,12 @@ class PyMutator(AbstractMutator):
         
         # -----------------------
         # Apply random combinations of mutations
-        import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
-        import_statement_names = b"\n".join([x.text for x in import_statements])
         new_program, all_mutations = self.mutate_captures(
             program,
             mutations,
             var_rename_all,
             type_rename_all,
-            remove_annotations_all,
-            import_statement_names = import_statement_names
+            remove_annotations_all
         )
         
         if debug_seed is not None:
@@ -272,7 +296,7 @@ class PyMutator(AbstractMutator):
         remove_annotations_captures: List[tree_sitter.Node]
     ) -> Tuple[tree_sitter.Node]:
         var_rename_targets = set([x.text for x in var_rename_captures])
-        type_rename_targets = set([x.text for x in type_rename_captures])
+        type_rename_targets = set([x.text.strip() for x in type_rename_captures])
         
         # do not rename or delete these types
         types_blacklist = [bytes(fim_type,"utf-8"), self.placeholder()]

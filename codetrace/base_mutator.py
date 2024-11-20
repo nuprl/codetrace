@@ -40,18 +40,25 @@ class Mutation:
                 replacement={str(self.byte_replacement)},
                 prefix={prefix})"""
 
-MutationFn = TypeVar("MutationFn", bound=Callable[[List[tree_sitter.Node], List[Mutation]]])
+MutationFn = TypeVar("MutationFn", bound=Callable[[List[tree_sitter.Node]], List[Mutation]])
+tree_sitter_fim = "_CodetraceSpecialPlaceholder_"
+fim_placeholder = "<FILL>"
 
 class AbstractMutator(ABC):
 
     @property
-    @abstractmethod
     def tree_sitter_placeholder(self) -> bytes:
-        return bytes("_CodetraceSpecialPlaceholder_", "utf-8")
+        return bytes(tree_sitter_fim, "utf-8")
     
-    @abstractmethod
     def replace_placeholder(self, program:str) -> str:
-        return program.replace("<FILL>", "_CodetraceSpecialPlaceholder_")
+        if not fim_placeholder in program:
+            raise ValueError(f"Program does not contain {fim_placeholder}!")
+        return program.replace(fim_placeholder, tree_sitter_fim)
+    
+    def revert_placeholder(self, program:str) -> str:
+        if not tree_sitter_fim in program:
+            raise ValueError(f"Program does not contain {tree_sitter_fim}!")
+        return program.replace(tree_sitter_fim, fim_placeholder)
 
     @abstractmethod
     def add_program_prefix(self, byte_program: bytes, prefixes: List[bytes]) -> bytes:
@@ -61,7 +68,6 @@ class AbstractMutator(ABC):
     def format_capture(self, capture: tree_sitter.Node, prefix: bytes, **kwargs) -> bytes:
         pass
 
-    @abstractmethod
     def rename_vars(self, var_captures : List[tree_sitter.Node]) -> List[Mutation]:
         """
         Make mutations for renaming vraiables in VAR_CAPTURES.
@@ -81,7 +87,6 @@ class AbstractMutator(ABC):
             mutations.append(mutation)
         return mutations
     
-    @abstractmethod
     def rename_types(self, type_captures: List[tree_sitter.Node]) -> List[Mutation]:
         """
         Make mutations for renaming types. Assign a new name to each type in type_captures.
@@ -105,7 +110,6 @@ class AbstractMutator(ABC):
             mutations.append(mutation)
         return mutations
 
-    @abstractmethod
     def delete_annotations(self, annotation_captures : List[tree_sitter.Node]) -> List[Mutation]:
         """
         Delete the type annotations from captures
@@ -126,7 +130,6 @@ class AbstractMutator(ABC):
     ) -> str:
         pass
 
-    @abstractmethod
     def apply_mutations(self, program: str, mutations: List[Mutation]) -> str:
         """
         Apply mutations to the program.
@@ -151,7 +154,6 @@ class AbstractMutator(ABC):
             byte_program = self.add_program_prefix(byte_program, prefixes)
         return byte_program.decode("utf-8")
     
-    @abstractmethod
     def random_mutate_ordered_by_type(
         self, 
         program: str, 
@@ -180,7 +182,6 @@ class AbstractMutator(ABC):
                 
         return new_program
     
-    @abstractmethod
     def mutate_captures(
         self,
         program:str,
@@ -188,8 +189,12 @@ class AbstractMutator(ABC):
         var_rename_captures: List[tree_sitter.Node],
         type_rename_captures: List[tree_sitter.Node],
         remove_captures: List[tree_sitter.Node],
-        **kwargs
-    )-> Tuple[str, List[MutationFn]]:
+    )-> Tuple[str, List[Mutation]]:
+        """
+        Given a program, a list of mutations to apply and the target nodes
+        for each mutation, return the mutated program and list of actually
+        applied mutations.
+        """
         # if any out of the selected mutations has no captures, return None
         for captures in [var_rename_captures, type_rename_captures,remove_captures]:
             if len(captures) == 0:
@@ -200,7 +205,7 @@ class AbstractMutator(ABC):
         if self.rename_vars in mutations:
             all_mutations += self.rename_vars(var_rename_captures)
         if self.rename_types in mutations:
-            all_mutations += self.rename_types(type_rename_captures, **kwargs)
+            all_mutations += self.rename_types(type_rename_captures)
         if self.delete_annotations in mutations:
             all_mutations += self.delete_annotations(remove_captures)
 
@@ -212,13 +217,12 @@ class AbstractMutator(ABC):
         
         # sometimes the placeholder can be deleted, for example in nested type annotations,
         # so here's a safety check
-        if not "_CodetraceSpecialPlaceholder_" in new_program:
+        try:
+            new_program = self.revert_placeholder(new_program)
+        except ValueError:
             return None, []
-        
-        new_program = new_program.replace("_CodetraceSpecialPlaceholder_", "<FILL>")
         return new_program, all_mutations
     
-    @abstractmethod
     def find_all_other_locations_of_captures(
         self,
         program:str,

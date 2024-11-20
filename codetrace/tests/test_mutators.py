@@ -1,16 +1,88 @@
+# from codetrace.py_mutator import (
+#     random_mutate as _py_mutate,
+#     mutate_captures as py_mutate_captures,
+#     find_mutation_locations as py_find_mut_locs
+# )
 from codetrace.py_mutator import (
-    add_type_aliases_after_imports as py_add_aliases,
-    postprocess_type_annotation as py_postproc_annotation,
-    postprocess_return_type as py_postproc_return_type,
-    random_mutate as _py_mutate,
-    mutate_captures as py_mutate_captures,
-    apply_mutations as py_apply_mutations,
-    find_mutation_locations as py_find_mut_locs
+    PyMutator,
+    PY_TYPE_ANNOTATIONS_QUERY,
+    RETURN_TYPES as PY_RETURN_TYPES,
+    PY_IDENTIFIER_QUERY
 )
-from codetrace.ts_mutator import (
-    random_mutate as _ts_mutate,
-    apply_mutations as ts_apply_mutations,
-)
+# from codetrace.ts_mutator import (
+#     random_mutate as _ts_mutate,
+#     apply_mutations as ts_apply_mutations,
+#     mutate_captures as py_mutate_captures,
+#     find_mutation_locations as py_find_mut_locs
+# )
+# merge_nested_mutations
+from codetrace.ts_mutator import TsMutator
 from functools import partial
-py_mutate = partial(_py_mutate, debug_seed=-1)
-ts_mutate = partial(_ts_mutate, debug_seed=-1)
+import os
+import tree_sitter
+from codetrace.parsing_utils import get_captures
+
+CWD = os.path.dirname(os.path.abspath(__file__))
+PROG = os.path.join(CWD, "test_programs")
+
+def read(path: str) -> str:
+    with open(path, "r") as fp:
+        return fp.read()
+
+def byte_encode(s: str, encoding="utf-8") -> bytes:
+    return bytes(s, encoding)
+
+def read_bytes(path: str) -> bytes:
+    return byte_encode(read(path))
+
+def test_py_add_aliases():
+    mutator = PyMutator()
+    code_bytes = read_bytes(f"{PROG}/before_add_alias.py")
+    output = mutator.add_type_aliases(
+        code_bytes, [
+            b'__tmp0 : TypeAlias = "TestUserRedirectView"', 
+            b'__tmp1 : TypeAlias = "settings.AUTH_USER_MODEL"',
+            b'__tmp2 : TypeAlias = "RequestFactory"']
+    )
+    expected = read_bytes(f"{PROG}/after_add_alias.py")
+    assert output == expected
+
+def test_py_postproc_annotation():
+    mutator = PyMutator()
+    node = get_captures("def palindrome(s : List[int]):\n\tpass", PY_TYPE_ANNOTATIONS_QUERY, "py", 
+                        "annotation")[0]
+    full_annotation = mutator.postprocess_type_annotation(node, target_char=b":", shift_amt=0)
+    type_only = mutator.postprocess_type_annotation(node, target_char=b":", shift_amt=1)
+    assert type_only.text == b" List[int]"
+    assert full_annotation.text == b": List[int]"
+
+def test_py_postproc_return_types():
+    mutator = PyMutator()
+    prog = """
+def palindrome(s : List[int], **kwargs) -> Union[List[Request], Dict]:
+    pass
+"""
+    program = bytes(prog, "utf-8")
+    node = get_captures(program, PY_RETURN_TYPES, "py", "id")[0]
+    assert node.text == b"Union[List[Request], Dict]"
+    output = mutator.postprocess_return_type(node, program)
+    assert output.text == b"-> Union[List[Request], Dict]"
+
+def test_py_mutate_captures():
+    mutator = PyMutator()
+    program = read(f"{PROG}/before_var_rename.py")
+    var_captures = get_captures(program, PY_IDENTIFIER_QUERY, "py", "id")
+    var_captures = [v for v in var_captures if b"" in v.text]
+    output, _ = mutator.mutate_captures(
+        program,
+        [mutator.rename_vars],
+        var_rename_captures=var_captures,
+        type_rename_captures=[],
+        remove_captures=[]
+    )
+    expected = read(f"{PROG}/after_var_rename.py")
+    assert output == expected
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([os.path.abspath(__file__), "-vv"])

@@ -1,4 +1,7 @@
-from tqdm import tqdm
+from argparse import ArgumentParser
+from functools import partial
+from nnsight import LanguageModel
+import torch
 from codetrace.interp_utils import (
     collect_hidden_states, 
     logit_lens,
@@ -8,10 +11,6 @@ from codetrace.interp_utils import (
 )
 from codetrace.utils import mask_target_idx, mask_target_tokens, predict, copy_decoder
 from codetrace.batched_utils import batched_get_averages,batched_insert_patch_logit
-from nnsight import LanguageModel
-import torch
-from argparse import ArgumentParser
-from functools import partial
 """
 Setup code
 """
@@ -24,6 +23,12 @@ model = LanguageModel(args.modelname, device_map="cuda", torch_dtype=torch.bfloa
 """
 tests
 """
+def test_batched_averages():
+    pass
+
+def test_batched_insert_patch():
+    pass
+
 def test_logit_pipeline():
     prompts = [
         'print(f',
@@ -218,5 +223,6 @@ repeat_test(test_collect_at_token_idx3, args.num_reps)
 repeat_test(test_collect_at_token_idx4, args.num_reps)
 repeat_test(test_collect_at_token_idx5, args.num_reps)
 repeat_test(test_interp_patch, args.num_reps)
-
+test_batched_averages()
+test_batched_insert_patch()
 print("All tests passed!")
