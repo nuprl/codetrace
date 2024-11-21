@@ -2,7 +2,7 @@ import tree_sitter
 from codetrace.parsing_utils import (
     get_captures,TS_PARSER, typescript_builtin_objects
 )
-from codetrace.base_mutator import AbstractMutator
+from codetrace.base_mutator import AbstractMutator, MutationFn
 import random
 from typing import List, Tuple,Callable, Optional
 import random
@@ -49,7 +49,7 @@ class TsMutator(AbstractMutator):
         """
         return node.type == "predefined_type" or node.text.decode("utf-8") in typescript_builtin_objects
     
-    def add_type_alias(self, type_capture: tree_sitter.Node, alias: bytes) -> bytes:
+    def format_type_alias(self, type_capture: tree_sitter.Node, alias: bytes) -> bytes:
         if self.needs_alias(type_capture) and type_capture.text.decode("utf-8") in typescript_builtin_objects:
             prefix = b"class " + alias + b" extends " + type_capture.text + b" {};"
         elif self.needs_alias(type_capture):
@@ -90,7 +90,7 @@ class TsMutator(AbstractMutator):
         self,
         program: str,
         fim_type: str,
-        mutations: List[Callable],
+        mutations: List[MutationFn],
         debug_seed: Optional[int] = None
     ) -> str:
         """

@@ -7,7 +7,6 @@ from codetrace.parsing_utils import (
     replace_between_bytes
 )
 
-
 def test_replace_between_bytes():
     text = b"I ponder when I will be replaced"
     start_byte = text.index(b"when I w")

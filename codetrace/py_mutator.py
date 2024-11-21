@@ -2,7 +2,7 @@ import tree_sitter
 from codetrace.parsing_utils import (
     get_captures, is_in_capture_range, PY_PARSER
 )
-from codetrace.base_mutator import AbstractMutator, Mutation, TreeSitterLocation
+from codetrace.base_mutator import AbstractMutator, Mutation, TreeSitterLocation, MutationFn
 import random
 from typing import List, Tuple, Callable
 import random
@@ -102,7 +102,8 @@ PY_TOPLEVEL_CHILDREN = "(module (_) @root_children)"
 
 DummyTreeSitterNode = namedtuple("DummyTreeSitterNode", [
                                         "start_byte", "end_byte", 
-                                        "start_point", "end_point", "text"])
+                                        "start_point", "end_point", 
+                                        "text", "type"])
 
 
 def get_toplevel_parent(node: tree_sitter.Node) -> tree_sitter.Node:
@@ -124,18 +125,18 @@ class PyMutator(AbstractMutator):
             get_toplevel_parent(expr).type in IMPORT_STATEMENTS
         )
 
-    def needs_alias(self, typ: tree_sitter.Node) -> bool:
+    def needs_alias(self, typ: tree_sitter.Node, **kwargs) -> bool:
         # if type is a builtin or typing, needs alias
         # if a type is in imports, needs alias
+        import_statements : bytes = kwargs.pop("import_statements")
         return any([typ.text==bytes(t,"utf-8") for t in dir(builtins)+dir(typing)]) \
-            or self.is_import_statement(typ)
+            or typ.text in import_statements
     
-    def add_type_alias(self, type_capture: tree_sitter.Node, alias: bytes) -> bytes:
-        if self.needs_alias(type_capture):
+    def format_type_alias(self, type_capture: tree_sitter.Node, alias: bytes, **kwargs) -> bytes:
+        prefix = None
+        if self.needs_alias(type_capture, **kwargs):
             # make new type alias
-            prefix = alias + b'" : TypeAlias = "' + type_capture.text + '"'
-        else:
-            prefix = None
+            prefix = alias + b' : TypeAlias = "' + type_capture.text + b'"'
         return prefix
 
     def add_type_aliases(self, code: bytes, type_aliases : List[bytes]) -> bytes:
@@ -163,8 +164,7 @@ class PyMutator(AbstractMutator):
 
                     replacement_muts.append(Mutation(
                                     TreeSitterLocation(possible_match),
-                                    byte_replacement=replacement
-                                ))
+                                    byte_replacement=replacement))
                     break
         
         # none found, insert at top
@@ -204,7 +204,7 @@ class PyMutator(AbstractMutator):
         
         # edit node
         new_node = DummyTreeSitterNode(new_start_byte, node_capture.end_byte, new_start_point, 
-                                       node_capture.end_point, new_text)
+                                       node_capture.end_point, new_text, node_capture.type)
         node_capture = new_node
         assert node_capture.text == new_text, f"Text mismatch: {node_capture.text} != {new_text}"
         return node_capture
@@ -227,7 +227,7 @@ class PyMutator(AbstractMutator):
         
         # edit node
         new_node = DummyTreeSitterNode(new_start_byte, node_capture.end_byte, new_start_point, 
-                    node_capture.end_point, new_text)
+                    node_capture.end_point, new_text, node_capture.type)
         node_capture = new_node
         assert node_capture.text == new_text, f"Text mismatch: {node_capture.text} != {new_text}"
         return node_capture
@@ -236,7 +236,7 @@ class PyMutator(AbstractMutator):
         self,
         program: str,
         fim_type: str,
-        mutations: List[Callable],
+        mutations: List[MutationFn],
         debug_seed : int = None
     ) -> str:
         """
@@ -289,13 +289,17 @@ class PyMutator(AbstractMutator):
         )
         
         # -----------------------
+        import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
+        import_statements_txt = b"\n".join([x.text for x in import_statements])
+
         # Apply random combinations of mutations
         new_program, all_mutations = self.mutate_captures(
             program,
             mutations,
             var_rename_all,
             type_rename_all,
-            remove_annotations_all
+            remove_annotations_all,
+            import_statements=import_statements_txt
         )
         
         if debug_seed is not None:
@@ -314,7 +318,7 @@ class PyMutator(AbstractMutator):
         assert self.tree_sitter_placeholder in program
         var_rename_targets = set([x.text for x in var_rename_captures])
         type_rename_targets = set([x.text.strip() for x in type_rename_captures])
-        
+
         # do not rename or delete these types
         types_blacklist = [bytes(fim_type,"utf-8"), bytes(self.tree_sitter_placeholder,"utf-8")]
         import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
@@ -346,6 +350,7 @@ class PyMutator(AbstractMutator):
             # but not the actual imports
             and not is_in_capture_range(x, import_statements)
         ]
+
         remove_annotations_captures = [
             x for x in remove_annotations_captures  
                 if (x.text.replace(b":",b"").replace(b"->",b"").strip() != 

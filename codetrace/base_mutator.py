@@ -29,7 +29,8 @@ class Mutation:
     location : TreeSitterLocation
     byte_replacement : bytes
     prefix : Union[bytes, None] = None
-    
+    _text_label : Union[bytes, None] = None
+
     def __repr__(self):
         prefix = "None"
         if self.prefix is not None:
@@ -51,20 +52,20 @@ class AbstractMutator(ABC):
         pass
 
     @abstractmethod
-    def add_type_alias(self, type_capture: tree_sitter.Node, alias: bytes, **kwargs) -> bytes:
+    def needs_alias(self, node: tree_sitter.Node, **kwargs) -> bool:
+        pass
+
+    @abstractmethod
+    def format_type_alias(self, type_capture: tree_sitter.Node, alias: bytes, **kwargs) -> bytes:
         pass
 
     @abstractmethod    
     def random_mutate(
         program: str,
         fim_type: str,
-        mutations: List[Callable], 
+        mutations: List[MutationFn], 
         **kwargs
     ) -> str:
-        pass
-
-    @abstractmethod
-    def needs_alias(self, node: tree_sitter.Node) -> bool:
         pass
     
     @abstractmethod
@@ -107,11 +108,11 @@ class AbstractMutator(ABC):
         for capture in var_captures:
             location = TreeSitterLocation(capture)
             replacement = name_to_new_name[capture.text]
-            mutation = Mutation(location, replacement)
+            mutation = Mutation(location, replacement, _text_label=capture.text)
             mutations.append(mutation)
         return mutations
     
-    def rename_types(self, type_captures: List[tree_sitter.Node]) -> List[Mutation]:
+    def rename_types(self, type_captures: List[tree_sitter.Node], **kwargs) -> List[Mutation]:
         """
         Make mutations for renaming types. Assign a new name to each type in type_captures.
         If a type needs it, we create a new type alias for its renamed version.
@@ -129,8 +130,8 @@ class AbstractMutator(ABC):
             location = TreeSitterLocation(capture)
             replacement = name_to_new_name[capture.text]
             
-            prefix = self.add_type_alias(capture, replacement)
-            mutation = Mutation(location, replacement, prefix)
+            prefix = self.format_type_alias(capture, replacement, **kwargs)
+            mutation = Mutation(location, replacement, prefix, _text_label=capture.text)
             mutations.append(mutation)
         return mutations
 
@@ -141,7 +142,7 @@ class AbstractMutator(ABC):
         mutations = []
         for capture in annotation_captures:
             location = TreeSitterLocation(capture)
-            mutation = Mutation(location, b"")
+            mutation = Mutation(location, b"", _text_label=capture.text)
             mutations.append(mutation)
         return mutations
 
@@ -204,6 +205,7 @@ class AbstractMutator(ABC):
         var_rename_captures: List[tree_sitter.Node],
         type_rename_captures: List[tree_sitter.Node],
         remove_captures: List[tree_sitter.Node],
+        **kwargs
     )-> Tuple[str, List[Mutation]]:
         """
         Given a program, a list of mutations to apply and the target nodes
@@ -211,6 +213,7 @@ class AbstractMutator(ABC):
         applied mutations.
         """
         assert self.tree_sitter_placeholder in program
+
         # if any out of the selected mutations has no captures, return None
         for (fn, captures) in [
             (self.rename_vars, var_rename_captures),
@@ -218,14 +221,15 @@ class AbstractMutator(ABC):
             (self.delete_annotations, remove_captures)
         ]:
             if fn in mutations and len(captures) == 0:
+                print("ret", fn)
                 return None, []
-    
+
         # collects mutations
         all_mutations = []
         if self.rename_vars in mutations:
             all_mutations += self.rename_vars(var_rename_captures)
         if self.rename_types in mutations:
-            all_mutations += self.rename_types(type_rename_captures)
+            all_mutations += self.rename_types(type_rename_captures, **kwargs)
         if self.delete_annotations in mutations:
             all_mutations += self.delete_annotations(remove_captures)
 
@@ -234,7 +238,7 @@ class AbstractMutator(ABC):
         if new_program == program:
             # no mods applied, return None
             return None, []
-        
+
         # sometimes the placeholder can be deleted, for example in nested type annotations,
         # so here's a safety check
         try:

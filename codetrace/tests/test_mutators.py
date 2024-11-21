@@ -1,21 +1,19 @@
+import itertools as it
 from codetrace.py_mutator import (
     PyMutator,
     PY_TYPE_ANNOTATIONS_QUERY,
     RETURN_TYPES as PY_RETURN_TYPES,
     PY_IDENTIFIER_QUERY,
-    get_toplevel_parent
+    get_toplevel_parent,
+    IMPORT_STATEMENT_QUERY
 )
-# from codetrace.py_mutator import (
-#     random_mutate as _py_mutate,
-#     mutate_captures as py_mutate_captures,
-#     find_mutation_locations as py_find_mut_locs
-# )
 # from codetrace.ts_mutator import (
 #     random_mutate as _ts_mutate,
 #     mutate_captures as py_mutate_captures,
 #     find_mutation_locations as py_find_mut_locs
 # )
 # merge_nested_mutations
+
 from codetrace.ts_mutator import TsMutator
 import os
 from codetrace.parsing_utils import get_captures
@@ -53,7 +51,9 @@ def test_py_add_aliases():
 def test_py_postproc_annotation():
     mutator = PyMutator()
     node = get_captures("def palindrome(s : List[int]):\n\tpass", PY_TYPE_ANNOTATIONS_QUERY, "py", 
-                        "annotation")[0]
+                        "annotation")
+    assert len(node) == 1
+    node = node[0]
     full_annotation = mutator.postprocess_type_annotation(node, target_char=b":", shift_amt=0)
     type_only = mutator.postprocess_type_annotation(node, target_char=b":", shift_amt=1)
     assert type_only.text == b" List[int]"
@@ -66,12 +66,14 @@ def palindrome(s : List[int], **kwargs) -> Union[List[Request], Dict]:
     pass
 """
     program = bytes(prog, "utf-8")
-    node = get_captures(program, PY_RETURN_TYPES, "py", "id")[0]
+    node = get_captures(program, PY_RETURN_TYPES, "py", "id")
+    assert len(node) == 1
+    node = node[0]
     assert node.text == b"Union[List[Request], Dict]"
     output = mutator.postprocess_return_type(node, program)
     assert output.text == b"-> Union[List[Request], Dict]"
 
-def test_py_mutate_captures():
+def test_py_rename_vars():
     mutator = PyMutator()
 
     # testing rename vars
@@ -93,26 +95,115 @@ def test_py_mutate_captures():
     expected = read(f"{PROG}/after_var_rename.py")
     assert output == expected
 
-    # # testing rename types
-    # program = mutator.replace_placeholder(read(f"{PROG}/before_type_rename.py"))
-    # type_captures = get_captures(program, PY_TYPE_ANNOTATIONS_QUERY, "py", "id")
-    # type_captures = []
-    # type_all_captures,_,_ = mutator.find_all_other_locations_of_captures(
-    #     program, "float", type_captures, [], []
-    # )
-    # output, _ = mutator.mutate_captures(
-    #     program,
-    #     [mutator.rename_types],
-    #     var_rename_captures=[],
-    #     type_rename_captures=type_captures,
-    #     remove_captures=[]
-    # )
-    # assert len(type_all_captures) == 8
-    # assert output
-    # expected = read(f"{PROG}/after_type_rename.py")
-    # assert output == expected
+def test_py_rename_types():
+    mutator = PyMutator()
 
-def test_py_needs_alias():
+    # testing rename types
+    program = mutator.replace_placeholder(read(f"{PROG}/before_type_rename.py"))
+    type_captures = get_captures(program, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation")
+    type_captures = [mutator.postprocess_type_annotation(c, b":", 1) 
+                     for c in type_captures if b"Derp" in c.text or b"UserProfile" in c.text]
+    assert len(type_captures) >= 2
+    _,type_all_captures,_ = mutator.find_all_other_locations_of_captures(
+        program, "int", [], type_captures, []
+    )
+    assert len(type_all_captures) >= 2
+    import_statements = (b"\n".join([imp.text for imp in
+        get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")]))
+    output, muts = mutator.mutate_captures(
+        program,
+        [mutator.rename_types],
+        var_rename_captures=[],
+        type_rename_captures=type_all_captures,
+        remove_captures=[],
+        import_statements=import_statements
+    )
+    assert any([mutator.needs_alias(c,import_statements=import_statements) for c in type_all_captures])
+    derp_rename = [m.byte_replacement.decode("utf-8")
+                   for m in muts if b"Derp" in m._text_label][0]
+    user_profile_rename = [m.byte_replacement.decode("utf-8")
+                           for m in muts if b"UserProfile" in m._text_label][0]
+    assert output
+    
+    expected = read(f"{PROG}/after_type_rename.py").replace("__typ1", "__typ2").replace(
+        "__typ0", user_profile_rename).replace("__typ2", derp_rename)
+    assert output == expected
+
+    _,output,_ = mutator.find_all_other_locations_of_captures(
+        program, "Derp", [], type_all_captures, [])
+    # cannot rename fim
+    assert not b"Derp" in [o.text for o in output]
+
+def test_py_delete():
+    mutator = PyMutator()
+    # testing rename vars
+    program = mutator.replace_placeholder(read(f"{PROG}/before_delete.py"))
+    del_captures = get_captures(program, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation")
+    del_captures = [mutator.postprocess_type_annotation(c, b":", 0) 
+                     for c in del_captures if b": str" in c.text]
+    assert len(del_captures) > 0
+    _,_,delete_captures = mutator.find_all_other_locations_of_captures(
+        program, "Realm", [], [], del_captures
+    )
+    output, _ = mutator.mutate_captures(
+        program,
+        [mutator.delete_annotations],
+        var_rename_captures=[],
+        type_rename_captures=[],
+        remove_captures=delete_captures
+    )
+    assert len(delete_captures) > 1
+    assert output
+    
+    expected = read(f"{PROG}/after_delete.py")
+    assert output == expected
+
+def test_py_all_muts():
+    mutator = PyMutator()
+    program = read(f"{PROG}/before_all_muts.py")
+    program = mutator.replace_placeholder(program)
+    import_statements = (b"\n".join([imp.text for imp in
+        get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")]))
+
+    # delete all UserProfile
+    rename_type_muts = [
+            mutator.postprocess_type_annotation(n, b":", 1) for n in
+            get_captures(program, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation") if
+             b": Addressee" in n.text
+        ] + [
+            mutator.postprocess_type_annotation(n, b":", 1) for n in
+            get_captures(program, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation") if
+             b": str" in n.text
+        ]
+    
+    mutations = mutator.find_all_other_locations_of_captures(
+        program,
+        "Realm",
+        # rename msg_type
+        [
+            n for n in
+            get_captures(program, "((identifier) @id)", "py", "id") if
+             b"msg_type" in n.text
+        ],
+        rename_type_muts,
+        [
+            mutator.postprocess_type_annotation(n, b":", 0) for n in
+            get_captures(program, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation") if
+             b": UserProfile" in n.text
+        ]
+    )
+    output,_ = mutator.mutate_captures(
+        program, [mutator.rename_types, mutator.rename_vars, mutator.delete_annotations], *mutations,
+        import_statements=import_statements
+    )
+    # output = mutator.revert_placeholder(output)
+    expected = read(f"{PROG}/after_all_muts.py")
+    expected_switched = expected.replace("__typ0", "__typ2").replace("__typ1","__typ0").replace(
+        "__typ2","__typ1"
+    )
+    assert output == expected or output == expected_switched
+
+def test_py_is_import():
     mutator = PyMutator()
     # import statement does needs alias
     prog = '''
@@ -122,8 +213,10 @@ def test_py_needs_alias():
 )
 '''
     cap = get_captures(prog, "((identifier) @s)", "py", "s")
-    cap = [c for c in cap if c.text == b"p"][0]
-    assert mutator.needs_alias(cap)
+    cap = [c for c in cap if c.text == b"p"]
+    assert len(cap) == 1
+    cap = cap[0]
+    assert mutator.is_import_statement(cap)
 
     prog = '''
     from math.hulu.tru import (
@@ -132,8 +225,10 @@ def test_py_needs_alias():
 )
 '''
     cap = get_captures(prog, "((identifier) @s)", "py", "s")
-    cap = [c for c in cap if c.text == b"p"][0]
-    assert mutator.needs_alias(cap)
+    cap = [c for c in cap if c.text == b"p"]
+    assert len(cap) == 1
+    cap = cap[0]
+    assert mutator.is_import_statement(cap)
 
 
 def test_get_toplevel_parent():
