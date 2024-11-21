@@ -1,4 +1,5 @@
 from typing import TypeAlias
+__typ0 : TypeAlias = "UserProfile"
 from typing import Any, Callable, Dict, List, Optional
 
 from zerver.lib.topic import (
@@ -10,8 +11,6 @@ from zerver.models import (
     MutedTopic,
     UserProfile
 )
-__typ0 : TypeAlias = "UserProfile"
-
 from sqlalchemy.sql import (
     and_,
     column,

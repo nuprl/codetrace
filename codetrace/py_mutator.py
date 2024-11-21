@@ -114,69 +114,34 @@ class PyMutator(AbstractMutator):
         return any([typ.text==bytes(t,"utf-8") for t in dir(builtins)+dir(typing)]) \
             or typ.text in import_statements
     
-    def format_type_alias(self, type_capture: tree_sitter.Node, alias: bytes, **kwargs) -> bytes:
+    def format_type_alias(self, type_capture: tree_sitter.Node, aliased_name: bytes, **kwargs) -> bytes:
         prefix = None
         if self.needs_alias(type_capture, **kwargs):
             # make new type alias
-            prefix = alias + b' : TypeAlias = "' + type_capture.text + b'"'
+            prefix = aliased_name + b' : TypeAlias = "' + type_capture.text + b'"'
         return prefix
 
-    def add_type_aliases(self, code: bytes, type_aliases : List[bytes]) -> bytes:
-        """
-        Add type aliases to the prefix
-        """
-        # raise NotImplementedError("Needs work")
-#     """
-# Find first byte in code that == alias, then insert alias below that statement,
-# unless it is import, Find statement by looking at children of module
-#     """
+    def add_aliases_to_program(self, program: bytes, aliases: List[bytes], **test_kwargs) -> bytes:
+        aliases = list(set(aliases))
+        if test_kwargs.pop("sort",None):
+            aliases.sort()
         import_typ_alias = b"from typing import TypeAlias\n"
+        return import_typ_alias + b"\n".join(aliases) + b"\n" + program
 
-        # # add before the first expression
-        # expressions = PY_PARSER.parse(code).root_node.children
-        # # find the relevant FIRST expression to insert alias before
-        # replacement_muts = defaultdict(list)
-        
-        # for type_alias in type_aliases:
-        #     type_original = type_alias.rsplit(b'=')[-1].replace(b'"',b'').strip()
-        #     # find first occurence of original type
-        #     min_byte = 1000000
-        #     for block in expressions:
-        #         if type_original in block.text:
-        #             if block.type in IMPORT_STATEMENTS:
-        #                 replacement_idx = block.end_byte
-        #             else:
-        #                 replacement_idx = block.start_byte
-        #             min_byte = min(min_byte, replacement_idx)
-        #     replacement_muts[min_byte].append(type_alias)
-        
-        # # none found, insert at top
-        # if len(replacement_muts) == 0:
-        return import_typ_alias + b"\n".join(type_aliases) + b"\n" + code
-        # # apply muts
-        # applied_muts = code
-        # for replacement_index in sorted(replacement_muts.keys(), reverse=True):
-        #     aliases = b"\n" + b"\n".join(replacement_muts[replacement_index]) + b"\n"
-        #     applied_muts = applied_muts[:replacement_index] + aliases + applied_muts[replacement_index:]
-        # return import_typ_alias + applied_muts
-
-    def add_program_prefix(self, byte_program: bytes, prefixes: List[bytes]) -> bytes:
-        prefixes = list(set(prefixes))
-        return self.add_type_aliases(byte_program, prefixes)
-
-    def postprocess_type_annotation(
+    def shift_capture_from_char(
         self,
         node_capture: tree_sitter.Node,
         target_char: bytes, # ":"
         shift_amt : int
     ) -> DummyTreeSitterNode:
         """
-        Postprocess the annotation node by applying a shift to the node from the target character. 
-        Captured annotations contain var id and type id, for example:
-            n : int
-        We want to extract only:
-            : int
-        Thus, need to shift node location + text
+        Postprocess the node by applying a shift to the node from the target character. 
+        For examples:
+            Captured annotations contain var id and type id, for example:
+                n : int
+            We want to extract only:
+                : int
+            Thus, need to shift node location + text
         """
         text = node_capture.text
         # find the index of the colon
@@ -252,7 +217,7 @@ class PyMutator(AbstractMutator):
         
         type_rename_captures = [self.extract_type_from_annotation(x) for x in type_annotations_captures] \
                         + class_names + return_types_captures
-        remove_annotations_captures = [self.postprocess_type_annotation(x, b":", 0) for x in type_annotations_captures] 
+        remove_annotations_captures = [self.shift_capture_from_char(x, b":", 0) for x in type_annotations_captures] 
         remove_annotations_captures +=  [self.postprocess_return_type(x, program_bytes) for x in return_types_captures]
         
         def select_random_subset(x):

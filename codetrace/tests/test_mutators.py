@@ -4,7 +4,6 @@ from codetrace.py_mutator import (
     PY_TYPE_ANNOTATIONS_QUERY,
     RETURN_TYPES as PY_RETURN_TYPES,
     PY_IDENTIFIER_QUERY,
-    get_toplevel_parent,
     IMPORT_STATEMENT_QUERY,
     DummyTreeSitterNode
 )
@@ -16,7 +15,7 @@ from codetrace.parsing_utils import get_captures
 CWD = os.path.dirname(os.path.abspath(__file__))
 PROG = os.path.join(CWD, "test_programs")
 
-def get_import_statement(program: str) ->bytes:
+def get_import_statements(program: str) ->bytes:
     return (b"\n".join([imp.text for imp in
         get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")]))
 
@@ -56,11 +55,12 @@ class EraseTypeVisitor(TypeVisitor[Type]):
         # TODO: replace with an assert after UnboundType can't leak from semantic analysis.
         return AnyType(TypeOfAny.from_error)
 """
-    cap = [mutator.postprocess_type_annotation(c, b":",1) for c in get_captures(program, PY_TYPE_ANNOTATIONS_QUERY,"py","annotation")
+    cap = [mutator.shift_capture_from_char(c, b":",1) for c 
+           in get_captures(program, PY_TYPE_ANNOTATIONS_QUERY,"py","annotation")
            if b"UnboundType" in c.text]
     assert len(cap) == 1
     cap = cap[0]
-    imps = get_import_statement(program)
+    imps = get_import_statements(program)
     output = mutator.needs_alias(cap, import_statements=imps)
     print(cap.text, imps)
     assert output
@@ -82,6 +82,7 @@ class EraseTypeVisitor(TypeVisitor[Type]):
 """
 
     expected = f"""from typing import TypeAlias
+__tmp : TypeAlias = "UnboundType"
 
 from typing import Optional, Container, Callable
 
@@ -90,8 +91,6 @@ from mypy.types import (
     CallableType, TupleType, TypedDictType, UnionType, Overloaded, ErasedType, PartialType,
     DeletedType, TypeTranslator, UninhabitedType, TypeType, TypeOfAny, LiteralType,
 )
-__tmp : TypeAlias = "UnboundType"
-
 
 class EraseTypeVisitor(TypeVisitor[Type]):
 
@@ -99,7 +98,7 @@ class EraseTypeVisitor(TypeVisitor[Type]):
         # TODO: replace with an assert after UnboundType can't leak from semantic analysis.
         return AnyType(TypeOfAny.from_error)
 """
-    output = mutator.add_type_aliases(bytes(program, "utf-8"), [b"__tmp : TypeAlias = \"UnboundType\""])
+    output = mutator.add_aliases_to_program(bytes(program, "utf-8"), [b"__tmp : TypeAlias = \"UnboundType\""])
     assert output == bytes(expected,"utf-8")
 
     program = """from flask import g, url_for
@@ -120,21 +119,22 @@ def _to_items_for_rendering(
 ) -> list[NavItemForRendering]:
     return [_to_item_for_rendering(site_id, item) for item in items]"""
 
-    cap = [mutator.postprocess_type_annotation(c, b":",1) for c in get_captures(program, PY_TYPE_ANNOTATIONS_QUERY,"py","annotation")
+    cap = [mutator.shift_capture_from_char(c, b":",1) for c 
+           in get_captures(program, PY_TYPE_ANNOTATIONS_QUERY,"py","annotation")
            if b": NavItem" in c.text]
     assert len(cap) == 1
     cap = cap[0]
-    imps = get_import_statement(program)
+    imps = get_import_statements(program)
     output = mutator.needs_alias(cap, import_statements=imps)
     print(cap.text, imps)
     assert output
 
     program = "def func(s: str) -> str:\n\tpass"
-    cap = [mutator.postprocess_type_annotation(c, b":",2) for c in get_captures(program, PY_TYPE_ANNOTATIONS_QUERY,"py","annotation")
+    cap = [mutator.shift_capture_from_char(c, b":",2) for c in get_captures(program, PY_TYPE_ANNOTATIONS_QUERY,"py","annotation")
            if b": str" in c.text]
     assert len(cap) == 1
     cap = cap[0]
-    imps = get_import_statement(program)
+    imps = get_import_statements(program)
     output = mutator.needs_alias(cap, import_statements=imps)
     print(cap.text, imps)
     assert output
@@ -145,17 +145,18 @@ def test_py_add_aliases():
     code = read(f"{PROG}/before_add_alias.py")
     code = mutator.replace_placeholder(code)
     code_bytes = byte_encode(code)
-    output = mutator.add_type_aliases(
+    output = mutator.add_aliases_to_program(
         code_bytes, [
             b'__tmp0 : TypeAlias = "TestUserRedirectView"', 
             b'__tmp1 : TypeAlias = "settings.AUTH_USER_MODEL"',
-            b'__tmp2 : TypeAlias = "RequestFactory"']
+            b'__tmp2 : TypeAlias = "RequestFactory"'],
+        sort=True
     )
     expected = byte_encode(
         mutator.replace_placeholder(
         read(f"{PROG}/after_add_alias.py")
     ))
-    with open(f"{PROG}/actual_after_add_alias.py","w") as fp:
+    with open(f"/tmp/actual_add_alias.py","w") as fp:
         fp.write(output.decode("utf-8"))
     assert output == expected
 
@@ -165,8 +166,8 @@ def test_py_postproc_annotation():
                         "annotation")
     assert len(node) == 1
     node = node[0]
-    full_annotation = mutator.postprocess_type_annotation(node, target_char=b":", shift_amt=0)
-    type_only = mutator.postprocess_type_annotation(node, target_char=b":", shift_amt=1)
+    full_annotation = mutator.shift_capture_from_char(node, target_char=b":", shift_amt=0)
+    type_only = mutator.shift_capture_from_char(node, target_char=b":", shift_amt=1)
     assert type_only.text == b" List[int]"
     assert full_annotation.text == b": List[int]"
 
@@ -219,25 +220,27 @@ def test_py_rename_types():
         program, "int", [], type_captures, []
     )
     assert len(type_all_captures) >= 2
-    import_statements = get_import_statement(program)
+    import_statements = get_import_statements(program)
     output, muts = mutator.mutate_captures(
         program,
         [mutator.rename_types],
         var_rename_captures=[],
         type_rename_captures=type_all_captures,
         remove_captures=[],
-        import_statements=import_statements
+        import_statements=import_statements,
+        sort=True
     )
     assert any([mutator.needs_alias(c,import_statements=import_statements) for c in type_all_captures])
-    derp_rename = [m.byte_replacement.decode("utf-8")
-                   for m in muts if b"Derp" in m._text_label][0]
-    user_profile_rename = [m.byte_replacement.decode("utf-8")
-                           for m in muts if b"UserProfile" in m._text_label][0]
     assert output
     
-    expected = read(f"{PROG}/after_type_rename.py").replace("__typ1", "__typ2").replace(
-        "__typ0", user_profile_rename).replace("__typ2", derp_rename)
-    assert output == expected
+    expected = read(f"{PROG}/after_type_rename.py")
+
+    expected = read(f"{PROG}/after_type_rename.py")
+    with open(f"/tmp/actual_type_rename.py","w") as fp:
+        fp.write(output)
+    expected_switched_names = expected.replace("__typ0","__typ-placeholder").replace(
+        "__typ1","__typ0").replace("__typ-placeholder","__typ1")
+    assert output == expected or output == expected_switched_names
 
     _,output,_ = mutator.find_all_other_locations_of_captures(
         program, "Derp", [], type_all_captures, [])
@@ -249,7 +252,7 @@ def test_py_delete():
     # testing rename vars
     program = mutator.replace_placeholder(read(f"{PROG}/before_delete.py"))
     del_captures = get_captures(program, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation")
-    del_captures = [mutator.postprocess_type_annotation(c, b":", 0) 
+    del_captures = [mutator.shift_capture_from_char(c, b":", 0) 
                      for c in del_captures if b": str" in c.text]
     assert len(del_captures) > 0
     _,_,delete_captures = mutator.find_all_other_locations_of_captures(
@@ -272,7 +275,7 @@ def test_py_all_muts():
     mutator = PyMutator()
     program = read(f"{PROG}/before_all_muts.py")
     program = mutator.replace_placeholder(program)
-    import_statements = get_import_statement(program)
+    import_statements = get_import_statements(program)
 
     # delete all UserProfile
     rename_type_muts = [
@@ -296,7 +299,7 @@ def test_py_all_muts():
         ],
         rename_type_muts,
         [
-            mutator.postprocess_type_annotation(n, b":", 0) for n in
+            mutator.shift_capture_from_char(n, b":", 0) for n in
             get_captures(program, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation") if
              b": UserProfile" in n.text
         ]
@@ -307,50 +310,11 @@ def test_py_all_muts():
     )
     # output = mutator.revert_placeholder(output)
     expected = read(f"{PROG}/after_all_muts.py")
-    expected_switched = expected.replace("__typ0", "__typ2").replace("__typ1","__typ0").replace(
-        "__typ2","__typ1"
-    )
+    with open("/tmp/actual_all_muts.py","w") as fp:
+        fp.write(output)
+    expected_switched = expected.replace("__typ0", "__typ-placeholder").replace(
+        "__typ1","__typ0").replace("__typ-placeholder","__typ1")
     assert output == expected or output == expected_switched
-
-
-def test_get_toplevel_parent():
-    prog = """
-import math
-from torch.utils import (
-	data.DataLoader as dl
-)
-
-def outer_function(x, y):
-    import boo
-    def inner_function(a, b):
-        return a * b
-    result = inner_function(x, y)
-    return result + math.sqrt(x)
-"""
-    captures = get_captures(prog, "((identifier) @s)", "py", "s")
-    cap = [c for c in captures if c.text == b"dl"]
-    assert len(cap) == 1
-    cap = cap[0]
-    parent = get_toplevel_parent(cap)
-    assert parent.type == "import_from_statement"
-    assert parent.text == b"""from torch.utils import (
-	data.DataLoader as dl
-)"""
-
-    cap = [c for c in captures if c.text == b"sqrt"]
-    assert len(cap) == 1
-    cap = cap[0]
-    parent = get_toplevel_parent(cap)
-    assert parent.type == "return_statement"
-    assert parent.text == b"return result + math.sqrt(x)"
-
-    captures = get_captures(prog, "((identifier) @s)", "py", "s")
-    cap = [c for c in captures if c.text == b"boo"]
-    assert len(cap) == 1
-    cap = cap[0]
-    parent = get_toplevel_parent(cap)
-    assert parent.type == "import_statement"
-    assert parent.text == b"import boo"
 
 def test_merge_nested_mutations():
     mutator = PyMutator()

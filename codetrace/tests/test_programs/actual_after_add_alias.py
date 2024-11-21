@@ -1,17 +1,16 @@
 from typing import TypeAlias
+__tmp0 : TypeAlias = "TestUserRedirectView"
+__tmp1 : TypeAlias = "settings.AUTH_USER_MODEL"
+__tmp2 : TypeAlias = "RequestFactory"
 import pytest
 from django.conf import settings
 from django.test import RequestFactory
-__tmp2 : TypeAlias = "RequestFactory"
-
 
 from hansberger.users.views import UserRedirectView, UserUpdateView
 
 pytestmark = pytest.mark.django_db
 
 
-
-__tmp1 : TypeAlias = "settings.AUTH_USER_MODEL"
 class TestUserUpdateView:
     """
     TODO:
@@ -44,8 +43,6 @@ class TestUserUpdateView:
         assert view.get_object() == user
 
 
-
-__tmp0 : TypeAlias = "TestUserRedirectView"
 class TestUserRedirectView:
     def test_get_redirect_url(
         self, user: settings.AUTH_USER_MODEL, request_factory: RequestFactory

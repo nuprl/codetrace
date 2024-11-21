@@ -58,11 +58,11 @@ class TsMutator(AbstractMutator):
             prefix = None
         return prefix
 
-    def add_program_prefix(self, byte_program: bytes, prefixes: List[bytes]) -> bytes:
-        if len(prefixes) > 0:
-            prefixes = b"\n".join(set(prefixes)) + b"\n\n"
-            byte_program = prefixes + byte_program
-        return byte_program
+    def add_aliases_to_program(self, program: bytes, aliases: List[bytes]) -> bytes:
+        if len(aliases) > 0:
+            aliases = b"\n".join(set(aliases)) + b"\n\n"
+            program = aliases + program
+        return program
 
     def is_constructor_param(self, x: tree_sitter.Node):
         """

@@ -47,7 +47,7 @@ fim_placeholder = "<FILL>"
 class AbstractMutator(ABC):
 
     @abstractmethod
-    def add_program_prefix(self, byte_program: bytes, prefixes: List[bytes]) -> bytes:
+    def add_aliases_to_program(self, program: bytes, aliases: List[bytes]) -> bytes:
         pass
 
     @abstractmethod
@@ -55,7 +55,7 @@ class AbstractMutator(ABC):
         pass
 
     @abstractmethod
-    def format_type_alias(self, type_capture: tree_sitter.Node, alias: bytes, **kwargs) -> bytes:
+    def format_type_alias(self, type_capture: tree_sitter.Node, aliased_name: bytes, **kwargs) -> bytes:
         pass
 
     @abstractmethod    
@@ -145,7 +145,7 @@ class AbstractMutator(ABC):
             mutations.append(mutation)
         return mutations
 
-    def apply_mutations(self, program: str, mutations: List[Mutation]) -> str:
+    def apply_mutations(self, program: str, mutations: List[Mutation], **test_kargs) -> str:
         """
         Apply mutations to the program.
         NOTE: 
@@ -166,7 +166,7 @@ class AbstractMutator(ABC):
                 prefixes.append(mutation.prefix)
 
         if len(prefixes) > 0:
-            byte_program = self.add_program_prefix(byte_program, prefixes)
+            byte_program = self.add_aliases_to_program(byte_program, prefixes, **test_kargs)
         return byte_program.decode("utf-8")
     
     def random_mutate_ordered_by_type(
@@ -232,7 +232,7 @@ class AbstractMutator(ABC):
             all_mutations += self.delete_annotations(remove_captures)
 
         # actually modify the program
-        new_program = self.apply_mutations(program, all_mutations)
+        new_program = self.apply_mutations(program, all_mutations, **kwargs)
         if new_program == program:
             # no mods applied, return None
             return None, []
