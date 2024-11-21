@@ -8,6 +8,9 @@ from codetrace.steering import (
 import datasets
 import torch
 
+def test_balance_prompts():
+    balance_prompts()
+
 def test_subtract_avg():
     x = torch.Tensor(
         [
@@ -115,6 +118,115 @@ def is_palindrome(s: <FILL>):
     print(expected)
     print(output)
     assert output == expected, f"{output}!={expected}"
+
+import pytest
+from unittest.mock import MagicMock
+from datasets import Dataset
+
+# Test for the balance_prompts function
+@pytest.fixture
+def mock_dataset():
+    # Create a mock dataset with hexsha (program ids) and fim_type (label types)
+    data = [
+        {"hexsha": "prog1", "fim_type": "typeA"},
+        {"hexsha": "prog1", "fim_type": "typeA"},
+        {"hexsha": "prog2", "fim_type": "typeB"},
+        {"hexsha": "prog2", "fim_type": "typeA"},
+        {"hexsha": "prog3", "fim_type": "typeB"},
+        {"hexsha": "prog3", "fim_type": "typeB"},
+        {"hexsha": "prog1", "fim_type": "typeB"},
+        {"hexsha": "prog3", "fim_type": "typeA"},
+    ]
+    return Dataset.from_list(data)
+
+def test_balance_prompts(mock_dataset):
+    # Case 1: dedup_prog_threshold and dedup_type_threshold are greater than dataset size
+    dedup_prog_threshold = 5
+    dedup_type_threshold = 5
+    result = balance_prompts(mock_dataset, dedup_prog_threshold, dedup_type_threshold)
+    assert len(result) == 8, "The dataset should remain unchanged as the thresholds are higher than the data."
+
+def test_balance_prompts_dedup_prog_threshold(mock_dataset):
+    # Case 2: Deduplication on program ID (hexsha) with a lower threshold
+    dedup_prog_threshold = 2
+    dedup_type_threshold = 5
+    result = balance_prompts(mock_dataset, dedup_prog_threshold, dedup_type_threshold)
+    
+    # Verify that no program appears more than 2 times
+    prog_count = {}
+    for ex in result:
+        prog_count[ex["hexsha"]] = prog_count.get(ex["hexsha"], 0) + 1
+    
+    for count in prog_count.values():
+        assert count <= dedup_prog_threshold, f"Program exceeded the deduplication threshold: {prog_count}"
+
+def test_balance_prompts_dedup_type_threshold(mock_dataset):
+    # Case 3: Deduplication on label type (fim_type) with a lower threshold
+    dedup_prog_threshold = 5
+    dedup_type_threshold = 2
+    result = balance_prompts(mock_dataset, dedup_prog_threshold, dedup_type_threshold)
+    
+    # Verify that no type appears more than 2 times
+    type_count = {}
+    for ex in result:
+        type_count[ex["fim_type"]] = type_count.get(ex["fim_type"], 0) + 1
+    
+    for count in type_count.values():
+        assert count <= dedup_type_threshold, f"Label type exceeded the deduplication threshold: {type_count}"
+
+def test_balance_prompts_dedup_both(mock_dataset):
+    # Case 4: Deduplication on both program ID and label type with lower thresholds
+    dedup_prog_threshold = 2
+    dedup_type_threshold = 2
+    result = balance_prompts(mock_dataset, dedup_prog_threshold, dedup_type_threshold)
+    
+    # Verify that no program or label type exceeds the deduplication threshold
+    prog_count = {}
+    type_count = {}
+    
+    for ex in result:
+        prog_count[ex["hexsha"]] = prog_count.get(ex["hexsha"], 0) + 1
+        type_count[ex["fim_type"]] = type_count.get(ex["fim_type"], 0) + 1
+    
+    for count in prog_count.values():
+        assert count <= dedup_prog_threshold, f"Program exceeded the deduplication threshold: {prog_count}"
+    
+    for count in type_count.values():
+        assert count <= dedup_type_threshold, f"Label type exceeded the deduplication threshold: {type_count}"
+
+def test_balance_prompts_dedup_no_limit(mock_dataset):
+    # Case 5: No deduplication limit (dedup_prog_threshold = -1, dedup_type_threshold = -1)
+    dedup_prog_threshold = -1
+    dedup_type_threshold = -1
+    result = balance_prompts(mock_dataset, dedup_prog_threshold, dedup_type_threshold)
+    
+    # Verify that the dataset size remains the same as no limit is applied
+    assert len(result) == len(mock_dataset), "The dataset should not be filtered when no deduplication limits are applied."
+
+@pytest.mark.parametrize("dedup_prog_threshold, dedup_type_threshold", [
+    (1, 1),
+    (2, 3),
+    (3, 1),
+    (5, 5)
+])
+def test_balance_prompts_varying_thresholds(mock_dataset, dedup_prog_threshold, dedup_type_threshold):
+    # Case 8: Varying thresholds to test different configurations
+    result = balance_prompts(mock_dataset, dedup_prog_threshold, dedup_type_threshold)
+    
+    # Verify no program or label type exceeds the respective thresholds
+    prog_count = {}
+    type_count = {}
+    
+    for ex in result:
+        prog_count[ex["hexsha"]] = prog_count.get(ex["hexsha"], 0) + 1
+        type_count[ex["fim_type"]] = type_count.get(ex["fim_type"], 0) + 1
+    
+    for count in prog_count.values():
+        assert count <= dedup_prog_threshold, f"Program exceeded the deduplication threshold: {prog_count}"
+    
+    for count in type_count.values():
+        assert count <= dedup_type_threshold, f"Label type exceeded the deduplication threshold: {type_count}"
+
 
 if __name__ == "__main__":
     import pytest

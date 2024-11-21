@@ -36,7 +36,7 @@ def balance_prompts(
     for _,ex in tqdm(enumerate(dataset), desc="Deduping dataset",total=len(dataset), disable=disable_tqdm):
         if hexsha_count[ex["hexsha"]] >= prog_maxn and label_count[ex["fim_type"]] >= type_maxn:
             break
-        elif label_count[ex["fim_type"]] >= prog_maxn or hexsha_count[ex["hexsha"]] >= type_maxn:
+        elif label_count[ex["fim_type"]] + 1 >= prog_maxn or hexsha_count[ex["hexsha"]] + 1 >= type_maxn:
             continue
         
         balanced_prompts.append(ex)

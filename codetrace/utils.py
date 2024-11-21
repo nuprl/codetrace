@@ -129,30 +129,21 @@ def mask_target_idx(
     mask = torch.zeros_like(input_ids).index_fill(1, indices, 1)
     return mask > 0
 
-def top_k_top_p_filtering(
+def topk_filtering(
     logits: torch.Tensor,
     top_k: int,
-    top_p: float,
     do_log_probs: bool
 ) -> torch.Tensor:
     """
     Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
     """
-    if top_k > 0:
-        if do_log_probs:
-            topk_indices = logits.log_softmax(dim=-1).topk(top_k, dim=-1).indices
-        else:
-            topk_indices = logits.softmax(dim=-1).topk(top_k, dim=-1).indices
-        # keep only indices that are in the top_k
-        logits = torch.gather(logits, -1, topk_indices)
-        sorted_indices = topk_indices
+    assert top_k > 0
+    if do_log_probs:
+        logits = logits.log_softmax(dim=-1)
+    else:
+        logits = logits.softmax(dim=-1)
 
-    if top_p < 1.0:
-        raise NotImplementedError("use top_k only for now, top_p not needed for greedy decoding")
-    
-    TopkTuple = namedtuple('TopkTuple', ['indices','values'])
-    logit_tuple = TopkTuple(indices=sorted_indices, values=logits)
-    return logit_tuple
+    return logits.topk(top_k, dim=-1)
 
 def predict(model, tokenizer, prompts: Union[List[str],str])->List[str]:
     inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(model.device)

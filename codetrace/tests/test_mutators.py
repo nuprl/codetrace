@@ -280,8 +280,6 @@ def test_merge_nested_mutations():
         if n.type == "typed_parameter" or n.text == b"for_stream"
     ]
     output = mutator.merge_nested_mutation(mutations)
-    with open("actual.md","w") as fp:
-        fp.write(str(output) + "\n" + "="*1000 + "\n" + str(expected))
     assert set([str(o) for o in output]) == set([str(e) for e in expected])
 
 if __name__ == "__main__":

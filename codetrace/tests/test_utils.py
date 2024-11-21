@@ -4,10 +4,35 @@ from codetrace.utils import (
     masked_add,
     mask_target_tokens,
     mask_target_idx,
-    top_k_top_p_filtering
+    topk_filtering
 )
 from transformers import AutoTokenizer
 import torch
+import pytest
+
+@pytest.mark.parametrize("logits, top_k, do_log_probs, expected_indices", [
+    (torch.tensor([[1.0, 2.0, 3.0]]), 2, False, torch.tensor([[2, 1]])),
+    (torch.tensor([[1.0, 2.0, 3.0]]), 1, False, torch.tensor([[2]])),
+    (torch.tensor([[0.1, 0.3, 0.2]]), 2, False, torch.tensor([[1, 2]])),
+    (torch.tensor([[1.0, 2.0, 3.0]]), 2, True, torch.tensor([[2, 1]])),
+    (torch.tensor([[0.5, 0.3, 0.2]]), 3, False, torch.tensor([[0, 1, 2]])),
+])
+def test_topk_filtering(logits, top_k, do_log_probs, expected_indices):
+    # Call the function with parameters
+    result = topk_filtering(logits, top_k, do_log_probs)
+    
+    # Assert the indices and values match the expected ones
+    assert torch.equal(result.indices, expected_indices), f"Expected indices {expected_indices}, got {result.indices}"
+
+@pytest.mark.parametrize("logits, top_k, do_log_probs, expected_indices", [
+    (torch.tensor([[0.5, 0.3, 0.2]]), 3, False, torch.tensor([[0, 1, 2]])),  # All elements are included, since top_k = 3
+    (torch.tensor([[1.0, 2.0, 3.0]]), 1, False, torch.tensor([[2]])),  # Only the highest value (index 2) should be kept
+    (torch.tensor([[1.0, 2.0, 3.0]]), 2, True, torch.tensor([[2, 1]])),  # log_softmax, 2 largest values should be kept
+])
+def test_edge_cases(logits, top_k, do_log_probs, expected_indices):
+    # Test the basic filtering logic, testing edge cases like all logits being 0, or negative logits
+    result = topk_filtering(logits, top_k, do_log_probs)
+    assert torch.equal(result.indices, expected_indices), f"Expected indices {expected_indices}, got {result.indices}"
 
 def test_masked_fill():
     src = torch.Tensor([[1,2,3],[4,5,6]])

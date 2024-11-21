@@ -252,7 +252,6 @@ class AbstractMutator(ABC):
         Merge nested annotation mutations. Recursive
         """
         mutations.sort(key=lambda x: (x.location.start_byte, -x.location.end_byte))
-
         reduced = []
         
         for current in mutations:

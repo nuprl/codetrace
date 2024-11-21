@@ -9,7 +9,7 @@ from typing import List, Union, Callable, Optional, TypeVar
 import transformers
 from torchtyping import TensorType
 from codetrace.utils import (
-    top_k_top_p_filtering,
+    topk_filtering,
     pos_indexing,
     masked_get,
     masked_fill,
@@ -102,7 +102,6 @@ class TraceResult:
         top_k : int = 1,
         layers : List[int] = [-1],
         do_log_probs : bool = False,
-        top_p : float = 1.0
     ) -> LogitResult:
         """
         Decode logits to tokens, after scoring top_k.
@@ -120,7 +119,7 @@ class TraceResult:
         if self.custom_decoder is not None:
             logits = self.custom_decoder(logits)
         
-        logits = top_k_top_p_filtering(logits, top_k, top_p, do_log_probs)
+        logits = topk_filtering(logits, top_k, do_log_probs)
         return LogitResult(logits.indices, logits.values)
 
 @torch.no_grad
