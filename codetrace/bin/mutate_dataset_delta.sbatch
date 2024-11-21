@@ -21,7 +21,7 @@ LANG=$3
 # Replace the commas with underscores in the mutations string.
 MUTATIONSUNDERSCORED=$(echo $MUTATIONS | sed 's/,/_/g')
 
-python3 -m codetrace.scripts.mutate_dataset \
+VLLM_LOGGING_LEVEL=ERROR python3 -m codetrace.scripts.mutate_dataset \
     --model /work/nvme/bcbj/models/$MODEL \
     --tokenizer /work/nvme/bcbj/models/$MODEL \
     --completions-ds results/completions-$LANG-$MODEL \
