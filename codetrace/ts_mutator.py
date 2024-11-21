@@ -4,7 +4,7 @@ from codetrace.parsing_utils import (
 )
 from codetrace.base_mutator import AbstractMutator, MutationFn
 import random
-from typing import List, Tuple,Callable, Optional
+from typing import List, Tuple, Optional
 import random
 """
 Random mutation code.
@@ -40,19 +40,10 @@ return_type: (type_annotation) @name
 
 class TsMutator(AbstractMutator):
 
-    def needs_alias(self, node: tree_sitter.Node) -> bool:
-        """
-        Whether the node, when renamed, will need a type alias to be added to the program.
-        Includes:
-        - predefined types
-        - builtin objects
-        """
-        return node.type == "predefined_type" or node.text.decode("utf-8") in typescript_builtin_objects
-    
     def format_type_alias(self, type_capture: tree_sitter.Node, alias: bytes) -> bytes:
-        if self.needs_alias(type_capture) and type_capture.text.decode("utf-8") in typescript_builtin_objects:
+        if type_capture.text.decode("utf-8") in typescript_builtin_objects:
             prefix = b"class " + alias + b" extends " + type_capture.text + b" {};"
-        elif self.needs_alias(type_capture):
+        elif type_capture.type == "predefined_type":
             prefix = b"type " + alias + b" = " + type_capture.text + b";"
         else:
             prefix = None
@@ -64,6 +55,9 @@ class TsMutator(AbstractMutator):
             program = aliases + program
         return program
 
+    def extract_type_from_annotation(self,node_capture: tree_sitter.Node) -> tree_sitter.Node:
+        return node_capture.child(1)
+    
     def is_constructor_param(self, x: tree_sitter.Node):
         """
         method_definition
@@ -107,7 +101,8 @@ class TsMutator(AbstractMutator):
         # get SELECT captures for target nodes that we can mutate
         tree = TS_PARSER.parse(bytes(program, "utf-8"))
         var_rename_captures = get_captures(tree, TS_VARIABLE_DECLARATION_QUERY, "ts","name")
-        type_rename_captures = get_captures(tree, TS_TYPE_ANNOTATIONS_QUERY, "ts","name")
+        type_rename_captures = [self.extract_type_from_annotation(n) for n in 
+            get_captures(tree, TS_TYPE_ANNOTATIONS_QUERY, "ts","name")]
         remove_annotations_captures = get_captures(tree, TS_PARAM_TYPES_QUERY, "ts","name")
         
         def select_random_subset(x):
@@ -158,7 +153,7 @@ class TsMutator(AbstractMutator):
         types_blacklist = [bytes(fim_type,"utf-8"), bytes(self.tree_sitter_placeholder, "utf-8")]
         tree = TS_PARSER.parse(bytes(program, "utf-8"))
         var_rename_targets = set([x.text for x in var_rename_captures])
-        type_rename_targets = set([x.text.replace(b":",b"").strip() for x in type_rename_captures])
+        type_rename_targets = set([x.text for x in type_rename_captures])
         
         all_id_captures = get_captures(tree, TS_IDENTIFIER_QUERY, "ts","name")
         all_type_id_captures = get_captures(tree,TS_TYPE_IDENTIFIER_QUERY + TS_PREDEFINED_TYPE_QUERY, "ts","name")
@@ -178,6 +173,8 @@ class TsMutator(AbstractMutator):
                                     # don't rename forbidden types
                                     and x.text not in types_blacklist
                                     ]
+
         remove_annotations_captures = [x for x in remove_annotations_captures  if 
                 (x.text.replace(b":",b"").strip() != bytes(self.tree_sitter_placeholder, "utf-8"))]
+
         return var_rename_full_captures, type_rename_full_captures, remove_annotations_captures

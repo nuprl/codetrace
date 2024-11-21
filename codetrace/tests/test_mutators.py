@@ -1,4 +1,6 @@
 import itertools as it
+from codetrace.scripts.typecheck_ds import typecheck_batch
+from codetrace.fast_utils import batched_apply, make_batches
 from codetrace.py_mutator import (
     PyMutator,
     PY_TYPE_ANNOTATIONS_QUERY,
@@ -7,9 +9,16 @@ from codetrace.py_mutator import (
     IMPORT_STATEMENT_QUERY,
     DummyTreeSitterNode
 )
-from codetrace.base_mutator import Mutation, TreeSitterLocation
-from codetrace.ts_mutator import TsMutator
+from codetrace.ts_mutator import (
+    TsMutator,
+    TS_IDENTIFIER_QUERY,
+    TS_PARAM_TYPES_QUERY,
+    TS_TYPE_ANNOTATIONS_QUERY,
+    TS_VARIABLE_DECLARATION_QUERY
+)
+from codetrace.base_mutator import Mutation, TreeSitterLocation,MutationFn
 import os
+from typing import Union,Tuple,List,Dict
 from codetrace.parsing_utils import get_captures
 
 CWD = os.path.dirname(os.path.abspath(__file__))
@@ -332,6 +341,163 @@ def test_merge_nested_mutations():
     ]
     output = mutator.merge_nested_mutation(mutations)
     assert set([str(o) for o in output]) == set([str(e) for e in expected])
+
+def test_ts_rename_vars():
+    mutator = TsMutator()
+
+    # testing rename vars
+    program = mutator.replace_placeholder(read(f"{PROG}/before_var_rename.ts"))
+    var_captures = get_captures(program, TS_VARIABLE_DECLARATION_QUERY, "ts", "name")
+    assert len(var_captures) > 0
+    var_captures = [v for v in var_captures if b"current" in v.text]
+    assert len(var_captures) > 0
+    var_all_captures,_,_ = mutator.find_all_other_locations_of_captures(
+        program, "T", var_captures, [], []
+    )
+    assert len(var_all_captures) > 0
+    output, _ = mutator.mutate_captures(
+        program,
+        [mutator.rename_vars],
+        var_rename_captures=var_all_captures,
+        type_rename_captures=[],
+        remove_captures=[]
+    )
+    assert output
+    expected = read(f"{PROG}/after_var_rename.ts")
+    assert output == expected
+
+def test_ts_rename_types():
+    mutator = TsMutator()
+    # testing rename types
+    program = mutator.replace_placeholder(read(f"{PROG}/before_type_rename.ts"))
+    type_captures = get_captures(program, TS_TYPE_ANNOTATIONS_QUERY, "ts", "name")
+    type_captures = [mutator.extract_type_from_annotation(c)
+            for c in type_captures if b"User" in c.text or b"string" in c.text]
+    assert len(type_captures) >= 2
+    _,type_all_captures,_ = mutator.find_all_other_locations_of_captures(
+        program, "number", [], type_captures, []
+    )
+    assert len(type_all_captures) >= 2
+    output, muts = mutator.mutate_captures(
+        program,
+        [mutator.rename_types],
+        var_rename_captures=[],
+        type_rename_captures=type_all_captures,
+        remove_captures=[]
+    )
+    assert output
+    
+    expected = read(f"{PROG}/after_type_rename.ts")
+
+    expected = read(f"{PROG}/after_type_rename.ts")
+    with open(f"/tmp/actual_type_rename.ts","w") as fp:
+        fp.write(output)
+    expected_switched_names = expected.replace("__typ0","__typ-placeholder").replace(
+        "__typ1","__typ0").replace("__typ-placeholder","__typ1")
+    assert output == expected or output == expected_switched_names
+
+    # cannot rename fim
+    _,output,_ = mutator.find_all_other_locations_of_captures(
+        program, "string", [], type_all_captures, [])
+    assert not b"string" in [o.text for o in output]
+
+def test_ts_extract_type_annotation():
+    mutator = TsMutator()
+    program = """
+function doesNotReject(block: (() => Promise<any>) | Promise<any>, message?: string | Error): Promise<void>;
+    """
+    node = get_captures(program, TS_TYPE_ANNOTATIONS_QUERY, "ts","name")
+    assert len(node) == 3
+    n = [i for i in node if b"(() => Promise<any>) | Promise<any>" in i.text]
+    assert len(n) == 1
+    n = n[0]
+    output = mutator.extract_type_from_annotation(n)
+    expected = b"(() => Promise<any>) | Promise<any>"
+    assert output.text == expected
+    n = [i for i in node if b"string | Error" in i.text]
+    assert len(n) == 1
+    n = n[0]
+    output = mutator.extract_type_from_annotation(n)
+    expected = b"string | Error"
+    assert output.text == expected
+
+def test_ts_all_muts():
+    mutator = TsMutator()
+    program = read(f"{PROG}/before_all_muts.ts")
+    program = mutator.replace_placeholder(program)
+
+    """
+    block -> tmp0
+    throws -> tmp1
+    delete any
+    Error -> typ0
+    CallTracker -> typ1
+    """
+    rename_var_muts = [
+            n for n in
+            get_captures(program, TS_VARIABLE_DECLARATION_QUERY, "ts", "name") if
+             b"block" in n.text
+        ] +[
+            n for n in
+            get_captures(program, TS_VARIABLE_DECLARATION_QUERY, "ts", "name") if
+             b"throws" in n.text
+        ]
+    rename_var_muts = [x for x in rename_var_muts if x]
+    
+    delete_muts = [
+            n for n in get_captures(program, TS_PARAM_TYPES_QUERY, "ts", "name") if
+            mutator.extract_type_from_annotation(n).text == b"any"
+        ]
+    assert len(rename_var_muts) >= 2
+    assert len(delete_muts) > 0
+    assert any([b"throws" in n.text for n in rename_var_muts])
+    
+    rename_type_muts = [
+            mutator.extract_type_from_annotation(n) for n in
+            get_captures(program, TS_TYPE_ANNOTATIONS_QUERY, "ts", "name") if
+             b"Error" in n.text
+        ] + [
+            mutator.extract_type_from_annotation(n) for n in
+            get_captures(program, TS_TYPE_ANNOTATIONS_QUERY, "ts", "name") if
+             b"CallTracker" in n.text
+        ]
+    
+    rename_type_muts = [x for x in rename_type_muts if x]
+    assert any([b"Error" in n.text for n in rename_type_muts])
+    assert len(rename_type_muts) >= 2
+
+    mutations = mutator.find_all_other_locations_of_captures(
+        program,
+        "any",
+        rename_var_muts,
+        rename_type_muts,
+        delete_muts
+    )
+    assert any([b"block" in n.text for n in mutations[0]])
+    assert any([b"CallTracker" in n.text for n in mutations[1]])
+    assert any([b"throws" in n.text for n in mutations[0]])
+    assert any([b"Error" in n.text for n in mutations[1]])
+    assert len(mutations[2]) > 0
+    
+    output,_ = mutator.mutate_captures(
+        program, [mutator.rename_types, mutator.rename_vars, mutator.delete_annotations], *mutations
+    )
+    assert output
+    expected = read(f"{PROG}/after_all_muts.ts")
+    with open("/tmp/actual_all_muts.ts","w") as fp:
+        fp.write(output)
+    
+    expected_switched_typ = expected.replace("__typ0", "__typ-placeholder").replace(
+        "__typ1","__typ0").replace("__typ-placeholder","__typ1")
+    expected_switched_vars = expected.replace("__tmp0", "__tmp-placeholder").replace(
+        "__tmp1","__tmp0").replace("__tmp-placeholder","__tmp1")
+    expected_switched_vars_and_types = expected.replace("__tmp0", "__tmp-placeholder").replace(
+        "__tmp1","__tmp0").replace("__tmp-placeholder","__tmp1").replace(
+        "__typ0", "__typ-placeholder").replace(
+        "__typ1","__typ0").replace("__typ-placeholder","__typ1")
+    assert output == expected or output == expected_switched_vars or \
+        output == expected_switched_typ or output == expected_switched_vars_and_types
+
 
 if __name__ == "__main__":
     import pytest

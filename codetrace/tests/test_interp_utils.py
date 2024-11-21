@@ -23,12 +23,6 @@ model = LanguageModel(args.modelname, device_map="cuda", torch_dtype=torch.bfloa
 """
 tests
 """
-def test_batched_averages():
-    pass
-
-def test_batched_insert_patch():
-    pass
-
 def test_logit_pipeline():
     prompts = [
         'print(f',
@@ -223,6 +217,4 @@ repeat_test(test_collect_at_token_idx3, args.num_reps)
 repeat_test(test_collect_at_token_idx4, args.num_reps)
 repeat_test(test_collect_at_token_idx5, args.num_reps)
 repeat_test(test_interp_patch, args.num_reps)
-test_batched_averages()
-test_batched_insert_patch()
 print("All tests passed!")

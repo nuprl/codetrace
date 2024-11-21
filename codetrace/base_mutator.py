@@ -51,13 +51,13 @@ class AbstractMutator(ABC):
         pass
 
     @abstractmethod
-    def needs_alias(self, node: tree_sitter.Node, **kwargs) -> bool:
-        pass
-
-    @abstractmethod
     def format_type_alias(self, type_capture: tree_sitter.Node, aliased_name: bytes, **kwargs) -> bytes:
         pass
-
+    
+    @abstractmethod
+    def extract_type_from_annotation(self, node_capture: tree_sitter.Node) -> tree_sitter.Node:
+        pass
+    
     @abstractmethod    
     def random_mutate(
         program: str,
@@ -212,7 +212,7 @@ class AbstractMutator(ABC):
         applied mutations.
         """
         assert self.tree_sitter_placeholder in program
-
+        
         # if any out of the selected mutations has no captures, return None
         for (fn, captures) in [
             (self.rename_vars, var_rename_captures),
@@ -220,6 +220,7 @@ class AbstractMutator(ABC):
             (self.delete_annotations, remove_captures)
         ]:
             if fn in mutations and len(captures) == 0:
+
                 return None, []
 
         # collects mutations

@@ -8,9 +8,6 @@ from codetrace.steering import (
 import datasets
 import torch
 
-def test_balance_prompts():
-    balance_prompts()
-
 def test_subtract_avg():
     x = torch.Tensor(
         [
