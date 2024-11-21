@@ -165,3 +165,8 @@ def test_mask_target_idx():
         [True, False, True],
     ])
     assert torch.equal(result, expected), f"result {result}, expected {expected}"
+
+if __name__ == "__main__":
+    import pytest
+    import os
+    pytest.main([os.path.abspath(__file__), "-vv"])

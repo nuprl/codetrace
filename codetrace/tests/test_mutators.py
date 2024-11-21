@@ -1,17 +1,17 @@
-# from codetrace.py_mutator import (
-#     random_mutate as _py_mutate,
-#     mutate_captures as py_mutate_captures,
-#     find_mutation_locations as py_find_mut_locs
-# )
 from codetrace.py_mutator import (
     PyMutator,
     PY_TYPE_ANNOTATIONS_QUERY,
     RETURN_TYPES as PY_RETURN_TYPES,
     PY_IDENTIFIER_QUERY
 )
+import json
+# from codetrace.py_mutator import (
+#     random_mutate as _py_mutate,
+#     mutate_captures as py_mutate_captures,
+#     find_mutation_locations as py_find_mut_locs
+# )
 # from codetrace.ts_mutator import (
 #     random_mutate as _ts_mutate,
-#     apply_mutations as ts_apply_mutations,
 #     mutate_captures as py_mutate_captures,
 #     find_mutation_locations as py_find_mut_locs
 # )
@@ -37,14 +37,19 @@ def read_bytes(path: str) -> bytes:
 
 def test_py_add_aliases():
     mutator = PyMutator()
-    code_bytes = read_bytes(f"{PROG}/before_add_alias.py")
+    code = read(f"{PROG}/before_add_alias.py")
+    code = mutator.replace_placeholder(code)
+    code_bytes = byte_encode(code)
     output = mutator.add_type_aliases(
         code_bytes, [
             b'__tmp0 : TypeAlias = "TestUserRedirectView"', 
             b'__tmp1 : TypeAlias = "settings.AUTH_USER_MODEL"',
             b'__tmp2 : TypeAlias = "RequestFactory"']
     )
-    expected = read_bytes(f"{PROG}/after_add_alias.py")
+    expected = byte_encode(
+        mutator.replace_placeholder(
+        read(f"{PROG}/after_add_alias.py")
+    ))
     assert output == expected
 
 def test_py_postproc_annotation():
@@ -70,17 +75,26 @@ def palindrome(s : List[int], **kwargs) -> Union[List[Request], Dict]:
 
 def test_py_mutate_captures():
     mutator = PyMutator()
-    program = read(f"{PROG}/before_var_rename.py")
+    program = mutator.replace_placeholder(read(f"{PROG}/before_var_rename.py"))
     var_captures = get_captures(program, PY_IDENTIFIER_QUERY, "py", "id")
-    var_captures = [v for v in var_captures if b"" in v.text]
-    output, _ = mutator.mutate_captures(
+    var_captures = [v for v in var_captures if b"forces" in v.text]
+    var_all_captures,_,_ = mutator.find_all_other_locations_of_captures(
+        program, "float", var_captures, [], []
+    )
+    output, muts = mutator.mutate_captures(
         program,
         [mutator.rename_vars],
-        var_rename_captures=var_captures,
+        var_rename_captures=var_all_captures,
         type_rename_captures=[],
         remove_captures=[]
     )
+    assert len(var_all_captures) == 8
+    assert output
     expected = read(f"{PROG}/after_var_rename.py")
+    with open(f"{PROG}/actual_var_rename.py","w") as fp:
+        fp.write(output)
+    with open(f"{PROG}/actual_var_rename_muts.md","w") as fp:
+        fp.write(str(muts))
     assert output == expected
 
 if __name__ == "__main__":

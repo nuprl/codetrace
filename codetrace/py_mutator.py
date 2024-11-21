@@ -106,7 +106,6 @@ DummyTreeSitterNode = namedtuple("DummyTreeSitterNode", [
 class PyMutator(AbstractMutator):
     
     def is_import_statement(self, expr : tree_sitter.Node) -> bool:
-        print(expr.type)
         return expr.type in IMPORT_STATEMENTS
 
     def needs_alias(self, typ: bytes, import_statements : bytes) -> bool:
@@ -294,12 +293,12 @@ class PyMutator(AbstractMutator):
         var_rename_captures: List[tree_sitter.Node],
         type_rename_captures: List[tree_sitter.Node],
         remove_annotations_captures: List[tree_sitter.Node]
-    ) -> Tuple[tree_sitter.Node]:
+    ) -> Tuple[List[tree_sitter.Node]]:
         var_rename_targets = set([x.text for x in var_rename_captures])
         type_rename_targets = set([x.text.strip() for x in type_rename_captures])
         
         # do not rename or delete these types
-        types_blacklist = [bytes(fim_type,"utf-8"), self.placeholder()]
+        types_blacklist = [bytes(fim_type,"utf-8"), bytes(self.tree_sitter_placeholder,"utf-8")]
         import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
         all_id_captures = get_captures(program, PY_IDENTIFIER_QUERY, "py", "id")
         all_attribute_ids = get_captures(program, PY_ATTRIBUTE_IDENTIFIER_QUERY, "py", "id")

@@ -47,8 +47,8 @@ fim_placeholder = "<FILL>"
 class AbstractMutator(ABC):
 
     @property
-    def tree_sitter_placeholder(self) -> bytes:
-        return bytes(tree_sitter_fim, "utf-8")
+    def tree_sitter_placeholder(self) -> str:
+        return tree_sitter_fim
     
     def replace_placeholder(self, program:str) -> str:
         if not fim_placeholder in program:
@@ -138,10 +138,10 @@ class AbstractMutator(ABC):
         - there's the issue that type rename mutations may be nested inside remove annotation mutations
             therefore, if a mutation is nested inside another mutation, keep only the parent mutation
         """
+        assert self.tree_sitter_placeholder in program
         # take care of nested mutations
         mutations = self.merge_nested_mutation(mutations)
         mutations.sort(key=lambda x: x.location.start_byte, reverse=True)
-        
         byte_program = program.encode("utf-8")
         prefixes = []
         for mutation in mutations:
@@ -195,11 +195,16 @@ class AbstractMutator(ABC):
         for each mutation, return the mutated program and list of actually
         applied mutations.
         """
+        assert self.tree_sitter_placeholder in program
         # if any out of the selected mutations has no captures, return None
-        for captures in [var_rename_captures, type_rename_captures,remove_captures]:
-            if len(captures) == 0:
-                return None,[]
-        
+        for (fn, captures) in [
+            (self.rename_vars, var_rename_captures),
+            (self.rename_types, type_rename_captures),
+            (self.delete_annotations, remove_captures)
+        ]:
+            if fn in mutations and len(captures) == 0:
+                return None, []
+    
         # collects mutations
         all_mutations = []
         if self.rename_vars in mutations:
@@ -221,6 +226,7 @@ class AbstractMutator(ABC):
             new_program = self.revert_placeholder(new_program)
         except ValueError:
             return None, []
+        all_mutations.sort(key=lambda x: x.location.start_byte, reverse=True)
         return new_program, all_mutations
     
     def find_all_other_locations_of_captures(

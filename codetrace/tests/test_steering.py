@@ -115,3 +115,8 @@ def is_palindrome(s: <FILL>):
     print(expected)
     print(output)
     assert output == expected, f"{output}!={expected}"
+
+if __name__ == "__main__":
+    import pytest
+    import os
+    pytest.main([os.path.abspath(__file__), "-vv"])
