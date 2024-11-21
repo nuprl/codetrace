@@ -16,7 +16,6 @@ class TreeSitterLocation:
         self.start_point = tree_sitter_node.start_point
         self.end_point = tree_sitter_node.end_point
         
-        
     def __repr__(self):
         return f"""TreeSitterLocation(
             start_byte={self.start_byte},
@@ -250,18 +249,17 @@ class AbstractMutator(ABC):
 
     def merge_nested_mutation(self, mutations : List[Mutation]) -> List[Mutation]:
         """
-        Merge nested annotation mutations. 
+        Merge nested annotation mutations. Recursive
         """
-        mutations.sort(key=lambda x: x.location.start_byte, reverse=True)
-        new_mutations = []
-        # work in pairs, if next capture is a superset of the current one, skip curr
-        for (curr, prev) in zip(mutations, mutations[1:]):
-            if not (curr.location.start_point[0] == prev.location.start_point[0] and 
-                curr.location.start_point[1] >= prev.location.start_point[1] and
-                curr.location.end_point[0] == prev.location.end_point[0] and
-                curr.location.end_point[1] <= prev.location.end_point[1]):
-                new_mutations.append(curr)
-                
-        # add the last capture in all cases
-        new_mutations.append(mutations[-1])       
-        return new_mutations
+        mutations.sort(key=lambda x: (x.location.start_byte, -x.location.end_byte))
+
+        reduced = []
+        
+        for current in mutations:
+            if reduced and reduced[-1].location.start_byte <= current.location.start_byte and \
+                reduced[-1].location.end_byte >= current.location.end_byte:
+                continue
+            reduced.append(current)
+
+        return reduced
+    

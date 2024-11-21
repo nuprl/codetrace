@@ -5,15 +5,10 @@ from codetrace.py_mutator import (
     RETURN_TYPES as PY_RETURN_TYPES,
     PY_IDENTIFIER_QUERY,
     get_toplevel_parent,
-    IMPORT_STATEMENT_QUERY
+    IMPORT_STATEMENT_QUERY,
+    DummyTreeSitterNode
 )
-# from codetrace.ts_mutator import (
-#     random_mutate as _ts_mutate,
-#     mutate_captures as py_mutate_captures,
-#     find_mutation_locations as py_find_mut_locs
-# )
-# merge_nested_mutations
-
+from codetrace.base_mutator import Mutation, TreeSitterLocation
 from codetrace.ts_mutator import TsMutator
 import os
 from codetrace.parsing_utils import get_captures
@@ -270,6 +265,24 @@ def outer_function(x, y):
     assert parent.type == "import_statement"
     assert parent.text == b"import boo"
 
+def test_merge_nested_mutations():
+    mutator = PyMutator()
+    prompt = """def for_stream(
+    stream_name: str, 
+    topic: str
+) -> 'Addressee':"""
+    nodes = get_captures(prompt, "((typed_parameter) @s) ((identifier) @s)", "py","s")
+    mutations = [
+        Mutation(TreeSitterLocation(n), None, None, None) for n in nodes
+    ]
+    expected = [
+        Mutation(TreeSitterLocation(n), None, None, None) for n in nodes
+        if n.type == "typed_parameter" or n.text == b"for_stream"
+    ]
+    output = mutator.merge_nested_mutation(mutations)
+    with open("actual.md","w") as fp:
+        fp.write(str(output) + "\n" + "="*1000 + "\n" + str(expected))
+    assert set([str(o) for o in output]) == set([str(e) for e in expected])
 
 if __name__ == "__main__":
     import pytest
