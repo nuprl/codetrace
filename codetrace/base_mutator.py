@@ -220,7 +220,6 @@ class AbstractMutator(ABC):
             (self.delete_annotations, remove_captures)
         ]:
             if fn in mutations and len(captures) == 0:
-                print("ret", fn)
                 return None, []
 
         # collects mutations

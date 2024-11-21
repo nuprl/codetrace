@@ -32,7 +32,8 @@ def found_error(lang:str, line:str) -> bool:
         return ("- error:" in line and not '- error: Import "' in line and not "unknown import symbol" in line 
             and not "Position-only parameter not allowed after parameter that is not position-only" in line
             and not 'Expression of type "None" cannot be assigned to return type' in line
-            and not 'is not a known member of "None"' in line)
+            and not 'is not a known member of "None"' in line 
+            and not 'Imports from __future__ must be at the beginning of the file' in line)
     elif lang == "ts":
         return (": error" in line and not "Cannot find module" in line \
                 and not "Invalid module name in augmentation" in line)

@@ -11,6 +11,7 @@ from zerver.models import (
     UserProfile
 )
 __typ0 : TypeAlias = "UserProfile"
+
 from sqlalchemy.sql import (
     and_,
     column,

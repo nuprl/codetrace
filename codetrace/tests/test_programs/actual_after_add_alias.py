@@ -22,7 +22,7 @@ class TestUserUpdateView:
     """
 
     def test_get_success_url(
-        self, user: settings.AUTH_USER_MODEL, request_factory: <FILL>
+        self, user: settings.AUTH_USER_MODEL, request_factory: _CodetraceSpecialPlaceholder_
     ):
         view = UserUpdateView()
         request = request_factory.get("/fake-url/")

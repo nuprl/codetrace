@@ -11,8 +11,9 @@ from vllm import LLM, SamplingParams
 from tqdm import tqdm
 import datasets
 from datasets import IterableDataset
-import tree_sitter
-from codetrace import py_mutator, ts_mutator
+from codetrace.base_mutator import MutationFn, Mutation
+from codetrace.py_mutator import PyMutator
+from codetrace.ts_mutator import TsMutator
 from codetrace.parsing_utils import get_model_fim, get_captures, FimChat, FimObj
 from codetrace.utils import (
     load_dataset,
@@ -25,17 +26,13 @@ from codetrace.vllm_utils import (
     generate_completions
 )
 
-PyMutateFn = TypeVar("PyMutateFn", bound=Callable[[List[tree_sitter.Node]], List[py_mutator.Mutation]])
-TsMutateFn = TypeVar("TsMutateFn", bound=Callable[[List[tree_sitter.Node]], List[ts_mutator.Mutation]])
-
-def get_mutations(key: str, lang: str) -> Union[TsMutateFn, PyMutateFn]:
-    mod = py_mutator if lang == "py" else ts_mutator
+def get_mutations(key: str, mutator: Union[PyMutator, TsMutator]) -> MutationFn:
     if key == "vars":
-        return mod.rename_vars
+        return mutator.rename_vars
     elif key == "types":
-        return mod.rename_types
+        return mutator.rename_types
     else:
-        return mod.delete_annotations
+        return mutator.delete_annotations
 
 def _save(data: List[Dict[str,Any]], path:str, message:str):
     print(message)
@@ -52,12 +49,7 @@ def _save(data: List[Dict[str,Any]], path:str, message:str):
     shutil.rmtree(temp_path, ignore_errors=True)
     print(f"Collected {len(new_ds)} candidates")
 
-def _mutate_item(
-    program: str,
-    fim_type: str,
-    mutations: List[Union[PyMutateFn,TsMutateFn]],
-    mutate_fn: Callable[[str, str, List[Union[PyMutateFn,TsMutateFn]]], str]
-) -> str:
+def _mutate_item(program: str, fim_type: str, mutations: List[Mutation], mutate_fn: MutationFn) -> str:
     new_program = None
     for _ in range(10):
         new_program = mutate_fn(program, fim_type, mutations)
@@ -79,7 +71,7 @@ def _preprocess(
     """
     if lang == "py":
         _condition = (lambda x: x["correct"])
-        mod = py_mutator
+        mutator = PyMutator()
     else:
         preproc_query = """
         ((shorthand_property_identifier_pattern) @si)
@@ -87,15 +79,15 @@ def _preprocess(
         """
         _condition = (lambda x: x["correct"] and 
                       len(get_captures(x["fim_program"], preproc_query, "ts","si")) == 0)
-        mod = ts_mutator
+        mutator = TsMutator()
     
-    mutations = [get_mutations(m, lang) for m in mutations]
+    mutations = [get_mutations(m, mutator) for m in mutations]
     mutation_names = [m.__name__ for m in mutations]
     ds = ds.filter(lambda x: hex_encode(x["fim_program"]) not in blacklist and _condition(x))
     ds = ds.map(lambda x: {**x, 
             "mutation_names": mutation_names,
             "mutated_program": _mutate_item(x["fim_program"], x["fim_type"], 
-                                        mutations, mod.apply_random_mutations_by_kind)})
+                                        mutations, mutator.random_mutate_ordered_by_type)})
     
     ds = ds.filter(lambda x: x["mutated_program"])
 
