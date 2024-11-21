@@ -46,6 +46,38 @@ fim_placeholder = "<FILL>"
 
 class AbstractMutator(ABC):
 
+    @abstractmethod
+    def add_program_prefix(self, byte_program: bytes, prefixes: List[bytes]) -> bytes:
+        pass
+
+    @abstractmethod
+    def add_type_alias(self, type_capture: tree_sitter.Node, alias: bytes, **kwargs) -> bytes:
+        pass
+
+    @abstractmethod    
+    def random_mutate(
+        program: str,
+        fim_type: str,
+        mutations: List[Callable], 
+        **kwargs
+    ) -> str:
+        pass
+
+    @abstractmethod
+    def needs_alias(self, node: tree_sitter.Node) -> bool:
+        pass
+    
+    @abstractmethod
+    def find_all_other_locations_of_captures(
+        self,
+        program:str,
+        fim_type:str,
+        var_rename_captures: List[tree_sitter.Node],
+        type_rename_captures: List[tree_sitter.Node],
+        remove_annotations_captures: List[tree_sitter.Node]
+    ) -> Tuple[tree_sitter.Node]:
+        pass
+
     @property
     def tree_sitter_placeholder(self) -> str:
         return tree_sitter_fim
@@ -59,14 +91,6 @@ class AbstractMutator(ABC):
         if not tree_sitter_fim in program:
             raise ValueError(f"Program does not contain {tree_sitter_fim}!")
         return program.replace(tree_sitter_fim, fim_placeholder)
-
-    @abstractmethod
-    def add_program_prefix(self, byte_program: bytes, prefixes: List[bytes]) -> bytes:
-        pass
-
-    @abstractmethod
-    def format_capture(self, capture: tree_sitter.Node, prefix: bytes, **kwargs) -> bytes:
-        pass
 
     def rename_vars(self, var_captures : List[tree_sitter.Node]) -> List[Mutation]:
         """
@@ -105,7 +129,7 @@ class AbstractMutator(ABC):
             location = TreeSitterLocation(capture)
             replacement = name_to_new_name[capture.text]
             
-            prefix = self.format_capture(capture, replacement)
+            prefix = self.add_type_alias(capture, replacement)
             mutation = Mutation(location, replacement, prefix)
             mutations.append(mutation)
         return mutations
@@ -120,15 +144,6 @@ class AbstractMutator(ABC):
             mutation = Mutation(location, b"")
             mutations.append(mutation)
         return mutations
-
-    @abstractmethod    
-    def random_mutate(
-        program: str,
-        fim_type: str,
-        mutations: List[Callable], 
-        **kwargs
-    ) -> str:
-        pass
 
     def apply_mutations(self, program: str, mutations: List[Mutation]) -> str:
         """
@@ -226,18 +241,8 @@ class AbstractMutator(ABC):
             new_program = self.revert_placeholder(new_program)
         except ValueError:
             return None, []
-        all_mutations.sort(key=lambda x: x.location.start_byte, reverse=True)
+        
         return new_program, all_mutations
-    
-    def find_all_other_locations_of_captures(
-        self,
-        program:str,
-        fim_type:str,
-        var_rename_captures: List[tree_sitter.Node],
-        type_rename_captures: List[tree_sitter.Node],
-        remove_annotations_captures: List[tree_sitter.Node]
-    ) -> Tuple[tree_sitter.Node]:
-        pass
 
     def merge_nested_mutation(self, mutations : List[Mutation]) -> List[Mutation]:
         """

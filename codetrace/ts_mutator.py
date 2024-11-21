@@ -49,11 +49,11 @@ class TsMutator(AbstractMutator):
         """
         return node.type == "predefined_type" or node.text.decode("utf-8") in typescript_builtin_objects
     
-    def format_capture(self, capture: tree_sitter.Node, replacement: bytes) -> bytes:
-        if self.needs_alias(capture) and capture.text.decode("utf-8") in typescript_builtin_objects:
-            prefix = b"class " + replacement + b" extends " + capture.text + b" {};"
-        elif self.needs_alias(capture):
-            prefix = b"type " + replacement + b" = " + capture.text + b";"
+    def add_type_alias(self, type_capture: tree_sitter.Node, alias: bytes) -> bytes:
+        if self.needs_alias(type_capture) and type_capture.text.decode("utf-8") in typescript_builtin_objects:
+            prefix = b"class " + alias + b" extends " + type_capture.text + b" {};"
+        elif self.needs_alias(type_capture):
+            prefix = b"type " + alias + b" = " + type_capture.text + b";"
         else:
             prefix = None
         return prefix
@@ -154,7 +154,8 @@ class TsMutator(AbstractMutator):
         type_rename_captures: List[tree_sitter.Node],
         remove_annotations_captures: List[tree_sitter.Node]
     ) -> Tuple[tree_sitter.Node]:
-        types_blacklist = [bytes(fim_type,"utf-8"), self.tree_sitter_placeholder()]
+        assert self.tree_sitter_placeholder in program
+        types_blacklist = [bytes(fim_type,"utf-8"), bytes(self.tree_sitter_placeholder, "utf-8")]
         tree = TS_PARSER.parse(bytes(program, "utf-8"))
         var_rename_targets = set([x.text for x in var_rename_captures])
         type_rename_targets = set([x.text.replace(b":",b"").strip() for x in type_rename_captures])
@@ -178,5 +179,5 @@ class TsMutator(AbstractMutator):
                                     and x.text not in types_blacklist
                                     ]
         remove_annotations_captures = [x for x in remove_annotations_captures  if 
-                                    (x.text.replace(b":",b"").strip() != self.tree_sitter_placeholder())]
+                (x.text.replace(b":",b"").strip() != bytes(self.tree_sitter_placeholder, "utf-8"))]
         return var_rename_full_captures, type_rename_full_captures, remove_annotations_captures

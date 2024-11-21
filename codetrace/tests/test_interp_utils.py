@@ -10,7 +10,7 @@ from codetrace.interp_utils import (
     TraceResult
 )
 from codetrace.utils import mask_target_idx, mask_target_tokens, predict, copy_decoder
-from codetrace.batched_utils import batched_get_averages,batched_insert_patch_logit
+from codetrace.batched_utils import batched_get_averages, batched_insert_patch_logit
 """
 Setup code
 """

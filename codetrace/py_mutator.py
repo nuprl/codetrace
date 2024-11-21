@@ -103,20 +103,37 @@ PY_TOPLEVEL_CHILDREN = "(module (_) @root_children)"
 DummyTreeSitterNode = namedtuple("DummyTreeSitterNode", [
                                         "start_byte", "end_byte", 
                                         "start_point", "end_point", "text"])
+
+
+def get_toplevel_parent(node: tree_sitter.Node) -> tree_sitter.Node:
+    """
+    Given a node, walk up the tree until a node's parent is module
+    or block, then return the node
+    """
+    if node.parent.type in ["block","module"]:
+        return node
+    else:
+        return get_toplevel_parent(node.parent)
+
+
 class PyMutator(AbstractMutator):
     
     def is_import_statement(self, expr : tree_sitter.Node) -> bool:
-        return expr.type in IMPORT_STATEMENTS
+        return (expr.type in IMPORT_STATEMENTS or
+            # block root of this node is an import statement
+            get_toplevel_parent(expr).type in IMPORT_STATEMENTS
+        )
 
-    def needs_alias(self, typ: bytes, import_statements : bytes) -> bool:
+    def needs_alias(self, typ: tree_sitter.Node) -> bool:
         # if type is a builtin or typing, needs alias
         # if a type is in imports, needs alias
-        return any([typ==bytes(t,"utf-8") for t in dir(builtins)+dir(typing)]) or typ in import_statements
+        return any([typ.text==bytes(t,"utf-8") for t in dir(builtins)+dir(typing)]) \
+            or self.is_import_statement(typ)
     
-    def format_capture(self, capture: tree_sitter.Node, prefix: bytes, **kwargs) -> str:
-        if self.needs_alias(capture.text, kwargs["import_statement_names"]):
+    def add_type_alias(self, type_capture: tree_sitter.Node, alias: bytes) -> bytes:
+        if self.needs_alias(type_capture):
             # make new type alias
-            prefix = prefix + b'" : TypeAlias = "' + capture.text + '"'
+            prefix = alias + b'" : TypeAlias = "' + type_capture.text + '"'
         else:
             prefix = None
         return prefix
@@ -294,6 +311,7 @@ class PyMutator(AbstractMutator):
         type_rename_captures: List[tree_sitter.Node],
         remove_annotations_captures: List[tree_sitter.Node]
     ) -> Tuple[List[tree_sitter.Node]]:
+        assert self.tree_sitter_placeholder in program
         var_rename_targets = set([x.text for x in var_rename_captures])
         type_rename_targets = set([x.text.strip() for x in type_rename_captures])
         
@@ -331,6 +349,6 @@ class PyMutator(AbstractMutator):
         remove_annotations_captures = [
             x for x in remove_annotations_captures  
                 if (x.text.replace(b":",b"").replace(b"->",b"").strip() != 
-                    self.placeholder())
+                    bytes(self.tree_sitter_placeholder, "utf-8"))
         ]
         return var_rename_full_captures, type_rename_full_captures, remove_annotations_captures
