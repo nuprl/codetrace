@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse
 import datasets
 import subprocess
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import tempfile
 import hashlib
 from codetrace.fast_utils import batched_apply, make_batches
@@ -74,8 +74,7 @@ def typecheck_ts(dir:str) -> Tuple[str, List[str]]:
     return "\n".join(outs),files
         
 # from https://github.com/nuprl/MultiPL-T/
-def run_typechecker(dir:str, lang:str, do_log:bool=False) -> Dict[str, Dict[str,str]]:
-    logdir = f"{lang}_log"
+def run_typechecker(dir:str, lang:str) -> Dict[str, Dict[str,str]]:
     if lang == "py":
         outs,files= typecheck_py(dir)
     elif lang == "ts":
@@ -91,12 +90,6 @@ def run_typechecker(dir:str, lang:str, do_log:bool=False) -> Dict[str, Dict[str,
             filename_in_line = filename_in_line[0].split("/")[-1]
             # found new file
             if filename_in_line != cur_file and any([f.split('/')[-1] == filename_in_line for f in files]):
-                # log any errors
-                if do_log and len(cur_file) > 0 and filemap[cur_file] > 0:
-                    with open(f"{d}/{cur_file}","r") as f:
-                        content = f.read()
-                    log(f"{logdir}/{cur_file}", content)
-                    log(f"{logdir}/{cur_file.replace('.'+lang,'.log')}", cur_lines)
                 # get new file
                 filemap[filename_in_line] = {"count":0, "errors":[]}
                 cur_file = filename_in_line
@@ -119,41 +112,56 @@ def _format_error_list(error_list: List[str])-> str:
     for err in error_list:
         res += wrap(err,col_len).strip() + delim
     return res
+
+def hash_string(input_string):
+    sha256 = hashlib.sha256()
+    sha256.update(input_string.encode('utf-8'))
+    return sha256.hexdigest()
     
-def typecheck_batch(examples: List[dict], colname, lang, do_log=False, logdir:str="/tmp") -> List[dict]:
-    filtered = []
+def typecheck_batch(
+    examples: List[dict],
+    colname: str, 
+    lang:str,
+    logdir:Optional[Path]=None
+) -> List[dict]:
+    new_ds = []
     hexsha_to_ex = {}
+    
+    if logdir:
+        os.makedirs(logdir)
+
     with tempfile.TemporaryDirectory() as tempdir:
         for ex in examples:
             program = ex[colname].replace("<FILL>", ex["fim_type"])
-            hexsha = hashlib.sha1(bytes(program, "utf8")).hexdigest()
+            hexsha = hash_string(program)
             hexsha_to_ex[hexsha] = ex
             name = os.path.join(tempdir, hexsha + f".{lang}")
             with open(name, "w") as f:
                 f.write(program)
-            if do_log:
-                log(f"{logdir}/{name.split('/')[-1]}", program)
 
         with open(f"{tempdir}/pyright_config.json", "w") as f:
             json.dump(pyright_config, f)
+
         # Run pyright in the temporary directory
-        typecheck_map = run_typechecker(tempdir, lang, do_log=do_log)
+        typecheck_map = run_typechecker(tempdir, lang)
         if typecheck_map is None:
             return []
 
-        for hexsha, dikt in typecheck_map.items():
+        for i, (hexsha, dikt) in enumerate(typecheck_map.items()):
             num_errors = dikt["count"]
             error_list = dikt["errors"]
-            if num_errors == 0:
-                filtered.append(hexsha.replace(f".{lang}",""))
-            elif do_log:
+            new_ds.append({**hexsha_to_ex[hexsha.replace(f".{lang}","")], 
+                           "typechecks": num_errors == 0,
+                           "error_list": "\n".join(error_list)})
+            if logdir:
                 item = hexsha_to_ex[hexsha.replace(f".{lang}","")]
                 original_prog,original_type = item["fim_program"], item["fim_type"]
                 original = original_prog.replace("<FILL>", original_type)
                 log(f"{logdir}/_original_{name.split('/')[-1]}", original)
+                log(f"{logdir}/_mutated_{name.split('/')[-1]}", original)
                 log(f"{logdir}/_errors_{name.split('/')[-1]}", _format_error_list(error_list))
-    
-    return [hexsha_to_ex[hexsha] for hexsha in filtered]
+
+    return new_ds
 
 def main(
     ds: datasets.Dataset,
@@ -188,7 +196,7 @@ if __name__=="__main__":
     if args.do_log:
         # warn user it will overwrite previous logs
         print("[WARNING] Overwriting previous logs")
-        logdir = f"{args.lang}_log"
+        logdir = f"/tmp/codetrace_logs/{args.lang}_log"
         if os.path.exists(logdir) and os.path.isdir(logdir):
             shutil.rmtree(logdir)
         os.makedirs(logdir, exist_ok=True)
@@ -199,4 +207,4 @@ if __name__=="__main__":
     if args.max_size > -1:
         ds = ds.shuffle().select(range(args.max_size))
 
-    main(ds, args.output_ds, colname=args.column_name, lang=args.lang, do_log=args.do_log, logdir=logdir)
+    main(ds, args.output_ds, colname=args.column_name, lang=args.lang, logdir=logdir)

@@ -23,3 +23,13 @@ In jupyer `kernel.json` add env var, then restart vscode.
 ```
 "env": {"PYTHONPATH": "/path/to/your/package:$PYTHONPATH"}`
 ```
+
+# TODO
+
+- finish unittests
+
+- Steering test split typecheck [MAKE IT ALWAYS SAME FOR SAME CANDIDATES]
+- add limit 3000 to mutations [CLI ARG], 100 TYPECHECKED
+
+- Run chat codellama on delta
+- upload completion for SC1 and SC7
