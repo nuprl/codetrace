@@ -46,7 +46,7 @@ def found_error(lang:str, line:str) -> bool:
         raise NotImplementedError("Supported languages are py and ts")
 
 
-def typecheck_py(dir:str, verbose=True, timeout=120, disable_tqdm=True) -> Dict[str,str]:
+def typecheck_py(dir:str, verbose=False, timeout=120, disable_tqdm=True) -> Dict[str,str]:
     files = list(glob.glob(f"{dir}/*.py"))
     file_to_error = {}
     with open(f"{dir}/pyright_config.json", "w") as f:
@@ -72,7 +72,7 @@ def typecheck_py(dir:str, verbose=True, timeout=120, disable_tqdm=True) -> Dict[
 
     return file_to_error
 
-def typecheck_ts(dir:str, verbose=True, timeout=300, disable_tqdm=True) -> Dict[str,str]:
+def typecheck_ts(dir:str, verbose=False, timeout=300, disable_tqdm=True) -> Dict[str,str]:
     file_to_error = {}
     files = list(glob.glob(f"{dir}/*.ts"))
     commands = ["npx", "--cache", str(os.environ["NPM_PACKAGES"]), "ts-node", 

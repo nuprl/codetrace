@@ -38,6 +38,7 @@ def main(
     dtype:str,
     candidates:str,
     layers:List[int],
+    lang:str,
     output_dir:str,
     steer_name:str,
     test_name:str,
@@ -54,6 +55,7 @@ def main(
     smanager = SteeringManager(
         model,
         candidates,
+        lang,
         output_dir,
         steer_name,
         test_name,
@@ -86,7 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--candidates", type=str,required=True)
     parser.add_argument("--output-dir", type=str, required=True)
     parser.add_argument("--layers", type=str, required=True)
-
+    parser.add_argument("--lang", choices=["py","ts"], required=True)
     # dataset
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--subset", type=str, default=None)

@@ -1,9 +1,13 @@
+from typing import Dict,Any,List
+import shutil
+from collections import namedtuple
 from codetrace.steering import (
     subtract_avg,
     get_model_fim,
     prepare_prompt_pairs,
     _steer_test_split,
-    balance_prompts
+    balance_prompts,
+    SteeringManager
 )
 import datasets
 import torch
@@ -71,24 +75,26 @@ def test_prepare_prompts():
         expected.append(fim_obj.placeholder_to_fim(i["mutated_program"]))
     assert output == expected, f"{output}!={expected}"
 
-def test_stratify():
-    data = [{"hexsha":0},
-            {"hexsha":1},
-            {"hexsha":2},
-            {"hexsha":3},
-            {"hexsha":4},
-            {"hexsha":5},
-            {"hexsha":5},
-            {"hexsha":5},
-            {"hexsha":6},
-            {"hexsha":6},
-            {"hexsha":7}]
+def test_split():
+    data = [{"hexsha":0, "typechecks": True},
+            {"hexsha":1, "typechecks": True},
+            {"hexsha":2, "typechecks": True},
+            {"hexsha":3, "typechecks": True},
+            {"hexsha":4, "typechecks": True},
+            {"hexsha":5, "typechecks": True},
+            {"hexsha":5, "typechecks": True},
+            {"hexsha":5, "typechecks": True},
+            {"hexsha":6, "typechecks": True},
+            {"hexsha":6, "typechecks": True},
+            {"hexsha":7, "typechecks": True},
+            ]
     ds = datasets.Dataset.from_list(data)
     steer_split,test_split = _steer_test_split(
         ds,
         4,
-        True,
+        False,
         None,
+        False,
         "hexsha"
     )
     steer_split = [x["hexsha"] for x in steer_split]
@@ -200,6 +206,20 @@ def test_balance_prompts_dedup_no_limit(mock_dataset):
     # Verify that the dataset size remains the same as no limit is applied
     assert len(result) == len(mock_dataset), "The dataset should not be filtered when no deduplication limits are applied."
 
+
+def _check_dedup(split:List[Dict[str,Any]], dedup_prog_threshold:int, dedup_type_threshold:int):
+    prog_count = {}
+    type_count = {}
+    for ex in split:
+        prog_count[ex["_original_program"]] = prog_count.get(ex["_original_program"], 0) + 1
+        type_count[ex["fim_type"]] = type_count.get(ex["fim_type"], 0) + 1
+
+    for count in prog_count.values():
+        assert count <= dedup_prog_threshold, f"Program exceeded the deduplication threshold: {prog_count}"
+    
+    for count in type_count.values():
+        assert count <= dedup_type_threshold, f"Label type exceeded the deduplication threshold: {type_count}"
+
 @pytest.mark.parametrize("dedup_prog_threshold, dedup_type_threshold", [
     (1, 1),
     (2, 3),
@@ -214,16 +234,49 @@ def test_balance_prompts_varying_thresholds(mock_dataset, dedup_prog_threshold, 
     prog_count = {}
     type_count = {}
     
-    for ex in result:
-        prog_count[ex["_original_program"]] = prog_count.get(ex["_original_program"], 0) + 1
-        type_count[ex["fim_type"]] = type_count.get(ex["fim_type"], 0) + 1
-    
-    for count in prog_count.values():
-        assert count <= dedup_prog_threshold, f"Program exceeded the deduplication threshold: {prog_count}"
-    
-    for count in type_count.values():
-        assert count <= dedup_type_threshold, f"Label type exceeded the deduplication threshold: {type_count}"
+    _check_dedup(result, dedup_prog_threshold, dedup_type_threshold)
 
+
+def test_steering_test_split():
+    """
+    Test that for a given candidate ts, test split is always the same
+    AND test split fully typechecks
+    """
+    TEST_SIZE = 100
+    MAXN=500
+    DEBUG_CYCLE=40
+    dedup_type_threshold = 25
+    dedup_prog_threshold = 3
+    shutil.rmtree("/tmp/testing_steering_manager", ignore_errors=True)
+    shutil.rmtree("/tmp/testing_steering_manager2", ignore_errors=True)
+
+    FakeModel = namedtuple("FakeModel", ["tokenizer", "config"])
+    FakeConfig = namedtuple("FakeConfig", "name_or_path")
+    model = FakeModel(tokenizer=None, config = FakeConfig(name_or_path="starcoder"))
+    ds = datasets.load_dataset("nuprl/type-steering", name="mutations-py-types_vars-qwen2p5_coder_7b_base", 
+                               split="train")
+    smanager = SteeringManager(model, ds, "py", "/tmp/testing_steering_manager", "steer","test","stensor",
+                               max_num_candidates=MAXN)
+    assert len(smanager.candidates_ds) == MAXN
+    steer_split, test_split = smanager.steer_test_splits(TEST_SIZE, dedup_prog_threshold, dedup_type_threshold,
+                                                         debug_max_cycle=DEBUG_CYCLE)
+    assert set(test_split["typechecks"]) == set([True])
+    assert len(test_split) == TEST_SIZE
+
+    _check_dedup(test_split, dedup_prog_threshold, dedup_type_threshold)
+    _check_dedup(steer_split, dedup_prog_threshold, dedup_type_threshold)
+
+    smanager2 = SteeringManager(model, ds, "py", "/tmp/testing_steering_manager2", "steer","test","stensor",
+                               max_num_candidates=MAXN)
+    steer_split2, test_split2 = smanager2.steer_test_splits(TEST_SIZE, dedup_prog_threshold, dedup_type_threshold,
+                                                             debug_max_cycle=DEBUG_CYCLE)
+
+    _check_dedup(steer_split2, dedup_prog_threshold, dedup_type_threshold)
+    _check_dedup(test_split2, dedup_prog_threshold, dedup_type_threshold)
+
+    assert set(test_split2["mutated_program"]) == set(test_split["mutated_program"])
+    assert set(steer_split2["_original_program"]).intersection(test_split2["_original_program"]) == set()
+    assert set(steer_split["_original_program"]).intersection(test_split["_original_program"]) == set()
 
 if __name__ == "__main__":
     import pytest

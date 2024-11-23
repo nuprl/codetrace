@@ -1,3 +1,4 @@
+from codetrace.scripts.typecheck_ds import multiproc_typecheck
 from multiprocessing import cpu_count
 import math
 import numpy as np
@@ -77,6 +78,7 @@ class SteeringManager:
         self,
         model:LanguageModel,
         candidates_ds: datasets.Dataset,
+        lang:str,
         cache_dir: Path,
         steer_split_path: Optional[str]=None,
         test_split_path: Optional[str]=None,
@@ -85,12 +87,12 @@ class SteeringManager:
         token_mask_fn:Optional[Callable]=None,
         reduction:Optional[Callable]=None,
     ):
+        self.lang=lang
         self.model=model
         self.tokenizer=model.tokenizer
         self.fim_obj=get_model_fim(model.config.name_or_path)
-        self.candidates_ds = candidates_ds
         if max_num_candidates > -1:
-            self.candidates_ds = self.candidates_ds.select(range(max_num_candidates))
+            candidates_ds = candidates_ds.select(range(max_num_candidates))
         self.candidates_ds = candidates_ds.map(
             lambda x: {**x, "_original_program": x["fim_program"].replace("<FILL>", x["fim_type"])},
             desc="Adding column for original unfimmed program"
@@ -159,8 +161,9 @@ class SteeringManager:
         test_size:Union[float,int],
         dedup_prog_threshold:int, # 3 suggested
         dedup_type_threshold:int, # 25 suggested
-        shuffle:bool=True,
-        seed:Optional[int]=None
+        shuffle:bool=False,
+        seed:Optional[int]=None,
+        debug_max_cycle:Optional[int]=None
     )-> Tuple[datasets.Dataset]:
         """
         Split candidates into a steering and test split.
@@ -175,21 +178,31 @@ class SteeringManager:
                 present in the splits.
             shuffle: whether to shuffle candidates
             seed: for deterministic shuffling
+
+        NOTE: test split is always the same for a dataset of candidates
         """
         if not self.test_split and not self.steer_split:
+            if test_size < 0:
+                test_size *= len(self.candidates_ds)
+
+            candidates_ds = balance_prompts(self.candidates_ds, 
+                        dedup_prog_threshold*3, dedup_type_threshold*3)
+
             steer_split,test_split = _steer_test_split(
-                self.candidates_ds,
+                candidates_ds,
                 test_size=test_size,
                 shuffle=shuffle,
                 seed=seed,
-                separate_by_column="_original_program"
+                typecheck_test=True,
+                separate_by_column="_original_program",
+                debug_max_cycle=debug_max_cycle,
+                lang=self.lang,
+                colname="mutated_program"
             )
             if dedup_prog_threshold > -1 or dedup_type_threshold > -1:
                 steer_split = balance_prompts(steer_split, dedup_prog_threshold, dedup_type_threshold)
-                test_split = balance_prompts(steer_split, dedup_prog_threshold, dedup_type_threshold)
+                test_split = balance_prompts(test_split, dedup_prog_threshold, dedup_type_threshold)
             
-            if test_size < 0:
-                test_size *= len(self.candidates_ds)
             train_size = len(self.candidates_ds) - test_size
             test_size = min(len(test_split), test_size)
             train_size = min(len(steer_split), train_size)
@@ -278,21 +291,32 @@ def _steer_test_split(
     test_size: Union[int, float],
     shuffle:bool,
     seed:Optional[int],
+    typecheck_test:bool,
     separate_by_column: str,
+    debug_max_cycle: Optional[int] = None,
+    **typechecker_kwargs,
 )-> Tuple[datasets.Dataset, datasets.Dataset]:
-    """
-    referenced from huggingface stratified_shuffle_split_generate_indices
-    """
-    counter = Counter(ds[separate_by_column])
-    ds = ds.map(lambda x: {**x, "_label": x[separate_by_column] if counter[x[separate_by_column]] > 1 else None},
-                                        num_proc=10)
-    ds = ds.class_encode_column("_label", include_nulls=True)
     if shuffle:
         ds = ds.shuffle(seed=seed)
+    if typecheck_test:
+        ds = multiproc_typecheck(ds, cpu_count(), **typechecker_kwargs)
+        ds = datasets.Dataset.from_list(ds)
 
     unique_labels = np.unique(ds[separate_by_column])
-    train_labels, test_labels = train_test_split(unique_labels, test_size=test_size)
-
-    train_ds = ds.filter(lambda x: x[separate_by_column] in train_labels, num_proc=10)
-    test_ds = ds.filter(lambda x: x[separate_by_column] in test_labels, num_proc=10)
+    print(len(unique_labels))
+    actual_test_size = test_size if test_size > 0 else int(test_size * len(ds))
+    test_ds, i = [],0
+    INCREASE_AMT = 10
+    while len(test_ds) < actual_test_size and i < len(ds):
+        print(f"Attempting split #{i}")
+        if debug_max_cycle and i > debug_max_cycle:
+            break
+        train_labels, test_labels = train_test_split(
+                                unique_labels, 
+                                test_size=actual_test_size+(i*INCREASE_AMT),
+                                shuffle=shuffle)
+        train_ds = ds.filter(lambda x: x[separate_by_column] in train_labels, num_proc=10)
+        test_ds = ds.filter(lambda x: x[separate_by_column] in test_labels and x["typechecks"], num_proc=10)
+        print(f"Split size:", len(train_ds), len(test_ds))
+        i += 1
     return train_ds, test_ds
