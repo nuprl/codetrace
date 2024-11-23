@@ -188,14 +188,14 @@ def test_py_mutate_ds():
     # check that for N random mutations on dataset,
     # at least THRESHOLD typecheck
     ds = datasets.load_dataset("nuprl-staging/py_typeinf_fim", split="train", 
-                               streaming=True).shuffle(buffer_size=1)
+                               streaming=True).shuffle(buffer_size=2000)
     test_mutate_ds("py",ds, logdir=None)
 
 def test_ts_mutate_ds():
     # check that for N random mutations on dataset,
     # at least THRESHOLD typecheck
     ds = datasets.load_dataset("nuprl-staging/ts_typeinf_fim", split="train", 
-                               streaming=True).shuffle(buffer_size=1)
+                               streaming=True).shuffle(buffer_size=2000)
     test_mutate_ds("ts",ds, logdir=None)
 
 if __name__ == "__main__":

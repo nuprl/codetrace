@@ -26,13 +26,13 @@ from codetrace.vllm_utils import (
     generate_completions
 )
 
-def get_mutations(key: str, mutator: Union[PyMutator, TsMutator]) -> MutationFn:
+def get_mutations(key: str) -> str:
     if key == "vars":
-        return mutator.rename_vars
+        return "rename_vars"
     elif key == "types":
-        return mutator.rename_types
+        return "rename_types"
     else:
-        return mutator.delete_annotations
+        return "delete_annotations"
 
 def _save(data: List[Dict[str,Any]], path:str, message:str):
     print(message)
@@ -81,11 +81,10 @@ def _preprocess(
                       len(get_captures(x["fim_program"], preproc_query, "ts","si")) == 0)
         mutator = TsMutator()
     
-    mutations = [get_mutations(m, mutator) for m in mutations]
-    mutation_names = [m.__name__ for m in mutations]
+    mutations = [get_mutations(m) for m in mutations]
     ds = ds.filter(lambda x: hex_encode(x["fim_program"]) not in blacklist and _condition(x))
     ds = ds.map(lambda x: {**x, 
-            "mutation_names": mutation_names,
+            "mutation_names": mutations,
             "mutated_program": _mutate_item(x["fim_program"], x["fim_type"], 
                                         mutations, mutator.random_mutate_ordered_by_type)})
     
@@ -201,9 +200,8 @@ if __name__ == "__main__":
                     tokenizer=args.tokenizer, async_inference=True)
     model_fim = get_model_fim(args.model)
     
-    ds = load_dataset(args.completions_ds, split=args.split, name=args.subset, streaming=True).shuffle(
-        buffer_size=1, seed=args.seed)
+    ds = load_dataset(args.completions_ds, split=args.split, name=args.subset, streaming=True)
     ds = ds.to_iterable_dataset() if isinstance(ds, datasets.Dataset) else ds
-    
+    ds = ds.shuffle(seed=args.seed, buffer_size=2000)
     main(llm, tokenizer, ds, Path(args.mutated_ds), model_fim, args.batch_size, args.model, 
          args.lang, args.mutations, args.max_size, args.max_mutants)

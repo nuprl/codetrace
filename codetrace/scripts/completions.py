@@ -126,8 +126,8 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
 
     datasets.disable_caching()
-    ds = datasets.load_dataset(args.prompt_ds, split=args.split, streaming=True).shuffle(args.seed, 
-                                                                                        buffer_size=1)
+    ds = datasets.load_dataset(args.prompt_ds, split=args.split, streaming=True).shuffle(
+                                                                args.seed, buffer_size=2000)
     
     llm = load_vllm(args.model, args.dtype, num_available_devices(),
                     tokenizer=args.tokenizer, async_inference=True)
