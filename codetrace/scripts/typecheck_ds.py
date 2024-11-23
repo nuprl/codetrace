@@ -162,6 +162,11 @@ def typecheck_batch(
 
     return new_ds
 
+def multiproc_typecheck(data: List[Dict[str,Any]],nproc, **typechecker_args):
+    batches = make_batches(data, nproc)
+    result = batched_apply(batches, nproc, typecheck_batch, desc="Typechecking", **typechecker_args)
+    return result
+
 def main(
     ds: datasets.Dataset,
     outpath: str,
@@ -170,8 +175,7 @@ def main(
     """
     For each ood_steering_ds/steering_ds in list-o-dirs, run parser. Collect % of parsing programs.
     """
-    batches = make_batches(ds, cpu_count())
-    result = batched_apply(batches, cpu_count(), typecheck_batch, **typechecker_args)
+    result = multiproc_typecheck(ds, cpu_count(), **typechecker_args)
     ds_new = datasets.Dataset.from_list(result)
     print(ds_new)
     ds_new.save_to_disk(outpath)

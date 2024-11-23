@@ -1,6 +1,8 @@
 import datasets
 import itertools as it
-from codetrace.scripts.typecheck_ds import typecheck_batch,run_typechecker, typecheck_py, typecheck_ts
+from codetrace.scripts.typecheck_ds import (
+    run_typechecker, typecheck_py, typecheck_ts, multiproc_typecheck
+)
 from codetrace.fast_utils import batched_apply, make_batches
 from codetrace.py_mutator import PyMutator
 from pathlib import Path
@@ -137,12 +139,6 @@ def dedup(data: List[Dict[str,Any]]) -> List[Dict[str,Any]]:
             dedup_data.append(item)
             seen.add(prog)
     return dedup_data
-
-def multiproc_typecheck(data: List[Dict[str,Any]],nproc, **typechecker_args):
-    batches = make_batches(data, nproc)
-    result = batched_apply(batches, nproc, typecheck_batch, desc="Typechecking",
-                           verbose=False, **typechecker_args)
-    return result
 
 def test_mutate_ds(lang:str, ds: datasets.IterableDataset, logdir=None):
     # check that for N random mutations on dataset,

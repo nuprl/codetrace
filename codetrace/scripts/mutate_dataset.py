@@ -113,7 +113,8 @@ def main(
     model_name: str,
     lang:str,
     mutations:List[str],
-    max_n: int
+    max_n: int,
+    max_mutants: int
 ):
     # resume from completions if they exist
     completions, blacklist = [], set()
@@ -147,6 +148,8 @@ def main(
         # save every batch
         if len(breaking_mutations) > 0:
             _save(breaking_mutations, output_path, f"Saving {i} batch")
+        if len(breaking_mutations) > max_mutants:
+            break
         if max_n > 0 and num_completed >= max_n:
             break
 
@@ -171,6 +174,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--max-size", type=int, default=-1)
+    parser.add_argument("--max-mutants", type=int, default=3500)
     parser.add_argument("--seed", type=int, default=None)
     
     parser.add_argument("--overwrite", action="store_true")
@@ -202,4 +206,4 @@ if __name__ == "__main__":
     ds = ds.to_iterable_dataset() if isinstance(ds, datasets.Dataset) else ds
     
     main(llm, tokenizer, ds, Path(args.mutated_ds), model_fim, args.batch_size, args.model, 
-         args.lang, args.mutations, args.max_size)
+         args.lang, args.mutations, args.max_size, args.max_mutants)
