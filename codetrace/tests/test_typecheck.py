@@ -1,39 +1,98 @@
-import shutil
 import datasets
 import itertools as it
-import pandas as pd
-from codetrace.scripts.typecheck_ds import typecheck_batch
+from codetrace.scripts.typecheck_ds import typecheck_batch,run_typechecker, typecheck_py, typecheck_ts
 from codetrace.fast_utils import batched_apply, make_batches
-import codetrace.fast_utils as fast_utils
-from codetrace.py_mutator import (
-    PyMutator,
-    PY_TYPE_ANNOTATIONS_QUERY,
-    RETURN_TYPES as PY_RETURN_TYPES,
-    PY_IDENTIFIER_QUERY,
-    IMPORT_STATEMENT_QUERY,
-    DummyTreeSitterNode
-)
+from codetrace.py_mutator import PyMutator
 from pathlib import Path
 from tqdm import tqdm
-from codetrace.base_mutator import Mutation, TreeSitterLocation,MutationFn
+from codetrace.base_mutator import MutationFn
 from codetrace.ts_mutator import TsMutator
 import os
 from typing import Union,Tuple,List,Dict,Any
-from codetrace.parsing_utils import get_captures
+import uuid
+CWD = os.path.abspath(Path(__file__).parent)
+
+def write(content:str, file:str):
+    with open(file, "w") as fp:
+        fp.write(content)
+
+def read(file:str) -> str:
+    with open(file, "r") as fp:
+        return fp.read()
+
+def test_typecheck_py():
+    prog1 = """
+from .soup import ultra_soup
+
+def test(wohoo: int
+)-> bool:
+    print('weeeee')
+    return True
+"""
+    prog2 = """
+def test(n : __typ0):
+    return n
+"""
+    prog3 = """
+from typing import TypeAlias
+__typ0 : TypeAlias = "str"
+def test(n : __typ0):
+    return n
+"""
+    adir = f"/tmp/{uuid.uuid1()}"
+    os.makedirs(adir)
+    write(prog1, f"{adir}/prog1.py")
+    write(prog2, f"{adir}/prog2.py")
+    write(prog3, f"{adir}/prog3.py")
+    
+    filemap = run_typechecker(adir, "py", verbose=True, timeout=10, disable_tqdm=False)
+    typecheck_output = typecheck_py(adir)
+    assert filemap["prog1"] == None, filemap["prog1"]
+    assert "error" in typecheck_output["prog3"] and filemap["prog3"] == None, filemap["prog3"]
+    assert "error" in filemap["prog2"], filemap["prog2"]
+
+def test_typecheck_ts():
+    prog1 = read(f"{CWD}/test_programs/after_type_rename.ts").replace("<FILL>", "string")
+    prog2 = """
+public getCount(): number {
+    return __typ0;
+}
+"""
+    prog3 = """
+import { someFunction } from 'nonexistent-module';
+import * as fs from 'fs';
+import * as path from 'path';
+
+function countFilesInDir(directory: string): number {
+    const files = fs.readdirSync(directory);
+    return files.filter(file => fs.statSync(path.join(directory, file)).isFile()).length;
+}
+"""
+    adir = f"/tmp/{uuid.uuid1()}"
+    os.makedirs(adir)
+    write(prog1, f"{adir}/prog1.ts")
+    write(prog2, f"{adir}/prog2.ts")
+    write(prog3, f"{adir}/prog3.ts")
+    
+    filemap = run_typechecker(adir, "ts", verbose=True, timeout=10, disable_tqdm=False)
+    typecheck_output = typecheck_ts(adir)
+    assert filemap["prog1"] == None, filemap["prog1"]
+    assert "error" in typecheck_output["prog3"] and filemap["prog3"] == None, filemap["prog3"]
+    assert "error" in filemap["prog2"], filemap["prog2"]
+
 
 def _all_subsets(muts: List[MutationFn]) -> List[List[MutationFn]]:
     subsets = []
     for r in range(1, len(muts) + 1):
         subsets.extend(it.combinations(muts, r))
-    subsets.append(tuple(muts))
     return [list(subset) for subset in subsets]
 
 def test_all_subsets():
     output = _all_subsets([1,2,3])
-    expected = [[1],[2],[3],[1,2],[2,3],[3,1], [1,2,3]]
-    expected = [frozenset(x) for x in expected]
-    output = [frozenset(x) for x in output]
-    assert set(output) == set(expected)
+    expected = [[1],[2],[3],[1,2],[2,3],[1,3], [1,2,3]]
+    output.sort()
+    expected.sort()
+    assert output == expected, f"{output} != {expected}"
 
 def _get_mutator(lang: str) -> Union[PyMutator, TsMutator]:
     if lang == "py":
@@ -44,7 +103,7 @@ def _get_mutator(lang: str) -> Union[PyMutator, TsMutator]:
 def _mutate_dataset(
     items: List[Tuple[str, str]],
     lang: str,
-    mutations: List[MutationFn]
+    mutations: List[str]
 ) -> List[Dict[str,str]]:
     mutator = _get_mutator(lang)
     mutated_program_and_type = []
@@ -64,10 +123,26 @@ def colored_message(message, color):
     reset = '\033[0m'
     print(f"{color}{message}{reset}\n")
 
-def all_unique_mutated_progs(data: List[Dict[str, Any]]) -> bool:
-    df = pd.DataFrame.from_dict(data)
-    n, n_unqiue = len(df),len(set(df["mutated_program"]))
-    return is_within_range(n, n_unqiue, 100), f"N {n} NUNIQUE {n_unqiue}"
+def dedup(data: List[Dict[str,Any]]) -> List[Dict[str,Any]]:
+    """
+    Necessary because same program can have <FILL> in different places,
+    but when this is substituted with label, it may be identical to another
+    mutated program with another fim location
+    """
+    seen = set()
+    dedup_data = []
+    for item in data:
+        prog = item["mutated_program"].replace("<FILL>", item["fim_type"])
+        if not prog in seen:
+            dedup_data.append(item)
+            seen.add(prog)
+    return dedup_data
+
+def multiproc_typecheck(data: List[Dict[str,Any]],nproc, **typechecker_args):
+    batches = make_batches(data, nproc)
+    result = batched_apply(batches, nproc, typecheck_batch, desc="Typechecking",
+                           verbose=False, **typechecker_args)
+    return result
 
 def test_mutate_ds(lang:str, ds: datasets.IterableDataset, logdir=None):
     # check that for N random mutations on dataset,
@@ -76,15 +151,14 @@ def test_mutate_ds(lang:str, ds: datasets.IterableDataset, logdir=None):
     NUM_EXAMPLES = 1000
     NUM_PROC = 30
     ERROR_RANGE = 0.05
-    mutator = _get_mutator(lang)
     
     for mutations in tqdm(_all_subsets(
-            [mutator.rename_types, mutator.rename_vars, mutator.delete_annotations]),
+            ["rename_types", "rename_vars", "delete_annotations"]),
             "Testing all combinations of muts"):
-        mutation_names = [m.__name__ for m in mutations]
-        print("Testing:", mutation_names)
 
-        items = next(ds.iter(NUM_EXAMPLES*2))
+        print("Testing:", mutations)
+
+        items = next(ds.iter(NUM_EXAMPLES*3))
         programs, fim_types = items["fim_program"], items["fim_type"]
         items = list(zip(programs, fim_types))
 
@@ -93,46 +167,46 @@ def test_mutate_ds(lang:str, ds: datasets.IterableDataset, logdir=None):
                                     _mutate_dataset, lang=lang, mutations = mutations,
                                     desc="Mutating")
         
-        assert all_unique_mutated_progs(mutated_prog_and_type)
-        assert len(mutated_prog_and_type) > NUM_EXAMPLES
+        # get all unique full programs
+        mutated_prog_and_type = dedup(mutated_prog_and_type)
+        print(f"Len mutated {len(mutated_prog_and_type)}\n")
+        assert len(mutated_prog_and_type) > NUM_EXAMPLES, len(mutated_prog_and_type)
         mutated_prog_and_type = mutated_prog_and_type[:NUM_EXAMPLES]
         
         # typecheck
-        new_ds = typecheck_batch(mutated_prog_and_type, "mutated_program", lang, logdir)
+        new_ds = multiproc_typecheck(mutated_prog_and_type, NUM_PROC,
+                                     colname="mutated_program", lang=lang, logdir=logdir)
         new_df = datasets.Dataset.from_list(new_ds).to_pandas()
         items_that_typecheck = new_df[new_df["typechecks"]]
         assert len(new_df) == NUM_EXAMPLES, len(new_df)
 
         mean = len(items_that_typecheck)/NUM_EXAMPLES
-        message = f"[{lang.upper()}]{mutation_names},{len(items_that_typecheck)}/{NUM_EXAMPLES}={mean:.2f}"
+        message = f"[{lang.upper()}]{mutations},{len(items_that_typecheck)}/{NUM_EXAMPLES}={mean:.2f}"
 
         if not is_within_range(mean, THRESHOLD, ERROR_RANGE):
-            colored_message("[FAILED] "+message, '\033[91m')#red
+            colored_message("[FAILED] "+message, '\033[91m') #red
         else:
             colored_message("[SUCC] "+message, '\033[92m') #green
-        1/0
 
 def test_py_mutate_ds():
     # check that for N random mutations on dataset,
     # at least THRESHOLD typecheck
-    logdir="/tmp/test_log_py"
-    shutil.rmtree(logdir, ignore_errors=True)
     ds = datasets.load_dataset("nuprl-staging/py_typeinf_fim", split="train", 
-                               streaming=True).shuffle()
-    test_mutate_ds("py",ds, logdir=logdir)
+                               streaming=True).shuffle(buffer_size=1)
+    test_mutate_ds("py",ds, logdir=None)
 
 def test_ts_mutate_ds():
     # check that for N random mutations on dataset,
     # at least THRESHOLD typecheck
-    logdir="/tmp/test_log_ts"
-    shutil.rmtree(logdir, ignore_errors=True)
     ds = datasets.load_dataset("nuprl-staging/ts_typeinf_fim", split="train", 
-                               streaming=True).shuffle()
-    test_mutate_ds("ts",ds, logdir=logdir)
+                               streaming=True).shuffle(buffer_size=1)
+    test_mutate_ds("ts",ds, logdir=None)
 
 if __name__ == "__main__":
-    test_all_subsets()
-    test_py_mutate_ds()
     assert os.path.exists(Path(os.environ["NPM_PACKAGES"])), \
-        "Please pass a path to npm package location"
-    # test_ts_mutate_ds()
+        "Please set 'NPM_PACKAGES' env var to npm package location"
+    test_all_subsets()
+    test_typecheck_py()
+    test_typecheck_ts()
+    test_py_mutate_ds()
+    test_ts_mutate_ds()

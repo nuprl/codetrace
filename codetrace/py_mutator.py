@@ -190,9 +190,9 @@ class PyMutator(AbstractMutator):
         self,
         program: str,
         fim_type: str,
-        mutations: List[MutationFn],
+        mutations: List[str],
         debug_seed : int = None
-    ) -> str:
+    ) -> Optional[str]:
         """
         Apply random combination of mutations to the program.
         Can provide a random seed DEBUG_SEED for debugging.
@@ -230,7 +230,7 @@ class PyMutator(AbstractMutator):
         var_rename = select_random_subset(var_rename_captures)
         type_rename = select_random_subset(type_rename_captures)
         remove_annotations = select_random_subset(remove_annotations_captures)
-        
+
         # -----------------------
         # find ALL ADDITIONAL locations that contain targets
         
@@ -249,14 +249,14 @@ class PyMutator(AbstractMutator):
         # Apply random combinations of mutations
         new_program, all_mutations = self.mutate_captures(
             program,
-            mutations,
+            [getattr(self, m) for m in mutations],
             var_rename_all,
             type_rename_all,
             remove_annotations_all,
             import_statements=import_statements_txt
         )
         
-        if debug_seed is not None:
+        if debug_seed == -1:
             return new_program, all_mutations
         
         return new_program

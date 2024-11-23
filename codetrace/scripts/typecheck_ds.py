@@ -1,3 +1,4 @@
+import asyncio
 import os
 import shutil
 from pathlib import Path
@@ -8,11 +9,12 @@ from typing import List, Dict, Any, Tuple, Optional
 import tempfile
 import hashlib
 from codetrace.fast_utils import batched_apply, make_batches
-from codetrace.utils import load_dataset, save_dataset
+from codetrace.utils import load_dataset
 from multiprocessing import cpu_count
 import glob
-import re
 import shutil
+from tqdm import tqdm
+from codetrace.scripts.bounded_subprocess_async import run as bounded_run
 import json
         
 pyright_config = {
@@ -29,89 +31,89 @@ def log(path: str, data: Any):
 
 def found_error(lang:str, line:str) -> bool:
     if lang == "py":
-        return ("- error:" in line and not '- error: Import "' in line and not "unknown import symbol" in line 
+        return ("- error:" in line \
+            and not '- error: Import "' in line \
+            and not "unknown import symbol" in line 
             and not "Position-only parameter not allowed after parameter that is not position-only" in line
             and not 'Expression of type "None" cannot be assigned to return type' in line
             and not 'is not a known member of "None"' in line 
             and not 'Imports from __future__ must be at the beginning of the file' in line)
     elif lang == "ts":
-        return (": error" in line and not "Cannot find module" in line \
+        return (": error" in line \
+                and not "Cannot find module" in line \
                 and not "Invalid module name in augmentation" in line)
     else:
         raise NotImplementedError("Supported languages are py and ts")
 
-def wrap(err:str, n_chars:int) -> str:
-    res = ""
-    for idx in range(0,len(err), n_chars):
-        res += err[idx:idx+n_chars] + "\n"
-    return res
 
-def typecheck_py(dir:str) -> Tuple[str, List[str]]:
+def typecheck_py(dir:str, verbose=True, timeout=120, disable_tqdm=True) -> Dict[str,str]:
     files = list(glob.glob(f"{dir}/*.py"))
-    commands = ["pyright", "-p", "pyright_config.json","*"]
-    try:
-        outs = subprocess.run(commands, cwd=dir, capture_output=True, timeout=300, text=True).stdout
-    except Exception as e:
-        print(f"Error in typechecking...{e}")
-        outs = "\n".join([f"{f} - error: {e}" for f in files])
-    return outs,files
+    file_to_error = {}
+    with open(f"{dir}/pyright_config.json", "w") as f:
+        json.dump(pyright_config, f)
 
-def typecheck_ts(dir:str) -> Tuple[str, List[str]]:
-    outs = []
+    commands = ["pyright", "-p", "pyright_config.json"]
+    for pyfile in tqdm(files, disable=disable_tqdm):
+        pyfile = pyfile.split("/")[-1]
+        try:
+            out = asyncio.run(bounded_run(commands + [pyfile], cwd=dir, max_output_size=4096,
+                                timeout_seconds=timeout))
+            stderr = out.stdout + "\n" + out.stderr
+            if out.timeout:
+                raise ValueError("Subprocess timed out!")
+            if out.exit_code != 0 and not "error" in stderr:
+                raise ValueError(f"Missing stderr but exitcode was non-zero: {stderr}")
+            
+            file_to_error[pyfile.replace(".py","")] = stderr
+        except Exception as e:
+            if verbose:
+                print(f"Error in typechecking...{e}")
+            file_to_error[pyfile.replace(".py","")] = "{pyfile} - error: {e}"
+
+    return file_to_error
+
+def typecheck_ts(dir:str, verbose=True, timeout=300, disable_tqdm=True) -> Dict[str,str]:
+    file_to_error = {}
     files = list(glob.glob(f"{dir}/*.ts"))
     commands = ["npx", "--cache", str(os.environ["NPM_PACKAGES"]), "ts-node", 
                 "--compilerOptions", "{\"noImplicitAny\": false, \"strictNullChecks\": false}", 
                 "--typeCheck"]
-    for tsfile in files:
+    for tsfile in tqdm(files, disable=disable_tqdm):
         tsfile = tsfile.split("/")[-1]
         try:
-            out = subprocess.run(commands + [tsfile], cwd=dir, capture_output=True, timeout=120,text=True).stderr
-            outs.append(out)
+            out = asyncio.run(bounded_run(commands + [tsfile], cwd=dir, max_output_size=4096, 
+                              timeout_seconds=timeout))
+            stderr = out.stdout + "\n" + out.stderr
+            if out.timeout:
+                raise ValueError("Subprocess timed out!")
+            if out.exit_code != 0 and not "error" in stderr:
+                raise ValueError(f"Missing stderr but exitcode was non-zero: {stderr}")
+            
+            file_to_error[tsfile.replace(".ts","")] = stderr
         except Exception as e:
-            print(f"Error in typechecking...{e}")
-            outs.append(f"{tsfile}: error {e}")
+            if verbose:
+                print(f"Error in typechecking...{e}")
+            file_to_error[tsfile.replace(".ts","")] = f"{tsfile}: error {e}"
 
-    return "\n".join(outs),files
+    return file_to_error
         
 # from https://github.com/nuprl/MultiPL-T/
-def run_typechecker(dir:str, lang:str) -> Dict[str, Dict[str,str]]:
+def run_typechecker(dir:str, lang:str, **kwargs) -> Dict[str,str]:
     if lang == "py":
-        outs,files= typecheck_py(dir)
+        file_to_error= typecheck_py(dir, **kwargs)
     elif lang == "ts":
-        outs,files = typecheck_ts(dir)
+        file_to_error = typecheck_ts(dir, **kwargs)
     else:
         raise ValueError("Only ts and py langs supported")
         
-    cur_file, cur_lines = "",""
     filemap = {}
-    for _, line in enumerate(outs.split("\n")):
-        filename_in_line = re.findall(r"^.*\.{lang}".format(lang=lang), line)
-        if len(filename_in_line) == 1:
-            filename_in_line = filename_in_line[0].split("/")[-1]
-            # found new file
-            if filename_in_line != cur_file and any([f.split('/')[-1] == filename_in_line for f in files]):
-                # get new file
-                filemap[filename_in_line] = {"count":0, "errors":[]}
-                cur_file = filename_in_line
-                cur_lines = ""
-        
-        if len(cur_file) > 0 and found_error(lang, line):
-            cur_lines += line + "\n"
-            filemap[cur_file]["count"] += 1
-            filemap[cur_file]["errors"].append(line)
-            
-    for filename in files:
-        if filename.split("/")[-1] not in filemap:
-            filemap[filename.split("/")[-1]] = {"count":0, "errors":[]}
-    return filemap
+    for file,stderr in file_to_error.items():
+        if found_error(lang, stderr):
+            filemap[file] = stderr
+        else:
+            filemap[file] = None
 
-def _format_error_list(error_list: List[str])-> str:
-    col_len = 80
-    delim = f"\n#{'='*col_len}\n"
-    res = ""
-    for err in error_list:
-        res += wrap(err,col_len).strip() + delim
-    return res
+    return filemap
 
 def hash_string(input_string):
     sha256 = hashlib.sha256()
@@ -122,44 +124,41 @@ def typecheck_batch(
     examples: List[dict],
     colname: str, 
     lang:str,
-    logdir:Optional[Path]=None
+    logdir:Optional[Path]=None,
+    **typechecker_kwargs
 ) -> List[dict]:
     new_ds = []
-    hexsha_to_ex = {}
+    pid_to_ex = {}
     
     if logdir:
         os.makedirs(logdir)
 
     with tempfile.TemporaryDirectory() as tempdir:
         for ex in examples:
+            # add id
             program = ex[colname].replace("<FILL>", ex["fim_type"])
-            hexsha = hash_string(program)
-            hexsha_to_ex[hexsha] = ex
-            name = os.path.join(tempdir, hexsha + f".{lang}")
+            pid = hash_string(program)
+            pid_to_ex[pid] = ex
+            name = os.path.join(tempdir, f"{pid}.{lang}")
             with open(name, "w") as f:
                 f.write(program)
 
-        with open(f"{tempdir}/pyright_config.json", "w") as f:
-            json.dump(pyright_config, f)
-
         # Run pyright in the temporary directory
-        typecheck_map = run_typechecker(tempdir, lang)
-        if typecheck_map is None:
+        typecheck_map = run_typechecker(tempdir, lang, **typechecker_kwargs)
+        if typecheck_map  == {}:
             return []
 
-        for i, (hexsha, dikt) in enumerate(typecheck_map.items()):
-            num_errors = dikt["count"]
-            error_list = dikt["errors"]
-            new_ds.append({**hexsha_to_ex[hexsha.replace(f".{lang}","")], 
-                           "typechecks": num_errors == 0,
-                           "error_list": "\n".join(error_list)})
-            if logdir:
-                item = hexsha_to_ex[hexsha.replace(f".{lang}","")]
-                original_prog,original_type = item["fim_program"], item["fim_type"]
-                original = original_prog.replace("<FILL>", original_type)
-                log(f"{logdir}/_original_{name.split('/')[-1]}", original)
-                log(f"{logdir}/_mutated_{name.split('/')[-1]}", original)
-                log(f"{logdir}/_errors_{name.split('/')[-1]}", _format_error_list(error_list))
+    for _, (fname, errors) in enumerate(typecheck_map.items()):
+        item = pid_to_ex[fname]
+        new_ds.append({**item, 
+                        "typechecks": errors is None,
+                        "errors": errors})
+        if logdir:
+            original_prog,original_type = item["fim_program"], item["fim_type"]
+            original = original_prog.replace("<FILL>", original_type)
+            log(f"{logdir}/_original_{name.split('/')[-1]}", original)
+            log(f"{logdir}/_mutated_{name.split('/')[-1]}", item[colname])
+            log(f"{logdir}/_errors_{name.split('/')[-1]}", errors)
 
     return new_ds
 

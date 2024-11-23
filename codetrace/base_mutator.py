@@ -1,6 +1,6 @@
 import tree_sitter
 from codetrace.parsing_utils import replace_between_bytes
-from typing import List, Tuple, Union, Callable, TypeVar
+from typing import List, Tuple, Union, Callable, TypeVar, Optional
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
@@ -62,9 +62,9 @@ class AbstractMutator(ABC):
     def random_mutate(
         program: str,
         fim_type: str,
-        mutations: List[MutationFn], 
+        mutations: List[str], 
         **kwargs
-    ) -> str:
+    ) -> Optional[str]:
         pass
     
     @abstractmethod
@@ -173,28 +173,30 @@ class AbstractMutator(ABC):
         self, 
         program: str, 
         fim_type: str, 
-        mutations: List[MutationFn]
-    ) -> str:
+        mutations: List[str]
+    ) -> Optional[str]:
         """
         Apply random combination of mutations to the program.
         NOTE: does rename variables first, then rename types, then delete
         """
         new_program = program
-        if self.rename_vars in mutations:
-            p = self.random_mutate(new_program, fim_type, [self.rename_vars])
-            if p != None:
+        if "rename_vars" in mutations:
+            p = self.random_mutate(new_program, fim_type, ["rename_vars"])
+            if p:
+                new_program = p
+        
+        if "rename_types" in mutations:
+            p = self.random_mutate(new_program, fim_type, ["rename_types"])
+            if p:
                 new_program = p
                 
-        if self.rename_types in mutations:
-            p = self.random_mutate(new_program, fim_type, [self.rename_types])
-            if p != None:
+        if "delete_annotations" in mutations:
+            p = self.random_mutate(new_program, fim_type, ["delete_annotations"])
+            if p:
                 new_program = p
-                
-        if self.delete_annotations in mutations:
-            p = self.random_mutate(new_program, fim_type, [self.delete_annotations])
-            if p != None:
-                new_program = p
-                
+        
+        if new_program == program:
+            return None
         return new_program
     
     def mutate_captures(
@@ -205,7 +207,7 @@ class AbstractMutator(ABC):
         type_rename_captures: List[tree_sitter.Node],
         remove_captures: List[tree_sitter.Node],
         **kwargs
-    )-> Tuple[str, List[Mutation]]:
+    )-> Tuple[Optional[str], List[Mutation]]:
         """
         Given a program, a list of mutations to apply and the target nodes
         for each mutation, return the mutated program and list of actually

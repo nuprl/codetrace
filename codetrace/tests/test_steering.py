@@ -125,14 +125,14 @@ from datasets import Dataset
 def mock_dataset():
     # Create a mock dataset with hexsha (program ids) and fim_type (label types)
     data = [
-        {"hexsha": "prog1", "fim_type": "typeA"},
-        {"hexsha": "prog1", "fim_type": "typeA"},
-        {"hexsha": "prog2", "fim_type": "typeB"},
-        {"hexsha": "prog2", "fim_type": "typeA"},
-        {"hexsha": "prog3", "fim_type": "typeB"},
-        {"hexsha": "prog3", "fim_type": "typeB"},
-        {"hexsha": "prog1", "fim_type": "typeB"},
-        {"hexsha": "prog3", "fim_type": "typeA"},
+        {"_original_program": "prog1", "fim_type": "typeA"},
+        {"_original_program": "prog1", "fim_type": "typeA"},
+        {"_original_program": "prog2", "fim_type": "typeB"},
+        {"_original_program": "prog2", "fim_type": "typeA"},
+        {"_original_program": "prog3", "fim_type": "typeB"},
+        {"_original_program": "prog3", "fim_type": "typeB"},
+        {"_original_program": "prog1", "fim_type": "typeB"},
+        {"_original_program": "prog3", "fim_type": "typeA"},
     ]
     return Dataset.from_list(data)
 
@@ -152,7 +152,7 @@ def test_balance_prompts_dedup_prog_threshold(mock_dataset):
     # Verify that no program appears more than 2 times
     prog_count = {}
     for ex in result:
-        prog_count[ex["hexsha"]] = prog_count.get(ex["hexsha"], 0) + 1
+        prog_count[ex["_original_program"]] = prog_count.get(ex["_original_program"], 0) + 1
     
     for count in prog_count.values():
         assert count <= dedup_prog_threshold, f"Program exceeded the deduplication threshold: {prog_count}"
@@ -182,7 +182,7 @@ def test_balance_prompts_dedup_both(mock_dataset):
     type_count = {}
     
     for ex in result:
-        prog_count[ex["hexsha"]] = prog_count.get(ex["hexsha"], 0) + 1
+        prog_count[ex["_original_program"]] = prog_count.get(ex["_original_program"], 0) + 1
         type_count[ex["fim_type"]] = type_count.get(ex["fim_type"], 0) + 1
     
     for count in prog_count.values():
@@ -215,7 +215,7 @@ def test_balance_prompts_varying_thresholds(mock_dataset, dedup_prog_threshold, 
     type_count = {}
     
     for ex in result:
-        prog_count[ex["hexsha"]] = prog_count.get(ex["hexsha"], 0) + 1
+        prog_count[ex["_original_program"]] = prog_count.get(ex["_original_program"], 0) + 1
         type_count[ex["fim_type"]] = type_count.get(ex["fim_type"], 0) + 1
     
     for count in prog_count.values():

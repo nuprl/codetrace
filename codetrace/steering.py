@@ -29,19 +29,19 @@ def balance_prompts(
     # if -1, set to the max value, aka do not dedup
     prog_maxn = len(dataset) if dedup_prog_threshold == -1 else dedup_prog_threshold
     type_maxn = len(dataset) if dedup_type_threshold == -1 else dedup_type_threshold
-
-    hexsha_count = {h:0 for h in dataset["hexsha"]}
+    
+    program_count = {i:0 for i in dataset["_original_program"]}
     label_count = {label : 0 for label in dataset["fim_type"]}
     balanced_prompts = []
     for _,ex in tqdm(enumerate(dataset), desc="Deduping dataset",total=len(dataset), disable=disable_tqdm):
-        if hexsha_count[ex["hexsha"]] >= prog_maxn and label_count[ex["fim_type"]] >= type_maxn:
+        if program_count[ex["_original_program"]] >= prog_maxn and label_count[ex["fim_type"]] >= type_maxn:
             break
-        elif label_count[ex["fim_type"]] + 1 >= prog_maxn or hexsha_count[ex["hexsha"]] + 1 >= type_maxn:
+        elif label_count[ex["fim_type"]] + 1 >= type_maxn or program_count[ex["_original_program"]] + 1 >= prog_maxn:
             continue
         
         balanced_prompts.append(ex)
         label_count[ex["fim_type"]] += 1
-        hexsha_count[ex["hexsha"]] += 1
+        program_count[ex["_original_program"]] += 1
 
     ds = datasets.Dataset.from_list(balanced_prompts)
     return ds
@@ -91,6 +91,10 @@ class SteeringManager:
         self.candidates_ds = candidates_ds
         if max_num_candidates > -1:
             self.candidates_ds = self.candidates_ds.select(range(max_num_candidates))
+        self.candidates_ds = candidates_ds.map(
+            lambda x: {**x, "_original_program": x["fim_program"].replace("<FILL>", x["fim_type"])},
+            desc="Adding column for original unfimmed program"
+        )
         self.cache_dir = cache_dir
         if not token_mask_fn:
             # default patch on fim middle
@@ -178,7 +182,7 @@ class SteeringManager:
                 test_size=test_size,
                 shuffle=shuffle,
                 seed=seed,
-                separate_by_column="hexsha"
+                separate_by_column="_original_program"
             )
             if dedup_prog_threshold > -1 or dedup_type_threshold > -1:
                 steer_split = balance_prompts(steer_split, dedup_prog_threshold, dedup_type_threshold)

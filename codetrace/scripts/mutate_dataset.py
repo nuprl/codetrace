@@ -197,7 +197,8 @@ if __name__ == "__main__":
                     tokenizer=args.tokenizer, async_inference=True)
     model_fim = get_model_fim(args.model)
     
-    ds = load_dataset(args.completions_ds, split=args.split, name=args.subset, streaming=True)
+    ds = load_dataset(args.completions_ds, split=args.split, name=args.subset, streaming=True).shuffle(
+        buffer_size=1, seed=args.seed)
     ds = ds.to_iterable_dataset() if isinstance(ds, datasets.Dataset) else ds
     
     main(llm, tokenizer, ds, Path(args.mutated_ds), model_fim, args.batch_size, args.model, 
