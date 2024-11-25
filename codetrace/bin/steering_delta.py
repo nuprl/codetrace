@@ -39,7 +39,7 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
             "--steer-name", "steering_split",
             "--test-name", "test_split",
             "--tensor-name", "steering_tensor.pt",
-            "-n", "3500",
+            "-n", "3000",
             "--test-size", "100",
         ]
         print(" ".join(cmd))

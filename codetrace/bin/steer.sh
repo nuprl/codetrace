@@ -12,4 +12,4 @@ python3 -m codetrace.scripts.launch_steer \
     --steer-name steering_split \
     --test-name test_split \
     --tensor-name steering_tensor.pt \
-    --test-size 200
+    --test-size 100

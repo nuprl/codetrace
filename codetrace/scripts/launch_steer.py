@@ -101,8 +101,8 @@ if __name__ == "__main__":
     parser.add_argument("--collect-batchsize", "-b1",type=int, default=4)
     parser.add_argument("--patch-batchsize", "-b2",type=int, default=2)
     parser.add_argument("--dtype", choices=["bfloat16","float32"],default="bfloat16")
-    parser.add_argument("--max-num-candidates","-n",type=int, default=-1)
-    parser.add_argument("--test-size", type=int,default=500)
+    parser.add_argument("--max-num-candidates","-n",type=int, default=3000)
+    parser.add_argument("--test-size", type=int,default=100)
 
     parser.add_argument("--overwrite", action="store_true")
 

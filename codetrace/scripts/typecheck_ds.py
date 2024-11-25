@@ -171,6 +171,7 @@ def main(
     ds: datasets.Dataset,
     outpath: str,
     num_proc: int,
+    max_size=int,
     **typechecker_args
 ):
     """
@@ -178,6 +179,8 @@ def main(
     """
     result = multiproc_typecheck(ds, num_proc, **typechecker_args)
     ds_new = datasets.Dataset.from_list(result)
+    if max_size > -1 and len(ds_new) > max_size:
+        ds_new = ds_new.shuffle().select(range(max_size))
     print(ds_new)
     df = ds_new.to_pandas()
     print(df["typechecks"].mean(), df["typechecks"].value_counts())
@@ -212,7 +215,4 @@ if __name__=="__main__":
     ds = load_dataset(args.input_ds, args.split, name=args.subset)
     print(ds)
 
-    if args.max_size > -1:
-        ds = ds.shuffle().select(range(args.max_size))
-
-    main(ds, args.output_ds, num_proc=args.nproc, colname=args.column_name, lang=args.lang, logdir=logdir)
+    main(ds, args.output_ds, num_proc=args.nproc, max_size=args.max_size,colname=args.column_name, lang=args.lang, logdir=logdir)
