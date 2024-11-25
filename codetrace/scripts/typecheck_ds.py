@@ -68,7 +68,7 @@ def typecheck_py(dir:str, verbose=False, timeout=120, disable_tqdm=True) -> Dict
         except Exception as e:
             if verbose:
                 print(f"Error in typechecking...{e}")
-            file_to_error[pyfile.replace(".py","")] = "{pyfile} - error: {e}"
+            file_to_error[pyfile.replace(".py","")] = f"{pyfile} - error: {e}"
 
     return file_to_error
 
@@ -178,6 +178,8 @@ def main(
     result = multiproc_typecheck(ds, cpu_count(), **typechecker_args)
     ds_new = datasets.Dataset.from_list(result)
     print(ds_new)
+    df = ds_new.to_pandas()
+    print(df["typechecks"].mean(), df["typechecks"].value_counts())
     ds_new.save_to_disk(outpath)
 
 if __name__=="__main__":
@@ -192,8 +194,9 @@ if __name__=="__main__":
     parser.add_argument("--max-size", type=int, default=-1)
     parser.add_argument("--do-log", action="store_true")
     args = parser.parse_args()
-            
-    assert os.path.exists(Path(os.environ["NPM_PACKAGES"])), "Please pass a path to npm package location"
+    
+    if args.lang == "ts":
+        assert os.path.exists(Path(os.environ["NPM_PACKAGES"])), "Please pass a path to npm package location"
     
     logdir=None
     if args.do_log:

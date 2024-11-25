@@ -126,7 +126,7 @@ def main(
     ds = _preprocess(ds, blacklist, model_fim, tokenizer, lang, mutations, batch_size)
 
     # batch generations because of cpu ops in vllm
-    num_completed = 0
+    num_completed = len(completions)
     for i,batch in tqdm(enumerate(ds.iter(batch_size)), desc="Batch generations"):
         batch_completions = asyncio.run(generate_completions(
                                     llm,

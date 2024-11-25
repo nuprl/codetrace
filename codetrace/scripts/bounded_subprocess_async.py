@@ -4,13 +4,29 @@ import fcntl
 import asyncio
 import subprocess
 from typing import List
-from bounded_subprocess import (
-    MAX_BYTES_PER_READ,
-    SLEEP_BETWEEN_READS,
-    Result,
-    set_nonblocking,
-)
+
 # modified from https://github.com/arjunguha/bounded_subprocess
+
+MAX_BYTES_PER_READ = 1024
+SLEEP_BETWEEN_READS = 0.1
+
+class Result:
+    timeout: int
+    exit_code: int
+    stdout: str
+    stderr: str
+
+    def __init__(self, timeout, exit_code, stdout, stderr):
+        self.timeout = timeout
+        self.exit_code = exit_code
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def set_nonblocking(reader):
+    fd = reader.fileno()
+    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
 async def run(
     args: List[str],

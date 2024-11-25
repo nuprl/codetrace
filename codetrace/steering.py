@@ -91,7 +91,7 @@ class SteeringManager:
         self.model=model
         self.tokenizer=model.tokenizer
         self.fim_obj=get_model_fim(model.config.name_or_path)
-        if max_num_candidates > -1:
+        if max_num_candidates > -1 and max_num_candidates < len(candidates_ds):
             candidates_ds = candidates_ds.select(range(max_num_candidates))
         self.candidates_ds = candidates_ds.map(
             lambda x: {**x, "_original_program": x["fim_program"].replace("<FILL>", x["fim_type"])},
@@ -260,7 +260,6 @@ class SteeringManager:
         
         if do_random_ablation:
             steering_tensor = torch.zeros_like(self.steering_tensor)
-            # steering_tensor.normal_(mean=self.steering_tensor.mean(), std=self.steering_tensor.std())
             steering_tensor.random_(math.floor(self.steering_tensor.min().item()), math.ceil(self.steering_tensor.max().item()))
         else:
             steering_tensor = self.steering_tensor
