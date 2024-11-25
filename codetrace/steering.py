@@ -193,7 +193,6 @@ class SteeringManager:
                 test_size=test_size,
                 shuffle=shuffle,
                 seed=seed,
-                typecheck_test=True,
                 separate_by_column="_original_program",
                 debug_max_cycle=debug_max_cycle,
                 lang=self.lang,
@@ -291,14 +290,13 @@ def _steer_test_split(
     test_size: Union[int, float],
     shuffle:bool,
     seed:Optional[int],
-    typecheck_test:bool,
     separate_by_column: str,
     debug_max_cycle: Optional[int] = None,
     **typechecker_kwargs,
 )-> Tuple[datasets.Dataset, datasets.Dataset]:
     if shuffle:
         ds = ds.shuffle(seed=seed)
-    if typecheck_test:
+    if not "typechecks" in ds.column_names:
         ds = multiproc_typecheck(ds, cpu_count(), **typechecker_kwargs)
         ds = datasets.Dataset.from_list(ds)
 
