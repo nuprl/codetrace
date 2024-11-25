@@ -15,8 +15,7 @@ set -e
 # in which it works.
 
 MODEL=$1
-OUTPUT_DIR=$2
-LANG=$3
+LANG=$2
 
 if [ "$LANG" = "py" ]; then
     SOURCE_DATASET="nuprl-staging/py_typeinf_fim"
@@ -24,7 +23,7 @@ else
     SOURCE_DATASET="nuprl-staging/ts_typeinf_fim"
 fi
 
-python3 -m codetrace.scripts.completions \
+VLLM_LOGGING_LEVEL=ERROR python3 -m codetrace.scripts.completions \
     --model /work/nvme/bcbj/models/$MODEL \
     --prompt-ds $SOURCE_DATASET \
     --new-ds-name results/completions-$LANG-$MODEL
