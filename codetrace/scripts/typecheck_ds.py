@@ -170,12 +170,13 @@ def multiproc_typecheck(data: List[Dict[str,Any]],nproc, **typechecker_args):
 def main(
     ds: datasets.Dataset,
     outpath: str,
+    num_proc: int,
     **typechecker_args
 ):
     """
     For each ood_steering_ds/steering_ds in list-o-dirs, run parser. Collect % of parsing programs.
     """
-    result = multiproc_typecheck(ds, cpu_count(), **typechecker_args)
+    result = multiproc_typecheck(ds, num_proc, **typechecker_args)
     ds_new = datasets.Dataset.from_list(result)
     print(ds_new)
     df = ds_new.to_pandas()
@@ -192,6 +193,7 @@ if __name__=="__main__":
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--subset", type=str, default=None)
     parser.add_argument("--max-size", type=int, default=-1)
+    parser.add_argument("--nproc", type=int, default=cpu_count())
     parser.add_argument("--do-log", action="store_true")
     args = parser.parse_args()
     
@@ -213,4 +215,4 @@ if __name__=="__main__":
     if args.max_size > -1:
         ds = ds.shuffle().select(range(args.max_size))
 
-    main(ds, args.output_ds, colname=args.column_name, lang=args.lang, logdir=logdir)
+    main(ds, args.output_ds, num_proc=args.nproc, colname=args.column_name, lang=args.lang, logdir=logdir)
