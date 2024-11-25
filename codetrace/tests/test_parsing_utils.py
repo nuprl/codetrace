@@ -1,6 +1,8 @@
 from codetrace.parsing_utils import (
     get_captures,
+    get_model_fim,
     STARCODER_FIM,
+    prepare_fim_prompt,
     CODELLAMA_FIM_CHAT,
     is_in_capture_range,
     find_between_bytes,
@@ -99,7 +101,49 @@ def is_palindrome(s: <FILL>) -> bool:
         {"role": "assistant", "content": program_prefix}
     ]
     assert result == expected
-    assert CODELLAMA_FIM_CHAT.chat_template() != expected
+    assert CODELLAMA_FIM_CHAT.chat_format() != expected
+    assert CODELLAMA_FIM_CHAT.fim_to_placeholder(result) == program
+
+def test_prepare_fim_prompt():
+    from transformers import AutoTokenizer
+    fim_obj = get_model_fim("codellama_instruct")
+
+    program = f"""
+def is_palindrome(s: {fim_obj.placeholder}):
+    return s[::-1]==s
+""".strip()
+    
+    tokenizer = AutoTokenizer.from_pretrained("/mnt/ssd/arjun/models/codellama_7b_instruct")
+    output = prepare_fim_prompt(tokenizer, get_model_fim(tokenizer.name_or_path), program)
+    expected = '''<s>[INST] Continue this program with the correct substitution for <FILL>:
+
+def is_palindrome(s: <FILL>):
+    return s[::-1]==s [/INST] def is_palindrome(s:'''
+    print(expected)
+    print(output)
+    assert output == expected, f"{output}!={expected}"
+
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
+    output = prepare_fim_prompt(tokenizer, get_model_fim(tokenizer.name_or_path), program)
+    expected = '''<|begin_of_text|><|start_header_id|>user<|end_header_id|>
+
+Continue this program with the correct substitution for <FILL>:
+
+def is_palindrome(s: <FILL>):
+    return s[::-1]==s<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+def is_palindrome(s:'''
+    print(expected)
+    print(output)
+    assert output == expected, f"{output}!={expected}"
+
+    tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoderbase-1b")
+    output = prepare_fim_prompt(tokenizer, get_model_fim(tokenizer.name_or_path), program)
+    expected = '''<fim_prefix>def is_palindrome(s: <fim_suffix>):
+    return s[::-1]==s<fim_middle>'''
+    print(expected)
+    print(output)
+    assert output == expected, f"{output}!={expected}"
 
 if __name__ == "__main__":
     import pytest

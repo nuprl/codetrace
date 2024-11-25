@@ -10,6 +10,7 @@ from codetrace.steering import (
     SteeringManager
 )
 import datasets
+from codetrace.parsing_utils import LLAMA_CHAT_TEMPLATE
 import torch
 
 def test_subtract_avg():
@@ -117,6 +118,22 @@ def is_palindrome(s: {fim_obj.placeholder}):
 
 def is_palindrome(s: <FILL>):
     return s[::-1]==s [/INST] def is_palindrome(s:'''
+    print(expected)
+    print(output)
+    assert output == expected, f"{output}!={expected}"
+
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
+    output = tokenizer.apply_chat_template(fim_obj.placeholder_to_fim(program), tokenize=False, 
+                                           add_generation_prompt=False, continue_final_message=True,
+                                           chat_template=LLAMA_CHAT_TEMPLATE)
+    expected = '''<|begin_of_text|><|start_header_id|>user<|end_header_id|>
+
+Continue this program with the correct substitution for <FILL>:
+
+def is_palindrome(s: <FILL>):
+    return s[::-1]==s<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+def is_palindrome(s:'''
     print(expected)
     print(output)
     assert output == expected, f"{output}!={expected}"

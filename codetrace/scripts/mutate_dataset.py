@@ -14,7 +14,7 @@ from datasets import IterableDataset
 from codetrace.base_mutator import MutationFn, Mutation
 from codetrace.py_mutator import PyMutator
 from codetrace.ts_mutator import TsMutator
-from codetrace.parsing_utils import get_model_fim, get_captures, FimChat, FimObj
+from codetrace.parsing_utils import get_model_fim,get_captures, FimChat, FimObj, prepare_fim_prompt
 from codetrace.utils import (
     load_dataset,
     num_available_devices,
@@ -89,16 +89,7 @@ def _preprocess(
                                         mutations, mutator.random_mutate_ordered_by_type)})
     
     ds = ds.filter(lambda x: x["mutated_program"])
-
-    if isinstance(model_fim, FimChat):
-        chat_template = tokenizer.get_chat_template()
-        _prompt_fmt = (lambda x: tokenizer.apply_chat_template(
-            model_fim.placeholder_to_fim(x), continue_final_message=True,
-            add_generation_prompt=False, tokenize=False, chat_template=chat_template
-        ))
-        ds = ds.map(lambda x: {**x, "_prompt": _prompt_fmt(x["mutated_program"])})
-    else:
-        ds = ds.map(lambda x: {**x, "_prompt": model_fim.placeholder_to_fim(x["mutated_program"])})
+    ds = ds.map(lambda x: {**x, "_prompt": prepare_fim_prompt(tokenizer, model_fim, x["mutated_program"])})
 
     return ds
 

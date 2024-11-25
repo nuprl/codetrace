@@ -17,6 +17,7 @@ from functools import partial
 import itertools as it
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
+from codetrace.parsing_utils import prepare_fim_prompt
 
 def balance_prompts(
     dataset : datasets.Dataset,
@@ -100,7 +101,6 @@ class SteeringManager:
         self.cache_dir = cache_dir
         if not token_mask_fn:
             # default patch on fim middle
-            # token_mask_fn = partial(mask_target_tokens, token_ids=[self.fim_obj.get_token_ids(self.fim_obj.middle)])
             token_mask_fn = partial(mask_target_idx, indices=[-1])
             reduction = "max"
         self.patch_fn = masked_add
@@ -113,15 +113,7 @@ class SteeringManager:
         os.makedirs(self.cache_dir, exist_ok=True)
 
     def tokenize(self, prompt:str) -> str:
-        if isinstance(self.fim_obj, FimChat):
-            return self.tokenizer.apply_chat_template(
-                self.fim_obj.placeholder_to_fim(prompt), 
-                tokenize=False, 
-                add_generation_prompt=False,
-                continue_final_message=True
-            )
-        else:
-            return self.fim_obj.placeholder_to_fim(prompt)
+        return prepare_fim_prompt(self.tokenizer, self.fim_obj, prompt)
 
     def save_data(self, data:datasets.Dataset, path:str):
         """

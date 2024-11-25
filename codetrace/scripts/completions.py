@@ -7,7 +7,7 @@ import os
 import torch
 import datasets
 from vllm import AsyncLLMEngine
-from codetrace.parsing_utils import get_model_fim, FimObj, FimChat
+from codetrace.parsing_utils import get_model_fim, FimObj, FimChat, prepare_fim_prompt
 from transformers import AutoTokenizer, PreTrainedTokenizer
 from tqdm import tqdm
 from codetrace.utils import (
@@ -67,15 +67,7 @@ def main(
     if len(blacklist) > 0:
         ds = ds.filter(lambda x: hex_encode(x["fim_program"]) not in blacklist)
     
-    if isinstance(model_fim, FimChat):
-        chat_template = tokenizer.get_chat_template()
-        _prompt_fmt = (lambda x: tokenizer.apply_chat_template(
-            model_fim.placeholder_to_fim(x), continue_final_message=True,
-            add_generation_prompt=False, tokenize=False, chat_template=chat_template
-        ))
-        ds = ds.map(lambda x: {**x, "_prompt": _prompt_fmt(x["fim_program"])})
-    else:
-        ds = ds.map(lambda x: {**x, "_prompt": model_fim.placeholder_to_fim(x["fim_program"])})
+    ds = ds.map(lambda x: {**x, "_prompt": prepare_fim_prompt(tokenizer, model_fim, x["fim_program"])})
 
     # generate                  
     # batch generations because of cpu ops in vllm
