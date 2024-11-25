@@ -94,7 +94,6 @@ def test_split():
         4,
         False,
         None,
-        False,
         "hexsha"
     )
     steer_split = [x["hexsha"] for x in steer_split]
