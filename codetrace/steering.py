@@ -177,11 +177,8 @@ class SteeringManager:
             if test_size < 0:
                 test_size *= len(self.candidates_ds)
 
-            candidates_ds = balance_prompts(self.candidates_ds, 
-                        dedup_prog_threshold*3, dedup_type_threshold*3)
-
             steer_split,test_split = _steer_test_split(
-                candidates_ds,
+                self.candidates_ds,
                 test_size=test_size,
                 shuffle=shuffle,
                 seed=seed,
@@ -297,7 +294,7 @@ def _steer_test_split(
     actual_test_size = test_size if test_size > 0 else int(test_size * len(ds))
     test_ds, i = [],0
     INCREASE_AMT = 10
-    while len(test_ds) < actual_test_size and i < len(ds):
+    while len(test_ds) < actual_test_size:
         print(f"Attempting split #{i}")
         if debug_max_cycle and i > debug_max_cycle:
             break
@@ -312,5 +309,6 @@ def _steer_test_split(
         if dedup_prog_threshold > -1 or dedup_type_threshold > -1:
             train_ds = balance_prompts(train_ds, dedup_prog_threshold, dedup_type_threshold)
             test_ds = balance_prompts(test_ds, dedup_prog_threshold, dedup_type_threshold)
+        
         i += 1
     return train_ds, test_ds
