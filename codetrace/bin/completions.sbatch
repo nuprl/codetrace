@@ -6,7 +6,7 @@
 #SBATCH --ntasks=8
 #SBATCH --mem=60G
 #SBATCH --gres=gpu:1
-#SBATCH --time=5:00:00
+#SBATCH --time=12:00:00
 
 set -x
 set -e
@@ -28,6 +28,6 @@ DEVICES=$(seq -s "," 0 $((NUM_GPUS - 1)))
 export CUDA_VISIBLE_DEVICES="$DEVICES"
 
 VLLM_LOGGING_LEVEL=ERROR python3 -m codetrace.scripts.completions \
-    --model /work/nvme/bcbj/models/$MODEL \
+    --model /work/nvme/bcbj/franlucc/models/$MODEL \
     --prompt-ds $SOURCE_DATASET \
     --new-ds-name results/completions-$LANG-$MODEL
