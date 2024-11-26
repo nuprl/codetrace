@@ -24,7 +24,7 @@ def main_with_args(model: str, lang: str, num_layers: int, interval: int, result
 
     for p in mutations_paths:
         mutations = p.name.split("-")[-2].replace("_", ",")
-        print(f"sbatch codetrace/bin/steering_delta.sbatch --model {model} --mutations {mutations} --lang {lang} --num-layers {num_layers} --interval {interval}")
+        print(f"sbatch codetrace/bin/steering_delta.py --model {model} --mutations {mutations} --lang {lang} --num-layers {num_layers} --interval {interval}")
 
 def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
