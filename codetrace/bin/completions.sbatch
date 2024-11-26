@@ -23,6 +23,7 @@ else
     SOURCE_DATASET="nuprl-staging/ts_typeinf_fim"
 fi
 
+export CUDA_VISIBLE_DEVICES="0,1,2,3"
 VLLM_LOGGING_LEVEL=ERROR python3 -m codetrace.scripts.completions \
     --model /work/nvme/bcbj/models/$MODEL \
     --prompt-ds $SOURCE_DATASET \
