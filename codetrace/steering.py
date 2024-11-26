@@ -187,12 +187,11 @@ class SteeringManager:
                 seed=seed,
                 separate_by_column="_original_program",
                 debug_max_cycle=debug_max_cycle,
+                dedup_prog_threshold=dedup_prog_threshold,
+                dedup_type_threshold=dedup_type_threshold,
                 lang=self.lang,
                 colname="mutated_program"
             )
-            if dedup_prog_threshold > -1 or dedup_type_threshold > -1:
-                steer_split = balance_prompts(steer_split, dedup_prog_threshold, dedup_type_threshold)
-                test_split = balance_prompts(test_split, dedup_prog_threshold, dedup_type_threshold)
             
             train_size = len(self.candidates_ds) - test_size
             test_size = min(len(test_split), test_size)
@@ -283,6 +282,8 @@ def _steer_test_split(
     seed:Optional[int],
     separate_by_column: str,
     debug_max_cycle: Optional[int] = None,
+    dedup_prog_threshold: int = -1,
+    dedup_type_threshold: int = -1,
     **typechecker_kwargs,
 )-> Tuple[datasets.Dataset, datasets.Dataset]:
     if shuffle:
@@ -307,5 +308,9 @@ def _steer_test_split(
         train_ds = ds.filter(lambda x: x[separate_by_column] in train_labels, num_proc=10)
         test_ds = ds.filter(lambda x: x[separate_by_column] in test_labels and x["typechecks"], num_proc=10)
         print(f"Split size:", len(train_ds), len(test_ds))
+
+        if dedup_prog_threshold > -1 or dedup_type_threshold > -1:
+            train_ds = balance_prompts(train_ds, dedup_prog_threshold, dedup_type_threshold)
+            test_ds = balance_prompts(test_ds, dedup_prog_threshold, dedup_type_threshold)
         i += 1
     return train_ds, test_ds
