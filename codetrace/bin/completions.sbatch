@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=typesteering_mutate_dataset
+#SBATCH --job-name=typesteering_completions
 #SBATCH --partition=gpuA40x4
 #SBATCH --account=bcbj-delta-gpu
 #SBATCH --nodes=1
