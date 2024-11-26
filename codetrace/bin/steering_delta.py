@@ -33,6 +33,7 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
         cmd = [
             "python3", "-m", "codetrace.scripts.launch_steer",
             "--model", f"/work/nvme/bcbj/models/{model}",
+            "--lang", lang,
             "--candidates", f"results/mutations-{lang}-{mutation_underscored}-{model}",
             "--output-dir", output_dir,
             "--layers", layers,
