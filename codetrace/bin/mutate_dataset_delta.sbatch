@@ -18,7 +18,10 @@ MODEL=$1
 MUTATIONS=$2
 LANG=$3
 
-export CUDA_VISIBLE_DEVICES="0,1,2,3"
+NUM_GPUS=$(nvidia-smi --list-gpus | wc -l)
+DEVICES=$(seq -s "," 0 $((NUM_GPUS - 1)))
+export CUDA_VISIBLE_DEVICES="$DEVICES"
+
 # Replace the commas with underscores in the mutations string.
 MUTATIONSUNDERSCORED=$(echo $MUTATIONS | sed 's/,/_/g')
 
