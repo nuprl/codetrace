@@ -145,6 +145,7 @@ def prepare_fim_prompt(
         chat_template = LLAMA_CHAT_TEMPLATE \
                         if model_fim == LLAMA_FIM_CHAT \
                         else tokenizer.get_chat_template()
+        
         return tokenizer.apply_chat_template(
             model_fim.placeholder_to_fim(prompt), 
             tokenize=False, 

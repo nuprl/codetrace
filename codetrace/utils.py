@@ -13,24 +13,59 @@ import functools
 from hashlib import sha256
 from multiprocessing import cpu_count
 import einops
-    
+from torchtyping import TensorType
+
+# Activation Tensors
+HiddenStateStack = TypeVar(TensorType[float,"num_layer","num_prompt","num_tokens","hdim"])
+HiddenStateStack_1tok = TypeVar(TensorType[float,"num_layer","num_prompt","hdim"])
+
+HiddenState = TypeVar(TensorType[float, "num_prompt","num_tokens","hdim"])
+HiddenState_1tok = TypeVar(TensorType[float, "num_prompt","hdim"])
+
+InputTensor = TypeVar(TensorType[float, "n_prompt","num_tokens"])
+InputMaskTensor = TypeVar(TensorType[bool, "n_prompt","num_tokens"])
+
+MaskTensorStack = TypeVar(TensorType[bool,"num_layer","num_prompt","num_tokens","hdim"])
+MaskTensor = TypeVar(TensorType[bool,"num_prompt","num_tokens","hdim"])
+
+# Logit tensors
+LogitsStack = TypeVar(TensorType[float,"num_layer","num_prompt","num_tokens","vocab_size"])
+Logits = TypeVar(TensorType[float,"num_prompt","num_tokens","vocab_size"])
+
+# Prediction Tensors
+IndicesTensor = TypeVar(TensorType[int, "num_layer","num_prompt","num_tokens","top_k"])
+ProbabilitiesTensor = TypeVar(TensorType[float, "num_layer","num_prompt","num_tokens","top_k"])
+
 def hex_encode(s: str) -> str:
     return sha256(bytes(s, "utf-8")).hexdigest()
 
-def get_reduction(reduction: Union[Callable,str]) -> Callable:
-    if isinstance(reduction,str):
-        return getattr(torch, reduction)
+def apply_reduction(
+    tensor: torch.Tensor, 
+    reduction: Union[str, Callable[[torch.Tensor,int], torch.Tensor]], 
+    dim: int,
+    **kwargs
+) -> torch.Tensor:
+    """
+    Applies a reduction function at given dim. Reduction fn is so called
+    because it reduces the size or number of dimensions of tensor.
+    Resulting tensor will always be smaller.
+    """
+    if isinstance(reduction, str):
+        if reduction == "max":
+            return tensor.amax(dim=dim,**kwargs)
+        elif reduction == "sum":
+            return tensor.sum(dim=dim,**kwargs)
+        else:
+            raise NotImplementedError("Reduction not implemented")
     else:
-        return reduction
+        return reduction(tensor,dim=dim, **kwargs)
 
-def apply_reduction(tensor: torch.Tensor, reduction: Union[Callable,str], **kwargs) -> torch.Tensor:
-    reduction = get_reduction(reduction)
-    x = reduction(tensor, **kwargs)
-    if hasattr(x, "values"):
-        return x.values
+def get_lm_hdim(model) -> int:
+    if hasattr(model, "transformer") or hasattr(model, "model"):
+        return model.lm_head.in_features
     else:
-        return x
-    
+        raise NotImplementedError("Model type not supported")
+
 def get_lm_layers(model):
     if hasattr(model, "transformer"):
         return model.transformer.h
@@ -77,39 +112,49 @@ def lm_decode(model, x : torch.Tensor, do_norm: bool) -> torch.Tensor:
         x = get_lm_final_norm(model)(x)
     return get_lm_head(model)(x)
 
-def masked_fill(src: torch.Tensor, mask:torch.BoolTensor, patch:torch.Tensor) -> torch.Tensor:
-    # mask shape is [n_prompt, n_tok], change to [n_prompt, n_tok, dim]
-    if mask.shape != src.shape:
-        mask = einops.repeat(mask, "p t -> p t d", d=src.shape[-1])
+def masked_fill(src: torch.Tensor, mask: torch.BoolTensor, patch: torch.Tensor) -> torch.Tensor:
+    """
+    Replaces SRC tensor with PATCH values at MASK locations. Must have same sizes.
+
+    >>> masked_fill( [1,2,3], [1,0,0], [4,5,6])
+    [4,2,3]
+    """
     if not (src.shape == mask.shape and mask.shape == patch.shape):
         raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}, patch {patch.shape}")
     
     return torch.mul(src, ~mask) + torch.mul(mask, patch)
 
-def masked_add(src: torch.Tensor, mask:torch.BoolTensor, patch:torch.Tensor) -> torch.Tensor:
-    # mask shape is [n_prompt, n_tok], change to [n_prompt, n_tok, dim]
-    if mask.shape != src.shape:
-        mask = einops.repeat(mask, "p t -> p t d", d=src.shape[-1])
+def masked_add(src: torch.Tensor, mask: torch.BoolTensor, patch: torch.Tensor) -> torch.Tensor:
+    """
+    Adds SRC tensor with PATCH values at MASK locations. Must have same sizes.
+    >>> masked_add( [1,2,3], [1,0,0], [4,6,7])
+    [5,2,3]
+    """
     if not (src.shape == mask.shape and mask.shape == patch.shape):
         raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}, patch {patch.shape}")
     
     return src + torch.mul(mask, patch)
 
-def masked_get(src: torch.Tensor, mask:torch.BoolTensor) -> torch.Tensor:
-    # mask shape is [n_prompt, n_tok], change to [n_prompt, n_tok, dim]
-    if mask.shape != src.shape:
-        mask = einops.repeat(mask, "p t -> p t d", d=src.shape[-1])
+def masked_get(src: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
+    """
+    Zeros out SRC values at MASK locations. Must have same sizes.
+    >>> masked_get( [1,2,3], [0,1,0])
+    [0,2,0]
+    """
     if not (src.shape == mask.shape):
         raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}")
     return torch.mul(src, mask)
 
-def mask_target_tokens(
-    input_ids: torch.Tensor, #shape[n_prompts, n_toks, dim]
-    token_ids: Union[torch.Tensor, list[int]],
-    **kwargs
-) -> torch.BoolTensor:
+def mask_target_tokens(input_ids: torch.Tensor, token_ids: List[int], **kwargs) -> torch.BoolTensor:
+    """
+    Returns a mask tensor over INPUT_IDS s.t. where MASK == 1 then the corresponding
+    value in INPUT_IDS is in TOKEN_IDS list
+    >>> mask_target_tokens( [1,2,3], [3, 1])
+    [1,0,1]
+    """
     token_ids = torch.Tensor(token_ids)
     if token_ids.ndim == 0:
+        # if 1 token id, check which members in input_ids are equal
         target = input_ids == token_ids.item()
     else:
         mask = functools.reduce(lambda a,b: a|b, [input_ids == i for i in token_ids])
@@ -120,13 +165,15 @@ def mask_target_tokens(
         target = target.to(device)
     return target
 
-def mask_target_idx(
-    input_ids: torch.Tensor, #shape[n_prompts, n_toks, dim]
-    indices: List[int],
-    **kwargs
-) -> torch.BoolTensor:
+def mask_target_idx(input_ids: torch.Tensor, indices: List[int], dim:int=1) -> torch.BoolTensor:
+    """
+    Returns a mask tensor over INPUT_IDS s.t. where MASK == 1 then the corresponding
+    index in INPUT_IDS is in INDICES list (along a certain DIM)
+    >>> mask_target_tokens( [1,2,3], [2,1], 0)
+    [0,1,1]
+    """
     indices = torch.Tensor(indices).to(dtype=torch.int64)
-    mask = torch.zeros_like(input_ids).index_fill(1, indices, 1)
+    mask = torch.zeros_like(input_ids).index_fill(dim, indices, 1)
     return mask > 0
 
 def topk_filtering(
@@ -191,3 +238,22 @@ def pos_indexing(x: int, n: int) -> int:
     turn to a positive index
     """
     return x if x >= 0 else n + x
+
+def reset_index_dim0(x: torch.Tensor, index_labels: List[int], n: int)->  torch.Tensor:
+    """
+    Given a tensor X and list of INDEX_LABELS (0 < i < n) for dim 0, if dim 0
+    of the tensor does not match the range of N, then re-index tensor
+    such that INDEX_LABELS are now indices into the tensor. Fill rest with zeros.
+
+    >>> reset_index_dim0([0.1, 0.2, 0.3],  [3, 7, 1], 9)
+    [0, 0.3, 0, 0.1, 0, 0, 0, 0.2, 0]
+    """
+    if n == x.shape[0]:
+        return x
+    
+    new_shape = list(x.shape)
+    new_shape[0] = n
+    new_tensor = torch.zeros(new_shape, dtype=x.dtype, device=x.device)
+    new_tensor[index_labels] = x
+    
+    return new_tensor

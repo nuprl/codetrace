@@ -9,26 +9,24 @@ from typing import List, Union, Callable, Optional, TypeVar
 import transformers
 from torchtyping import TensorType
 from codetrace.utils import (
+    reset_index_dim0,
     topk_filtering,
     pos_indexing,
     masked_get,
     masked_fill,
     lm_decode,
     get_lm_layers,
-    apply_reduction
+    apply_reduction,
+    get_lm_hdim
 )
-
-"""
-Define some tensor types
-"""
-ActivationTensor = TypeVar(TensorType[float,"n_layer","n_prompt","n_tokens","hdim"])
-ReducedActivationTensor = TypeVar(TensorType[float,"n_layer","n_prompt","hdim"])
-LayerActivationTensor = TypeVar(TensorType[float, "n_prompt","n_tokens","hdim"])
-
-MaskTensor = TypeVar(TensorType[bool,"n_layer","n_prompt","n_tokens","hdim"])
-
-IndicesTensor = TypeVar(TensorType[int, "n_layer","n_prompt","n_tokens","top_k"])
-ProbabilitiesTensor = TypeVar(TensorType[float, "n_layer","n_prompt","n_tokens","top_k"], )
+from codetrace.utils import (
+    IndicesTensor, ProbabilitiesTensor, LogitsStack, 
+    HiddenStateStack, HiddenStateStack_1tok, 
+    HiddenState, HiddenState_1tok,
+    MaskTensorStack, MaskTensor,
+    InputTensor, InputMaskTensor
+)
+import einops
 
 class LogitResult:
     """
@@ -42,7 +40,7 @@ class LogitResult:
     def __getitem__(self, idx:int) -> "LogitResult":
         return LogitResult(self.token_indices[idx], self.probabilities[idx])
     
-    def tokens(self, tokenizer : transformers.PreTrainedTokenizer) -> List[str]:
+    def tokens(self, tokenizer : transformers.PreTrainedTokenizer) -> str:
         """
         Decode tokens to strings
         """
@@ -78,10 +76,10 @@ class TraceResult:
     
     def __init__(
         self, 
-        logits : ActivationTensor, 
+        logits: LogitsStack, 
         layer_idxs : List[int],
         model_n_layer : int,
-        hidden_states : ActivationTensor = None,
+        hidden_states : HiddenStateStack = None,
         custom_decoder : Union[None, torch.nn.Module] = None
     ):
         self._logits = logits.detach().cpu()
@@ -127,9 +125,9 @@ def collect_hidden_states(
     model : LanguageModel,
     prompts : List[str],
     layers : List[int] = None,
-    target_fn : Optional[Callable[[ActivationTensor],MaskTensor]] = None,
-    reduction: Optional[Union[str, Callable[[ActivationTensor,List[int]],ReducedActivationTensor]]]= None
-) -> Union[ReducedActivationTensor, ActivationTensor]:
+    target_fn : Optional[Callable[[InputTensor],InputMaskTensor]] = None,
+    reduction: Optional[Union[str, Callable[[HiddenState,int],HiddenState_1tok]]]= None
+) -> Union[HiddenStateStack_1tok, HiddenStateStack]:
     """
     Collect hidden states for each prompt. 
     Optionally, collect hidden states at specific layers, or at certain
@@ -154,35 +152,43 @@ def collect_hidden_states(
                 # output is a tuple of (hidden_states, present)
                 hs = get_lm_layers(model)[layer_idx].output[0]
                 if target_fn != None:
-                    # mask shape: [n_prompts, n_toks]
                     mask = target_fn(invoker.inputs[0]["input_ids"])
+                    mask = einops.repeat(
+                        mask, "num_prompts num_tokens -> num_prompts num_tokens hdim", hdim=hs.shape[-1]
+                    )
                     hs = masked_get(hs, mask)
                     if reduction:
                         hs = apply_reduction(hs, reduction, dim=1)
                 hidden_states.append(hs)
 
-        hidden_states = torch.stack(hidden_states, dim=0).save() 
+        hidden_states = torch.stack(hidden_states, dim=0).save()
             
     hidden_states = nnsight.util.apply(hidden_states, lambda x: x.value, Proxy)
+    
+    # add empty dimensions if only subset of layers was collected
+    hidden_states = reset_index_dim0(hidden_states, layers, len(get_lm_layers(model)))
     return hidden_states
 
 @torch.no_grad
-def _prepare_patch(patch:Union[ReducedActivationTensor,ActivationTensor], n_tokens:int)->LayerActivationTensor:
-    if patch.ndim == 4:
+def _prepare_layer_patch(patch: HiddenState, n_tokens:int)->HiddenState:
+    if patch.ndim == 3 and patch.shape[1] == n_tokens:
         return patch
-    else:
+    elif patch.ndim == 3:
         # pad left side with 0's s.t. n_tokens_to_patch == n_tokens
         return torch.nn.functional.pad(patch, (0,0,n_tokens - patch.shape[1],0))
+    else:
+        print(patch.shape)
+        raise ValueError("Patch is wrong dimension, should be [n_prompt,n_token,hdim]")
 
 @torch.no_grad
 def insert_patch(
     model : LanguageModel,
     prompts : List[str],
-    patch : Union[ReducedActivationTensor,ActivationTensor],
+    patch : HiddenStateStack,
     layers_to_patch : List[int],
-    target_fn : Optional[Callable[[ActivationTensor],MaskTensor]] = None,
+    target_fn : Optional[Callable[[InputTensor],InputMaskTensor]] = None,
     collect_hidden_states : bool = True,
-    patch_fn: Optional[Callable[[ActivationTensor, MaskTensor, ActivationTensor],MaskTensor]] = None,
+    patch_fn: Optional[Callable[[HiddenState, MaskTensor, HiddenState],HiddenState]] = None,
 ) -> TraceResult:
     """
     Insert patch at layers and tokens
@@ -200,13 +206,16 @@ def insert_patch(
         with tracer.invoke(prompts) as invoker:
             inputs = invoker.inputs[0]["input_ids"]
             mask = target_fn(inputs)
+            mask = einops.repeat(mask, "num_prompts num_tokens -> num_prompts num_tokens hdim", 
+                                hdim=get_lm_hdim(model))
             hidden_states = []
+
             # iter over all layers
             for layer in range(len(get_lm_layers(model))):
                 hs = get_lm_layers(model)[layer].output[0]
                 
                 if layer in layers_to_patch:
-                    layer_patch = _prepare_patch(patch[layer], mask.shape[1]).to(model.device)
+                    layer_patch = _prepare_layer_patch(patch[layer], mask.shape[1]).to(model.device)
                     patched_hs = patch_fn(hs, mask.to(model.device), layer_patch)
                     for prompt_idx in range(hs.shape[0]):
                         get_lm_layers(model)[layer].output[0][prompt_idx,:,:] = patched_hs[prompt_idx,:]
@@ -265,7 +274,7 @@ def custom_lens(
     decoder : torch.nn.Module,
     prompts : List[str],
     layers : List[int],
-    activations : Optional[ActivationTensor] = None,
+    activations : Optional[HiddenStateStack] = None,
     k : int = 1
 ) -> List[str]:
     """

@@ -79,7 +79,6 @@ class SteeringManager:
         self,
         model:LanguageModel,
         candidates_ds: datasets.Dataset,
-        lang:str,
         cache_dir: Path,
         steer_split_path: Optional[str]=None,
         test_split_path: Optional[str]=None,
@@ -87,8 +86,8 @@ class SteeringManager:
         max_num_candidates:int=-1,
         token_mask_fn:Optional[Callable]=None,
         reduction:Optional[Callable]=None,
+        only_collect_layers:Optional[List[int]]=None
     ):
-        self.lang=lang
         self.model=model
         self.tokenizer=model.tokenizer
         self.fim_obj=get_model_fim(model.config.name_or_path)
@@ -100,12 +99,13 @@ class SteeringManager:
         )
         self.cache_dir = cache_dir
         if not token_mask_fn:
-            # default patch on fim middle
+            # default patch on fim middle last token
             token_mask_fn = partial(mask_target_idx, indices=[-1])
-            reduction = "max"
+            reduction = "sum"
         self.patch_fn = masked_add
         self.token_mask_fn = token_mask_fn
         self.reduction = reduction
+        self.only_collect_layers=only_collect_layers
         # try load cached if it exists
         self.test_split : Optional[datasets.Dataset] = self.load_data(test_split_path)
         self.steer_split : Optional[datasets.Dataset] = self.load_data(steer_split_path)
@@ -186,16 +186,15 @@ class SteeringManager:
                 debug_max_cycle=debug_max_cycle,
                 dedup_prog_threshold=dedup_prog_threshold,
                 dedup_type_threshold=dedup_type_threshold,
-                lang=self.lang,
-                colname="mutated_program"
             )
             
             train_size = len(self.candidates_ds) - test_size
-            test_size = min(len(test_split), test_size)
-            train_size = min(len(steer_split), train_size)
-
-            self.steer_split = steer_split.select(range(train_size))
-            self.test_split = test_split.select(range(test_size))
+            if train_size < len(steer_split):
+                steer_split = steer_split.select(range(train_size))
+            if test_size < len(test_split):
+                test_split = test_split.select(range(test_size))
+            self.test_split = test_split
+            self.steer_split = steer_split
 
         return self.steer_split, self.test_split
 
@@ -221,6 +220,7 @@ class SteeringManager:
                 batch_size=batch_size,
                 target_fn=self.token_mask_fn,
                 reduction=self.reduction,
+                layers=self.only_collect_layers,
                 average_fn=subtract_avg,
                 outfile=os.path.join(self.cache_dir, "cached_steering_tensor")
             )
@@ -237,6 +237,8 @@ class SteeringManager:
         Evaluate the steering tensor on data.
         If do_random_ablation is set, will run a random steering tensor.
         """
+        if self.only_collect_layers and not set(layers_to_steer).issubset(set(self.only_collect_layers)):
+            raise ValueError(f"Trying to steer layers {layers_to_steer} but only collected steering tensor from {self.only_collect_layers}")
         if self.steering_tensor == None:
             raise ValueError("Please create a steering tensor before attempting to steer.")
         if split == "steer":
@@ -247,8 +249,9 @@ class SteeringManager:
             raise ValueError("Can only specify to steer either on the steer or test split.")
         
         if do_random_ablation:
-            steering_tensor = torch.zeros_like(self.steering_tensor)
-            steering_tensor.random_(math.floor(self.steering_tensor.min().item()), math.ceil(self.steering_tensor.max().item()))
+            steering_tensor = torch.rand_like(self.steering_tensor)
+            # steering_tensor.random_(math.floor(self.steering_tensor.min().item()), 
+            #                       math.ceil(self.steering_tensor.max().item()))
         else:
             steering_tensor = self.steering_tensor
 
@@ -281,14 +284,9 @@ def _steer_test_split(
     debug_max_cycle: Optional[int] = None,
     dedup_prog_threshold: int = -1,
     dedup_type_threshold: int = -1,
-    **typechecker_kwargs,
 )-> Tuple[datasets.Dataset, datasets.Dataset]:
     if shuffle:
         ds = ds.shuffle(seed=seed)
-    if not "typechecks" in ds.column_names:
-        ds = multiproc_typecheck(ds, cpu_count(), **typechecker_kwargs)
-        ds = datasets.Dataset.from_list(ds)
-
     unique_labels = np.unique(ds[separate_by_column])
     print(len(unique_labels))
     actual_test_size = test_size if test_size > 0 else int(test_size * len(ds))

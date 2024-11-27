@@ -38,7 +38,6 @@ def main(
     dtype:str,
     candidates:str,
     layers:List[int],
-    lang:str,
     output_dir:str,
     steer_name:str,
     test_name:str,
@@ -49,18 +48,19 @@ def main(
     test_size:int,
     subset:str,
     split:Optional[str],
+    run_steering_splits: Optional[List[str]] = None,
 ):
     candidates = load_dataset(candidates, split=split,name=subset)
     model = LanguageModel(model, torch_dtype=dtype,device_map="cuda",dispatch=True)
     smanager = SteeringManager(
         model,
         candidates,
-        lang,
         output_dir,
         steer_name,
         test_name,
         tensor_name,
-        max_num_candidates
+        max_num_candidates,
+        only_collect_layers=layers
     )
     # 1. make splits
     steer_split, test_split = smanager.steer_test_splits(test_size, 3, 25)
@@ -72,14 +72,20 @@ def main(
     steering_tensor = smanager.create_steering_tensor(collect_batchsize)
     smanager.save_tensor(steering_tensor, tensor_name)
 
-    # # 3. run steering on test
-    run_steer(smanager, "test", layers, patch_batchsize, False)
+    # check valid options
+    assert not run_steering_splits or set(run_steering_splits).issubset(set(["test","steer","rand"]))
+    
+    # 3. run steering on test
+    if not run_steering_splits or "test" in run_steering_splits:
+        run_steer(smanager, "test", layers, patch_batchsize, False)
 
     # 4. run steering on test with random tensor
-    run_steer(smanager, "test", layers, patch_batchsize, True)
+    if not run_steering_splits or "rand" in run_steering_splits:
+        run_steer(smanager, "test", layers, patch_batchsize, True)
 
-    # # 5. run steering on steer
-    run_steer(smanager, "steer", layers, patch_batchsize, False)
+    # 5. run steering on steer
+    if not run_steering_splits or "steer" in run_steering_splits: 
+        run_steer(smanager, "steer", layers, patch_batchsize, False)
 
 
 if __name__ == "__main__":
@@ -88,7 +94,6 @@ if __name__ == "__main__":
     parser.add_argument("--candidates", type=str,required=True)
     parser.add_argument("--output-dir", type=str, required=True)
     parser.add_argument("--layers", type=str, required=True)
-    parser.add_argument("--lang", choices=["py","ts"], required=True)
     # dataset
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--subset", type=str, default=None)

@@ -33,7 +33,7 @@ def request_vllm_generations(
     **kwargs
 ) -> Union[List[RequestOutput],AsyncGenerator[None,RequestOutput]]:
     return llm.generate(prompts, sampling_params, **kwargs)
-    
+
 def request_vllm_chat(
     llm: LLM,
     prompts: List[List[Dict[str,str]]],
