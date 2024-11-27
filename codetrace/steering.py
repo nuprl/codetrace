@@ -18,6 +18,8 @@ import itertools as it
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from codetrace.parsing_utils import prepare_fim_prompt
+import shutil
+import glob
 
 def balance_prompts(
     dataset : datasets.Dataset,
@@ -151,6 +153,17 @@ class SteeringManager:
             return torch.load(fullpath)
         else:
             return None
+
+    def clear_cache(self):
+        """
+        Clear any cached intermediate computations once final
+        computations are done
+        """
+        if self.steering_tensor:
+            shutil.rmtree(os.path.join(self.cache_dir, "cached_steering_tensor"))
+        if self.test_split:
+            for file in glob.glob(os.path.join(self.cache_dir, "cached_steering_*")):
+                shutil.rmtree(file)
 
     def steer_test_splits(
         self,

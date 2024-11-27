@@ -87,6 +87,7 @@ def main(
     if not run_steering_splits or "steer" in run_steering_splits: 
         run_steer(smanager, "steer", layers, patch_batchsize, False)
 
+    smanager.clear_cache()
 
 if __name__ == "__main__":
     parser = ArgumentParser()
