@@ -33,8 +33,9 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
         cmd = [
             "python3", "-m", "codetrace.scripts.launch_steer",
             "--model", f"/work/nvme/bcbj/models/{model}",
-            "--lang", lang,
-            "--candidates", f"results/mutations-{lang}-{mutation_underscored}-{model}",
+            "--candidates", "nuprl-staging/type-steering",
+            "--split", "train", 
+            "--subset", f"mutations-{lang}-{mutation_underscored}-{model}",
             "--output-dir", output_dir,
             "--layers", layers,
             "--steer-name", "steering_split",
@@ -42,6 +43,7 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
             "--tensor-name", "steering_tensor.pt",
             "-n", "3000",
             "--test-size", "100",
+            "--run-steering-splits", "test", "rand" # don't run "steer" split to save compute
         ]
         print(" ".join(cmd))
         if not dry_run:
