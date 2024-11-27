@@ -15,21 +15,25 @@ from codetrace.interp_utils import (
     insert_patch,
     TraceResult,
     LogitResult,
-    ReducedActivationTensor,
-    ActivationTensor,
+    HiddenStateStack_1tok,
+    HiddenStateStack,
+    InputMaskTensor,
+    InputTensor,
+    HiddenState,
+    HiddenState_1tok,
     MaskTensor
 )
 
 def batched_get_averages(
     model: LanguageModel,
     prompts : Union[List[str], torch.utils.data.DataLoader],
-    target_fn : Optional[Callable[[ActivationTensor],MaskTensor]] = None,
+    target_fn : Optional[Callable[[InputTensor],InputMaskTensor]] = None,
     batch_size:int =5,
-    average_fn: Callable = (lambda x: x.mean(dim=1)),
+    average_fn: Callable = (lambda x: x.mean(dim=1, keepdim=True)),
     outfile: Optional[str] = None,
     layers: Optional[List[int]] = None,
-    reduction: Optional[Union[str, Callable[[ActivationTensor,List[int]],ReducedActivationTensor]]]= None
-) -> ActivationTensor:
+    reduction: Optional[Union[str, Callable[[HiddenState,int],HiddenState_1tok]]] = None
+) -> HiddenStateStack:
     """
     Get averages of activations at all layers for prompts. Select activations according to mask
     produced by target_fn. Batches the prompts to
@@ -64,10 +68,10 @@ def batched_get_averages(
 def batched_insert_patch_logit(
     model : LanguageModel,
     prompts : Union[List[str], torch.utils.data.DataLoader],
-    patch : ReducedActivationTensor,
+    patch : Union[HiddenStateStack,HiddenStateStack_1tok],
     layers_to_patch : List[int],
-    target_fn : Callable,
-    patch_fn:Callable,
+    target_fn : Callable[[InputTensor],InputMaskTensor],
+    patch_fn: Callable[[HiddenState, MaskTensor, HiddenState],HiddenState],
     batch_size : int = 5,
     outfile: str = None,
     solutions : Union[List[str],str, None] = None,
@@ -101,7 +105,8 @@ def batched_insert_patch_logit(
             predictions.append(tok)
         
         # log
-        print("current_accuracy:", _percent_success(predictions, solutions))
+        if solutions:
+            print("current_accuracy:", _percent_success(predictions, solutions))
         if outfile is not None:
             with open(outfile, "w") as f:
                 data = {"batch_size" : batch_size, 
@@ -112,7 +117,6 @@ def batched_insert_patch_logit(
            
     return predictions
 
-
 def _percent_success(predictions_so_far, solutions):
     correct = 0
     for pred,sol in zip(predictions_so_far, solutions[:len(predictions_so_far)]):
@@ -120,5 +124,7 @@ def _percent_success(predictions_so_far, solutions):
             correct += 1
     return correct / len(solutions)
 
-def _resize_patch(patch:ReducedActivationTensor,batch_size:int)->ActivationTensor:
+def _resize_patch(patch: Union[HiddenStateStack, HiddenStateStack_1tok],batch_size:int)->HiddenStateStack:
+    if patch.ndim == 4 and patch.shape[1] == batch_size:
+        return patch
     return einops.repeat(patch, "l t d -> l p t d", p=batch_size)

@@ -269,9 +269,9 @@ def test_steering_test_split():
     FakeModel = namedtuple("FakeModel", ["tokenizer", "config"])
     FakeConfig = namedtuple("FakeConfig", "name_or_path")
     model = FakeModel(tokenizer=None, config = FakeConfig(name_or_path="starcoder"))
-    ds = datasets.load_dataset("nuprl/type-steering", name="mutations-py-types_vars-qwen2p5_coder_7b_base", 
+    ds = datasets.load_dataset("nuprl-staging/type-steering", name="mutations-py-types_vars-qwen2p5_coder_7b_base", 
                                split="train")
-    smanager = SteeringManager(model, ds, "py", "/tmp/testing_steering_manager", "steer","test","stensor",
+    smanager = SteeringManager(model, ds, "/tmp/testing_steering_manager", "steer","test","stensor",
                                max_num_candidates=MAXN)
     assert len(smanager.candidates_ds) == MAXN
     steer_split, test_split = smanager.steer_test_splits(TEST_SIZE, dedup_prog_threshold, dedup_type_threshold,
@@ -282,7 +282,7 @@ def test_steering_test_split():
     _check_dedup(test_split, dedup_prog_threshold, dedup_type_threshold)
     _check_dedup(steer_split, dedup_prog_threshold, dedup_type_threshold)
 
-    smanager2 = SteeringManager(model, ds, "py", "/tmp/testing_steering_manager2", "steer","test","stensor",
+    smanager2 = SteeringManager(model, ds, "/tmp/testing_steering_manager2", "steer","test","stensor",
                                max_num_candidates=MAXN)
     steer_split2, test_split2 = smanager2.steer_test_splits(TEST_SIZE, dedup_prog_threshold, dedup_type_threshold,
                                                              debug_max_cycle=DEBUG_CYCLE)

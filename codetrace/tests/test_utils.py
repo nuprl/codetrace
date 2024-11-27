@@ -9,6 +9,7 @@ from codetrace.utils import (
 from transformers import AutoTokenizer
 import torch
 import pytest
+import einops
 
 @pytest.mark.parametrize("logits, top_k, do_log_probs, expected_indices", [
     (torch.tensor([[1.0, 2.0, 3.0]]), 2, False, torch.tensor([[2, 1]])),
@@ -59,6 +60,7 @@ def test_masked_fill():
                           [5,5,5,5],
                           [6,6,6,6]]])
     mask = torch.BoolTensor([[1,1,0],[1,1,0]])
+    mask = einops.repeat(mask, "l t -> l t d", d=4)
     patch = torch.Tensor([[[10,11,12,13],
                          [20,21,22,23],
                          [30,31,32,33]],
@@ -81,6 +83,7 @@ def test_masked_fill():
                           [5,5,5,5],
                           [6,6,6,6]]])
     mask = torch.BoolTensor([[1,1,1],[1,1,1]])
+    mask = einops.repeat(mask, "l t -> l t d", d=4)
     patch = torch.Tensor([[[10,11,12,13],
                          [20,21,22,23],
                          [30,31,32,33]],
@@ -117,6 +120,7 @@ def test_masked_add():
                           [5,5,5,5],
                           [6,6,6,6]]])
     mask = torch.BoolTensor([[1,1,0],[1,1,0]])
+    mask = einops.repeat(mask, "l t -> l t d", d=4)
     patch = torch.Tensor([[[10,11,12,13],
                          [20,21,22,23],
                          [30,31,32,33]],
@@ -139,6 +143,7 @@ def test_masked_add():
                           [5,5,5,5],
                           [6,6,6,6]]])
     mask = torch.BoolTensor([[1,1,1],[1,1,1]])
+    mask = einops.repeat(mask, "l t -> l t d", d=4)
     expected = torch.Tensor([[[11,12,13,14],
                          [22,23,24,25],
                          [33,34,35,36]],
