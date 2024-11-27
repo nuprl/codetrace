@@ -92,7 +92,11 @@ class SteeringManager:
         self.tokenizer=model.tokenizer
         self.fim_obj=get_model_fim(model.config.name_or_path)
         if max_num_candidates > -1 and max_num_candidates < len(candidates_ds):
+            # select first and foremost from typechecking candidates
+            candidates_ds = candidates_ds.sort("typechecks", reverse=True)
+            assert candidates_ds[0]["typechecks"]
             candidates_ds = candidates_ds.select(range(max_num_candidates))
+            
         self.candidates_ds = candidates_ds.map(
             lambda x: {**x, "_original_program": x["fim_program"].replace("<FILL>", x["fim_type"])},
             desc="Adding column for original unfimmed program"
