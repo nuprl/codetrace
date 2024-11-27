@@ -18,7 +18,6 @@ import itertools as it
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from codetrace.parsing_utils import prepare_fim_prompt
-import shutil
 import glob
 
 def balance_prompts(
@@ -164,7 +163,7 @@ class SteeringManager:
                 os.remove(file)
         if self.test_split != None:
             for file in glob.glob(os.path.join(self.cache_dir, "cached_steering_*")):
-                shutil.rmtree(file)
+                os.remove(file)
 
     def steer_test_splits(
         self,
