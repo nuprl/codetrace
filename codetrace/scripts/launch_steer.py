@@ -110,6 +110,7 @@ if __name__ == "__main__":
     parser.add_argument("--max-num-candidates","-n",type=int, default=3000)
     parser.add_argument("--test-size", type=int,default=100)
 
+    parser.add_argument("--run-steering-splits", type=str, nargs="+", choices=["test","steer","rand"], default=None)
     parser.add_argument("--overwrite", action="store_true")
 
     args = parser.parse_args().__dict__
