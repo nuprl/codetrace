@@ -21,10 +21,11 @@ AUTH_TOKEN = os.environ.get("HF_AUTH_TOKEN",None)
 
 def upload_results(path: Path):
     config_name = path.name
-    steer_results = datasets.Dataset.load_from_disk(os.path.join(path, "steer_steering_results"))
-
+    
     # we need to map error column to str because splits need to have same types,
-    # since test splits always typecheck the error column is Null
+    # since some splits always typecheck the error column is Null
+    steer_results = datasets.Dataset.load_from_disk(os.path.join(path, "steer_steering_results")
+            ).map(lambda x: {**x, "errors": "" if not x["errors"] else x["errors"]})
     test_results = datasets.Dataset.load_from_disk(os.path.join(path, "test_steering_results")
             ).map(lambda x: {**x, "errors": "" if not x["errors"] else x["errors"]})
     test_results_rand = datasets.Dataset.load_from_disk(os.path.join(path, "test_steering_results_rand")
