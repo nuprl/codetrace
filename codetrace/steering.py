@@ -160,7 +160,8 @@ class SteeringManager:
         computations are done
         """
         if self.steering_tensor:
-            shutil.rmtree(os.path.join(self.cache_dir, "cached_steering_tensor"))
+            for file in glob.glob(os.path.join(self.cache_dir, "cached_steering_tensor.*")):
+                shutil.rmtree(file)
         if self.test_split:
             for file in glob.glob(os.path.join(self.cache_dir, "cached_steering_*")):
                 shutil.rmtree(file)
