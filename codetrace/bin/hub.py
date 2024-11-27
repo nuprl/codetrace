@@ -35,9 +35,10 @@ def upload_results(path: Path):
         "steer": steer_results,
         "test_rand": test_results_rand
     })
-    results_ds.push_to_hub(f"nuprl-staging/type-steering", config_name=config_name, token=AUTH_TOKEN)
+    results_ds.push_to_hub(f"nuprl-staging/type-steering", config_name=config_name, token=AUTH_TOKEN,
+                           commit_message=f"Uploading {config_name} results")
     print(results_ds)
-    
+
     upload_file(
         path_or_fileobj=os.path.join(path, "steering_tensor.pt"),
         path_in_repo= config_name + ".pt",
@@ -52,7 +53,7 @@ def upload(path: Path):
 
     the_dataset = datasets.Dataset.load_from_disk(path)
     the_dataset.push_to_hub(f"nuprl-staging/type-steering", config_name=config_name, split=SPLIT,
-                            token=AUTH_TOKEN)
+                            token=AUTH_TOKEN, commit_message=f"Uploading {config_name} data")
     print(the_dataset)
 
 def download(config_name: str, output_dir: Path):
