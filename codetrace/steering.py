@@ -159,10 +159,10 @@ class SteeringManager:
         Clear any cached intermediate computations once final
         computations are done
         """
-        if self.steering_tensor:
+        if self.steering_tensor != None:
             for file in glob.glob(os.path.join(self.cache_dir, "cached_steering_tensor.*")):
-                shutil.rmtree(file)
-        if self.test_split:
+                os.remove(file)
+        if self.test_split != None:
             for file in glob.glob(os.path.join(self.cache_dir, "cached_steering_*")):
                 shutil.rmtree(file)
 
