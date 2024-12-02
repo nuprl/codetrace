@@ -92,7 +92,13 @@ class TraceResult:
         # if layer idxs are negative indexing, convert to positive index
         self._layer_idx = [pos_indexing(i, n=model_n_layer) for i in layer_idxs]
         self.custom_decoder = custom_decoder
-        
+    
+    def hidden_states(self) -> HiddenStateStack:
+        if self._hidden_states != None:
+            return reset_index_dim0(self._hidden_states, self._layer_idx, self.n_layers)
+        else:
+            raise ValueError("Hidden states were not passed to init.")
+    
     def decode_logits(
         self, 
         prompt_idx : List[int],
