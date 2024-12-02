@@ -319,11 +319,11 @@ def _steer_test_split(
                                 shuffle=shuffle)
         train_ds = ds.filter(lambda x: x[separate_by_column] in train_labels, num_proc=10)
         test_ds = ds.filter(lambda x: x[separate_by_column] in test_labels and x["typechecks"], num_proc=10)
-        print(f"Split size:", len(train_ds), len(test_ds))
-
+        
         if dedup_prog_threshold > -1 or dedup_type_threshold > -1:
             train_ds = balance_prompts(train_ds, dedup_prog_threshold, dedup_type_threshold)
             test_ds = balance_prompts(test_ds, dedup_prog_threshold, dedup_type_threshold)
         
+        print(f"Split size:", len(train_ds), len(test_ds))
         i += 1
     return train_ds, test_ds

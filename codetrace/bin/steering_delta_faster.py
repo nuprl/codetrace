@@ -35,28 +35,37 @@ def save_to_steering_dir(
     steering_tensor: Optional[torch.Tensor],
     output_dir: str
 ):
-    if steer_split != None:
-        steer_split.save_to_disk(f"{output_dir}/steer_split")
-    if test_split != None:
+    if steer_split != None and not Path(f"{output_dir}/steering_split").exists():
+        steer_split.save_to_disk(f"{output_dir}/steering_split")
+    if test_split != None and not Path(f"{output_dir}/test_split").exists():
         test_split.save_to_disk(f"{output_dir}/test_split")
     if steering_tensor != None:
         torch.save(steering_tensor, f"{output_dir}/steering_tensor.pt")
 
-def main_with_args(model: str, mutations: str, lang: str, num_layers: int, interval: int, dry_run: bool):
-    steer_split = None
-    test_split = None
-    steering_tensor = None
-    RUN_SPLITS = ["test", "rand"] # don't run "steer" split to save compute
+def try_load(output_dir:str):
+    steer_split, test_split, steering_tensor = None,None,None
+    if Path(f"{output_dir}/steering_split").exists():
+        steer_split = datasets.load_from_disk(f"{output_dir}/steering_split")
+    if Path(f"{output_dir}/test_split").exists():
+        test_split = datasets.load_from_disk(f"{output_dir}/test_split")
+    if Path(f"{output_dir}/steering_tensor.pt").exists():
+        steering_tensor = torch.load(f"{output_dir}/steering_tensor.pt")
+    return steer_split, test_split, steering_tensor
 
-    for n_iter,layers in enumerate(get_ranges(num_layers, interval)):
+def main_with_args(model: str, mutations: str, lang: str, num_layers: int, interval: int, dry_run: bool):
+    RUN_SPLITS = ["test", "rand"] # don't run "steer" split to save compute
+    steer_split, test_split, steering_tensor = None,None,None
+
+    for layers in get_ranges(num_layers, interval):
         mutation_underscored = mutations.replace(",", "_")
         layers_underscored = layers.replace(",", "_")
         output_dir = f"results/steering-{lang}-{mutation_underscored}-{layers_underscored}-{model}"
-
+        
         if ((Path(output_dir) / "test_results.json").exists() or not "test" in  RUN_SPLITS) and \
             ((Path(output_dir) / "steer_results.json").exists() or not "steer" in RUN_SPLITS) and \
             ((Path(output_dir) / "test_results_rand.json").exists() or not "rand" in RUN_SPLITS):
             print(f"Skipping {output_dir} because it already exists")
+            steer_split, test_split, steering_tensor = try_load(output_dir)
             continue
 
         save_to_steering_dir(steer_split, test_split, steering_tensor, output_dir)
@@ -82,11 +91,7 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
         if not dry_run:
             subprocess.run(cmd, check=True)
 
-        if n_iter == 0:
-            # save output once at first iter, copy it to all other dirs later
-            steer_split = datasets.load_from_disk(f"{output_dir}/steer_split")
-            test_split = datasets.load_from_disk(f"{output_dir}/test_split")
-            steering_tensor = torch.load(f"{output_dir}/steering_tensor.pt")
+        steer_split, test_split, steering_tensor = try_load(output_dir)
 
 def main():
     parser = argparse.ArgumentParser()

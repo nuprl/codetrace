@@ -51,6 +51,8 @@ def main(
     run_steering_splits: Optional[List[str]] = None,
     collect_all_layers: bool = False
 ):
+    if run_steering_splits is None:
+        run_steering_splits = ["test","rand","steer"]
     candidates = load_dataset(candidates, split=split,name=subset)
     model = LanguageModel(model, torch_dtype=dtype,device_map="cuda",dispatch=True)
     smanager = SteeringManager(
@@ -74,18 +76,18 @@ def main(
     smanager.save_tensor(steering_tensor, tensor_name)
 
     # check valid options
-    assert not run_steering_splits or set(run_steering_splits).issubset(set(["test","steer","rand"]))
+    assert set(run_steering_splits).issubset(set(["test","steer","rand"]))
     
     # 3. run steering on test
-    if not run_steering_splits or "test" in run_steering_splits:
+    if "test" in run_steering_splits:
         run_steer(smanager, "test", layers, patch_batchsize, False)
 
     # 4. run steering on test with random tensor
-    if not run_steering_splits or "rand" in run_steering_splits:
+    if "rand" in run_steering_splits:
         run_steer(smanager, "test", layers, patch_batchsize, True)
 
     # 5. run steering on steer
-    if not run_steering_splits or "steer" in run_steering_splits: 
+    if "steer" in run_steering_splits: 
         run_steer(smanager, "steer", layers, patch_batchsize, False)
 
     smanager.clear_cache()
@@ -105,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-name", required=True)
     parser.add_argument("--tensor-name", required=True)
 
-    parser.add_argument("--collect-batchsize", "-b1",type=int, default=4)
+    parser.add_argument("--collect-batchsize", "-b1",type=int, default=2)
     parser.add_argument("--patch-batchsize", "-b2",type=int, default=2)
     parser.add_argument("--dtype", choices=["bfloat16","float32"],default="bfloat16")
     parser.add_argument("--max-num-candidates","-n",type=int, default=3000)
