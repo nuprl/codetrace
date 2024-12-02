@@ -103,7 +103,7 @@ def load_dataset(ds: str, split:str=None, **hub_kwargs) -> datasets.Dataset:
 
 def save_dataset(ds: datasets.Dataset, path:Union[str,Path], **hub_kwargs):
     if isinstance(path, Path):
-        ds.save_to_disk(path)
+        ds.save_to_disk(path.as_posix())
     else:
         ds.push_to_hub(path, **hub_kwargs)
 
