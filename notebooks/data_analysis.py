@@ -4,8 +4,6 @@
 import pandas as pd
 import json
 from pathlib import Path
-from matplotlib import pyplot as plt
-import seaborn as sns
 import datasets
 import sys
 import os
@@ -43,10 +41,14 @@ def read_steering_results(lang:str = "", model:str = ""):
         num_layers = len(layers.split("_"))
         df = pd.read_json(test_results_path, typ='series').to_frame().T
         df_rand = pd.read_json(rand_path, typ='series').to_frame().T
-        # df_steering = pd.read_json(steering_path, typ='series').to_frame().T
+        if steering_path.exists():
+            df_steering = pd.read_json(steering_path, typ='series').to_frame().T
+            df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
         df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
-        # df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
-        df = pd.concat([df, df_rand], axis=1) #df_steering
+        if steering_path.exists():
+            df = pd.concat([df, df_rand, df_steering], axis=1)
+        else:
+            df = pd.concat([df, df_rand], axis=1)
         df["lang"] = lang
         df["mutations"] = mutations
         df["layers"] = layers
@@ -59,6 +61,8 @@ def read_steering_results(lang:str = "", model:str = ""):
 
 # %%
 def plot_steering_results(df: pd.DataFrame, num_layers: int):
+    from matplotlib import pyplot as plt
+    import seaborn as sns
     df = df.reset_index()
     df = df[df["num_layers"] == num_layers]
     mutations = df["mutations"].unique()
@@ -74,7 +78,10 @@ def plot_steering_results(df: pd.DataFrame, num_layers: int):
         print(i, mutation)
         subset = df[df["mutations"] == mutation]
         sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
-        # sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", label="Steering")
+        try:
+            sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", label="Steering")
+        except:
+            pass
         sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
 
         axes[i].set_title(mutation)
@@ -94,6 +101,33 @@ def plot_steering_results(df: pd.DataFrame, num_layers: int):
     # plt.show()
     plt.savefig("fig.pdf")
 
+def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
+    """
+    probability of A|B
+    
+    P(A|B) = P(AnB)/P(B)
+    
+    """
+    prob_a = df[var_a].mean()
+    prob_b = df[var_b].mean()
+    prob_anb = (df[var_a] & df[var_b]).mean()
+    prob_a_given_b = prob_anb / prob_b
+    return prob_a, prob_b, prob_anb, prob_a_given_b
+
+def correlation(lang, model):
+    all_dfs = []
+    for file in Path(f"{DIR}/results").glob(f"steering-{lang}-*-17_18*{model}/test_steering_results_rand"):
+        df = datasets.load_from_disk(file).to_pandas()
+        all_dfs.append(df)
+    df = pd.concat(all_dfs, axis=0).reset_index()
+    print(df)
+    df["mutated_pred_is_underscore"] = df["mutated_generated_text"] == "__"
+    df["success"] = df["steered_predictions"] == df["fim_type"]
+    df["mutation_names"] = df["mutation_names"].apply(lambda x: "_".join(x))
+    df = df.groupby("mutation_names").agg({"success":"mean", "mutated_pred_is_underscore":"mean"}).reset_index()
+    print(df)
+    return df.corr("pearson", "success","mutated_pred_is_underscore")
+
 # %%
 df, missing_test_results = read_steering_results(sys.argv[1],sys.argv[2])
 print(missing_test_results)
@@ -105,8 +139,8 @@ df_pretty = df_pretty.sort_values(["mutations","layers"])
 # df_pretty.head(70)
 
 # %%
-plot_steering_results(df_pretty, 5)
-
+# plot_steering_results(df_pretty, 5)
+print(correlation(sys.argv[1],sys.argv[2]))
 # %%
 # plot_steering_results(df_pretty, 3)
 

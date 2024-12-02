@@ -6,7 +6,7 @@
 #SBATCH --ntasks=8
 #SBATCH --mem=60G
 #SBATCH --gres=gpu:1
-#SBATCH --time=6:00:00
+#SBATCH --time=3:00:00
 
 set -x
 set -e
@@ -28,7 +28,9 @@ MUTATIONSUNDERSCORED=$(echo $MUTATIONS | sed 's/,/_/g')
 VLLM_LOGGING_LEVEL=ERROR python3 -m codetrace.scripts.mutate_dataset \
     --model /work/nvme/bcbj/franlucc/models/$MODEL \
     --tokenizer /work/nvme/bcbj/franlucc/models/$MODEL \
-    --completions-ds results/completions-$MODEL \
+    --completions-ds nuprl-staging/type-steering \
+    --subset completions-$LANG-$MODEL \
+    --split train \
     --mutated-ds results/mutations-$LANG-$MUTATIONSUNDERSCORED-$MODEL \
     --lang $LANG \
     --mutations=$MUTATIONS

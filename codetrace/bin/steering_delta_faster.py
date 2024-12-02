@@ -11,19 +11,44 @@
 # You must run this script in the codetrace directory and in an environment
 # in which it works.
 
+"""
+This is the "faster" version because it computes steering tensor for a 
+model/mutations steer script ONCE instead of for every layer interval (collects all layers
+at once).
+"""
+
 import argparse
 import subprocess
 from pathlib import Path
+import datasets
+from typing import Optional
+import torch
+
 def get_ranges(num_layers: int, interval: int):
     for i in range(0, num_layers):
         if i + interval <= num_layers:
             yield ",".join(map(str, range(i, i + interval)))
 
+def save_to_steering_dir(
+    steer_split: Optional[datasets.Dataset],
+    test_split: Optional[datasets.Dataset],
+    steering_tensor: Optional[torch.Tensor],
+    output_dir: str
+):
+    if steer_split != None:
+        steer_split.save_to_disk(f"{output_dir}/steer_split")
+    if test_split != None:
+        test_split.save_to_disk(f"{output_dir}/test_split")
+    if steering_tensor != None:
+        torch.save(steering_tensor, f"{output_dir}/steering_tensor.pt")
 
 def main_with_args(model: str, mutations: str, lang: str, num_layers: int, interval: int, dry_run: bool):
+    steer_split = None
+    test_split = None
+    steering_tensor = None
     RUN_SPLITS = ["test", "rand"] # don't run "steer" split to save compute
 
-    for layers in get_ranges(num_layers, interval):
+    for n_iter,layers in enumerate(get_ranges(num_layers, interval)):
         mutation_underscored = mutations.replace(",", "_")
         layers_underscored = layers.replace(",", "_")
         output_dir = f"results/steering-{lang}-{mutation_underscored}-{layers_underscored}-{model}"
@@ -33,6 +58,8 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
             ((Path(output_dir) / "test_results_rand.json").exists() or not "rand" in RUN_SPLITS):
             print(f"Skipping {output_dir} because it already exists")
             continue
+
+        save_to_steering_dir(steer_split, test_split, steering_tensor, output_dir)
 
         cmd = [
             "python3", "-m", "codetrace.scripts.launch_steer",
@@ -47,12 +74,19 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
             "--tensor-name", "steering_tensor.pt",
             "-n", "3000",
             "--test-size", "100",
-            "--run-steering-splits", *RUN_SPLITS
+            "--collect-all-layers",
+            "--run-steering-splits", *RUN_SPLITS 
         ]
+        
         print(" ".join(cmd))
         if not dry_run:
             subprocess.run(cmd, check=True)
 
+        if n_iter == 0:
+            # save output once at first iter, copy it to all other dirs later
+            steer_split = datasets.load_from_disk(f"{output_dir}/steer_split")
+            test_split = datasets.load_from_disk(f"{output_dir}/test_split")
+            steering_tensor = torch.load(f"{output_dir}/steering_tensor.pt")
 
 def main():
     parser = argparse.ArgumentParser()

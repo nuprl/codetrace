@@ -49,6 +49,7 @@ def main(
     subset:str,
     split:Optional[str],
     run_steering_splits: Optional[List[str]] = None,
+    collect_all_layers: bool = False
 ):
     candidates = load_dataset(candidates, split=split,name=subset)
     model = LanguageModel(model, torch_dtype=dtype,device_map="cuda",dispatch=True)
@@ -60,7 +61,7 @@ def main(
         test_name,
         tensor_name,
         max_num_candidates,
-        only_collect_layers=layers
+        only_collect_layers=None if collect_all_layers else layers
     )
     # 1. make splits
     steer_split, test_split = smanager.steer_test_splits(test_size, 3, 25)
@@ -111,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-size", type=int,default=100)
 
     parser.add_argument("--run-steering-splits", type=str, nargs="+", choices=["test","steer","rand"], default=None)
+    parser.add_argument("--collect-all-layers", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
 
     args = parser.parse_args().__dict__

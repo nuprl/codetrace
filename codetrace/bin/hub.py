@@ -24,19 +24,28 @@ def upload_results(path: Path):
     
     # we need to map error column to str because splits need to have same types,
     # since some splits always typecheck the error column is Null
-    steer_results = datasets.Dataset.load_from_disk(os.path.join(path, "steer_steering_results")
-            ).map(lambda x: {**x, "errors": "" if not x["errors"] else x["errors"]})
+    steer_results = None
+    if os.path.exists(os.path.join(path, "steer_steering_results")):
+        steer_results = datasets.Dataset.load_from_disk(os.path.join(path, "steer_steering_results")
+                ).map(lambda x: {**x, "errors": "" if not x["errors"] else x["errors"]})
+    
     test_results = datasets.Dataset.load_from_disk(os.path.join(path, "test_steering_results")
             ).map(lambda x: {**x, "errors": "" if not x["errors"] else x["errors"]})
     test_results_rand = datasets.Dataset.load_from_disk(os.path.join(path, "test_steering_results_rand")
             ).map(lambda x: {**x, "errors": "" if not x["errors"] else x["errors"]})
     
-    results_ds = datasets.DatasetDict({
-        "test": test_results,
-        "steer": steer_results,
-        "test_rand": test_results_rand
-    })
-    results_ds.push_to_hub(f"nuprl-staging/type-steering", config_name=config_name, token=AUTH_TOKEN,
+    if not steer_results:
+        results_ds = datasets.DatasetDict({
+            "test": test_results,
+            "test_rand": test_results_rand
+        })
+    else:
+        results_ds = datasets.DatasetDict({
+            "test": test_results,
+            "steer": steer_results,
+            "test_rand": test_results_rand
+        })
+    results_ds.push_to_hub(f"nuprl-staging/type-steering-results", config_name=config_name, token=AUTH_TOKEN,
                            commit_message=f"Uploading {config_name} results")
     print(results_ds)
 
