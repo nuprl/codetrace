@@ -13,6 +13,7 @@ from typing import List, Union, Callable, Optional, TypeVar
 from codetrace.interp_utils import (
     collect_hidden_states,
     insert_patch,
+    apply_reduction,
     TraceResult,
     LogitResult,
     HiddenStateStack_1tok,
@@ -24,6 +25,72 @@ from codetrace.interp_utils import (
     MaskTensor
 )
 
+def batched_patch(
+    model : LanguageModel,
+    prompts : Union[List[str], torch.utils.data.DataLoader],
+    patch : Union[HiddenStateStack,HiddenStateStack_1tok],
+    layers_to_patch : List[int],
+    target_fn : Callable[[InputTensor],InputMaskTensor],
+    patch_fn: Callable[[HiddenState, MaskTensor, HiddenState],HiddenState],
+    batch_size : int = 5,
+    reduction: Optional[Union[str, Callable[[HiddenState,int],HiddenState_1tok]]] = None,
+    collect_hidden_states: Optional[List[int]] = None
+) -> List[Union[HiddenStateStack, HiddenStateStack_1tok]]:
+    if isinstance(prompts, torch.utils.data.DataLoader):
+        prompt_batches = prompts
+    else:
+        prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
+    
+    hs = []
+    for i,batch in tqdm(enumerate(prompt_batches), desc="Insert Patch Batch", total=len(prompt_batches)):
+        bsize = len(batch) if isinstance(batch, List) else batch.shape[1]
+
+        res : TraceResult = insert_patch(
+            model, 
+            batch, 
+            _resize_patch(patch, bsize), # repeat patch in dim 1 to match batch len
+            layers_to_patch, 
+            target_fn=target_fn,
+            patch_fn=patch_fn,
+            collect_hidden_states=collect_hidden_states,
+        )
+        activs = res._hidden_states
+        if reduction:
+            activs = apply_reduction(activs, reduction, dim=1)
+        hs.append(activs)
+    return hs
+
+def batched_collect_activations(
+    model: LanguageModel,
+    prompts : Union[List[str], torch.utils.data.DataLoader],
+    target_fn : Optional[Callable[[InputTensor],InputMaskTensor]] = None,
+    batch_size:int=5,
+    layers: Optional[List[int]] = None,
+    reduction: Optional[Union[str, Callable[[HiddenState,int],HiddenState_1tok]]] = None
+) -> List[Union[HiddenStateStack, HiddenStateStack_1tok]]:
+    """
+    Get activations at all layers for prompts. Select activations according to mask
+    produced by target_fn. Batches the prompts to avoid memory issues.
+
+    reduction: provide an einops reduction function for reducing the collected activation to
+            save gpu memory.
+    """
+    # batch prompts according to batch size
+    if isinstance(prompts, torch.utils.data.DataLoader):
+        prompt_batches = prompts
+    else:
+        prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
+
+    if not layers:
+        layers = range(model.config.num_hidden_layers)
+    hidden_states = []
+    for i,batch in tqdm(enumerate(prompt_batches), desc="Batch collect", total=len(prompt_batches)):
+        hs = collect_hidden_states(model, batch,layers, target_fn, reduction=reduction).cpu()
+        hidden_states.append(hs)
+        
+    # save tensor
+    return hidden_states
+
 def batched_get_averages(
     model: LanguageModel,
     prompts : Union[List[str], torch.utils.data.DataLoader],
@@ -33,7 +100,7 @@ def batched_get_averages(
     outfile: Optional[str] = None,
     layers: Optional[List[int]] = None,
     reduction: Optional[Union[str, Callable[[HiddenState,int],HiddenState_1tok]]] = None
-) -> HiddenStateStack:
+) -> Union[HiddenStateStack, HiddenStateStack_1tok]:
     """
     Get averages of activations at all layers for prompts. Select activations according to mask
     produced by target_fn. Batches the prompts to

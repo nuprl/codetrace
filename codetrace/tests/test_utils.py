@@ -10,6 +10,12 @@ from transformers import AutoTokenizer
 import torch
 import pytest
 import einops
+from codetrace.scripts.plot_activations import _chain_activations
+
+def test_chain_activations():
+    activs = [torch.randn(40,30,5,100)]*3 # nsamples,nlayer, nprompt, hdim
+    output = _chain_activations(activs, 5)
+    assert list(output.shape) == [120,5,100]
 
 @pytest.mark.parametrize("logits, top_k, do_log_probs, expected_indices", [
     (torch.tensor([[1.0, 2.0, 3.0]]), 2, False, torch.tensor([[2, 1]])),

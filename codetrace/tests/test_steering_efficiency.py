@@ -5,6 +5,7 @@ from codetrace.utils import reset_index_dim0, predict, copy_decoder, load_datase
 from codetrace.utils import masked_add, mask_target_idx, masked_fill, mask_target_tokens, masked_get
 from codetrace.steering import SteeringManager, subtract_avg
 from codetrace.scripts.launch_steer import main as launch_steer
+from codetrace.batched_utils import batched_patch, batched_collect_activations
 import torch
 from nnsight import LanguageModel
 from functools import partial
@@ -12,6 +13,12 @@ from functools import partial
 MODEL = "/mnt/ssd/arjun/models/starcoderbase-1b"
 model = LanguageModel(MODEL, device_map="cuda", torch_dtype=torch.bfloat16)
 tokenizer = model.tokenizer
+
+def test_batched_patch():
+    assert False
+
+def test_batched_collect():
+    assert False
 
 def test_masked_fill():
     output = masked_fill(torch.Tensor([1,2,3]), torch.BoolTensor([1,0,0]), torch.Tensor([4,5,6]))

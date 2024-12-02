@@ -187,7 +187,7 @@ def insert_patch(
     patch : HiddenStateStack,
     layers_to_patch : List[int],
     target_fn : Optional[Callable[[InputTensor],InputMaskTensor]] = None,
-    collect_hidden_states : bool = True,
+    collect_hidden_states : Optional[List[int]] = None,
     patch_fn: Optional[Callable[[HiddenState, MaskTensor, HiddenState],HiddenState]] = None,
 ) -> TraceResult:
     """
@@ -197,7 +197,7 @@ def insert_patch(
         patch_fn = masked_fill
 
     if collect_hidden_states:
-        collect_range = list(range(len(get_lm_layers(model))))
+        collect_range = collect_hidden_states
     else:
         collect_range = [len(get_lm_layers(model))-1]
 
@@ -230,7 +230,8 @@ def insert_patch(
     hidden_states = nnsight.util.apply(hidden_states, lambda x: x.value, Proxy)
     logits = nnsight.util.apply(logits, lambda x: x.value, Proxy)
     final_logits = nnsight.util.apply(final_logits, lambda x: x.value, Proxy)
-    assert torch.equal(logits[-1], final_logits), f"{logits[-1]} != {final_logits}"
+    if len(get_lm_layers(model))-1 in collect_range:
+        assert torch.equal(logits[-1], final_logits), f"{logits[-1]} != {final_logits}"
     return TraceResult(logits, collect_range, len(get_lm_layers(model)), hidden_states=hidden_states)
 
 @torch.no_grad    
