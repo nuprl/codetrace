@@ -56,7 +56,7 @@ def batched_patch(
         )
         activs = res.hidden_states()
         if reduction:
-            activs = apply_reduction(activs, reduction, dim=1)
+            activs = apply_reduction(activs, reduction, dim=2)
         hs.append(activs)
     return hs
 
