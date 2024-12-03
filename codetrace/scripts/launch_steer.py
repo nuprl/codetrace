@@ -49,7 +49,9 @@ def main(
     subset:str,
     split:Optional[str],
     run_steering_splits: Optional[List[str]] = None,
-    collect_all_layers: bool = False
+    collect_all_layers: bool = False,
+    dedup_prog_threshold: int = 3,
+    dedup_type_threshold: int = 25
 ):
     if run_steering_splits is None:
         run_steering_splits = ["test","rand","steer"]
@@ -66,7 +68,7 @@ def main(
         only_collect_layers=None if collect_all_layers else layers
     )
     # 1. make splits
-    steer_split, test_split = smanager.steer_test_splits(test_size, 3, 25)
+    steer_split, test_split = smanager.steer_test_splits(test_size, dedup_prog_threshold, dedup_type_threshold)
     print("Steer split:\n",steer_split,"Test_split:\n", test_split)
     smanager.save_data(steer_split, steer_name)
     smanager.save_data(test_split, test_name)
@@ -101,7 +103,8 @@ if __name__ == "__main__":
     # dataset
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--subset", type=str, default=None)
-
+    parser.add_argument("--dedup-prog-threshold", type=int, default=3)
+    parser.add_argument("--dedup-type-threshold", type=int, default=25)
     # naming
     parser.add_argument("--steer-name", required=True)
     parser.add_argument("--test-name", required=True)
@@ -117,7 +120,8 @@ if __name__ == "__main__":
     parser.add_argument("--collect-all-layers", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
 
-    args = parser.parse_args().__dict__
+    args = parser.parse_args()
+    args = vars(args)
     if args.pop("overwrite", None) and os.path.exists(args["output_dir"]):
         rmtree(args["output_dir"])
     args["layers"] = [int(l.strip()) for l in args["layers"].split(',') if l != ""]
