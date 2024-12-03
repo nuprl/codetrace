@@ -131,11 +131,11 @@ def read_steering_results_from_hub(
 def read_steering_results(lang:str = "", model:str = ""):
     all_dfs = []
     missing_test_results = []
-    for path in Path(f"{DIR}/results").glob(f"steering-{lang}*{model}"):
+    for path in tqdm(list(Path(f"{DIR}/results").glob(f"steering-{lang}*{model}")), desc="Reading"):
         test_results_path = path / "test_results.json"
         steering_path = path / "steer_results.json"
         rand_path = path / "test_results_rand.json"
-        if not test_results_path.exists() or not rand_path.exists(): #not steering_path.exists() or 
+        if not test_results_path.exists() or not rand_path.exists():
             missing_test_results.append(path)
             continue
         names = path.name.split("-")
@@ -146,11 +146,13 @@ def read_steering_results(lang:str = "", model:str = ""):
         if steering_path.exists():
             df_steering = pd.read_json(steering_path, typ='series').to_frame().T
             df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
+        
         df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
         if steering_path.exists():
             df = pd.concat([df, df_rand, df_steering], axis=1)
         else:
             df = pd.concat([df, df_rand], axis=1)
+            missing_test_results.append(steering_path)
         df["lang"] = lang
         df["mutations"] = mutations
         df["layers"] = layers
