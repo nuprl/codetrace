@@ -1,6 +1,7 @@
 # %%
 # %config InlineBackend.figure_format = "retina"
-
+from matplotlib import pyplot as plt
+import seaborn as sns
 import pandas as pd
 import json
 from pathlib import Path
@@ -10,6 +11,7 @@ import os
 from typing import Optional,Dict,List
 from tqdm import tqdm
 import sys
+from codetrace.fast_utils import batched_apply, make_batches
 DIR=os.path.dirname(os.path.abspath(Path(__file__).parent))
 
 
@@ -30,6 +32,10 @@ MUTATIONS_RENAMED = {
     "delete_vars_types": "All edits",
 }
 
+"""
+Utils code
+"""
+
 def get_ranges(num_layers: int, interval: int):
     for i in range(0, num_layers):
         if i + interval <= num_layers:
@@ -43,6 +49,17 @@ def all_subsets(lang:str, model:str, n_layers:int, interval:int):
             subsets.append(f"steering-{lang}-{m}-{r}-{model}")
     return subsets
 
+def model_n_layer(model: str) -> int:
+    if "qwen" in model.lower():
+        return 28
+    elif "codellama" in model.lower():
+        return 32
+    else:
+        return None
+
+"""
+Loading code
+"""
 def _format_results(df: pd.DataFrame) -> pd.DataFrame:
     df["succ"] = df["steered_predictions"] == df["fim_type"]
     return pd.DataFrame.from_records([
@@ -90,31 +107,40 @@ def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False
     df["num_layers"] = num_layers
     return {"data": df, "missing_results": missing_test_results}
 
-def batched_process_df_from_hub(batch: List[str], **kwargs) -> List[Dict[str, List]]:
-    processed = []
-    for item in batch:
-        processed.append(process_df_from_hub(item, **kwargs))
-    return processed
-
-def read_steering_results_from_hub_multiproc(
-    lang:str, model:str, n_layers:int, interval:int, cache_dir: str=None, num_proc: int = None
-):
-    from codetrace.fast_utils import batched_apply, make_batches
-    def _postproc(results):
-        dataset, missing = [],[]
-        for item in results:
-            if isinstance(item["data"], pd.DataFrame):
-                dataset.append(item["data"])
-            missing += item["missing_results"]
-        return dataset, missing
+def process_df_local(path: Path, model:str) ->  Dict[str, List]:
+    missing_test_results = []
+    test_results_path = path / "test_results.json"
+    steering_path = path / "steer_results.json"
+    rand_path = path / "test_results_rand.json"
+    if not test_results_path.exists() or not rand_path.exists():
+        missing_test_results.append(path)
+        return {"data": None, "missing_results": missing_test_results}
+    names = path.name.split("-")
+    lang, mutations, layers = names[1],names[2],names[3]
+    num_layers = len(layers.split("_"))
+    df = pd.read_json(test_results_path, typ='series').to_frame().T
+    df_rand = pd.read_json(rand_path, typ='series').to_frame().T
+    if steering_path.exists():
+        df_steering = pd.read_json(steering_path, typ='series').to_frame().T
+        df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
     
-    subsets = all_subsets(lang, model, n_layers, interval)
-    batches = make_batches(subsets, num_proc)
-    results = batched_apply(batches, num_proc, batched_process_df_from_hub, 
-                            model=model, cache_dir=cache_dir, verbose=False)
-    data, missing_test_results = _postproc(results)
-    return pd.concat(data), missing_test_results
+    df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
+    if steering_path.exists():
+        df = pd.concat([df, df_rand, df_steering], axis=1)
+    else:
+        df = pd.concat([df, df_rand], axis=1)
+        missing_test_results.append(steering_path)
+    df["lang"] = lang
+    df["mutations"] = mutations
+    df["layers"] = layers
+    df["start_layer"] = int(layers.split("_")[0])
+    df["model"] = model
+    df["num_layers"] = num_layers
+    return {"data": df, "missing_results": missing_test_results}
 
+"""
+List processing
+"""
 def read_steering_results_from_hub(
     lang:str, model:str, n_layers:int, interval:int, cache_dir: str=None
 ):
@@ -132,41 +158,55 @@ def read_steering_results(lang:str = "", model:str = ""):
     all_dfs = []
     missing_test_results = []
     for path in tqdm(list(Path(f"{DIR}/results").glob(f"steering-{lang}*{model}")), desc="Reading"):
-        test_results_path = path / "test_results.json"
-        steering_path = path / "steer_results.json"
-        rand_path = path / "test_results_rand.json"
-        if not test_results_path.exists() or not rand_path.exists():
-            missing_test_results.append(path)
-            continue
-        names = path.name.split("-")
-        lang, mutations, layers = names[1],names[2],names[3]
-        num_layers = len(layers.split("_"))
-        df = pd.read_json(test_results_path, typ='series').to_frame().T
-        df_rand = pd.read_json(rand_path, typ='series').to_frame().T
-        if steering_path.exists():
-            df_steering = pd.read_json(steering_path, typ='series').to_frame().T
-            df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
-        
-        df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
-        if steering_path.exists():
-            df = pd.concat([df, df_rand, df_steering], axis=1)
-        else:
-            df = pd.concat([df, df_rand], axis=1)
-            missing_test_results.append(steering_path)
-        df["lang"] = lang
-        df["mutations"] = mutations
-        df["layers"] = layers
-        df["start_layer"] = int(layers.split("_")[0])
-        df["model"] = model
-        df["num_layers"] = num_layers
-        all_dfs.append(df)
+        output = process_df_local(path)
+        if isinstance(output["data"], pd.DataFrame):
+            all_dfs.append(output["data"])
+        missing_test_results += output["missing_results"]
     
     return pd.concat(all_dfs), missing_test_results
 
+"""
+Multiproc code
+"""
+def _postproc(results):
+    dataset, missing = [],[]
+    for item in results:
+        if isinstance(item["data"], pd.DataFrame):
+            dataset.append(item["data"])
+        missing += item["missing_results"]
+    return dataset, missing
+
+
+def batched_process(batch: List[str], fn: callable, **kwargs) -> List[Dict[str, List]]:
+    processed = []
+    for item in batch:
+        processed.append(fn(item, **kwargs))
+    return processed
+
+def read_steering_results_from_hub_multiproc(
+    lang:str, model:str, n_layers:int, interval:int, cache_dir: str=None, num_proc: int = None
+):
+    subsets = all_subsets(lang, model, n_layers, interval)
+    batches = make_batches(subsets, num_proc)
+    results = batched_apply(batches, num_proc, batched_process, fn=process_df_from_hub, 
+                            model=model, cache_dir=cache_dir, verbose=False)
+    data, missing_test_results = _postproc(results)
+    return pd.concat(data), missing_test_results
+
+def read_steering_results_multiproc(
+    lang:str, model:str, num_proc: int = None
+):
+    subsets = list(Path(f"{DIR}/results").glob(f"steering-{lang}*{model}"))
+    batches = make_batches(subsets, num_proc)
+    results = batched_apply(batches, num_proc, batched_process, fn=process_df_local, model=model)
+    data, missing_test_results = _postproc(results)
+    return pd.concat(data), missing_test_results
+
+"""
+Plotting
+"""
 # %%
-def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[str] = None):
-    from matplotlib import pyplot as plt
-    import seaborn as sns
+def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[str] = None, n_layer: int = None):
     df = df.reset_index()
     df = df[df["num_layers"] == interval]
     mutations = df["mutations"].unique()
@@ -181,15 +221,19 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
         subset = df[df["mutations"] == mutation]
 
         sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
-        sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
         if "steering_mean_succ" in subset.columns:
-            sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", label="Steering")
+            sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", 
+                         label="Steering")
+        sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
         
         axes[i].set_title(mutation)
         axes[i].set_xlabel("Patch layer start")
         axes[i].set_ylabel("Accuracy")
         axes[i].set_ylim(0, 1)  # Set y-axis range from 0 to 1
-        axes[i].set_xticks(range(int(df["start_layer"].min()), int(df["start_layer"].max()) + 1, 1))
+        if not n_layer:
+            axes[i].set_xticks(range(int(df["start_layer"].min()), int(df["start_layer"].max()) + 1, 1))
+        else:
+            axes[i].set_xticks(range(0, n_layer-interval+1, 1))
         axes[i].tick_params(axis='x', rotation=45)
         axes[i].grid(True, which='major', linestyle='-', linewidth=0.5, color='lightgrey')
 
@@ -199,12 +243,16 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
     fig.suptitle(f"{interval} patched layers", fontsize=16)
 
     plt.tight_layout()
-
+    if n_layer:
+        plt.xlim(0, n_layer-interval+1)
     if fig_file:
         plt.savefig(fig_file)
     else:
         plt.show()
 
+"""
+Metrics
+"""
 def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
     """
     probability of A|B
@@ -232,9 +280,14 @@ def correlation(lang, model):
     print(df)
     return df.corr("pearson", "success","mutated_pred_is_underscore")
 
+
+
 if __name__ == "__main__":
     # %%
-    df, missing_test_results = read_steering_results(sys.argv[1],sys.argv[2])
+    lang = sys.argv[1]
+    model = sys.argv[2]
+    outfile = sys.argv[3]
+    df, missing_test_results = read_steering_results_multiproc(lang,model,40)
     print(missing_test_results)
 
     # %%
@@ -242,10 +295,9 @@ if __name__ == "__main__":
     df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
     df_pretty = df_pretty.sort_values(["mutations","layers"])
     # df_pretty.head(70)
-
-    # %%
-    # plot_steering_results(df_pretty, 5, "fig.pdf")
-    print(correlation(sys.argv[1],sys.argv[2]))
+    
+    plot_steering_results(df_pretty, 5, outfile, model_n_layer(model))
+    # print(correlation(sys.argv[1],sys.argv[2]))
     # %%
     # plot_steering_results(df_pretty, 3)
 
