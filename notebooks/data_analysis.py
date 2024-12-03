@@ -213,7 +213,7 @@ def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
     prob_a = df[var_a].mean()
     prob_b = df[var_b].mean()
     prob_anb = (df[var_a] & df[var_b]).mean()
-    prob_a_given_b = prob_anb / prob_b
+    prob_a_given_b = 0 if prob_anb == 0 else prob_anb / prob_b
     return prob_a, prob_b, prob_anb, prob_a_given_b
 
 def correlation(lang, model):
