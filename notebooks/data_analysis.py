@@ -57,7 +57,7 @@ def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False
     test_results = ds["test"]
     rand_results = ds["rand"]
     steering_results = ds.get("steer", None)
-    if steering_results:
+    if not steering_results:
         missing_test_results.append(subset + "/steer")
     names = subset.split("-")
     lang, mutations, layers = names[1],names[2],names[3]
@@ -93,7 +93,7 @@ def read_steering_results_from_hub_multiproc(
     def _postproc(results):
         dataset, missing = [],[]
         for item in results:
-            if item["data"] != None:
+            if isinstance(item["data"], pd.DataFrame):
                 dataset.append(item["data"])
             missing += item["missing_results"]
         return dataset, missing
@@ -112,7 +112,7 @@ def read_steering_results_from_hub(
     missing_test_results = []
     for subset in tqdm(all_subsets(lang, model, n_layers, interval), "fetching subsets"):
         output = process_df_from_hub(subset, model, cache_dir)
-        if output["data"] != None:
+        if isinstance(output["data"], pd.DataFrame):
             all_dfs.append(output["data"])
         missing_test_results += output["missing_results"]
     
@@ -152,11 +152,11 @@ def read_steering_results(lang:str = "", model:str = ""):
     return pd.concat(all_dfs), missing_test_results
 
 # %%
-def plot_steering_results(df: pd.DataFrame, num_layers: int, fig_file: Optional[str] = None):
+def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[str] = None):
     from matplotlib import pyplot as plt
     import seaborn as sns
     df = df.reset_index()
-    df = df[df["num_layers"] == num_layers]
+    df = df[df["num_layers"] == interval]
     mutations = df["mutations"].unique()
     mutations = sorted(mutations)
     num_mutations = len(mutations)
@@ -166,16 +166,19 @@ def plot_steering_results(df: pd.DataFrame, num_layers: int, fig_file: Optional[
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 4 * num_rows), sharex=True, sharey=True)
     axes = axes.flatten()
 
+    if "mean_succ" not in df.columns:
+        if "steering_fim_type" in df.columns:
+            df["steering_mean_succ"] = df["steering_fim_type"] == df["steering_steered_predictions"]
+        df["mean_succ"] = df["fim_type"] == df["steered_predictions"]
+        df["rand_mean_succ"] = df["rand_fim_type"] == df["rand_steered_predictions"]
+    
     for i, mutation in enumerate(mutations):
-        print(i, mutation)
         subset = df[df["mutations"] == mutation]
         sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
-        try:
-            sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", label="Steering")
-        except:
-            pass
         sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
-
+        if "steering_mean_succ" in subset.columns:        
+            sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", label="Steering")
+        
         axes[i].set_title(mutation)
         axes[i].set_xlabel("Patch layer start")
         axes[i].set_ylabel("Accuracy")
@@ -187,7 +190,7 @@ def plot_steering_results(df: pd.DataFrame, num_layers: int, fig_file: Optional[
     for j in range(i + 1, len(axes)):
         fig.delaxes(axes[j])
 
-    fig.suptitle(f"{num_layers} patched layers", fontsize=16)
+    fig.suptitle(f"{interval} patched layers", fontsize=16)
 
     plt.tight_layout()
 
