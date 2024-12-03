@@ -43,6 +43,13 @@ def all_subsets(lang:str, model:str, n_layers:int, interval:int):
             subsets.append(f"steering-{lang}-{m}-{r}-{model}")
     return subsets
 
+def _format_results(df: pd.DataFrame) -> pd.DataFrame:
+    df["succ"] = df["steered_predictions"] == df["fim_type"]
+    return pd.DataFrame.from_records([
+        {"num_succ":df["succ"].sum(), 
+         "tot_succ":df["succ"].count(),
+         "mean_succ":df["succ"].mean(),}])
+
 def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False) -> Dict[str, List]:
     missing_test_results = []
     try:
@@ -63,11 +70,14 @@ def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False
     lang, mutations, layers = names[1],names[2],names[3]
     num_layers = len(layers.split("_"))
     df = test_results.to_pandas()
+    df = _format_results(df)
     df_rand = rand_results.to_pandas()
+    df_rand = _format_results(df_rand)
+    df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
     if steering_results:
         df_steering = steering_results.to_pandas()
+        df_steering = _format_results(df_steering)
         df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
-    df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
     if steering_results:
         df = pd.concat([df, df_rand, df_steering], axis=1)
     else:
@@ -165,18 +175,12 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
 
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 4 * num_rows), sharex=True, sharey=True)
     axes = axes.flatten()
-
-    if "mean_succ" not in df.columns:
-        if "steering_fim_type" in df.columns:
-            df["steering_mean_succ"] = df["steering_fim_type"] == df["steering_steered_predictions"]
-        df["mean_succ"] = df["fim_type"] == df["steered_predictions"]
-        df["rand_mean_succ"] = df["rand_fim_type"] == df["rand_steered_predictions"]
-    
     for i, mutation in enumerate(mutations):
         subset = df[df["mutations"] == mutation]
+
         sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
         sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
-        if "steering_mean_succ" in subset.columns:        
+        if "steering_mean_succ" in subset.columns:
             sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", label="Steering")
         
         axes[i].set_title(mutation)
