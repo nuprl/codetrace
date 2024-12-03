@@ -121,6 +121,7 @@ def upload_results_folder(path: Path, create_pr: bool = False):
 
     Use create_pr for a dry run to prevent overwriting
     """
+    os.environ["HF_HUB_DISABLE_PROGRESS_BARS"]="true"
     datasets.disable_progress_bars()
     vectors_repo = create_vectors_repo(path)
     results_repo = create_results_repo(path)
