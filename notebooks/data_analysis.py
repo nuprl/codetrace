@@ -1,7 +1,3 @@
-# %%
-# %config InlineBackend.figure_format = "retina"
-from matplotlib import pyplot as plt
-import seaborn as sns
 from matplotlib import pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -17,14 +13,11 @@ from codetrace.fast_utils import batched_apply, make_batches
 from codetrace.fast_utils import batched_apply, make_batches
 DIR=os.path.dirname(os.path.abspath(Path(__file__).parent))
 
-
-# %% [markdown]
 # We have several directories named results/steering-LANG-MUTATIONS-LAYERS-MODEL.
 # Within each of these directories, there are files called test_results.json.
 # Each test_results.json has fields called total and num_succ. Read all of these
 # into a pandas dataframe.
 
-# %%
 MUTATIONS_RENAMED = {
     "types": "Rename types",
     "vars": "Rename variables",
@@ -34,10 +27,6 @@ MUTATIONS_RENAMED = {
     "vars_delete": "Rename variables and remove type annotations",
     "delete_vars_types": "All edits",
 }
-
-"""
-Utils code
-"""
 
 """
 Utils code
@@ -114,7 +103,6 @@ def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False
     df["num_layers"] = num_layers
     return {"data": df, "missing_results": missing_test_results}
 
-def process_df_local(path: Path, model:str) ->  Dict[str, List]:
 def process_df_local(path: Path, model:str) ->  Dict[str, List]:
     missing_test_results = []
     test_results_path = path / "test_results.json"
@@ -213,7 +201,6 @@ def read_steering_results_multiproc(
 """
 Plotting
 """
-# %%
 def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[str] = None, n_layer: int = None):
     df = df.reset_index()
     df = df[df["num_layers"] == interval]
@@ -261,9 +248,6 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
 """
 Metrics
 """
-"""
-Metrics
-"""
 def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
     """
     probability of A|B
@@ -291,33 +275,19 @@ def correlation(lang, model):
     print(df)
     return df.corr("pearson", "success","mutated_pred_is_underscore")
 
-
-
-
-
 if __name__ == "__main__":
-    # %%
     lang = sys.argv[1]
     model = sys.argv[2]
     outfile = sys.argv[3]
     df, missing_test_results = read_steering_results_multiproc(lang,model,40)
     print(missing_test_results)
 
-    # %%
     df_pretty = df.copy()
     df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
     df_pretty = df_pretty.sort_values(["mutations","layers"])
-    # df_pretty.head(70)
     
     plot_steering_results(df_pretty, 5, outfile, model_n_layer(model))
     # print(correlation(sys.argv[1],sys.argv[2]))
-    # %%
     # plot_steering_results(df_pretty, 3)
 
-    # # %%
     # plot_steering_results(df_pretty, 5)
-
-    # %%
-    # datasets.Dataset.from_pandas(df).push_to_hub("nuprl/type-steering", config_name="results")
-
-
