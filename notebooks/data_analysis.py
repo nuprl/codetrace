@@ -1,6 +1,7 @@
 # %%
 # %config InlineBackend.figure_format = "retina"
-
+from matplotlib import pyplot as plt
+import seaborn as sns
 import pandas as pd
 import json
 from pathlib import Path
@@ -10,6 +11,7 @@ import os
 from typing import Optional,Dict,List
 from tqdm import tqdm
 import sys
+from codetrace.fast_utils import batched_apply, make_batches
 DIR=os.path.dirname(os.path.abspath(Path(__file__).parent))
 
 
@@ -30,6 +32,10 @@ MUTATIONS_RENAMED = {
     "delete_vars_types": "All edits",
 }
 
+"""
+Utils code
+"""
+
 def get_ranges(num_layers: int, interval: int):
     for i in range(0, num_layers):
         if i + interval <= num_layers:
@@ -43,6 +49,10 @@ def all_subsets(lang:str, model:str, n_layers:int, interval:int):
             subsets.append(f"steering-{lang}-{m}-{r}-{model}")
     return subsets
 
+
+"""
+Loading code
+"""
 def _format_results(df: pd.DataFrame) -> pd.DataFrame:
     df["succ"] = df["steered_predictions"] == df["fim_type"]
     return pd.DataFrame.from_records([
@@ -90,31 +100,39 @@ def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False
     df["num_layers"] = num_layers
     return {"data": df, "missing_results": missing_test_results}
 
-def batched_process_df_from_hub(batch: List[str], **kwargs) -> List[Dict[str, List]]:
-    processed = []
-    for item in batch:
-        processed.append(process_df_from_hub(item, **kwargs))
-    return processed
-
-def read_steering_results_from_hub_multiproc(
-    lang:str, model:str, n_layers:int, interval:int, cache_dir: str=None, num_proc: int = None
-):
-    from codetrace.fast_utils import batched_apply, make_batches
-    def _postproc(results):
-        dataset, missing = [],[]
-        for item in results:
-            if isinstance(item["data"], pd.DataFrame):
-                dataset.append(item["data"])
-            missing += item["missing_results"]
-        return dataset, missing
+def process_df_local(path: Path, model:str) ->  Dict[str, List]:
+    missing_test_results = []
+    test_results_path = path / "test_results.json"
+    steering_path = path / "steer_results.json"
+    rand_path = path / "test_results_rand.json"
+    if not test_results_path.exists() or not rand_path.exists():
+        missing_test_results.append(path)
+    names = path.name.split("-")
+    lang, mutations, layers = names[1],names[2],names[3]
+    num_layers = len(layers.split("_"))
+    df = pd.read_json(test_results_path, typ='series').to_frame().T
+    df_rand = pd.read_json(rand_path, typ='series').to_frame().T
+    if steering_path.exists():
+        df_steering = pd.read_json(steering_path, typ='series').to_frame().T
+        df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
     
-    subsets = all_subsets(lang, model, n_layers, interval)
-    batches = make_batches(subsets, num_proc)
-    results = batched_apply(batches, num_proc, batched_process_df_from_hub, 
-                            model=model, cache_dir=cache_dir, verbose=False)
-    data, missing_test_results = _postproc(results)
-    return pd.concat(data), missing_test_results
+    df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
+    if steering_path.exists():
+        df = pd.concat([df, df_rand, df_steering], axis=1)
+    else:
+        df = pd.concat([df, df_rand], axis=1)
+        missing_test_results.append(steering_path)
+    df["lang"] = lang
+    df["mutations"] = mutations
+    df["layers"] = layers
+    df["start_layer"] = int(layers.split("_")[0])
+    df["model"] = model
+    df["num_layers"] = num_layers
+    return {"data": df, "missing_results": missing_test_results}
 
+"""
+List processing
+"""
 def read_steering_results_from_hub(
     lang:str, model:str, n_layers:int, interval:int, cache_dir: str=None
 ):
@@ -132,41 +150,55 @@ def read_steering_results(lang:str = "", model:str = ""):
     all_dfs = []
     missing_test_results = []
     for path in tqdm(list(Path(f"{DIR}/results").glob(f"steering-{lang}*{model}")), desc="Reading"):
-        test_results_path = path / "test_results.json"
-        steering_path = path / "steer_results.json"
-        rand_path = path / "test_results_rand.json"
-        if not test_results_path.exists() or not rand_path.exists():
-            missing_test_results.append(path)
-            continue
-        names = path.name.split("-")
-        lang, mutations, layers = names[1],names[2],names[3]
-        num_layers = len(layers.split("_"))
-        df = pd.read_json(test_results_path, typ='series').to_frame().T
-        df_rand = pd.read_json(rand_path, typ='series').to_frame().T
-        if steering_path.exists():
-            df_steering = pd.read_json(steering_path, typ='series').to_frame().T
-            df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
-        
-        df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
-        if steering_path.exists():
-            df = pd.concat([df, df_rand, df_steering], axis=1)
-        else:
-            df = pd.concat([df, df_rand], axis=1)
-            missing_test_results.append(steering_path)
-        df["lang"] = lang
-        df["mutations"] = mutations
-        df["layers"] = layers
-        df["start_layer"] = int(layers.split("_")[0])
-        df["model"] = model
-        df["num_layers"] = num_layers
-        all_dfs.append(df)
+        output = process_df_local(path)
+        missing_test_results += output["missing_results"]
+        all_dfs.append(output["data"])
     
     return pd.concat(all_dfs), missing_test_results
 
+"""
+Multiproc code
+"""
+def _postproc(results):
+    dataset, missing = [],[]
+    for item in results:
+        if isinstance(item["data"], pd.DataFrame):
+            dataset.append(item["data"])
+        missing += item["missing_results"]
+    return dataset, missing
+
+
+def batched_process(batch: List[str], fn: callable, **kwargs) -> List[Dict[str, List]]:
+    processed = []
+    for item in batch:
+        processed.append(fn(item, **kwargs))
+    return processed
+
+def read_steering_results_from_hub_multiproc(
+    lang:str, model:str, n_layers:int, interval:int, cache_dir: str=None, num_proc: int = None
+):
+    subsets = all_subsets(lang, model, n_layers, interval)
+    batches = make_batches(subsets, num_proc)
+    results = batched_apply(batches, num_proc, batched_process, fn=process_df_from_hub, 
+                            model=model, cache_dir=cache_dir, verbose=False)
+    data, missing_test_results = _postproc(results)
+    return pd.concat(data), missing_test_results
+
+def read_steering_results_multiproc(
+    lang:str, model:str, num_proc: int = None
+):
+    subsets = list(Path(f"{DIR}/results").glob(f"steering-{lang}*{model}"))
+    batches = make_batches(subsets, num_proc)
+    results = batched_apply(batches, num_proc, batched_process, fn=process_df_local,
+                            model=model,verbose=False)
+    data, missing_test_results = _postproc(results)
+    return pd.concat(data), missing_test_results
+
+"""
+Plotting
+"""
 # %%
 def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[str] = None):
-    from matplotlib import pyplot as plt
-    import seaborn as sns
     df = df.reset_index()
     df = df[df["num_layers"] == interval]
     mutations = df["mutations"].unique()
@@ -205,6 +237,9 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
     else:
         plt.show()
 
+"""
+Metrics
+"""
 def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
     """
     probability of A|B
@@ -231,6 +266,8 @@ def correlation(lang, model):
     df = df.groupby("mutation_names").agg({"success":"mean", "mutated_pred_is_underscore":"mean"}).reset_index()
     print(df)
     return df.corr("pearson", "success","mutated_pred_is_underscore")
+
+
 
 if __name__ == "__main__":
     # %%
