@@ -114,7 +114,7 @@ def create_vectors_repo(path: Path) -> Path:
 
     return tempdir
 
-def upload_results_folder(path: Path, create_pr: bool = True):
+def upload_results_folder(path: Path, create_pr: bool = False):
     """
     Pushes two commits: one for result datasets repo; one for steering vectors repo.
     Uploads entire directories each time.
