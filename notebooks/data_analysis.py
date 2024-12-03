@@ -7,7 +7,11 @@ from pathlib import Path
 import datasets
 import sys
 import os
+from typing import Optional,Dict,List
+from tqdm import tqdm
+import sys
 DIR=os.path.dirname(os.path.abspath(Path(__file__).parent))
+
 
 # %% [markdown]
 # We have several directories named results/steering-LANG-MUTATIONS-LAYERS-MODEL.
@@ -25,6 +29,94 @@ MUTATIONS_RENAMED = {
     "vars_delete": "Rename variables and remove type annotations",
     "delete_vars_types": "All edits",
 }
+
+def get_ranges(num_layers: int, interval: int):
+    for i in range(0, num_layers):
+        if i + interval <= num_layers:
+            yield "_".join(map(str, range(i, i + interval)))
+
+def all_subsets(lang:str, model:str, n_layers:int, interval:int):
+    subsets = []
+    ranges = get_ranges(n_layers, interval)
+    for r in ranges:
+        for m in MUTATIONS_RENAMED.keys():
+            subsets.append(f"steering-{lang}-{m}-{r}-{model}")
+    return subsets
+
+def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False) -> Dict[str, List]:
+    missing_test_results = []
+    try:
+        ds = datasets.load_dataset("nuprl-staging/type-steering-results", name=subset, 
+                                    cache_dir=cache_dir)
+    except Exception as e:
+        if verbose:
+            print(e)
+        missing_test_results.append(subset)
+        return {"missing_results": missing_test_results, "data": None}
+
+    test_results = ds["test"]
+    rand_results = ds["rand"]
+    steering_results = ds.get("steer", None)
+    if steering_results:
+        missing_test_results.append(subset + "/steer")
+    names = subset.split("-")
+    lang, mutations, layers = names[1],names[2],names[3]
+    num_layers = len(layers.split("_"))
+    df = test_results.to_pandas()
+    df_rand = rand_results.to_pandas()
+    if steering_results:
+        df_steering = steering_results.to_pandas()
+        df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
+    df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
+    if steering_results:
+        df = pd.concat([df, df_rand, df_steering], axis=1)
+    else:
+        df = pd.concat([df, df_rand], axis=1)
+    df["lang"] = lang
+    df["mutations"] = mutations
+    df["layers"] = layers
+    df["start_layer"] = int(layers.split("_")[0])
+    df["model"] = model
+    df["num_layers"] = num_layers
+    return {"data": df, "missing_results": missing_test_results}
+
+def batched_process_df_from_hub(batch: List[str], **kwargs) -> List[Dict[str, List]]:
+    processed = []
+    for item in batch:
+        processed.append(process_df_from_hub(item, **kwargs))
+    return processed
+
+def read_steering_results_from_hub_multiproc(
+    lang:str, model:str, n_layers:int, interval:int, cache_dir: str=None, num_proc: int = None
+):
+    from codetrace.fast_utils import batched_apply, make_batches
+    def _postproc(results):
+        dataset, missing = [],[]
+        for item in results:
+            if item["data"] != None:
+                dataset.append(item["data"])
+            missing += item["missing_results"]
+        return dataset, missing
+    
+    subsets = all_subsets(lang, model, n_layers, interval)
+    batches = make_batches(subsets, num_proc)
+    results = batched_apply(batches, num_proc, batched_process_df_from_hub, 
+                            model=model, cache_dir=cache_dir, verbose=False)
+    data, missing_test_results = _postproc(results)
+    return pd.concat(data), missing_test_results
+
+def read_steering_results_from_hub(
+    lang:str, model:str, n_layers:int, interval:int, cache_dir: str=None
+):
+    all_dfs = []
+    missing_test_results = []
+    for subset in tqdm(all_subsets(lang, model, n_layers, interval), "fetching subsets"):
+        output = process_df_from_hub(subset, model, cache_dir)
+        if output["data"] != None:
+            all_dfs.append(output["data"])
+        missing_test_results += output["missing_results"]
+    
+    return pd.concat(all_dfs), missing_test_results
 
 def read_steering_results(lang:str = "", model:str = ""):
     all_dfs = []
@@ -60,7 +152,7 @@ def read_steering_results(lang:str = "", model:str = ""):
     return pd.concat(all_dfs), missing_test_results
 
 # %%
-def plot_steering_results(df: pd.DataFrame, num_layers: int):
+def plot_steering_results(df: pd.DataFrame, num_layers: int, fig_file: Optional[str] = None):
     from matplotlib import pyplot as plt
     import seaborn as sns
     df = df.reset_index()
@@ -98,8 +190,11 @@ def plot_steering_results(df: pd.DataFrame, num_layers: int):
     fig.suptitle(f"{num_layers} patched layers", fontsize=16)
 
     plt.tight_layout()
-    # plt.show()
-    plt.savefig("fig.pdf")
+
+    if fig_file:
+        plt.savefig(fig_file)
+    else:
+        plt.show()
 
 def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
     """
@@ -128,26 +223,27 @@ def correlation(lang, model):
     print(df)
     return df.corr("pearson", "success","mutated_pred_is_underscore")
 
-# %%
-df, missing_test_results = read_steering_results(sys.argv[1],sys.argv[2])
-print(missing_test_results)
+if __name__ == "__main__":
+    # %%
+    df, missing_test_results = read_steering_results(sys.argv[1],sys.argv[2])
+    print(missing_test_results)
 
-# %%
-df_pretty = df.copy()
-df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
-df_pretty = df_pretty.sort_values(["mutations","layers"])
-# df_pretty.head(70)
+    # %%
+    df_pretty = df.copy()
+    df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
+    df_pretty = df_pretty.sort_values(["mutations","layers"])
+    # df_pretty.head(70)
 
-# %%
-# plot_steering_results(df_pretty, 5)
-print(correlation(sys.argv[1],sys.argv[2]))
-# %%
-# plot_steering_results(df_pretty, 3)
+    # %%
+    # plot_steering_results(df_pretty, 5, "fig.pdf")
+    print(correlation(sys.argv[1],sys.argv[2]))
+    # %%
+    # plot_steering_results(df_pretty, 3)
 
-# # %%
-# plot_steering_results(df_pretty, 5)
+    # # %%
+    # plot_steering_results(df_pretty, 5)
 
-# %%
-# datasets.Dataset.from_pandas(df).push_to_hub("nuprl/type-steering", config_name="results")
+    # %%
+    # datasets.Dataset.from_pandas(df).push_to_hub("nuprl/type-steering", config_name="results")
 
 
