@@ -2,6 +2,8 @@
 # %config InlineBackend.figure_format = "retina"
 from matplotlib import pyplot as plt
 import seaborn as sns
+from matplotlib import pyplot as plt
+import seaborn as sns
 import pandas as pd
 import json
 from pathlib import Path
@@ -11,6 +13,7 @@ import os
 from typing import Optional,Dict,List
 from tqdm import tqdm
 import sys
+from codetrace.fast_utils import batched_apply, make_batches
 from codetrace.fast_utils import batched_apply, make_batches
 DIR=os.path.dirname(os.path.abspath(Path(__file__).parent))
 
@@ -31,6 +34,10 @@ MUTATIONS_RENAMED = {
     "vars_delete": "Rename variables and remove type annotations",
     "delete_vars_types": "All edits",
 }
+
+"""
+Utils code
+"""
 
 """
 Utils code
@@ -107,6 +114,7 @@ def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False
     df["num_layers"] = num_layers
     return {"data": df, "missing_results": missing_test_results}
 
+def process_df_local(path: Path, model:str) ->  Dict[str, List]:
 def process_df_local(path: Path, model:str) ->  Dict[str, List]:
     missing_test_results = []
     test_results_path = path / "test_results.json"
@@ -253,6 +261,9 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
 """
 Metrics
 """
+"""
+Metrics
+"""
 def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
     """
     probability of A|B
@@ -279,6 +290,8 @@ def correlation(lang, model):
     df = df.groupby("mutation_names").agg({"success":"mean", "mutated_pred_is_underscore":"mean"}).reset_index()
     print(df)
     return df.corr("pearson", "success","mutated_pred_is_underscore")
+
+
 
 
 
