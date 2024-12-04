@@ -21,7 +21,7 @@ def get_ranges(num_layers: int, interval: int):
 
 
 def main_with_args(model: str, mutations: str, lang: str, num_layers: int, interval: int, dry_run: bool):
-    RUN_SPLITS = ["test", "rand"] # don't run "steer" split to save compute
+    RUN_SPLITS = ["test", "rand","steer"] # don't run "steer" split to save compute
 
     for layers in get_ranges(num_layers, interval):
         mutation_underscored = mutations.replace(",", "_")
@@ -36,7 +36,7 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
 
         cmd = [
             "python3", "-m", "codetrace.scripts.launch_steer",
-            "--model", f"/work/nvme/bcbj/franlucc/models/{model}",
+            "--model", f"/work/nvme/bcbj/models/{model}",
             "--candidates", "nuprl-staging/type-steering",
             "--split", "train", 
             "--subset", f"mutations-{lang}-{mutation_underscored}-{model}",
@@ -47,7 +47,9 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
             "--tensor-name", "steering_tensor.pt",
             "-n", "3000",
             "--test-size", "100",
-            "--run-steering-splits", *RUN_SPLITS
+            "--run-steering-splits", *RUN_SPLITS,
+            "--dedup-type-threshold", "4",
+            "--dedup-prog-threshold", "25"
         ]
         print(" ".join(cmd))
         if not dry_run:

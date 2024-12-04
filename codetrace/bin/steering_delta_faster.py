@@ -53,7 +53,7 @@ def try_load(output_dir:str):
     return steer_split, test_split, steering_tensor
 
 def main_with_args(model: str, mutations: str, lang: str, num_layers: int, interval: int, dry_run: bool):
-    RUN_SPLITS = ["test", "rand"] # don't run "steer" split to save compute
+    RUN_SPLITS = ["test", "rand","steer"] # don't run "steer" split to save compute
     steer_split, test_split, steering_tensor = None,None,None
 
     for layers in get_ranges(num_layers, interval):
@@ -84,7 +84,9 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
             "-n", "3000",
             "--test-size", "100",
             "--collect-all-layers",
-            "--run-steering-splits", *RUN_SPLITS 
+            "--run-steering-splits", *RUN_SPLITS,
+            "--dedup-type-threshold", "4",
+            "--dedup-prog-threshold", "25"
         ]
         
         print(" ".join(cmd))

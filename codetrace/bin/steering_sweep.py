@@ -12,7 +12,7 @@ in the model.
 
 # sbatch codetrace/bin/steering_delta.py --model qwen2p5_coder_7b_base --mutations delete --lang py --num-layers 28 --interval 1
 def main_with_args(model: str, lang: str, num_layers: int, interval: int, results_dir: Path):
-    model_path = Path(f"/work/nvme/bcbj/models/{model}")
+    model_path = Path(f"/work/nvme/bcbj/franlucc/models/{model}")
     if not model_path.exists():
         print(f"Model {model} does not exist", file=sys.stderr)
         sys.exit(1)
@@ -23,8 +23,8 @@ def main_with_args(model: str, lang: str, num_layers: int, interval: int, result
         sys.exit(1)
 
     for p in mutations_paths:
-        mutations = p.name.split("-")[-2].replace("_", ",")
-        print(f"sbatch codetrace/bin/steering_delta.py --model {model} --mutations {mutations} --lang {lang} --num-layers {num_layers} --interval {interval}")
+        mutations = p.name.split("-")[2].replace("_", ",")
+        print(f"sbatch codetrace/bin/steering_delta_faster.py --model {model} --mutations {mutations} --lang {lang} --num-layers {num_layers} --interval {interval}")
 
 def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
