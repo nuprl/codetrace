@@ -8,6 +8,6 @@ OUTDIR=$2
 for language in $"${LANG[@]}"; do
     for model in $"${MODELS[@]}"; do
         echo "Plotting $language $model"
-        python -m codetrace.scripts.data_analysis $language $model $RESULTS "$OUTDIR/fig_$language_$model.pdf"
+        python -m codetrace.scripts.data_analysis $language $model $RESULTS "$OUTDIR/fig_$language-$model.pdf"
     done
 done
