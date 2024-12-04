@@ -14,6 +14,5 @@ for MUTATIONS in "${ALL_MUTATIONS[@]}"; do
         --lang $LANG \
         --output-ds results/mutations-$LANG-$MUTATIONS-$MODEL  \
         --column-name mutated_program \
-        --nproc $NPROC \
-        --max-size 3500 >> /tmp/$LANG-$MUTATIONS-$MODEL.out 2>&1 &
+        --nproc $NPROC >> /tmp/$LANG-$MUTATIONS-$MODEL.out 2>&1 &
 done
