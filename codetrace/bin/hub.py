@@ -93,7 +93,7 @@ def process_result(subpath: Path, tempdir: Path) -> Dict[str, Any]:
     return {"infodict": infodict, "datafiles": datafiles}
 
 
-def create_results_repo(path: Path, num_proc=10) -> Path:
+def create_results_repo(path: Path, num_proc=10, pattern="steering*") -> Path:
     """
     Copy the steering results to a temporary path, formatted as a Hugging Face dataset
     repo with subsets. Use multiprocessing to speed up the operation.
@@ -102,7 +102,7 @@ def create_results_repo(path: Path, num_proc=10) -> Path:
     tempdir = Path(f"/tmp/{uuid.uuid4()}")
     os.makedirs(tempdir, exist_ok=True)
 
-    results = list(path.glob("steering*"))
+    results = list(path.glob(pattern))
     config_infos, config_datafiles = [], []
 
     with ProcessPoolExecutor(max_workers=num_proc) as executor:
@@ -127,7 +127,7 @@ def create_results_repo(path: Path, num_proc=10) -> Path:
     return tempdir
 
 
-def create_vectors_repo(path: Path) -> Path:
+def create_vectors_repo(path: Path, pattern="steering*") -> Path:
     """
     Copy the steering vectors to a temporary path, formatted as a huggingface model
     repo with .pt files. Return the temp path.
@@ -135,7 +135,7 @@ def create_vectors_repo(path: Path) -> Path:
     tempdir = Path(f"/tmp/{uuid.uuid4()}")
     os.makedirs(tempdir)
 
-    vectors = list(path.glob("steering*"))
+    vectors = list(path.glob(pattern))
     for subpath in tqdm(vectors, total=len(vectors), desc="Loading vectors data"):
         if subpath.is_dir():
             vector_temp_path = (tempdir / f"{subpath.name}.pt")
@@ -145,7 +145,7 @@ def create_vectors_repo(path: Path) -> Path:
 
     return tempdir
 
-def upload_results_folder(path: Path, create_pr: bool = False):
+def upload_results_folder(path: Path, create_pr: bool = False, search_pattern: str = "steering*"):
     """
     Pushes two commits: one for result datasets repo; one for steering vectors repo.
     Uploads entire directories each time.
@@ -154,8 +154,8 @@ def upload_results_folder(path: Path, create_pr: bool = False):
     """
     os.environ["HF_HUB_DISABLE_PROGRESS_BARS"]="true"
     datasets.disable_progress_bars()
-    vectors_repo = create_vectors_repo(path)
-    results_repo = create_results_repo(path)
+    vectors_repo = create_vectors_repo(path, pattern=search_pattern)
+    results_repo = create_results_repo(path, pattern=search_pattern)
     print(f"Vectors temporary path {vectors_repo}, Results temporary path {results_repo}")
     print("Pushing to hub, this may take a while...")
     upload_folder(
@@ -193,12 +193,13 @@ def upload_results_file(path: Path, create_pr: bool = False):
         create_pr=create_pr
     )
 
-def upload_results(path: Path, file_upload: bool, create_pr: bool):
+def upload_results(path: Path, file_upload: bool, create_pr: bool, search_pattern: str):
     if file_upload:
         upload_results_file(path, create_pr=create_pr)
     else:
         os.environ["HF_HUB_DISABLE_PROGRESS_BARS"]="true"
-        upload_results_folder(path, create_pr=create_pr)
+        print(f"Search pattern: {search_pattern}")
+        upload_results_folder(path, create_pr=create_pr, search_pattern=search_pattern)
 
 def upload(path: Path):
     config_name = path.name
@@ -235,6 +236,7 @@ def main():
     parser_upload_results.add_argument("path", type=Path)
     parser_upload_results.add_argument("-f", "--file-upload", action="store_true")
     parser_upload_results.add_argument("-pr", "--open-pull-request", action="store_true")
+    parser_upload_results.add_argument("-s", "--search-pattern", type=str, default="steering*")
 
     parser_download = subparsers.add_parser("download")
     parser_download.add_argument("config_name", type=str)
@@ -246,7 +248,7 @@ def main():
         upload(args.path)
     elif args.command == "upload_results":
         print(f"Open pull request: {args.open_pull_request}")
-        upload_results(args.path, args.file_upload, args.open_pull_request)
+        upload_results(args.path, args.file_upload, args.open_pull_request, args.search_pattern)
     elif args.command == "download":
         download(args.config_name, args.output_dir)
     else:
