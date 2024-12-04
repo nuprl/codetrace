@@ -8,6 +8,9 @@ from tqdm import tqdm
 import uuid
 from shutil import copyfile, rmtree
 import yaml
+from typing import Dict,List,Any
+from concurrent.futures import ProcessPoolExecutor
+
 
 SPLIT = "train"
 
@@ -65,36 +68,64 @@ def build_infodict(path: Path) -> dict:
             infodict["data_files"].append({"split": split_name, "path": f"{path.name}/{split_name}-*"})
     return infodict
 
-def create_results_repo(path: Path) -> Path:
+def process_result(subpath: Path, tempdir: Path) -> Dict[str, Any]:
     """
-    Copy the steering results to a temporary path, formatted as a huggingface dataset
-    repo with subsets. Return the temp path.
+    Process a single result directory and return its dataset info and data files.
+    """
+    results_temp_path = tempdir / subpath.name
+    os.makedirs(results_temp_path, exist_ok=True)
+    results_dict = load_results_dataset(subpath)
+
+    if len(results_dict) == 0:
+        return None  # Skip if no results
+
+    for split_name, dataset in results_dict.items():
+        file_name = f"{split_name}-0-of-1.parquet"
+        file_path = os.path.join(results_temp_path, file_name)
+        dataset.to_parquet(file_path)
+
+    infodict = build_infodict(results_temp_path)
+    datafiles = {
+        "config_name": infodict["config_name"],
+        "data_files": infodict.pop("data_files"),
+    }
+
+    return {"infodict": infodict, "datafiles": datafiles}
+
+
+def create_results_repo(path: Path, num_proc=10) -> Path:
+    """
+    Copy the steering results to a temporary path, formatted as a Hugging Face dataset
+    repo with subsets. Use multiprocessing to speed up the operation.
+    Return the temp path.
     """
     tempdir = Path(f"/tmp/{uuid.uuid4()}")
-    os.makedirs(tempdir)
+    os.makedirs(tempdir, exist_ok=True)
 
-    config_infos,config_datafiles = [],[]
     results = list(path.glob("steering*"))
-    for subpath in tqdm(results, total=len(results), desc="Loading results data"):
-        if subpath.is_dir():
-            results_temp_path = (tempdir / subpath.name)
-            results_dict = load_results_dataset(subpath)
-            if len(results_dict) > 0:
-                for split_name, dataset in results_dict.items():
-                    file_name = f"{split_name}-0-of-1.parquet"
-                    file_path = os.path.join(results_temp_path, file_name)
-                    dataset.to_parquet(file_path)
-                infodict = build_infodict(results_temp_path)
-                datafiles = {"config_name": infodict["config_name"], 
-                             "data_files": infodict.pop("data_files")}
-                config_infos.append(infodict)
-                config_datafiles.append(datafiles)
-    
+    config_infos, config_datafiles = [], []
+
+    with ProcessPoolExecutor(max_workers=num_proc) as executor:
+        results_data = list(
+            tqdm(
+                executor.map(process_result, results, [tempdir] * len(results)),
+                total=len(results),
+                desc="Loading results data",
+            )
+        )
+
+    for result in results_data:
+        if result:
+            config_infos.append(result["infodict"])
+            config_datafiles.append(result["datafiles"])
+
+    # Write the README with YAML dataset info
     with open(tempdir / "README.md", "w") as fp:
-        yaml_str = yaml.dump({"dataset_info" : config_infos, "configs": config_datafiles})
+        yaml_str = yaml.dump({"dataset_info": config_infos, "configs": config_datafiles})
         fp.write(f"---\n{yaml_str}---")
-        
+
     return tempdir
+
 
 def create_vectors_repo(path: Path) -> Path:
     """
@@ -145,7 +176,7 @@ def upload_results_folder(path: Path, create_pr: bool = False):
     rmtree(vectors_repo, ignore_errors=True)
     rmtree(results_repo, ignore_errors=True)
 
-def upload_results_file(path: Path):
+def upload_results_file(path: Path, create_pr: bool = False):
     config_name = path.name
     results_ds = load_results_dataset(path)
     results_ds.push_to_hub(f"nuprl-staging/type-steering-results", config_name=config_name, token=AUTH_TOKEN,
@@ -158,14 +189,16 @@ def upload_results_file(path: Path):
         repo_id="nuprl-staging/steering-tensors",
         repo_type="model",
         commit_message=f"Upload {config_name}.pt tensor",
-        token=AUTH_TOKEN
+        token=AUTH_TOKEN,
+        create_pr=create_pr
     )
 
-def upload_results(path: Path, file_upload: bool):
+def upload_results(path: Path, file_upload: bool, create_pr: bool):
     if file_upload:
-        upload_results_file(path)
+        upload_results_file(path, create_pr=create_pr)
     else:
-        upload_results_folder(path)
+        os.environ["HF_HUB_DISABLE_PROGRESS_BARS"]="true"
+        upload_results_folder(path, create_pr=create_pr)
 
 def upload(path: Path):
     config_name = path.name
@@ -200,6 +233,7 @@ def main():
     parser_upload_results = subparsers.add_parser("upload_results")
     parser_upload_results.add_argument("path", type=Path)
     parser_upload_results.add_argument("-f", "--file-upload", action="store_true")
+    parser_upload_results.add_argument("-pr", "--open-pull-request", action="store_true")
 
     parser_download = subparsers.add_parser("download")
     parser_download.add_argument("config_name", type=str)
@@ -210,7 +244,8 @@ def main():
     if args.command == "upload":
         upload(args.path)
     elif args.command == "upload_results":
-        upload_results(args.path, args.file_upload)
+        print(f"Open pull request: {args.open_pull_request}")
+        upload_results(args.path, args.file_upload, args.open_pull_request)
     elif args.command == "download":
         download(args.config_name, args.output_dir)
     else:

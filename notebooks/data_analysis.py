@@ -286,8 +286,8 @@ if __name__ == "__main__":
     df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
     df_pretty = df_pretty.sort_values(["mutations","layers"])
     
-    plot_steering_results(df_pretty, 5, outfile, model_n_layer(model))
-    # print(correlation(sys.argv[1],sys.argv[2]))
-    # plot_steering_results(df_pretty, 3)
+    plot_steering_results(df_pretty, 1, outfile.replace(".pdf","_1.pdf"), model_n_layer(model))
 
-    # plot_steering_results(df_pretty, 5)
+    plot_steering_results(df_pretty, 3, outfile.replace(".pdf","_3.pdf"), model_n_layer(model))
+
+    plot_steering_results(df_pretty, 5, outfile.replace(".pdf","_5.pdf"), model_n_layer(model))
