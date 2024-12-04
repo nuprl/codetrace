@@ -50,7 +50,12 @@ def model_n_layer(model: str) -> int:
         return 28
     elif "codellama" in model.lower():
         return 32
+    elif "starcoderbase-1b" in model.lower():
+        return 24
+    elif "starcoderbase-7b" in model.lower():
+        return 42
     else:
+        print(f"Model {model} model_n_layer not implemented!")
         return None
 
 """
