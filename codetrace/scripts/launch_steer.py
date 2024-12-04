@@ -103,8 +103,8 @@ if __name__ == "__main__":
     # dataset
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--subset", type=str, default=None)
-    parser.add_argument("--dedup-prog-threshold", type=int, default=3)
-    parser.add_argument("--dedup-type-threshold", type=int, default=25)
+    parser.add_argument("--dedup-prog-threshold", type=int, default=25)
+    parser.add_argument("--dedup-type-threshold", type=int, default=4)
     # naming
     parser.add_argument("--steer-name", required=True)
     parser.add_argument("--test-name", required=True)
