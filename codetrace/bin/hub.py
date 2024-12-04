@@ -126,7 +126,6 @@ def create_results_repo(path: Path, num_proc=10, pattern="steering*") -> Path:
 
     return tempdir
 
-
 def create_vectors_repo(path: Path, pattern="steering*") -> Path:
     """
     Copy the steering vectors to a temporary path, formatted as a huggingface model
@@ -163,14 +162,16 @@ def upload_results_folder(path: Path, create_pr: bool = False, search_pattern: s
         folder_path=results_repo,
         token=AUTH_TOKEN,
         repo_type="dataset",
-        create_pr=create_pr
+        create_pr=create_pr,
+        commit_message=f"Upload results {search_pattern}"
     )
     upload_folder(
         repo_id="nuprl-staging/steering-tensors",
         folder_path=vectors_repo,
         token=AUTH_TOKEN,
         repo_type="model",
-        create_pr=create_pr
+        create_pr=create_pr,
+        commit_message=f"Upload results {search_pattern}"
     )
     print("Done pushing.")
     rmtree(vectors_repo, ignore_errors=True)
