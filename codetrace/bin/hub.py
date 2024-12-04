@@ -203,7 +203,7 @@ def upload_results(path: Path, file_upload: bool, create_pr: bool):
 def upload(path: Path):
     config_name = path.name
 
-    the_dataset = datasets.Dataset.load_from_disk(path)
+    the_dataset = datasets.Dataset.load_from_disk(path.as_posix())
     the_dataset.push_to_hub(f"nuprl-staging/type-steering", config_name=config_name, split=SPLIT,
                             token=AUTH_TOKEN, commit_message=f"Uploading {config_name} data")
     print(the_dataset)
@@ -222,6 +222,7 @@ def download(config_name: str, output_dir: Path):
 
     the_dataset = datasets.load_dataset("nuprl-staging/type-steering", name=config_name, split=SPLIT,)
     the_dataset.save_to_disk(output_dir)
+    print(the_dataset)
 
 def main():
     parser = argparse.ArgumentParser(description=HELP)
