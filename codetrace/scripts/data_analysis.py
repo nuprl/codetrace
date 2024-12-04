@@ -11,7 +11,6 @@ from tqdm import tqdm
 import sys
 from codetrace.fast_utils import batched_apply, make_batches
 from codetrace.fast_utils import batched_apply, make_batches
-DIR=os.path.dirname(os.path.abspath(Path(__file__).parent))
 
 # We have several directories named results/steering-LANG-MUTATIONS-LAYERS-MODEL.
 # Within each of these directories, there are files called test_results.json.
@@ -155,10 +154,10 @@ def read_steering_results_from_hub(
     
     return pd.concat(all_dfs), missing_test_results
 
-def read_steering_results(lang:str = "", model:str = ""):
+def read_steering_results(results_dir: str, lang:str = "", model:str = ""):
     all_dfs = []
     missing_test_results = []
-    for path in tqdm(list(Path(f"{DIR}/results").glob(f"steering-{lang}*{model}")), desc="Reading"):
+    for path in tqdm(list(Path(results_dir).glob(f"steering-{lang}*{model}")), desc="Reading"):
         output = process_df_local(path)
         if isinstance(output["data"], pd.DataFrame):
             all_dfs.append(output["data"])
@@ -195,9 +194,9 @@ def read_steering_results_from_hub_multiproc(
     return pd.concat(data), missing_test_results
 
 def read_steering_results_multiproc(
-    lang:str, model:str, num_proc: int = None
+    results_dir: str, lang:str, model:str, num_proc: int = None
 ):
-    subsets = list(Path(f"{DIR}/results").glob(f"steering-{lang}*{model}"))
+    subsets = list(Path(results_dir).glob(f"steering-{lang}*{model}"))
     batches = make_batches(subsets, num_proc)
     results = batched_apply(batches, num_proc, batched_process, fn=process_df_local, model=model)
     data, missing_test_results = _postproc(results)
@@ -266,9 +265,9 @@ def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
     prob_a_given_b = 0 if prob_anb == 0 else prob_anb / prob_b
     return prob_a, prob_b, prob_anb, prob_a_given_b
 
-def correlation(lang, model):
+def correlation(results_dir, lang, model):
     all_dfs = []
-    for file in Path(f"{DIR}/results").glob(f"steering-{lang}-*-17_18*{model}/test_steering_results_rand"):
+    for file in Path(results_dir).glob(f"steering-{lang}-*-17_18*{model}/test_steering_results_rand"):
         df = datasets.load_from_disk(file).to_pandas()
         all_dfs.append(df)
     df = pd.concat(all_dfs, axis=0).reset_index()
@@ -283,8 +282,10 @@ def correlation(lang, model):
 if __name__ == "__main__":
     lang = sys.argv[1]
     model = sys.argv[2]
-    outfile = sys.argv[3]
-    df, missing_test_results = read_steering_results_multiproc(lang,model,40)
+    results_dir = sys.argv[3]
+    outfile = sys.argv[4]
+    
+    df, missing_test_results = read_steering_results_multiproc(results_dir,lang,model,40)
     print(missing_test_results)
 
     df_pretty = df.copy()
