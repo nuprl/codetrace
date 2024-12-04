@@ -110,6 +110,7 @@ def main(
     if os.path.exists(output_path):
         completions = datasets.load_from_disk(output_path, keep_in_memory=False)
         print(f"Resuming from {len(completions)} completions.")
+        print(f"Collected {len(completions)} candidates")
         for row in completions:
             blacklist.add(hex_encode(row["fim_program"]))
 
