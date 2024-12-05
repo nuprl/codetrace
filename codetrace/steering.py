@@ -248,7 +248,8 @@ class SteeringManager:
         split:str,
         layers_to_steer:List[int],
         batch_size:int,
-        do_random_ablation:bool=False
+        do_random_ablation:bool=False,
+        steering_field:Optional[str]=None
     )-> datasets.Dataset:
         """
         Evaluate the steering tensor on data.
@@ -272,8 +273,9 @@ class SteeringManager:
         else:
             steering_tensor = self.steering_tensor
 
+        steering_field = (steering_field or "mutated_program")
         dataloader = torch.utils.data.DataLoader(
-            ds["mutated_program"],
+            ds[steering_field],
             batch_size,
             collate_fn = (lambda x: list(map(self.tokenize, x)))
         )

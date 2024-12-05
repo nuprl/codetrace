@@ -1,5 +1,5 @@
 from codetrace.steering import SteeringManager
-from codetrace.utils import load_dataset
+from codetrace.utils import load_dataset, print_color
 from argparse import ArgumentParser
 from nnsight import LanguageModel
 from typing import List,Dict,Optional
@@ -21,9 +21,12 @@ def run_steer(
     split_name:str,
     layers:List[int],
     patch_batchsize:int,
-    do_random_ablation:bool
+    do_random_ablation:bool,
+    steering_field:Optional[str] = None
 ):
-    results_ds = smanager.steer(split_name, layers, patch_batchsize, do_random_ablation=do_random_ablation)
+    results_ds = smanager.steer(split_name, layers, patch_batchsize, 
+                                do_random_ablation=do_random_ablation,
+                                steering_field=steering_field)
     suffix = "_rand" if do_random_ablation else ""
 
     # 4. analyze and save results
@@ -50,8 +53,9 @@ def main(
     split:Optional[str],
     run_steering_splits: Optional[List[str]] = None,
     collect_all_layers: bool = False,
-    dedup_prog_threshold: int = 3,
-    dedup_type_threshold: int = 25
+    dedup_prog_threshold: int = 25,
+    dedup_type_threshold: int = 4,
+    steering_field: Optional[str] = None
 ):
     if run_steering_splits is None:
         run_steering_splits = ["test","rand","steer"]
@@ -67,6 +71,7 @@ def main(
         max_num_candidates,
         only_collect_layers=None if collect_all_layers else layers
     )
+
     # 1. make splits
     steer_split, test_split = smanager.steer_test_splits(test_size, dedup_prog_threshold, dedup_type_threshold)
     print("Steer split:\n",steer_split,"Test_split:\n", test_split)
@@ -82,15 +87,18 @@ def main(
     
     # 3. run steering on test
     if "test" in run_steering_splits:
-        run_steer(smanager, "test", layers, patch_batchsize, False)
+        print_color("[TEST STEERING]", "green")
+        run_steer(smanager, "test", layers, patch_batchsize, False, steering_field)
 
     # 4. run steering on test with random tensor
     if "rand" in run_steering_splits:
-        run_steer(smanager, "test", layers, patch_batchsize, True)
+        print_color("[RAND STEERING]", "red")
+        run_steer(smanager, "test", layers, patch_batchsize, True, steering_field)
 
     # 5. run steering on steer
     if "steer" in run_steering_splits: 
-        run_steer(smanager, "steer", layers, patch_batchsize, False)
+        print_color("[STEER STEERING]", "yellow")
+        run_steer(smanager, "steer", layers, patch_batchsize, False, steering_field)
 
     smanager.clear_cache()
 
@@ -109,6 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("--steer-name", required=True)
     parser.add_argument("--test-name", required=True)
     parser.add_argument("--tensor-name", required=True)
+    parser.add_argument("--steering-field", type=str, default=None)
 
     parser.add_argument("--collect-batchsize", "-b1",type=int, default=2)
     parser.add_argument("--patch-batchsize", "-b2",type=int, default=2)

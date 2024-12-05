@@ -257,3 +257,13 @@ def reset_index_dim0(x: torch.Tensor, index_labels: List[int], n: int)->  torch.
     new_tensor[index_labels] = x
     
     return new_tensor
+
+def print_color(message:str, color:str):
+    reset = '\033[0m'
+    if color == "red":
+        color = '\033[91m'
+    elif color == "green":
+        color = '\033[92m'
+    elif color == "yellow":
+        color = '\033[93m'
+    print(f"{color}{message}{reset}")

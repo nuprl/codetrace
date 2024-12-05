@@ -4,6 +4,7 @@ from codetrace.scripts.typecheck_ds import (
     run_typechecker, typecheck_py, typecheck_ts, multiproc_typecheck
 )
 from codetrace.fast_utils import batched_apply, make_batches
+from codetrace.utils import print_color
 from codetrace.py_mutator import PyMutator
 from pathlib import Path
 from tqdm import tqdm
@@ -120,11 +121,6 @@ def _mutate_dataset(
 def is_within_range(number, target, error):
     return target - number <= error
 
-def colored_message(message, color):
-    # ANSI escape codes for colored text (Red color for warning)
-    reset = '\033[0m'
-    print(f"{color}{message}{reset}\n")
-
 def dedup(data: List[Dict[str,Any]]) -> List[Dict[str,Any]]:
     """
     Necessary because same program can have <FILL> in different places,
@@ -180,9 +176,9 @@ def test_mutate_ds(lang:str, ds: datasets.IterableDataset, logdir=None):
         message = f"[{lang.upper()}]{mutations},{len(items_that_typecheck)}/{NUM_EXAMPLES}={mean:.2f}"
 
         if not is_within_range(mean, THRESHOLD, ERROR_RANGE):
-            colored_message("[FAILED] "+message, '\033[91m') #red
+            print_color("[FAILED] "+message, "red")
         else:
-            colored_message("[SUCC] "+message, '\033[92m') #green
+            print_color("[SUCC] "+message, "green")
 
 def test_py_mutate_ds():
     # check that for N random mutations on dataset,
