@@ -36,8 +36,11 @@ while [ "${#processed[@]}" -lt "${#ALL_MUTATIONS[@]}" ]; do
 
         if [ $? -eq 0 ]; then
             echo "[PASS] $file has >= 3500 candidates"
+            echo "Collected sufficient candidates for mutations $MUTATIONS."
+            processed+=("$MUTATIONS")
         else
             echo "[FAIL] $file has < 3500 candidates"
+            echo "Not enough candidates for $MUTATIONS."
         fi
     done
 done
