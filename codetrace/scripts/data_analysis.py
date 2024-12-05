@@ -228,11 +228,35 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
     for i, mutation in enumerate(mutations):
         subset = df[df["mutations"] == mutation]
 
-        sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
+                # Plot Test line
+        test_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
+        max_test = subset["mean_succ"].max()
+        test_color = test_plot.get_lines()[-1].get_color()  # Extract color from the last line
+        axes[i].hlines(y=max_test, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
+                       colors=test_color, linestyles='dashed', label="Test Max")
+
+        # Plot Steering line if the column exists
         if "steering_mean_succ" in subset.columns:
-            sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", 
-                         label="Steering")
-        sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
+            steering_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", 
+                                         label="Steering")
+            max_steering = subset["steering_mean_succ"].max()
+            steering_color = steering_plot.get_lines()[-1].get_color()  # Extract color
+            axes[i].hlines(y=max_steering, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
+                           colors=steering_color, linestyles='dashed', label="Steering Max")
+
+        # Plot Random line
+        random_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
+        max_random = subset["rand_mean_succ"].max()
+        random_color = random_plot.get_lines()[-1].get_color()  # Extract color
+        axes[i].hlines(y=max_random, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
+                       colors=random_color, linestyles='dashed', label="Random Max")
+
+
+        # sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
+        # if "steering_mean_succ" in subset.columns:
+        #     sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", 
+        #                  label="Steering")
+        # sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
         
         axes[i].set_title(mutation)
         axes[i].set_xlabel("Patch layer start")
@@ -244,6 +268,7 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
             axes[i].set_xticks(range(0, n_layer-interval+1, 1))
         axes[i].tick_params(axis='x', rotation=45)
         axes[i].grid(True, which='major', linestyle='-', linewidth=0.5, color='lightgrey')
+        axes[i].legend(loc='best')
 
     for j in range(i + 1, len(axes)):
         fig.delaxes(axes[j])
@@ -304,7 +329,7 @@ if __name__ == "__main__":
         df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
         print(df_pretty["mutations"].value_counts())
         df_pretty = df_pretty.sort_values(["mutations","layers"])
-    if args.command == "precomputed":
+    elif args.command == "precomputed":
         df, missing_test_results = read_steering_results_precomputed_multiproc(args.results_dir,args.lang,
                                                                                args.model,args.label,40)
         # no steer for precomputed
