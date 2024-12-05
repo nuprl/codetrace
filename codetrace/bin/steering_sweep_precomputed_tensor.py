@@ -50,7 +50,7 @@ def main_with_args(
     # for each layer interval, create a subdir in results_dir 
     # and copy steering_tensor to it
     for layer_range in get_ranges(num_layers, interval):
-        output_dir = results_dir / f"precomputed-steering-{lang}-{results_label}-{layer_range.replace(',','_')}-{model}"
+        output_dir = results_dir / f"precomputed_steering-{lang}-{results_label}-{layer_range.replace(',','_')}-{model}"
         if not dry_run:
             os.makedirs(output_dir)
             shutil.copyfile(steering_tensor, output_dir / "steering_tensor.pt")
@@ -69,6 +69,7 @@ def main():
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+    assert "-" not in args.results_label, "To use plotting script, please do not include - in labels."
 
     main_with_args(args.model, Path(args.candidate_ds), args.results_label,
                    args.steering_field, Path(args.steering_tensor), 

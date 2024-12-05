@@ -3,6 +3,7 @@ import seaborn as sns
 import pandas as pd
 import json
 from pathlib import Path
+import argparse
 import datasets
 import sys
 import os
@@ -202,6 +203,14 @@ def read_steering_results_multiproc(
     data, missing_test_results = _postproc(results)
     return pd.concat(data), missing_test_results
 
+def read_steering_results_precomputed_multiproc(
+    results_dir: str, lang:str, model:str, label:str, num_proc: int = None
+):
+    subsets = list(Path(results_dir).glob(f"precomputed_steering-{lang}-{label}*{model}"))
+    batches = make_batches(subsets, num_proc)
+    results = batched_apply(batches, num_proc, batched_process, fn=process_df_local, model=model)
+    data, missing_test_results = _postproc(results)
+    return pd.concat(data), missing_test_results
 """
 Plotting
 """
@@ -280,20 +289,45 @@ def correlation(results_dir, lang, model):
     return df.corr("pearson", "success","mutated_pred_is_underscore")
 
 if __name__ == "__main__":
-    lang = sys.argv[1]
-    model = sys.argv[2]
-    results_dir = sys.argv[3]
-    outfile = sys.argv[4]
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command")
+
+    parser_muts = subparsers.add_parser("mutations")
+    parser_muts.add_argument("--lang", type=str)
+    parser_muts.add_argument("--model", type=str)
+    parser_muts.add_argument("--results-dir", type=Path)
+    parser_muts.add_argument("--outfile", type=Path)
+    parser_muts.add_argument("--interval", type=int, nargs="+", default=[1,3,5])
+
+    parser_precomputed = subparsers.add_parser("precomputed")
+    parser_precomputed.add_argument("--label")
+    parser_precomputed.add_argument("--lang", type=str)
+    parser_precomputed.add_argument("--model", type=str)
+    parser_precomputed.add_argument("--results-dir", type=Path)
+    parser_precomputed.add_argument("--outfile", type=Path)
+    parser_precomputed.add_argument("--interval", type=int, nargs="+", default=[1,3,5])
+
+    args = parser.parse_args()
+
+    if args.command == "mutations":
+        df, missing_test_results = read_steering_results_multiproc(args.results_dir,args.lang,args.model,40)
+        print(missing_test_results)
+
+        df_pretty = df.copy()
+        df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
+        df_pretty = df_pretty.sort_values(["mutations","layers"])
+    if args.command == "precomputed":
+        df, missing_test_results = read_steering_results_precomputed_multiproc(args.results_dir,args.lang,
+                                                                               args.model,args.label,40)
+        print(missing_test_results)
+
+        df_pretty = df.copy()
+        df_pretty = df_pretty.sort_values(["mutations","layers"])
+    else:
+        raise NotImplementedError("Task not implemented.")
     
-    df, missing_test_results = read_steering_results_multiproc(results_dir,lang,model,40)
-    print(missing_test_results)
+    outfile = args.outfile.as_posix()
 
-    df_pretty = df.copy()
-    df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
-    df_pretty = df_pretty.sort_values(["mutations","layers"])
-    
-    plot_steering_results(df_pretty, 1, outfile.replace(".pdf","_1.pdf"), model_n_layer(model))
-
-    plot_steering_results(df_pretty, 3, outfile.replace(".pdf","_3.pdf"), model_n_layer(model))
-
-    plot_steering_results(df_pretty, 5, outfile.replace(".pdf","_5.pdf"), model_n_layer(model))
+    for i in args.interval:
+        print(f"Plotting interval {i}")
+        plot_steering_results(df_pretty, i, outfile.replace(".pdf",f"_{i}.pdf"), model_n_layer(args.model))
