@@ -6,11 +6,18 @@ import shutil
 import torch
 
 DESCRIPTION = """
-Prints sbatch commands to perform activation steering for a given model and
-language. It looks for mutations named mutations-LANG-MUTATIONS-MODEL in
-the results directory and prints commands to steer intervals of 1,3, and 5
-layers. On the command line, you need to specify the total number of layers
-in the model.
+Prints sbatch commands to perform activation steering for a given model, language
+and steering tensor. It copies the steering tensor to the result output directory
+of each layer for each interval passed (1,3 or 5). It checks that the passed
+steering tensor has collected all layers, in case only-collect-layers flag
+was used when constructing the steering tensor.
+
+On the command line, you need to specify the total number of layers
+in the model. You also need to pass a label for the steering output directory,
+as well as the steering field for the candidate dataset, to keep track of what
+the steering experiment is. If dry-run is passed, it will only print out
+sbatch commands and not copy the tensors. If no dry-run, code will throw an error
+if the result output directory already exists; this is to prevent human errors.
 """.strip()
 
 def get_ranges(num_layers: int, interval: int):
