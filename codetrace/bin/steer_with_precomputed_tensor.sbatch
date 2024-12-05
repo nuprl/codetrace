@@ -19,6 +19,7 @@ MODEL=$1
 DATASET=$2
 OUTPUT_DIR=$3
 LAYERS=$4
+STEERING_FIELD=$5
 
 python3 -m codetrace.scripts.launch_steer \
     --model /work/nvme/bcbj/franlucc/models/$MODEL \
@@ -28,7 +29,7 @@ python3 -m codetrace.scripts.launch_steer \
     --steer-name steering_split \
     --test-name test_split \
     --tensor-name steering_tensor.pt \
-    --steering-field fim_program \
+    --steering-field $STEERING_FIELD \
     --test-size 500 \
     --dedup-prog-threshold 10 \
     --dedup-type-threshold -1 \
