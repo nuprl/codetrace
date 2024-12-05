@@ -35,7 +35,8 @@ def main_with_args(
     interval: int, 
     lang: str,
     results_dir: Path,
-    dry_run: bool
+    dry_run: bool,
+    multiplier: int = 1
 ):
     model_path = Path(f"/work/nvme/bcbj/franlucc/models/{model}")
     if not model_path.exists():
@@ -46,6 +47,8 @@ def main_with_args(
     tensor = torch.load(steering_tensor)
     for l in range(num_layers):
         assert tensor[l].sum() != 0, f"Tensor {steering_tensor} layer {l} was not collected!"
+    if multiplier != 1:
+        tensor = tensor * multiplier
     
     # for each layer interval, create a subdir in results_dir 
     # and copy steering_tensor to it
@@ -53,7 +56,7 @@ def main_with_args(
         output_dir = results_dir / f"precomputed_steering-{lang}-{results_label}-{layer_range.replace(',','_')}-{model}"
         if not dry_run:
             os.makedirs(output_dir)
-            shutil.copyfile(steering_tensor, output_dir / "steering_tensor.pt")
+            torch.save(tensor, output_dir / "steering_tensor.pt")
         print(f"sbatch codetrace/bin/steer_with_precomputed_tensor.sbatch {model} {candidate_ds} {output_dir} {layer_range} {steering_field}")
 
 def main():
@@ -62,6 +65,7 @@ def main():
     parser.add_argument("--candidate-ds", type=Path)
     parser.add_argument("--steering-field", type=str)
     parser.add_argument("--steering-tensor", type=Path)
+    parser.add_argument("--multiplier", type=float, default=1.)
     parser.add_argument("--results-label", type=str)
     parser.add_argument("--lang", type=str)
     parser.add_argument("--num-layers", type=int)
@@ -74,7 +78,7 @@ def main():
     main_with_args(args.model, Path(args.candidate_ds), args.results_label,
                    args.steering_field, Path(args.steering_tensor), 
                    args.num_layers, args.interval, 
-                   args.lang, args.results_dir, args.dry_run)
+                   args.lang, args.results_dir, args.dry_run, args.multiplier)
 
 if __name__ == "__main__":
     main()
