@@ -33,5 +33,5 @@ python3 -m codetrace.scripts.launch_steer \
     --test-size 500 \
     --dedup-prog-threshold 10 \
     --dedup-type-threshold -1 \
-    --b2 5 \
+    -b2 5 \
     --run-steering-splits "test" "rand"
