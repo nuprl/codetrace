@@ -3,7 +3,7 @@ MODEL=$1
 LANG=$2
 set -o pipefail
 
-ALL_MUTATIONS=("vars,delete" "types,delete")
+ALL_MUTATIONS=("types,vars" "vars" "types" "delete" "delete,vars,types" "vars,delete" "types,delete")
 
 # Use an array to track processed mutations
 processed=()
@@ -32,24 +32,12 @@ while [ "${#processed[@]}" -lt "${#ALL_MUTATIONS[@]}" ]; do
             --batch-size 50 \
             --mutations=$MUTATIONS  >> $file 2>&1
 
-        if [[ ! -s "$file" ]]; then
-            echo "ERROR: Log file $file is empty or unreadable"
-            continue
-        fi
-
-        grep_output=$(grep -Eo "Collected [0-9]+ candidates" $file)
-        if [[ -z "$grep_output" ]]; then
-            echo "No candidates collected in $file. Skipping..."
-            continue
-        fi
-
-        grep -Eo "Collected [0-9]+ candidates" $file | awk '{if ($3 ~ /^[0-9]+$/ && $3 >= 3500) {exit 0} else {exit 1}}'
+        python3 /home/franlucc/projects/codetrace/codetrace/bin/check_candidates.py "$file"
 
         if [ $? -eq 0 ]; then
-            echo "Finished mutations $MUTATIONS"
-            processed+=("$MUTATIONS")  # Mark this mutation as processed
+            echo "[PASS] $file has >= 3500 candidates"
         else
-            echo "Problem with mutations $MUTATIONS"
+            echo "[FAIL] $file has < 3500 candidates"
         fi
     done
 done
