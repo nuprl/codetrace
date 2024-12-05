@@ -274,19 +274,6 @@ def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame):
     prob_a_given_b = 0 if prob_anb == 0 else prob_anb / prob_b
     return prob_a, prob_b, prob_anb, prob_a_given_b
 
-def correlation(results_dir, lang, model):
-    all_dfs = []
-    for file in Path(results_dir).glob(f"steering-{lang}-*-17_18*{model}/test_steering_results_rand"):
-        df = datasets.load_from_disk(file).to_pandas()
-        all_dfs.append(df)
-    df = pd.concat(all_dfs, axis=0).reset_index()
-    print(df)
-    df["mutated_pred_is_underscore"] = df["mutated_generated_text"] == "__"
-    df["success"] = df["steered_predictions"] == df["fim_type"]
-    df["mutation_names"] = df["mutation_names"].apply(lambda x: "_".join(x))
-    df = df.groupby("mutation_names").agg({"success":"mean", "mutated_pred_is_underscore":"mean"}).reset_index()
-    print(df)
-    return df.corr("pearson", "success","mutated_pred_is_underscore")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -315,13 +302,17 @@ if __name__ == "__main__":
 
         df_pretty = df.copy()
         df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
+        print(df_pretty["mutations"].value_counts())
         df_pretty = df_pretty.sort_values(["mutations","layers"])
     if args.command == "precomputed":
         df, missing_test_results = read_steering_results_precomputed_multiproc(args.results_dir,args.lang,
                                                                                args.model,args.label,40)
+        # no steer for precomputed
+        missing_test_results = [m for m in missing_test_results if "steer_results.json" not in m.as_posix()]
         print(missing_test_results)
 
         df_pretty = df.copy()
+        print(df_pretty["mutations"].value_counts())
         df_pretty = df_pretty.sort_values(["mutations","layers"])
     else:
         raise NotImplementedError("Task not implemented.")
