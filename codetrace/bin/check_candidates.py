@@ -3,6 +3,7 @@ import re
 
 def main(file_path):
     try:
+        num_candidates=-1
         # Open the file and check for matching lines
         with open(file_path, 'r') as file:
             for line in file:
@@ -11,6 +12,7 @@ def main(file_path):
                     num_candidates = int(match.group(1))
                     if num_candidates >= 3500:
                         sys.exit(0)  # Success
+        print(f"INFO: not enough num candidates {num_candidates}")
         sys.exit(1)  # No valid line with enough candidates found
     except FileNotFoundError:
         print(f"ERROR: File not found: {file_path}")

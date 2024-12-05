@@ -3,7 +3,7 @@ MODEL=$1
 LANG=$2
 set -o pipefail
 
-ALL_MUTATIONS=("types,vars" "vars" "types" "delete" "delete,vars,types" "vars,delete" "types,delete")
+ALL_MUTATIONS=("delete,vars,types" "vars,delete" "types,delete" "types,vars" "vars" "types" "delete")
 
 # Use an array to track processed mutations
 processed=()
@@ -24,9 +24,7 @@ while [ "${#processed[@]}" -lt "${#ALL_MUTATIONS[@]}" ]; do
         VLLM_LOGGING_LEVEL=ERROR python3 -m codetrace.scripts.mutate_dataset \
             --model /mnt/ssd/franlucc/models/$MODEL \
             --tokenizer /mnt/ssd/franlucc/models/$MODEL \
-            --completions-ds nuprl-staging/type-steering \
-            --subset completions-$LANG-$MODEL \
-            --split train \
+            --completions-ds results/completions-$LANG-$MODEL \
             --mutated-ds results/mutations-$LANG-$MUTATIONSUNDERSCORED-$MODEL \
             --lang $LANG \
             --batch-size 50 \
