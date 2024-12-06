@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 from typing import List,Union,Callable,Dict,Any,Optional,TypeVar,Set
 import pandas as pd
+import uuid
 from transformers import AutoTokenizer, PreTrainedTokenizer
 from vllm import LLM, SamplingParams
 from tqdm import tqdm
@@ -36,18 +37,39 @@ def get_mutations(key: str) -> str:
 
 def _save(data: List[Dict[str,Any]], path:str, message:str):
     print(message)
-    temp_path = Path(str(path) + "_temp")
+    temp_path = Path(str(path) + f"_temp_{uuid.uuid4()}")
     new_ds = datasets.Dataset.from_list(data)
     if os.path.exists(path):
         existing_completions = datasets.load_from_disk(path)  
         new_ds = datasets.concatenate_datasets([new_ds, existing_completions])
 
     # workaround huggingface save_to_disk permissions
-    new_ds.save_to_disk(temp_path)
-    shutil.rmtree(path, ignore_errors=True)
-    shutil.move(temp_path, path)
-    shutil.rmtree(temp_path, ignore_errors=True)
+    retries, max_retries = 0,4
+    while retries < max_retries:
+        try:
+            new_ds.save_to_disk(temp_path)
+            if Path(path).exists():
+                shutil.rmtree(path, ignore_errors=True)
+            temp_path.rename(path)
+            break
+        except Exception as e:
+            retries += 1
+            if retries >= max_retries:
+                print(f"Error in saving: {e}")
+
+    if temp_path.exists():
+        shutil.rmtree(temp_path, ignore_errors=True)
+    
     print(f"Collected {len(new_ds)} candidates")
+
+def test_save():
+    dummy_ds = datasets.Dataset.from_list([{"a":1},{"a":2}])
+    new_data = [{"a":3}]
+    path = "/tmp/original_ds"
+    dummy_ds.save_to_disk(path)
+    _save(new_data, path, "test save")
+    ds = datasets.load_from_disk(path)
+    assert sorted(ds.to_list(), key=lambda x: x["a"]) == [{"a":1}, {"a":2}, {"a":3}]
 
 def _mutate_item(program: str, fim_type: str, mutations: List[Mutation], mutate_fn: MutationFn) -> str:
     new_program = None
