@@ -10,7 +10,7 @@ from shutil import copyfile, rmtree
 import yaml
 from typing import Dict,List,Any
 from concurrent.futures import ProcessPoolExecutor
-
+import re
 
 SPLIT = "train"
 
@@ -25,6 +25,25 @@ To delete a configuration, you can use:
 """.strip()
 
 AUTH_TOKEN = os.environ.get("HF_AUTH_TOKEN",None)
+
+def find_subtree_matches(path: Path, pattern:str)-> List[Path]:
+    matches = []
+    for filepath in path.glob("*"):
+        if re.match(r"{}".format(pattern), filepath.name):
+            matches.append(filepath)
+    return matches
+
+def test_find_subtree_matches():
+    rootdir = Path("/tmp/test_codetrace_find_subtree_pattern")
+    os.makedirs(rootdir, exist_ok=True)
+    subpaths = ["steering-0-types", "steering-2_3_4-vars", "steering-2_3_4-types",
+                "steering-14-delete", "steering-a-delete"]
+    for p in subpaths:
+        (rootdir / p).touch()
+    pattern = "steering-\d+-.*|steering-\d_\d_\d-types"
+    expected = ["steering-0-types","steering-14-delete","steering-2_3_4-types"]
+    output = find_subtree_matches(rootdir, pattern)
+    assert sorted([p.name for p in output]) == sorted(expected)
 
 def load_results_dataset(path: Path) -> datasets.DatasetDict:
     """
@@ -102,7 +121,8 @@ def create_results_repo(path: Path, num_proc=10, pattern="steering*") -> Path:
     tempdir = Path(f"/tmp/{uuid.uuid4()}")
     os.makedirs(tempdir, exist_ok=True)
 
-    results = list(path.glob(pattern))
+    # results = list(path.glob(pattern))
+    results = find_subtree_matches(path, pattern)
     config_infos, config_datafiles = [], []
 
     with ProcessPoolExecutor(max_workers=num_proc) as executor:
@@ -126,7 +146,7 @@ def create_results_repo(path: Path, num_proc=10, pattern="steering*") -> Path:
 
     return tempdir
 
-def create_vectors_repo(path: Path, pattern="steering*") -> Path:
+def create_vectors_repo(path: Path, pattern="steering.*") -> Path:
     """
     Copy the steering vectors to a temporary path, formatted as a huggingface model
     repo with .pt files. Return the temp path.
@@ -134,7 +154,8 @@ def create_vectors_repo(path: Path, pattern="steering*") -> Path:
     tempdir = Path(f"/tmp/{uuid.uuid4()}")
     os.makedirs(tempdir)
 
-    vectors = list(path.glob(pattern))
+    # vectors = list(path.glob(pattern))
+    vectors = find_subtree_matches(path, pattern)
     for subpath in tqdm(vectors, total=len(vectors), desc="Loading vectors data"):
         if subpath.is_dir():
             vector_temp_path = (tempdir / f"{subpath.name}.pt")
@@ -144,7 +165,7 @@ def create_vectors_repo(path: Path, pattern="steering*") -> Path:
 
     return tempdir
 
-def upload_results_folder(path: Path, create_pr: bool = False, search_pattern: str = "steering*"):
+def upload_results_folder(path: Path, create_pr: bool = False, search_pattern: str = "steering.*"):
     """
     Pushes two commits: one for result datasets repo; one for steering vectors repo.
     Uploads entire directories each time.
@@ -227,6 +248,7 @@ def download(config_name: str, output_dir: Path):
     print(the_dataset)
 
 def main():
+    datasets.disable_caching()
     parser = argparse.ArgumentParser(description=HELP)
     subparsers = parser.add_subparsers(dest="command")
 
@@ -237,7 +259,7 @@ def main():
     parser_upload_results.add_argument("path", type=Path)
     parser_upload_results.add_argument("-f", "--file-upload", action="store_true")
     parser_upload_results.add_argument("-pr", "--open-pull-request", action="store_true")
-    parser_upload_results.add_argument("-s", "--search-pattern", type=str, default="steering*")
+    parser_upload_results.add_argument("-s", "--search-pattern", type=str, default="steering.*", help="Regex pattern")
 
     parser_download = subparsers.add_parser("download")
     parser_download.add_argument("config_name", type=str)
