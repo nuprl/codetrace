@@ -1,5 +1,8 @@
 import datasets
 from tqdm import tqdm
+from multiprocessing import cpu_count
+from codetrace.fast_utils import batched_apply, make_batches
+import itertools as it
 
 def model_n_layer(model: str) -> int:
     if "qwen" in model.lower():
@@ -37,18 +40,30 @@ def check_all_generations():
                 progress_bar.update(1)
     progress_bar.close()
 
-def check_all_generations_in_test(split="test"):
-    progress_bar = tqdm(total=(2*4*7), desc=f"Checking generations in {split}")
-    for lang in ["py","ts"]:
-        for model in ["CodeLlama-7b-Instruct-hf",
+ALL_MODELS = ["CodeLlama-7b-Instruct-hf",
                       "qwen2p5_coder_7b_base",
-                      "starcoderbase-7b","starcoderbase-1b"]:
+                      "starcoderbase-7b","starcoderbase-1b"]
+def check_all_generations_in_test(
+    keydict: list[dict], 
+    split="test", 
+    disable_tqdm=False
+) -> list[str]:
+    assert not keydict or len(keydict) == 0
+    if len(keydict) == 0:
+        keydict = keydict[0]
+    langs=keydict.pop("langs",["py","ts"])
+    all_models=keydict.pop("models",ALL_MODELS)
+    failed = []
+    progress_bar = tqdm(total=(len(langs)*len(all_models)*7), desc=f"Checking generations in {split}", disable=disable_tqdm)
+    for lang in langs:
+        for model in all_models:
             for mut in ["types","vars","delete","vars_delete","types_delete","types_vars","delete_vars_types"]:
                 for interval in [1,3,5]:
                     for layers in get_ranges(model_n_layer(model), interval):
                         try:
                             ds = datasets.load_dataset("nuprl-staging/type-steering-results",
-                                                    f"steering-{lang}-{mut}-{layers}-{model}",split=split)
+                                                    f"steering-{lang}-{mut}-{layers}-{model}",split=split,
+                                                    trust_remote_code=True)
                         except Exception as e:
                             print(e)
                             continue
@@ -56,16 +71,23 @@ def check_all_generations_in_test(split="test"):
                         counts_mut = df.value_counts("mutated_generated_text")
                         counts = df.value_counts("generated_text")
                         if counts_mut.get("", 0) > 0:
-                            print(f"mutations {split}: {lang}-{mut}-{layers}-{model}: {counts_mut['']}")
+                            failed.append(f"mutations {split}: {lang}-{mut}-{layers}-{model}: {counts_mut['']}")
                         if counts.get("", 0) > 0:
-                            print(f"generated {split}: {lang}-{mut}-{layers}-{model}: {counts['']}")
-                        print(counts.get("", 0), counts_mut.get("", 0))
+                            failed(f"generated {split}: {lang}-{mut}-{layers}-{model}: {counts['']}")
+                        # print("Counts of null predictions:", counts.get("", 0), counts_mut.get("", 0))
                 progress_bar.update(1)
     progress_bar.close()
-                
+    return failed
+
+def multiproc_check_results(split):
+    keys = [{"langs": l, "models": m} for l,m in it.product(ALL_MODELS, ["py","ts"])]
+    batches = make_batches(keys, len(keys))
+    results = batched_apply(batches, len(keys), check_all_generations_in_test, split=split)
+    print("\n".join(results))
+
 if __name__ == "__main__":
     datasets.disable_progress_bars()
-    check_all_generations_in_test("test")
-    check_all_generations_in_test("steer")
+    multiproc_check_results("test")
+    multiproc_check_results("steer")
     check_all_generations()
     

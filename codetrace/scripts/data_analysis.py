@@ -11,7 +11,6 @@ from typing import Optional,Dict,List
 from tqdm import tqdm
 import sys
 from codetrace.fast_utils import batched_apply, make_batches
-from codetrace.fast_utils import batched_apply, make_batches
 
 # We have several directories named results/steering-LANG-MUTATIONS-LAYERS-MODEL.
 # Within each of these directories, there are files called test_results.json.
