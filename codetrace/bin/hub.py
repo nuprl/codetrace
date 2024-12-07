@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 import sys
 import os
-from huggingface_hub import upload_folder, upload_file
+from huggingface_hub import upload_folder, upload_file,hf_hub_download
 from tqdm import tqdm
 import uuid
 from shutil import copyfile, rmtree
@@ -111,6 +111,17 @@ def process_result(subpath: Path, tempdir: Path) -> Dict[str, Any]:
 
     return {"infodict": infodict, "datafiles": datafiles}
 
+def create_readme(tempdir: Path, config_infos: List, config_datafiles: List):
+    # Write the README with YAML dataset info, merged with existing
+    hf_hub_download(repo_id="nuprl-staging/type-steering-results", filename=tempdir / "README.md")
+    with open(tempdir / "README.md", "r") as fp:
+        existing_readme = yaml.safe_load(fp)
+    new_readme = existing_readme
+    new_readme["dataset_info"] += config_infos
+    new_readme["configs"] += config_datafiles
+    with open(tempdir / "README.md", "w") as fp:
+        yaml_str = yaml.dump(new_readme)
+        fp.write(f"---\n{yaml_str}---")
 
 def create_results_repo(path: Path, num_proc=10, pattern="steering*") -> Path:
     """
@@ -139,10 +150,8 @@ def create_results_repo(path: Path, num_proc=10, pattern="steering*") -> Path:
             config_infos.append(result["infodict"])
             config_datafiles.append(result["datafiles"])
 
-    # Write the README with YAML dataset info
-    with open(tempdir / "README.md", "w") as fp:
-        yaml_str = yaml.dump({"dataset_info": config_infos, "configs": config_datafiles})
-        fp.write(f"---\n{yaml_str}---")
+    # since readme got too big, opt for a dataset builder instead
+    # create_readme(tempdir, config_infos, config_datafiles)
 
     return tempdir
 
@@ -176,6 +185,7 @@ def upload_results_folder(path: Path, create_pr: bool = False, search_pattern: s
     datasets.disable_progress_bars()
     vectors_repo = create_vectors_repo(path, pattern=search_pattern)
     results_repo = create_results_repo(path, pattern=search_pattern)
+
     print(f"Vectors temporary path {vectors_repo}, Results temporary path {results_repo}")
     print("Pushing to hub, this may take a while...")
     upload_folder(
