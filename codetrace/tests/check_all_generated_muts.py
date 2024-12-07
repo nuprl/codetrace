@@ -13,9 +13,10 @@ def model_n_layer(model: str) -> int:
         return 24
     elif "starcoderbase-7b" in model.lower():
         return 42
+    elif "llama" in model.lower():
+        return 24
     else:
-        print(f"Model {model} model_n_layer not implemented!")
-        return None
+        raise NotImplementedError(f"Model {model} model_n_layer not implemented!")
 
 def get_ranges(num_layers: int, interval: int):
     for i in range(0, num_layers):
@@ -40,16 +41,16 @@ def check_all_generations():
                 progress_bar.update(1)
     progress_bar.close()
 
-ALL_MODELS = ["CodeLlama-7b-Instruct-hf",
-                      "qwen2p5_coder_7b_base",
-                      "starcoderbase-7b","starcoderbase-1b"]
+ALL_MODELS = ["CodeLlama-7b-Instruct-hf","qwen2p5_coder_7b_base",
+              "Llama-3.2-3B-Instruct",
+              "starcoderbase-7b","starcoderbase-1b"]
 def check_all_generations_in_test(
     keydict: list[dict], 
     split="test", 
     disable_tqdm=False
 ) -> list[str]:
-    assert not keydict or len(keydict) == 0
-    if len(keydict) == 0:
+    assert not keydict or len(keydict) == 1
+    if len(keydict) == 1:
         keydict = keydict[0]
     langs=keydict.pop("langs",["py","ts"])
     all_models=keydict.pop("models",ALL_MODELS)
@@ -60,29 +61,30 @@ def check_all_generations_in_test(
             for mut in ["types","vars","delete","vars_delete","types_delete","types_vars","delete_vars_types"]:
                 for interval in [1,3,5]:
                     for layers in get_ranges(model_n_layer(model), interval):
+                        name=f"steering-{lang}-{mut}-{layers}-{model}"
                         try:
-                            ds = datasets.load_dataset("nuprl-staging/type-steering-results",
-                                                    f"steering-{lang}-{mut}-{layers}-{model}",split=split,
-                                                    trust_remote_code=True)
-                        except Exception as e:
-                            print(e)
+                            ds = datasets.load_dataset("nuprl-staging/type-steering-results",name=name,
+                                                    split=split,trust_remote_code=True)
+                        except ValueError as e:
+                            print(name)
                             continue
+                        
                         df = ds.to_pandas()
                         counts_mut = df.value_counts("mutated_generated_text")
                         counts = df.value_counts("generated_text")
                         if counts_mut.get("", 0) > 0:
                             failed.append(f"mutations {split}: {lang}-{mut}-{layers}-{model}: {counts_mut['']}")
                         if counts.get("", 0) > 0:
-                            failed(f"generated {split}: {lang}-{mut}-{layers}-{model}: {counts['']}")
-                        # print("Counts of null predictions:", counts.get("", 0), counts_mut.get("", 0))
+                            failed.append(f"generated {split}: {lang}-{mut}-{layers}-{model}: {counts['']}")
+                        failed.append(f"Counts of null predictions: {counts.get('', 0)} {counts_mut.get('', 0)}")
                 progress_bar.update(1)
     progress_bar.close()
     return failed
 
 def multiproc_check_results(split):
-    keys = [{"langs": l, "models": m} for l,m in it.product(ALL_MODELS, ["py","ts"])]
+    keys = [{"langs": [l], "models": [m]} for m,l in it.product(ALL_MODELS, ["py","ts"])]
     batches = make_batches(keys, len(keys))
-    results = batched_apply(batches, len(keys), check_all_generations_in_test, split=split)
+    results = batched_apply(batches, len(keys), check_all_generations_in_test, split=split, disable_tqdm=True)
     print("\n".join(results))
 
 if __name__ == "__main__":
