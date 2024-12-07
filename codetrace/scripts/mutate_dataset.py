@@ -151,7 +151,7 @@ def main(
         breaking_mutations = []
         for item in batch_completions:
             correct = item["_generated"] == item["fim_type"]
-            if not correct:
+            if not correct and len(item["_generated"]) > 0:
                 breaking_mutations.append({**item, 
                                         "mutated_generated_text": item["_generated"], 
                                         "correct": False,

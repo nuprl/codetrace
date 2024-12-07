@@ -1,6 +1,12 @@
 import sys
 import datasets
-import pandas as pd
+
+def check_all_generations(ds):
+    df = ds.to_pandas()
+    counts_mut = df.value_counts("mutated_generated_text")
+    counts = df.value_counts("generated_text")
+    assert counts_mut.get("", None) is None, f"Found empty mutated generations: {counts_mut['']}"
+    assert counts.get("", None) is None, f"Found empty original generations: {counts['']}"
 
 def compare(typechecked, original):
     cols = original.columns
@@ -39,4 +45,8 @@ if __name__ == "__main__":
     print(f"Equality: {equals}")
     assert len(df_typechecked) >= 3000
     print(f"Length >= 3000: {len(df_typechecked) >= 3000}")
+
+    # check if any empty generations
+    check_all_generations(df_typechecked)
+
 

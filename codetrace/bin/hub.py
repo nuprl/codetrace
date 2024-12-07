@@ -270,6 +270,9 @@ def main():
     if args.command == "upload":
         upload(args.path)
     elif args.command == "upload_results":
+        if not args.file_upload:
+            assert args.open_pull_request, \
+                "Please open pull request with -pr unless you want to lose existing configs in README.md"
         print(f"Open pull request: {args.open_pull_request}")
         upload_results(args.path, args.file_upload, args.open_pull_request, args.search_pattern)
     elif args.command == "download":
