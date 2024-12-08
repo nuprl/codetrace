@@ -38,7 +38,9 @@ def _run_layer_steer(
     steering_field:str,
     dry_run:bool
 ):
-    RUN_SPLITS = ["test", "rand"] # don't run steer, since steering tensor is precomputed
+    # don't run steer, since steering tensor is precomputed
+    # don't run rand, since we already have the data
+    RUN_SPLITS = ["test"]
     
     for layers in get_ranges(num_layers, interval):
         mutation_underscored = mutations.replace(",", "_")
