@@ -25,7 +25,7 @@ def get_ranges(num_layers: int, interval: int):
         if i + interval <= num_layers:
             yield ",".join(map(str, range(i, i + interval)))
 
-def main_with_args(
+def steer_with_existing_data_precomputed_tensor(
     model: str, 
     candidate_ds: Path,
     results_label: str,
@@ -53,11 +53,46 @@ def main_with_args(
     # for each layer interval, create a subdir in results_dir 
     # and copy steering_tensor to it
     for layer_range in get_ranges(num_layers, interval):
-        output_dir = results_dir / f"precomputed_steering-{lang}-{results_label}-{layer_range.replace(',','_')}-{model}"
+        output_dir = results_dir / f"{results_label}_steering-{lang}-{layer_range.replace(',','_')}-{model}"
         if not dry_run:
             os.makedirs(output_dir)
             torch.save(tensor, output_dir / "steering_tensor.pt")
         print(f"sbatch codetrace/bin/steer_with_precomputed_tensor.sbatch {model} {candidate_ds} {output_dir} {layer_range} {steering_field}")
+
+def steer_with_precomputer_tensor(
+    model: str, 
+    candidate_ds: Path,
+    results_label: str,
+    steering_field: str,
+    steering_tensor: Path,
+    num_layers: int, 
+    interval: int, 
+    lang: str,
+    results_dir: Path,
+    dry_run: bool,
+    multiplier: int = 1
+):
+    model_path = Path(f"/work/nvme/bcbj/franlucc/models/{model}")
+    if not model_path.exists():
+        print(f"Model {model} does not exist", file=sys.stderr)
+        sys.exit(1)
+
+    # check steering tensor has all layers computer
+    tensor = torch.load(steering_tensor)
+    for l in range(num_layers):
+        assert tensor[l].sum() != 0, f"Tensor {steering_tensor} layer {l} was not collected!"
+    if multiplier != 1:
+        tensor = tensor * multiplier
+    
+    # for each layer interval, create a subdir in results_dir 
+    # and copy steering_tensor to it
+    for layer_range in get_ranges(num_layers, interval):
+        output_dir = results_dir / f"{results_label}_steering-{lang}-{layer_range.replace(',','_')}-{model}"
+        if not dry_run:
+            os.makedirs(output_dir)
+            torch.save(tensor, output_dir / "steering_tensor.pt")
+        print(f"""sbatch codetrace/bin/steering_delta_precomputed_tensor.py \
+               {model} {candidate_ds} {output_dir} {layer_range} {steering_field}""")
 
 def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION)

@@ -29,6 +29,14 @@ def get_ranges(num_layers: int, interval: int):
         if i + interval <= num_layers:
             yield ",".join(map(str, range(i, i + interval)))
 
+"""
+Fast utils.
+
+Since for every layer, steering tensor, test split, and steer split are the same
+(in the case where all layers are collected during creation of steering tensor),
+we can save some time by just loading the previous layer data and saving it
+in the current layers' directory.
+"""
 def save_to_steering_dir(
     steer_split: Optional[datasets.Dataset],
     test_split: Optional[datasets.Dataset],
@@ -50,10 +58,16 @@ def try_load(output_dir:str):
         test_split = datasets.load_from_disk(f"{output_dir}/test_split")
     if Path(f"{output_dir}/steering_tensor.pt").exists():
         steering_tensor = torch.load(f"{output_dir}/steering_tensor.pt")
+    for layer in steering_tensor.shape[0]:
+        assert steering_tensor[layer].sum().item() != 0, \
+            f"Steering tensor layer {layer} should not be empty!"
     return steer_split, test_split, steering_tensor
 
+"""
+Main
+"""
 def main_with_args(model: str, mutations: str, lang: str, num_layers: int, interval: int, dry_run: bool):
-    RUN_SPLITS = ["test", "rand","steer"] # don't run "steer" split to save compute
+    RUN_SPLITS = ["test", "rand","steer"]
     steer_split, test_split, steering_tensor = None,None,None
 
     for layers in get_ranges(num_layers, interval):
@@ -61,13 +75,15 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
         layers_underscored = layers.replace(",", "_")
         output_dir = f"results/steering-{lang}-{mutation_underscored}-{layers_underscored}-{model}"
         
-        if ((Path(output_dir) / "test_results.json").exists() or not "test" in  RUN_SPLITS) and \
-            ((Path(output_dir) / "steer_results.json").exists() or not "steer" in RUN_SPLITS) and \
-            ((Path(output_dir) / "test_results_rand.json").exists() or not "rand" in RUN_SPLITS):
+        if (Path(output_dir) / "test_results.json").exists() and \
+            (Path(output_dir) / "steer_results.json").exists() and \
+            (Path(output_dir) / "test_results_rand.json").exists():
             print(f"Skipping {output_dir} because it already exists")
+            # load previous steering data. Useful for resuming from existing sweep
             steer_split, test_split, steering_tensor = try_load(output_dir)
             continue
 
+        # save previous steering data in current dir if it exists
         save_to_steering_dir(steer_split, test_split, steering_tensor, output_dir)
 
         cmd = [
@@ -93,6 +109,7 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
         if not dry_run:
             subprocess.run(cmd, check=True)
 
+        # load steering data for next layer experiment
         steer_split, test_split, steering_tensor = try_load(output_dir)
 
 def main():

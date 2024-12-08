@@ -1,3 +1,4 @@
+import json
 import argparse
 from pathlib import Path
 import datasets
@@ -5,6 +6,7 @@ from tqdm import tqdm
 from multiprocessing import cpu_count
 from codetrace.fast_utils import batched_apply, make_batches
 import itertools as it
+from collections import defaultdict
 
 ALL_MODELS= ["CodeLlama-7b-Instruct-hf",
             "qwen2p5_coder_7b_base", 
@@ -72,7 +74,7 @@ def check_all_generations_in_test(
     split="test", 
     path:Path=Path("nuprl-staging/type-steering-results"),
     inner_disable_tqdm=False,
-) -> list[str]:
+) -> list[dict]:
     assert not keydict or len(keydict) == 1
     if len(keydict) == 1:
         keydict = keydict[0]
@@ -80,7 +82,7 @@ def check_all_generations_in_test(
     all_models=keydict.pop("models",ALL_MODELS)
     all_muts=keydict.pop("mutations",ALL_MUTS)
 
-    failed = []
+    failed = defaultdict(list)
     progress_bar = tqdm(total=(len(langs)*len(all_models)*len(all_muts)), desc=f"Checking generations in {split}", 
                         disable=inner_disable_tqdm)
     for lang in langs:
@@ -94,12 +96,12 @@ def check_all_generations_in_test(
                             df = ds.to_pandas()
                             counts_mut = df.value_counts("mutated_generated_text")
                             if counts_mut.get("", 0) > 0:
-                                failed.append(f"mutations {split}: {lang}-{mut}-{layers}-{model}: {counts_mut['']}")
+                                failed[counts_mut['']].append(f"{lang}-{mut}-{layers}-{model}/{split}")
                         except FileNotFoundError:
                             print(f"{split} Error file not found {name}")
                 progress_bar.update(1)
     progress_bar.close()
-    return failed
+    return [failed]
 
 def multiproc_check_results(split, path: Path=None):
     keys = [{"langs": [l], "models": [llm], "mutations": [m]} 
@@ -109,7 +111,7 @@ def multiproc_check_results(split, path: Path=None):
     if path:
         kwargs["path"]=path
     results = batched_apply(batches, len(keys), check_all_generations_in_test, **kwargs)
-    print("\n".join(results))
+    print(json.dumps(results, indent=4))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

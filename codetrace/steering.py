@@ -259,6 +259,8 @@ class SteeringManager:
             raise ValueError(f"Trying to steer layers {layers_to_steer} but only collected steering tensor from {self.only_collect_layers}")
         if self.steering_tensor == None:
             raise ValueError("Please create a steering tensor before attempting to steer.")
+        if any([self.steering_tensor[l].sum().item() == 0 for l in layers_to_steer]):
+            raise ValueError(f"Trying to steer layers {layers_to_steer} but steering tensor is empty at one of the layers.")
         if split == "steer":
             ds = self.steer_split
         elif split == "test":

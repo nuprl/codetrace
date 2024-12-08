@@ -21,16 +21,16 @@ def get_ranges(num_layers: int, interval: int):
 
 
 def main_with_args(model: str, mutations: str, lang: str, num_layers: int, interval: int, dry_run: bool):
-    RUN_SPLITS = ["test", "rand","steer"] # don't run "steer" split to save compute
+    RUN_SPLITS = ["test", "rand","steer"]
 
     for layers in get_ranges(num_layers, interval):
         mutation_underscored = mutations.replace(",", "_")
         layers_underscored = layers.replace(",", "_")
         output_dir = f"results/steering-{lang}-{mutation_underscored}-{layers_underscored}-{model}"
 
-        if ((Path(output_dir) / "test_results.json").exists() or not "test" in  RUN_SPLITS) and \
-            ((Path(output_dir) / "steer_results.json").exists() or not "steer" in RUN_SPLITS) and \
-            ((Path(output_dir) / "test_results_rand.json").exists() or not "rand" in RUN_SPLITS):
+        if (Path(output_dir) / "test_results.json").exists() and \
+            (Path(output_dir) / "steer_results.json").exists() and \
+            (Path(output_dir) / "test_results_rand.json").exists():
             print(f"Skipping {output_dir} because it already exists")
             continue
 

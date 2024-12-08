@@ -1,6 +1,10 @@
 import sys
 import re
 
+"""
+Check progression of mutation candidates by passing in the .out file
+"""
+
 def main(file_path):
     try:
         num_candidates=-1
