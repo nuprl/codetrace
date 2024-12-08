@@ -1,7 +1,7 @@
 import uuid
 from codetrace.interp_utils import collect_hidden_states, TraceResult, _prepare_layer_patch
 from codetrace.batched_utils import batched_get_averages, batched_insert_patch_logit, _resize_patch
-from codetrace.utils import reset_index_dim0, predict, copy_decoder, load_dataset
+from codetrace.utils import reset_index_dim0, predict, copy_decoder, load_dataset, lm_decode,topk_filtering
 from codetrace.utils import masked_add, mask_target_idx, masked_fill, mask_target_tokens, masked_get
 from codetrace.steering import SteeringManager, subtract_avg
 from codetrace.scripts.launch_steer import main as launch_steer
@@ -14,11 +14,18 @@ MODEL = "/mnt/ssd/arjun/models/starcoderbase-1b"
 model = LanguageModel(MODEL, device_map="cuda", torch_dtype=torch.bfloat16)
 tokenizer = model.tokenizer
 
-def test_batched_patch():
-    assert False
-
-def test_batched_collect():
-    assert False
+def _test_batched_collect_and_patch():
+    prompts = ["test 1","test 2"]
+    collected = batched_collect_activations(model, prompts, lambda x: mask_target_idx(x, [-1]), 
+                                            batch_size=2, layers=range(10,15), reduction="sum")
+    outputs = batched_patch(model, prompts, torch.stack(collected), batch_size=2,
+                            layers_to_patch=range(10,20), reduction="sum", target_fn= lambda x: mask_target_idx(x, [-1]))
+    outputs = torch.stack(outputs)
+    outputs = lm_decode(model, outputs, True)
+    outputs = topk_filtering(outputs, 1)
+    print(outputs.shape)
+    assert tokenizer.decode(outputs[0,0]) == "2" 
+    assert tokenizer.decode(outputs[1,0]) == "1" 
 
 def test_masked_fill():
     output = masked_fill(torch.Tensor([1,2,3]), torch.BoolTensor([1,0,0]), torch.Tensor([4,5,6]))
@@ -340,5 +347,6 @@ def _test_launch_steer():
 if __name__ == "__main__":
     import pytest
     import os
-    _test_launch_steer()
+    _test_batched_collect_and_patch()
     pytest.main([os.path.abspath(__file__), "-vv"])
+    # _test_launch_steer()
