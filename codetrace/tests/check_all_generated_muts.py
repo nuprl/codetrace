@@ -6,6 +6,7 @@ from tqdm import tqdm
 from multiprocessing import cpu_count
 from codetrace.fast_utils import batched_apply, make_batches
 import itertools as it
+import sys
 from collections import defaultdict
 
 ALL_MODELS= ["CodeLlama-7b-Instruct-hf",
@@ -65,7 +66,7 @@ def check_all_generations(path : Path = None):
                     if counts.get("", 0) > 0:
                         print(f"generated: {lang}-{mut}-{model}: {counts['']}")
                 except FileNotFoundError:
-                    print(f"Error file not found {name}")
+                    print(f"Error file not found {name}",file=sys.stderr)
                 progress_bar.update(1)
     progress_bar.close()
 
@@ -98,10 +99,10 @@ def check_all_generations_in_test(
                             if counts_mut.get("", 0) > 0:
                                 failed[counts_mut['']].append(f"{lang}-{mut}-{layers}-{model}/{split}")
                         except FileNotFoundError:
-                            print(f"{split} Error file not found {name}")
+                            print(f"{split} Error file not found {name}",file=sys.stderr)
                 progress_bar.update(1)
     progress_bar.close()
-    return [failed]
+    return [{str(k):v for k,v in failed.items()}]
 
 def multiproc_check_results(split, path: Path=None):
     keys = [{"langs": [l], "models": [llm], "mutations": [m]} 
@@ -111,12 +112,32 @@ def multiproc_check_results(split, path: Path=None):
     if path:
         kwargs["path"]=path
     results = batched_apply(batches, len(keys), check_all_generations_in_test, **kwargs)
-    print(json.dumps(results, indent=4))
+    combined = defaultdict(list)
+    for r in results:
+        for k,v in r.items():
+            combined[k] += v
+    print(json.dumps({"split":split, **combined}, indent=4))
+
+def check_steering_vectors(path: Path):
+    import torch
+    for tensor in tqdm(path.glob("*.pt"), "Checking tensors"):
+        t = torch.load(tensor)
+        try:
+            layers = [int(l) for l in tensor.name.split("-")[3].split("_")]
+        except:
+            print(f"Could not parse layers from vec {tensor.name}", file=sys.stderr)
+            continue
+        for l in layers:
+            if t[l].sum().item() == 0:
+                print(f"Tensor {tensor} at layer {l} is empty!")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r","--results_dir", type=Path, default=None)
+    parser.add_argument("-v","--steering_vector_dir", type=Path, default=None)
     args = parser.parse_args()
+    if args.steering_vector_dir:
+        check_steering_vectors(args.steering_vector_dir)
     multiproc_check_results("test", args.results_dir)
     multiproc_check_results("steer", args.results_dir)
     check_all_generations()
