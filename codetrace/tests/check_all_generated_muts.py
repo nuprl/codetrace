@@ -28,8 +28,7 @@ def model_n_layer(model: str) -> int:
     elif "llama" in model.lower():
         return 28
     else:
-        print(f"Model {model} model_n_layer not implemented!")
-        return None
+        raise NotImplementedError(f"Model {model} model_n_layer not implemented!")
 
 def get_ranges(num_layers: int, interval: int):
     for i in range(0, num_layers):
