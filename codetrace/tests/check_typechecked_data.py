@@ -1,8 +1,7 @@
 import sys
 import datasets
 
-def check_all_generations(ds):
-    df = ds.to_pandas()
+def check_all_generations(df):
     counts_mut = df.value_counts("mutated_generated_text")
     counts = df.value_counts("generated_text")
     assert counts_mut.get("", None) is None, f"Found empty mutated generations: {counts_mut['']}"
