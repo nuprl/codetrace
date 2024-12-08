@@ -107,29 +107,38 @@ def process_df_from_hub(subset:str, model:str, cache_dir:str, verbose:bool=False
     df["num_layers"] = num_layers
     return {"data": df, "missing_results": missing_test_results}
 
-def process_df_local(path: Path, model:str) ->  Dict[str, List]:
+def process_df_local(path: Path, model:str, ignore_rand:bool = False) ->  Dict[str, List]:
     missing_test_results = []
     test_results_path = path / "test_results.json"
     steering_path = path / "steer_results.json"
     rand_path = path / "test_results_rand.json"
-    if not test_results_path.exists() or not rand_path.exists():
-        missing_test_results.append(path)
+    if not test_results_path.exists():
+        missing_test_results.append(test_results_path)
+        return {"data": None, "missing_results": missing_test_results }
+    if not ignore_rand and not rand_path.exists():
+        missing_test_results.append(rand_path)
         return {"data": None, "missing_results": missing_test_results}
+    
     names = path.name.split("-")
     lang, mutations, layers = names[1],names[2],names[3]
     num_layers = len(layers.split("_"))
     df = pd.read_json(test_results_path, typ='series').to_frame().T
-    df_rand = pd.read_json(rand_path, typ='series').to_frame().T
+    
+    all_data = [df]
+
     if steering_path.exists():
         df_steering = pd.read_json(steering_path, typ='series').to_frame().T
         df_steering.columns = [f"steering_{c}" for c in df_steering.columns]
-    
-    df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
-    if steering_path.exists():
-        df = pd.concat([df, df_rand, df_steering], axis=1)
+        all_data.append(df_steering)
     else:
-        df = pd.concat([df, df_rand], axis=1)
         missing_test_results.append(steering_path)
+
+    if not ignore_rand:
+        df_rand = pd.read_json(rand_path, typ='series').to_frame().T
+        df_rand.columns = [f"rand_{c}" for c in df_rand.columns]
+        all_data.append(df_rand)
+    
+    df = pd.concat(all_data, axis=1)
     df["lang"] = lang
     df["mutations"] = mutations
     df["layers"] = layers
@@ -203,11 +212,14 @@ def read_steering_results_multiproc(
     return pd.concat(data), missing_test_results
 
 def read_steering_results_precomputed_multiproc(
-    results_dir: str, lang:str, model:str, label:str, num_proc: int = None
+    results_dir: str, lang:str, model:str, num_proc: int = None, prefix: str = "precomputed_"
 ):
-    subsets = list(Path(results_dir).glob(f"precomputed_steering-{lang}-{label}*{model}"))
+    subsets = list(Path(results_dir).glob(f"{prefix}steering-{lang}-*-{model}"))
+    print(len(subsets),f"{prefix}steering-{lang}-*-{model}")
     batches = make_batches(subsets, num_proc)
-    results = batched_apply(batches, num_proc, batched_process, fn=process_df_local, model=model)
+    results = batched_apply(batches, num_proc, batched_process, 
+                            fn=process_df_local, model=model, 
+                            ignore_rand=("lang_transfer" in prefix))
     data, missing_test_results = _postproc(results)
     return pd.concat(data), missing_test_results
 """
@@ -249,7 +261,6 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
         random_color = random_plot.get_lines()[-1].get_color()  # Extract color
         axes[i].hlines(y=max_random, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
                        colors=random_color, linestyles='dashed', label="Random Max")
-
 
         # sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
         # if "steering_mean_succ" in subset.columns:
@@ -311,12 +322,18 @@ if __name__ == "__main__":
     parser_muts.add_argument("--interval", type=int, nargs="+", default=[1,3,5])
 
     parser_precomputed = subparsers.add_parser("precomputed")
-    parser_precomputed.add_argument("--label")
     parser_precomputed.add_argument("--lang", type=str)
     parser_precomputed.add_argument("--model", type=str)
     parser_precomputed.add_argument("--results-dir", type=Path)
     parser_precomputed.add_argument("--outfile", type=Path)
     parser_precomputed.add_argument("--interval", type=int, nargs="+", default=[1,3,5])
+
+    parser_transfer = subparsers.add_parser("lang_transfer")
+    parser_transfer.add_argument("--lang", type=str, help="Language tested on, not of the steering tensor")
+    parser_transfer.add_argument("--model", type=str)
+    parser_transfer.add_argument("--results-dir", type=Path)
+    parser_transfer.add_argument("--outfile", type=Path)
+    parser_transfer.add_argument("--interval", type=int, nargs="+", default=[1,3,5])
 
     args = parser.parse_args()
 
@@ -328,14 +345,41 @@ if __name__ == "__main__":
         df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
         print(df_pretty["mutations"].value_counts())
         df_pretty = df_pretty.sort_values(["mutations","layers"])
+
     elif args.command == "precomputed":
-        df, missing_test_results = read_steering_results_precomputed_multiproc(args.results_dir,args.lang,
-                                                                               args.model,args.label,40)
+        df, missing_test_results = read_steering_results_precomputed_multiproc(
+            args.results_dir,
+            args.lang,
+            args.model,
+            40
+        )
         # no steer for precomputed
         missing_test_results = [m for m in missing_test_results if "steer_results.json" not in m.as_posix()]
         print(missing_test_results)
 
         df_pretty = df.copy()
+        df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
+        print(df_pretty["mutations"].value_counts())
+        df_pretty = df_pretty.sort_values(["mutations","layers"])
+
+    elif args.command == "lang_transfer":
+        df, missing_test_results = read_steering_results_multiproc(args.results_dir,args.lang,args.model,40)
+        # keep only rand col
+        df_layer_sweep = df[["rand_mean_succ","start_layer","mutations","layers","num_layers"]]
+        print(df_layer_sweep)
+        df, missing_test_results = read_steering_results_precomputed_multiproc(
+            args.results_dir,
+            args.lang,
+            args.model,
+            40,
+            prefix=f"lang_transfer_{'py' if args.lang=='ts' else 'ts'}_"
+        )
+        df_lang_transfer = df[["mean_succ","start_layer","mutations","layers","num_layers"]]
+        # no steer for precomputed
+        df = pd.merge(df_lang_transfer,df_layer_sweep, 
+                      on=["start_layer", "layers","mutations","num_layers"]).reset_index()
+        df_pretty = df.copy()
+        df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
         print(df_pretty["mutations"].value_counts())
         df_pretty = df_pretty.sort_values(["mutations","layers"])
     else:

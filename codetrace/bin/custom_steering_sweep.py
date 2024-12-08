@@ -12,7 +12,6 @@ from pathlib import Path
 import argparse
 import sys
 import os
-import shutil
 import torch
 from typing import Optional
 import datasets
