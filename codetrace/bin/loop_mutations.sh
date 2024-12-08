@@ -3,7 +3,7 @@ MODEL=$1
 LANG=$2
 set -o pipefail
 
-ALL_MUTATIONS=("delete,vars,types" "vars,delete" "types,delete" "types,vars" "vars" "types" "delete")
+ALL_MUTATIONS=("vars" "types" "delete" "delete,vars,types" "vars,delete" "types,delete" "types,vars")
 
 # Use an array to track processed mutations
 processed=()
@@ -30,7 +30,7 @@ while [ "${#processed[@]}" -lt "${#ALL_MUTATIONS[@]}" ]; do
             --batch-size 50 \
             --mutations=$MUTATIONS  >> $file 2>&1
 
-        python3 /home/franlucc/projects/codetrace/codetrace/bin/check_candidates.py "$file"
+        python3 /home/franlucc/projects/codetrace/codetrace/tests/check_candidates.py "$file"
 
         if [ $? -eq 0 ]; then
             echo "[PASS] $file has >= 3500 candidates"
