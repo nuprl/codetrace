@@ -365,5 +365,5 @@ if __name__ == "__main__":
     import pytest
     import os
     _test_batched_collect_and_patch()
-    # pytest.main([os.path.abspath(__file__), "-vv"])
-    # _test_launch_steer()
+    pytest.main([os.path.abspath(__file__), "-vv"])
+    _test_launch_steer()

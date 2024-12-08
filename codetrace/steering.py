@@ -168,11 +168,11 @@ class SteeringManager:
     def steer_test_splits(
         self,
         test_size:Union[float,int],
-        dedup_prog_threshold:int, # 3 suggested
-        dedup_type_threshold:int, # 25 suggested
+        dedup_prog_threshold:int,
+        dedup_type_threshold:int,
         shuffle:bool=False,
         seed:Optional[int]=None,
-        debug_max_cycle:Optional[int]=None
+        debug_max_cycle:Optional[int]=None,
     )-> Tuple[datasets.Dataset]:
         """
         Split candidates into a steering and test split.
@@ -190,7 +190,7 @@ class SteeringManager:
 
         NOTE: test split is always the same for a dataset of candidates
         """
-        if not self.test_split and not self.steer_split:
+        if not self.test_split:
             if test_size < 0:
                 test_size *= len(self.candidates_ds)
 
