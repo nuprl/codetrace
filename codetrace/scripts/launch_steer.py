@@ -39,7 +39,7 @@ def run_steer(
 def main(
     model:str,
     dtype:str,
-    candidates:str,
+    candidates:Optional[str],
     layers:List[int],
     output_dir:str,
     steer_name:str,
@@ -51,20 +51,20 @@ def main(
     test_size:int,
     subset:str,
     split:Optional[str],
-    run_steering_splits: Optional[List[str]] = None,
+    run_steering_splits: List[str] = ["test","rand","steer"],
     collect_all_layers: bool = False,
     dedup_prog_threshold: int = 25,
     dedup_type_threshold: int = 4,
     steering_field: Optional[str] = None
 ):
-    if run_steering_splits is None:
-        run_steering_splits = ["test","rand","steer"]
-    candidates = load_dataset(candidates, split=split,name=subset)
+    if candidates:
+        candidates = load_dataset(candidates, split=split,name=subset)
+    
     model = LanguageModel(model, torch_dtype=dtype,device_map="cuda",dispatch=True)
     smanager = SteeringManager(
         model,
-        candidates,
         output_dir,
+        candidates,
         steer_name,
         test_name,
         tensor_name,
@@ -72,40 +72,43 @@ def main(
         only_collect_layers=None if collect_all_layers else layers
     )
 
-    # 1. make splits
+    # 1. make splits if they do not exist and save
     steer_split, test_split = smanager.steer_test_splits(test_size, dedup_prog_threshold, dedup_type_threshold)
     print("Steer split:\n",steer_split,"Test_split:\n", test_split)
-    smanager.save_data(steer_split, steer_name)
-    smanager.save_data(test_split, test_name)
 
-    # 2. make tensor
+    smanager.save_data(test_split, test_name)
+    if "steer" in run_steering_splits:
+        smanager.save_data(steer_split, steer_name)
+
+    # 2. make tensor if it does not exist
     steering_tensor = smanager.create_steering_tensor(collect_batchsize)
     smanager.save_tensor(steering_tensor, tensor_name)
 
-    # check valid options
-    assert set(run_steering_splits).issubset(set(["test","steer","rand"]))
-    
-    # 3. run steering on test
+    # 3. run steering on splits
     if "test" in run_steering_splits:
-        print_color("[TEST STEERING]", "green")
+        print_color("[TEST SPLIT]", "green")
         run_steer(smanager, "test", layers, patch_batchsize, False, steering_field)
 
-    # 4. run steering on test with random tensor
     if "rand" in run_steering_splits:
-        print_color("[RAND STEERING]", "red")
+        print_color("[RAND SPLIT]", "red")
         run_steer(smanager, "test", layers, patch_batchsize, True, steering_field)
 
-    # 5. run steering on steer
-    if "steer" in run_steering_splits: 
-        print_color("[STEER STEERING]", "yellow")
+    if "steer" in run_steering_splits:
+        print_color("[STEER SPLIT]", "yellow")
         run_steer(smanager, "steer", layers, patch_batchsize, False, steering_field)
 
     smanager.clear_cache()
 
+def none_or_str(value):
+    if value == 'None':
+        return None
+    return value
+
 if __name__ == "__main__":
     parser = ArgumentParser()
+
     parser.add_argument("--model",type=str, required=True)
-    parser.add_argument("--candidates", type=str,required=True)
+    parser.add_argument("--candidates", type=none_or_str, required=True)
     parser.add_argument("--output-dir", type=str, required=True)
     parser.add_argument("--layers", type=str, required=True)
     # dataset
@@ -119,18 +122,22 @@ if __name__ == "__main__":
     parser.add_argument("--tensor-name", required=True)
     parser.add_argument("--steering-field", type=str, default=None)
 
-    parser.add_argument("-b1","--collect-batchsize", type=int, default=2)
+    parser.add_argument("-b1","--collect-batchsize", type=int, default=4)
     parser.add_argument("-b2","--patch-batchsize",type=int, default=2)
     parser.add_argument("--dtype", choices=["bfloat16","float32"],default="bfloat16")
     parser.add_argument("--max-num-candidates","-n",type=int, default=3000)
     parser.add_argument("--test-size", type=int,default=100)
 
-    parser.add_argument("--run-steering-splits", type=str, nargs="+", choices=["test","steer","rand"], default=None)
+    parser.add_argument("--run-steering-splits", type=str, nargs="+", choices=["test","steer","rand"], 
+                        default=["test","rand","steer"])
     parser.add_argument("--collect-all-layers", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
 
     args = parser.parse_args()
+    # check valid options
+    assert set(args.run_steering_splits).issubset(set(["test","steer","rand"]))
     args = vars(args)
+    
     if args.pop("overwrite", None) and os.path.exists(args["output_dir"]):
         rmtree(args["output_dir"])
     args["layers"] = [int(l.strip()) for l in args["layers"].split(',') if l != ""]

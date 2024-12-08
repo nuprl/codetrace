@@ -79,8 +79,8 @@ class SteeringManager:
     def __init__(
         self,
         model:LanguageModel,
-        candidates_ds: datasets.Dataset,
         cache_dir: Path,
+        candidates_ds: Optional[datasets.Dataset]=None,
         steer_split_path: Optional[str]=None,
         test_split_path: Optional[str]=None,
         steering_tensor_path: Optional[str]=None,
@@ -92,16 +92,7 @@ class SteeringManager:
         self.model=model
         self.tokenizer=model.tokenizer
         self.fim_obj=get_model_fim(model.config.name_or_path)
-        if max_num_candidates > -1 and max_num_candidates < len(candidates_ds):
-            # select first and foremost from typechecking candidates
-            candidates_ds = candidates_ds.sort("typechecks", reverse=True)
-            assert candidates_ds[0]["typechecks"]
-            candidates_ds = candidates_ds.select(range(max_num_candidates))
-            
-        self.candidates_ds = candidates_ds.map(
-            lambda x: {**x, "_original_program": x["fim_program"].replace("<FILL>", x["fim_type"])},
-            desc="Adding column for original unfimmed program"
-        )
+        
         self.cache_dir = cache_dir
         if not token_mask_fn:
             # default patch on fim middle last token
@@ -116,6 +107,22 @@ class SteeringManager:
         self.steer_split : Optional[datasets.Dataset] = self.load_data(steer_split_path)
         self.steering_tensor : Optional[torch.Tensor] = self.load_tensor(steering_tensor_path)
         os.makedirs(self.cache_dir, exist_ok=True)
+        self.candidates_ds = None
+        if self.steering_tensor is None:
+            assert candidates_ds != None, "Please pass some steering candidates to compute tensor"
+            self._post_init(candidates_ds, max_num_candidates)
+
+    def _post_init(self, candidates_ds: datasets.Dataset, max_num_candidates: int):
+        if max_num_candidates > -1 and max_num_candidates < len(candidates_ds):
+            # select first and foremost from typechecking candidates
+            candidates_ds = candidates_ds.sort("typechecks", reverse=True)
+            assert candidates_ds[0]["typechecks"]
+            candidates_ds = candidates_ds.select(range(max_num_candidates))
+            
+        self.candidates_ds = candidates_ds.map(
+            lambda x: {**x, "_original_program": x["fim_program"].replace("<FILL>", x["fim_type"])},
+            desc="Adding column for original unfimmed program"
+        )
 
     def tokenize(self, prompt:str) -> str:
         return prepare_fim_prompt(self.tokenizer, self.fim_obj, prompt)
@@ -190,7 +197,7 @@ class SteeringManager:
 
         NOTE: test split is always the same for a dataset of candidates
         """
-        if not self.test_split:
+        if self.candidates_ds and not self.test_split and not self.steer_split:
             if test_size < 0:
                 test_size *= len(self.candidates_ds)
 
@@ -220,12 +227,12 @@ class SteeringManager:
         Collects activations of steering split in a batched manner, subtracting
         negative and positive steering items and averaging result as it goes.
         """
-        if not self.steer_split:
-            raise ValueError("Please create a steer split before attempting to steer.")
-        if batch_size % 2 != 0:
-            raise ValueError("Please provide a batch_size divisible by pairs")
-        
         if self.steering_tensor == None:
+            if not self.steer_split:
+                raise ValueError("Please create a steer split before attempting to steer.")
+            if batch_size % 2 != 0:
+                raise ValueError("Please provide a batch_size divisible by pairs")
+            
             dataloader = torch.utils.data.DataLoader(
                 self.steer_split,
                 batch_size,
@@ -249,7 +256,8 @@ class SteeringManager:
         layers_to_steer:List[int],
         batch_size:int,
         do_random_ablation:bool=False,
-        steering_field:Optional[str]=None
+        steering_field:Optional[str]=None,
+        quiet:bool = True
     )-> datasets.Dataset:
         """
         Evaluate the steering tensor on data.
@@ -281,7 +289,7 @@ class SteeringManager:
             batch_size,
             collate_fn = (lambda x: list(map(self.tokenize, x)))
         )
-        solutions = list(ds["fim_type"])
+        solutions = None if quiet else list(ds["fim_type"])
         predictions = batched_insert_patch_logit(
             self.model,
             dataloader,
