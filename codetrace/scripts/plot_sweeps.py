@@ -31,6 +31,14 @@ MUTATIONS_RENAMED = {
 Utils code
 """
 
+def fmt_language(lang: str) ->str:
+    if lang == "py":
+        return "Python"
+    elif lang == "ts":
+        return "TypeScript"
+    else:
+        raise ValueError(f"Not found {lang}")
+
 def get_ranges(num_layers: int, interval: int):
     for i in range(0, num_layers):
         if i + interval <= num_layers:
@@ -215,7 +223,6 @@ def read_steering_results_precomputed_multiproc(
     results_dir: str, lang:str, model:str, num_proc: int = None, prefix: str = "precomputed_"
 ):
     subsets = list(Path(results_dir).glob(f"{prefix}steering-{lang}-*-{model}"))
-    print(len(subsets),f"{prefix}steering-{lang}-*-{model}")
     batches = make_batches(subsets, num_proc)
     results = batched_apply(batches, num_proc, batched_process, 
                             fn=process_df_local, model=model, 
@@ -225,7 +232,15 @@ def read_steering_results_precomputed_multiproc(
 """
 Plotting
 """
-def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[str] = None, n_layer: int = None):
+def plot_steering_results(
+    df: pd.DataFrame, 
+    interval: int, 
+    fig_file: Optional[str] = None, 
+    n_layer: int = None,
+    steer_label:str = "Steering",
+    test_label:str = "Test",
+    rand_label:str = "Random"
+):
     df = df.reset_index()
     df = df[df["num_layers"] == interval]
     mutations = df["mutations"].unique()
@@ -240,34 +255,28 @@ def plot_steering_results(df: pd.DataFrame, interval: int, fig_file: Optional[st
         subset = df[df["mutations"] == mutation]
 
                 # Plot Test line
-        test_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
+        test_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label=test_label)
         max_test = subset["mean_succ"].max()
         test_color = test_plot.get_lines()[-1].get_color()  # Extract color from the last line
         axes[i].hlines(y=max_test, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
-                       colors=test_color, linestyles='dashed', label="Test Max")
+                       colors=test_color, linestyles='dashed', label=f"{test_label} Max")
 
         # Plot Steering line if the column exists
         if "steering_mean_succ" in subset.columns:
             steering_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", 
-                                         label="Steering")
+                                         label=steer_label)
             max_steering = subset["steering_mean_succ"].max()
             steering_color = steering_plot.get_lines()[-1].get_color()  # Extract color
             axes[i].hlines(y=max_steering, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
-                           colors=steering_color, linestyles='dashed', label="Steering Max")
+                           colors=steering_color, linestyles='dashed', label=f"{steer_label} Max")
 
         # Plot Random line
-        random_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
+        random_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label=rand_label)
         max_random = subset["rand_mean_succ"].max()
         random_color = random_plot.get_lines()[-1].get_color()  # Extract color
         axes[i].hlines(y=max_random, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
-                       colors=random_color, linestyles='dashed', label="Random Max")
+                       colors=random_color, linestyles='dashed', label=f"{rand_label} Max")
 
-        # sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label="Test")
-        # if "steering_mean_succ" in subset.columns:
-        #     sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", 
-        #                  label="Steering")
-        # sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label="Random")
-        
         axes[i].set_title(mutation)
         axes[i].set_xlabel("Patch layer start")
         axes[i].set_ylabel("Accuracy")
@@ -336,6 +345,7 @@ if __name__ == "__main__":
     parser_transfer.add_argument("--interval", type=int, nargs="+", default=[1,3,5])
 
     args = parser.parse_args()
+    label_kwargs = {}
 
     if args.command == "mutations":
         df, missing_test_results = read_steering_results_multiproc(args.results_dir,args.lang,args.model,40)
@@ -365,14 +375,17 @@ if __name__ == "__main__":
     elif args.command == "lang_transfer":
         df, missing_test_results = read_steering_results_multiproc(args.results_dir,args.lang,args.model,40)
         # keep only rand col
-        df_layer_sweep = df[["rand_mean_succ","start_layer","mutations","layers","num_layers"]]
-        print(df_layer_sweep)
+        df_layer_sweep = df[["rand_mean_succ","start_layer","mutations",
+                             "layers","num_layers","mean_succ"]]
+        df_layer_sweep = df_layer_sweep.rename(columns={"mean_succ":"steering_mean_succ"}, errors="raise")
+        
+        steering_lang = 'py' if args.lang=='ts' else 'ts'
         df, missing_test_results = read_steering_results_precomputed_multiproc(
             args.results_dir,
             args.lang,
             args.model,
             40,
-            prefix=f"lang_transfer_{'py' if args.lang=='ts' else 'ts'}_"
+            prefix=f"lang_transfer_{steering_lang}_"
         )
         df_lang_transfer = df[["mean_succ","start_layer","mutations","layers","num_layers"]]
         # no steer for precomputed
@@ -382,6 +395,7 @@ if __name__ == "__main__":
         df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
         print(df_pretty["mutations"].value_counts())
         df_pretty = df_pretty.sort_values(["mutations","layers"])
+        label_kwargs = {"steer_label": f"Original {fmt_language(args.lang)}", "test_label": fmt_language(steering_lang)}
     else:
         raise NotImplementedError("Task not implemented.")
     
@@ -389,4 +403,5 @@ if __name__ == "__main__":
 
     for i in args.interval:
         print(f"Plotting interval {i}")
-        plot_steering_results(df_pretty, i, outfile.replace(".pdf",f"_{i}.pdf"), model_n_layer(args.model))
+        plot_steering_results(df_pretty, i, outfile.replace(".pdf",f"_{i}.pdf"), 
+                              model_n_layer(args.model), **label_kwargs)
