@@ -1,8 +1,10 @@
+from functools import partial
 import pandas as pd
 import datasets
 from scipy import stats
 from collections import namedtuple
 from codetrace.fast_utils import batched_apply, make_batches
+from codetrace.utils import print_color
 from typing import Dict,List,Tuple,Optional,TypedDict,Set
 from pathlib import Path
 from tqdm import tqdm
@@ -14,6 +16,16 @@ import itertools as it
 from multiprocessing import Pool
 from codetrace.scripts.typecheck_ds import multiproc_typecheck
 import re
+
+HELP="""
+Contains *efficient* loading and data processing script for dealing with results
+of steering experiments. Can load from hub, from a local repo cloned
+from hub, or from raw experiment results directory. Loads according
+to passed ResultsKeys; if a key is not passed, loads all possible
+values of key (eg. if 'mutations' is not passed, will load all)
+
+See `test_result_loader` for how to load data.
+""".strip()
 
 MUTATIONS_RENAMED = {
     "types": "Rename types",
@@ -173,10 +185,10 @@ class SteerResult:
         df["num_layers"] = num_layers
         return df
     
-    def to_errors_dataframe(self, num_proc:int = 10) -> pd.DataFrame:
+    def to_errors_dataframe(self, split:str, num_proc:int, disable_tqdm:bool=True) -> pd.DataFrame:
         COLUMNS = ["steering_success","typechecks_before","typechecks_after", 
-           "errors_before", "errors_after","fim_type","change","program"]
-        ds = ds.map(lambda x: 
+           "errors_before", "errors_after","fim_type","change","mutated_program"]
+        ds = self[split].map(lambda x: 
                 {**x, 
                 "change": (x['mutated_generated_text'],x['steered_predictions']),
                 "_before_steering_prog": x["mutated_program"].replace("<FILL>", x["mutated_generated_text"]),
@@ -188,22 +200,25 @@ class SteerResult:
         ds = ds.remove_columns(["typechecks","errors"])
         
         # typecheck before/after steer
-        result_before = multiproc_typecheck(ds, num_proc, lang=self.lang, colname="_before_steering_prog")
-        result_after = multiproc_typecheck(ds, num_proc, lang=self.lang, colname="_after_steering_prog")
+        result_before = multiproc_typecheck(ds, num_proc, lang=self.lang, 
+                            colname="_before_steering_prog", disable_tqdm=disable_tqdm)
+        result_after = multiproc_typecheck(ds, num_proc, lang=self.lang, 
+                            colname="_after_steering_prog", disable_tqdm=disable_tqdm)
         before_df = pd.DataFrame.from_records(result_before).rename(
             columns={"typechecks":"typechecks_before","errors":"errors_before"})
         after_df = pd.DataFrame.from_records(result_after).rename(
             columns={"typechecks":"typechecks_after","errors":"errors_after"})
         
         # merge into one dataset
-        df = pd.merge(before_df, after_df, 
-                      on=["_before_steering_prog","_after_steering_prog","mutated_program"])
-        assert list(df["steering_success_x"]) == list(df["steering_success_y"])
-        assert list(df["fim_type_x"]) == list(df["fim_type_y"])
+        df = pd.merge(before_df, after_df, on=["_before_steering_prog","_after_steering_prog"])
+        # sanity check
+        for col in ["steering_success","fim_type","mutated_program"]:
+            assert list(df[f"{col}_x"]) == list(df[f"{col}_y"])
+        
         df = df.rename(columns={
                 "mutation": self.mutations,
                 "steering_success_x":"steering_success", 
-                "mutated_program_x":"program",
+                "mutated_program_x":"mutated_program",
                 "change_x": "change",
                 "fim_type_x": "fim_type"
             })
@@ -216,7 +231,7 @@ class SteerResult:
         return df
 
 @dataclass
-class ResultKwargs:
+class ResultKeys:
     model:str
     lang:Optional[str]=None
     start_layer:Optional[int]=None
@@ -271,7 +286,6 @@ class ResultsLoader:
     auth_token: Optional[str] = None
     cache_dir: Optional[str] = None
     _prefetched: Set[Tuple[str]] = set()
-    
 
     def __init__(self, 
         local: bool, 
@@ -285,6 +299,7 @@ class ResultsLoader:
             if Path(cache_dir).exists():
                 print(f"Loading from existing {cache_dir}")
             os.makedirs(cache_dir, exist_ok=True)
+        print_color(f"Loading from local: {local}", "green")
         self.cache_dir = cache_dir
 
     def get_subset(
@@ -299,7 +314,7 @@ class ResultsLoader:
         layers = "_".join([str(start_layer+i) for i in range(interval)])
         return f"{prefix}steering-{lang}-{mutation}-{layers}-{model}"
 
-    def prefetch(self, keys: ResultKwargs):
+    def prefetch(self, keys: ResultKeys):
         """
         Do prefetch
         """
@@ -323,10 +338,10 @@ class ResultsLoader:
         for r in expanded:
             self._prefetched.add(r)
     
-    def is_prefetched(self, keys: ResultKwargs) -> bool:
+    def is_prefetched(self, keys: ResultKeys) -> bool:
         return set(keys.expand()).issubset(self._prefetched)
     
-    def load_data(self, keys: ResultKwargs) -> List[SteerResult]:
+    def load_data(self, keys: ResultKeys) -> List[SteerResult]:
         if not self.local and not self.is_prefetched(keys):
             self.prefetch(keys)
         return [SteerResult.from_local( Path(self.cache_dir) / self.get_subset(*e)) 
@@ -353,9 +368,6 @@ def _to_success_dataframe(x:SteerResult):
 def _missing_results(x: SteerResult):
     return x.missing_results()
 
-def _to_errors_dataframe(x: SteerResult):
-    return x.to_errors_dataframe()
-
 def load_success_data(
     model:str, 
     num_proc:int,
@@ -363,7 +375,7 @@ def load_success_data(
     **keys,
 ) ->Tuple[pd.DataFrame,List[str]]:
     loader = ResultsLoader(Path(cache_dir).exists(), cache_dir=cache_dir)
-    results = loader.load_data(ResultKwargs(model=model, **keys))
+    results = loader.load_data(ResultKeys(model=model, **keys))
     with Pool(num_proc) as p, tqdm(total=len(results)) as pbar:
         all_dfs = []
         for result in p.imap(_to_success_dataframe, results):
@@ -371,24 +383,22 @@ def load_success_data(
             pbar.refresh()
             all_dfs.append(result)
         missing_test_results = p.map(_missing_results, results)
-    
+    p.close()
+    p.join()
     return pd.concat(all_dfs), list(it.chain(*missing_test_results))
 
 def load_errors_data(
     model:str, 
     num_proc:int,
+    split:str,
     cache_dir: Optional[Path]=None,
     **keys,
 ) ->Tuple[pd.DataFrame,List[str]]:
     loader = ResultsLoader(Path(cache_dir).exists(), cache_dir=cache_dir)
-    results = loader.load_data(ResultKwargs(model=model, **keys))
-    with Pool(num_proc) as p, tqdm(total=len(results)) as pbar:
-        all_dfs = []
-        for result in p.imap(_to_errors_dataframe, results):
-            pbar.update()
-            pbar.refresh()
-            all_dfs.append(result)
-    
+    results = loader.load_data(ResultKeys(model=model, **keys))
+    all_dfs = []
+    for r in tqdm(results, desc="Collecting errors with typechecker"):
+        all_dfs.append(r.to_errors_dataframe(split, num_proc))
     return pd.concat(all_dfs, axis=0)
 
 """
@@ -407,8 +417,8 @@ class CondProb:
     label_b : str
 
     def __repr__(self):
-        probs_str = f"""P({self.label_a} | {self.label_b}) = P({self.prob_a_and_b}) / P({self.prob_b}) 
-        = {self.prob_a_given_b}"""
+        label = f"P({self.label_a} | {self.label_b})"
+        probs_str = f"{label} = P({self.prob_a_and_b:.2f}) / P({self.prob_b:.2f}) = {self.prob_a_given_b:.2f}"
         return f"[{self.total} samples] {probs_str}"
     
 def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame) -> CondProb:
@@ -434,7 +444,7 @@ Tests
 def test_result_loader():
     cache_dir="/tmp/testing_result_loader"
     loader = ResultsLoader(False, cache_dir=cache_dir)
-    keys = ResultKwargs(**{"model":"qwen2p5_coder_7b_base","lang":"ts","interval":1, "start_layer":27})
+    keys = ResultKeys(**{"model":"qwen2p5_coder_7b_base","lang":"ts","interval":1, "start_layer":27})
     results = loader.load_data(keys)
     # print(results)
     for m in ALL_MUTATIONS:
@@ -450,7 +460,24 @@ def test_load_data():
     print(missing)
     assert len(df) > 0
 
+def test_remove_warnings():
+    error = '''\n:29:9 - information: Analysis of function \"validate\" is skipped\
+\ because it is unannotated\n:75:9 - information: Analysis of function \"serialize\"\
+\ is skipped because it is unannotated\n:103:9 - information: Analysis of function\
+\ \"__len__\" is skipped because it is unannotated\n:106:9 - information: Analysis\
+\ of function \"__setitem__\" is skipped because it is unannotated\n:121:13
+\ - error: Module cannot be used as a type (reportGeneralTypeIssues)\n:133:9 - information:\
+\ Analysis of function \"validate\" is skipped because it is unannotated\n1 error,\
+\ 0 warnings, 5 informations \nWARNING: there is a new pyright version available\
+\ (v1.1.388 -> v1.1.390).\nPlease install the new version or set PYRIGHT_PYTHON_FORCE_VERSION\
+\ to `latest`\n\n\n
+'''
+    output = remove_warnings(error, "py")
+    expected = 'Module cannot be used as a type (reportGeneralTypeIssues)'
+    assert output.strip() == expected.strip()
 
 if __name__ == "__main__":
-    test_result_loader()
-    test_load_data()
+    # call all test fns
+    for key, value in globals().items():
+        if callable(value) and key.startswith('test_'):
+            value()

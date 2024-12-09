@@ -14,6 +14,8 @@ Given a model, lang, mut and MAX SUCCESS RATE layer
     + the fim type is a subtype of fim_type 
 
 """
+import csv
+from tqdm import tqdm
 from codetrace.scripts.typecheck_ds import multiproc_typecheck
 import itertools as it
 import argparse
@@ -27,7 +29,9 @@ from ruamel.yaml import YAML
 import numpy as np
 import re
 from codetrace.analysis.data import (
-    conditional_prob, ALL_MUTATIONS, correlation, SteerResult, load_success_data,load_errors_data
+    conditional_prob, ALL_MUTATIONS, correlation, 
+    SteerResult, load_success_data,load_errors_data,
+    ResultKeys, ResultsLoader
 )
 
 yaml = YAML()
@@ -86,7 +90,7 @@ def analyze_steering_effect_on_errors(
 
     # print("SUCC DID NOT SOLVE THESE ERRORS", set(errors_failed).difference(set(errors_solved)))
 
-def RQ1(model:str, results:Path, lang:str, interval:int, num_proc:int=40) -> int:
+def RQ1(model:str, results:Path, lang:str, interval:int, num_proc:int) -> int:
     """
     lemma: "Activation steering identifies error subspaces"
     corollary: "that's why lang transfer works, subspaces in common between langs"
@@ -96,28 +100,43 @@ def RQ1(model:str, results:Path, lang:str, interval:int, num_proc:int=40) -> int
     1. when num `typechecks before` is high, steering success is low.
         + the fim type is a subtype of fim_type 
     """
-    df_success,_ = load_success_data(model, num_proc, results, lang=lang, interval=interval)
-    _df = df_success.groupby("mutations").agg({"test_mean_succ":"max","start_layer":"first"}
-                                              ).to_dict(orient="list")
-    muts_to_best_layer = {k:v for (k,v) in zip(_df["mutations"], _df["start_layer"])}
-    
-    all_error_dfs = []
-    for m in ALL_MUTATIONS:
-        edf = load_errors_data(
-                model, num_proc, results, mutation=m, 
-                start_layer=muts_to_best_layer[m], 
-                lang=lang, interval=interval
-            )
-        all_error_dfs.append(edf)
-    all_error_dfs = pd.concat(all_error_dfs, axis=0)
-    
-    # 1. when num `typechecks before` is high, steering success is low.
+    df_steer_succ_data,_ = load_success_data(model, num_proc, results, lang=lang, interval=interval)
+    print(df_steer_succ_data)
+
+    all_results = []
+    edfs = []
+    loader = ResultsLoader(Path(results).exists(), cache_dir=results)
+    steering_success_x,typechecks_before_y = [],[]
+    for m in tqdm(ALL_MUTATIONS, desc="Processing muts"):
+        # get most performant layer
+        mut_df = df_steer_succ_data[df_steer_succ_data["mutations"] == m].reset_index()
+        best_layer = mut_df["start_layer"].iloc[mut_df["test_mean_succ"].idxmax()]
+        keys = ResultKeys(model=model, lang=lang, interval=interval, mutation=m, start_layer=best_layer)
+        print(keys)
+        # load and get errors before/after steering for best layer
+        results = loader.load_data(keys)
+        all_results += results
+        edf = pd.concat([r.to_errors_dataframe("test", num_proc, True) for r in results], axis=0)
+        edf["mutation"] = m
+        edfs.append(edf)
+        cprob = conditional_prob("typechecks_before","steering_success", edf)
+        print(cprob)
+        steering_success_x.append(cprob.prob_a)
+        typechecks_before_y.append(cprob.prob_b)
+        
+    all_error_dfs = pd.concat(edfs, axis=0)
+
+    # 1. when num `typechecks before` is high, steering success is low. Expect an inverse correlation
     df_muts = all_error_dfs.groupby("mutation").agg({"steering_success":"mean", "typechecks_before": "sum"})
     print("Correlation typechecks_before and steering success: ", \
             correlation(df_muts, "typechecks_before", "steering_success"))
     
-    cprob = conditional_prob("steering_success", "typechecks_before", df_muts)
+    cprob = conditional_prob("steering_success", "typechecks_before", all_error_dfs)
     print(cprob)
+
+    with open("rq1.csv", "a") as fp:
+        writer = csv.writer(fp)
+        writer.writerow([model, steering_success_x, typechecks_before_y, lang])
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -129,6 +148,7 @@ if __name__ == "__main__":
     subparser_rq1.add_argument("--results", required=True, type=Path)
     subparser_rq1.add_argument("--lang", required=True, choices=["py","ts"])
     subparser_rq1.add_argument("--interval", required=True, type=int, choices=[1,3,5])
+    subparser_rq1.add_argument("--num-proc", type=int, default=40)
 
     args = parser.parse_args()
     args = vars(args)
@@ -151,23 +171,3 @@ if __name__ == "__main__":
     # args = parser.parse_args()
     # main_with_args(**vars(args))
 
-
-"""
-PYTESTS
-"""
-
-def test_remove_warnings():
-    error = '''\n:29:9 - information: Analysis of function \"validate\" is skipped\
-\ because it is unannotated\n:75:9 - information: Analysis of function \"serialize\"\
-\ is skipped because it is unannotated\n:103:9 - information: Analysis of function\
-\ \"__len__\" is skipped because it is unannotated\n:106:9 - information: Analysis\
-\ of function \"__setitem__\" is skipped because it is unannotated\n:121:13
-\ - error: Module cannot be used as a type (reportGeneralTypeIssues)\n:133:9 - information:\
-\ Analysis of function \"validate\" is skipped because it is unannotated\n1 error,\
-\ 0 warnings, 5 informations \nWARNING: there is a new pyright version available\
-\ (v1.1.388 -> v1.1.390).\nPlease install the new version or set PYRIGHT_PYTHON_FORCE_VERSION\
-\ to `latest`\n\n\n
-'''
-    output = remove_warnings(error, "py")
-    expected = 'Module cannot be used as a type (reportGeneralTypeIssues)'
-    assert output.strip() == expected.strip()
