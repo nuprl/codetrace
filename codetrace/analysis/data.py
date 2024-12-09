@@ -12,6 +12,8 @@ import os
 import subprocess
 import itertools as it
 from multiprocessing import Pool
+from codetrace.scripts.typecheck_ds import multiproc_typecheck
+import re
 
 MUTATIONS_RENAMED = {
     "types": "Rename types",
@@ -26,9 +28,25 @@ ALL_MODELS = ["qwen2p5_coder_7b_base","CodeLlama-7b-Instruct-hf","starcoderbase-
               "Llama-3.2-3B-Instruct"]
 
 ALL_MUTATIONS = MUTATIONS_RENAMED.keys()
+
 """
-Layers and languages
+Parsing layers, models, languages
 """
+
+def remove_filename(text: str, lang_ext: str) -> str:
+    return re.sub(r".*?\.{lang}".format(lang=lang_ext), "", text)
+ 
+def remove_warnings(error: str, lang:str) -> str:
+    if lang == "py":
+        error_list = error.split("\n")
+        return "\n".join([e.split("- error:")[-1].strip() for e 
+                          in error_list if "- error:" in e])
+    elif lang == "ts":
+        error_list = re.split(r"(: error TS\d+)",error)
+        return "\n".join([e.replace(": ","") for e in error_list if "error TS" in e])
+    else:
+        raise NotImplementedError(lang)
+    
 def get_model_name(name: str)->Optional[str]:
     for model in ALL_MODELS:
         if model in name.lower():
@@ -83,6 +101,26 @@ class SteerResult:
 
     def __getitem__(self, key:str):
         return getattr(self,key)
+
+    @property
+    def subset(self) -> str:
+        return self.name.name if isinstance(self.name, Path) else self.name
+    
+    @property
+    def lang(self) -> str:
+        lang = self.subset.split("-")[1]
+        assert lang in ["py","ts"]
+        return lang
+    
+    @property
+    def mutations(self) -> str:
+        muts = self.subset.split("-")[2]
+        assert muts in ALL_MUTATIONS
+        return muts
+    
+    @property
+    def layers(self) -> str:
+        return self.subset.split("-")[3]
     
     @classmethod
     def from_local(cls, path:Path) -> "SteerResult":
@@ -115,10 +153,8 @@ class SteerResult:
         return missing
     
     def to_success_dataframe(self) -> pd.DataFrame:
-        name = self.name.name if isinstance(self.name, Path) else name
-        names = name.split("-")
-        lang, mutations, layers = names[1],names[2],names[3]
-        num_layers = len(layers.split("_"))
+        name = self.subset
+        num_layers = len(self.layers.split("_"))
 
         all_dfs = []
         for split in ["test","rand","steer"]:
@@ -129,12 +165,54 @@ class SteerResult:
                 all_dfs.append(df)
 
         df = pd.concat(all_dfs, axis=1)
-        df["lang"] = lang
-        df["mutations"] = mutations
-        df["layers"] = layers
-        df["start_layer"] = int(layers.split("_")[0])
+        df["lang"] = self.lang
+        df["mutations"] = self.mutations
+        df["layers"] = self.layers
+        df["start_layer"] = int(self.layers.split("_")[0])
         df["model"] = get_model_name(name)
         df["num_layers"] = num_layers
+        return df
+    
+    def to_errors_dataframe(self, num_proc:int = 10) -> pd.DataFrame:
+        COLUMNS = ["steering_success","typechecks_before","typechecks_after", 
+           "errors_before", "errors_after","fim_type","change","program"]
+        ds = ds.map(lambda x: 
+                {**x, 
+                "change": (x['mutated_generated_text'],x['steered_predictions']),
+                "_before_steering_prog": x["mutated_program"].replace("<FILL>", x["mutated_generated_text"]),
+                "_after_steering_prog":  x["mutated_program"].replace("<FILL>", x["steered_predictions"]),
+                "steering_success": x["fim_type"] == x["steered_predictions"]
+            }, num_proc=num_proc)
+    
+        # remove typechecks cols for safety
+        ds = ds.remove_columns(["typechecks","errors"])
+        
+        # typecheck before/after steer
+        result_before = multiproc_typecheck(ds, num_proc, lang=self.lang, colname="_before_steering_prog")
+        result_after = multiproc_typecheck(ds, num_proc, lang=self.lang, colname="_after_steering_prog")
+        before_df = pd.DataFrame.from_records(result_before).rename(
+            columns={"typechecks":"typechecks_before","errors":"errors_before"})
+        after_df = pd.DataFrame.from_records(result_after).rename(
+            columns={"typechecks":"typechecks_after","errors":"errors_after"})
+        
+        # merge into one dataset
+        df = pd.merge(before_df, after_df, 
+                      on=["_before_steering_prog","_after_steering_prog","mutated_program"])
+        assert list(df["steering_success_x"]) == list(df["steering_success_y"])
+        assert list(df["fim_type_x"]) == list(df["fim_type_y"])
+        df = df.rename(columns={
+                "mutation": self.mutations,
+                "steering_success_x":"steering_success", 
+                "mutated_program_x":"program",
+                "change_x": "change",
+                "fim_type_x": "fim_type"
+            })
+        df = df[COLUMNS]
+        
+        for label in ["errors_before","errors_after"]:
+            df[label] = df[label].apply(
+                lambda x: remove_warnings(remove_filename(x, self.lang), self.lang) 
+                        if isinstance(x, str) else "")
         return df
 
 @dataclass
@@ -157,7 +235,7 @@ class ResultKwargs:
     
     def expand(self) -> List[Tuple]:
         assert not self.interval or self.interval in [1,3,5]
-        assert not self.interval or self.start_layer <= model_n_layer(self.model)-self.interval
+        assert not self.start_layer or self.start_layer <= model_n_layer(self.model)-self.interval
         model = self.model
         lang = self.get("lang",None)
         start_layer = self.get("start_layer",None)
@@ -269,10 +347,14 @@ def build_success_df(df: pd.DataFrame) -> pd.DataFrame:
 """
 Loading scripts
 """
-def to_success_dataframe(x):
+def _to_success_dataframe(x:SteerResult):
     return x.to_success_dataframe()
-def missing_results(x):
+
+def _missing_results(x: SteerResult):
     return x.missing_results()
+
+def _to_errors_dataframe(x: SteerResult):
+    return x.to_errors_dataframe()
 
 def load_success_data(
     model:str, 
@@ -284,18 +366,50 @@ def load_success_data(
     results = loader.load_data(ResultKwargs(model=model, **keys))
     with Pool(num_proc) as p, tqdm(total=len(results)) as pbar:
         all_dfs = []
-        for result in p.imap(to_success_dataframe, results):
+        for result in p.imap(_to_success_dataframe, results):
             pbar.update()
             pbar.refresh()
             all_dfs.append(result)
-        missing_test_results = p.map(missing_results, results)
+        missing_test_results = p.map(_missing_results, results)
     
     return pd.concat(all_dfs), list(it.chain(*missing_test_results))
+
+def load_errors_data(
+    model:str, 
+    num_proc:int,
+    cache_dir: Optional[Path]=None,
+    **keys,
+) ->Tuple[pd.DataFrame,List[str]]:
+    loader = ResultsLoader(Path(cache_dir).exists(), cache_dir=cache_dir)
+    results = loader.load_data(ResultKwargs(model=model, **keys))
+    with Pool(num_proc) as p, tqdm(total=len(results)) as pbar:
+        all_dfs = []
+        for result in p.imap(_to_errors_dataframe, results):
+            pbar.update()
+            pbar.refresh()
+            all_dfs.append(result)
+    
+    return pd.concat(all_dfs, axis=0)
 
 """
 Metrics
 """
-CondProb = namedtuple("ContionalProbability",["a","b","a_and_b","a_given_b", "num_a", "num_b", "total"])
+@dataclass
+class CondProb:
+    prob_a : float
+    prob_b : float
+    prob_a_and_b : float
+    prob_a_given_b : float
+    num_a : int
+    num_b : int
+    total : int
+    label_a : str
+    label_b : str
+
+    def __repr__(self):
+        probs_str = f"""P({self.label_a} | {self.label_b}) = P({self.prob_a_and_b}) / P({self.prob_b}) 
+        = {self.prob_a_given_b}"""
+        return f"[{self.total} samples] {probs_str}"
     
 def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame) -> CondProb:
     """
@@ -309,7 +423,7 @@ def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame) -> CondProb:
     prob_anb = (df[var_a] & df[var_b]).mean()
     prob_a_given_b = 0 if prob_anb == 0 else prob_anb / prob_b
     return CondProb(prob_a, prob_b, prob_anb, prob_a_given_b, 
-                    df[var_a].sum(), df[var_b].sum(), len(df))
+                    df[var_a].sum(), df[var_b].sum(), len(df), var_a, var_b)
 
 def correlation(df: pd.DataFrame, var_a:str, var_b:str):
     return stats.pearsonr(df[var_a], df[var_b])
