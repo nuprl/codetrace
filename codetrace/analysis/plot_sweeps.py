@@ -1,0 +1,158 @@
+from matplotlib import pyplot as plt
+import seaborn as sns
+import pandas as pd
+import json
+from pathlib import Path
+import argparse
+import datasets
+import sys
+import os
+from typing import Optional,Dict,List
+from tqdm import tqdm
+import sys
+from codetrace.analysis.data import load_results, MUTATIONS_RENAMED,full_language_name, model_n_layer
+
+# We have several directories named results/steering-LANG-MUTATIONS-LAYERS-MODEL.
+# Within each of these directories, there are files called test_results.json.
+# Each test_results.json has fields called total and num_succ. Read all of these
+# into a pandas dataframe.
+
+"""
+Plotting
+"""
+def plot_steering_results(
+    df: pd.DataFrame, 
+    interval: int, 
+    fig_file: Optional[str] = None, 
+    n_layer: int = None,
+    steer_label:str = "Steering",
+    test_label:str = "Test",
+    rand_label:str = "Random"
+):
+    df = df.reset_index()
+    df = df[df["num_layers"] == interval]
+    mutations = df["mutations"].unique()
+    mutations = sorted(mutations)
+    num_mutations = len(mutations)
+    num_cols = 3
+    num_rows = (num_mutations + num_cols - 1) // num_cols
+
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 4 * num_rows), sharex=True, sharey=True)
+    axes = axes.flatten()
+    for i, mutation in enumerate(mutations):
+        subset = df[df["mutations"] == mutation]
+
+                # Plot Test line
+        test_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="mean_succ", label=test_label)
+        max_test = subset["mean_succ"].max()
+        test_color = test_plot.get_lines()[-1].get_color()  # Extract color from the last line
+        axes[i].hlines(y=max_test, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
+                       colors=test_color, linestyles='dashed', label=f"{test_label} Max")
+
+        # Plot Steering line if the column exists
+        if "steering_mean_succ" in subset.columns:
+            steering_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="steering_mean_succ", 
+                                         label=steer_label)
+            max_steering = subset["steering_mean_succ"].max()
+            steering_color = steering_plot.get_lines()[-1].get_color()  # Extract color
+            axes[i].hlines(y=max_steering, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
+                           colors=steering_color, linestyles='dashed', label=f"{steer_label} Max")
+
+        # Plot Random line
+        random_plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y="rand_mean_succ", label=rand_label)
+        max_random = subset["rand_mean_succ"].max()
+        random_color = random_plot.get_lines()[-1].get_color()  # Extract color
+        axes[i].hlines(y=max_random, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
+                       colors=random_color, linestyles='dashed', label=f"{rand_label} Max")
+
+        axes[i].set_title(mutation)
+        axes[i].set_xlabel("Patch layer start")
+        axes[i].set_ylabel("Accuracy")
+        axes[i].set_ylim(0, 1)  # Set y-axis range from 0 to 1
+        if not n_layer:
+            axes[i].set_xticks(range(int(df["start_layer"].min()), int(df["start_layer"].max()) + 1, 1))
+        else:
+            axes[i].set_xticks(range(0, n_layer-interval+1, 1))
+        axes[i].tick_params(axis='x', rotation=45)
+        axes[i].grid(True, which='major', linestyle='-', linewidth=0.5, color='lightgrey')
+        axes[i].legend(loc='best')
+
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    fig.suptitle(f"{interval} patched layers", fontsize=16)
+
+    plt.tight_layout()
+    if n_layer:
+        plt.xlim(0, n_layer-interval+1)
+    if fig_file:
+        plt.savefig(fig_file)
+    else:
+        plt.show()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("command", choices=["mutations","precomputed","lang_transfer"])
+    parser.add_argument("--lang", type=str, 
+                                 help="For lang transfer, this is language tested on, not of the steering tensor")
+    parser.add_argument("--model", type=str)
+    parser.add_argument("--results-dir", type=Path)
+    parser.add_argument("--outfile", type=Path)
+    parser.add_argument("--interval", type=int, nargs="+", default=[1,3,5])
+
+    args = parser.parse_args()
+    label_kwargs = {}
+
+    if args.command == "mutations":
+        df, missing_test_results = load_results(args.lang,args.model,args.results_dir)
+        print(missing_test_results)
+
+        df_pretty = df.copy()
+        df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
+        print(df_pretty["mutations"].value_counts())
+        df_pretty = df_pretty.sort_values(["mutations","layers"])
+
+    elif args.command == "precomputed":
+        df, missing_test_results = load_results(
+            args.lang,
+            args.model,
+            args.interval,
+            args.results_dir,
+        )
+        # no steer for precomputed
+        missing_test_results = [m for m in missing_test_results if "/steer" not in m]
+        print(missing_test_results)
+
+        df_pretty = df.copy()
+        df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
+        print(df_pretty["mutations"].value_counts())
+        df_pretty = df_pretty.sort_values(["mutations","layers"])
+
+    elif args.command == "lang_transfer":
+        df, missing_test_results = load_results(args.lang,args.model,args.results_dir)
+        # keep only rand col
+        df_layer_sweep = df[["rand_mean_succ","start_layer","mutations",
+                             "layers","num_layers","mean_succ"]]
+        df_layer_sweep = df_layer_sweep.rename(columns={"mean_succ":"steering_mean_succ"}, errors="raise")
+        
+        steering_lang = 'py' if args.lang=='ts' else 'ts'
+        df, missing_test_results = load_results(args.lang,args.model,args.results_dir, prefix=f"lang_transfer_{steering_lang}_")
+        
+        df_lang_transfer = df[["mean_succ","start_layer","mutations","layers","num_layers"]]
+        # no steer for precomputed
+        df = pd.merge(df_lang_transfer,df_layer_sweep, 
+                      on=["start_layer", "layers","mutations","num_layers"]).reset_index()
+        df_pretty = df.copy()
+        df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
+        print(df_pretty["mutations"].value_counts())
+        df_pretty = df_pretty.sort_values(["mutations","layers"])
+        label_kwargs = {"steer_label": f"Original {full_language_name(args.lang)}", "test_label": full_language_name(steering_lang)}
+    else:
+        raise NotImplementedError("Task not implemented.")
+    
+    outfile = args.outfile.as_posix()
+
+    for i in args.interval:
+        print(f"Plotting interval {i}")
+        plot_steering_results(df_pretty, i, outfile.replace(".pdf",f"_{i}.pdf"), 
+                              model_n_layer(args.model), **label_kwargs)
