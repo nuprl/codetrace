@@ -95,6 +95,8 @@ def num_available_devices():
 def load_dataset(ds: str, split:str=None, **hub_kwargs) -> datasets.Dataset:
     if ds.endswith(".csv"):
         ds = datasets.Dataset.from_csv(ds)
+    elif ds.endswith(".parquet"):
+        ds = datasets.Dataset.from_parquet(ds)
     elif os.path.exists(ds):
         ds = datasets.load_from_disk(ds)
     else:
