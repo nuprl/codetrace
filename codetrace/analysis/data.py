@@ -224,9 +224,9 @@ class SteerResult(HashableClass):
         for label in ["errors_before","errors_after"]:
             df[label] = df[label].apply(
                 lambda x: remove_warnings(remove_filename(x, self.lang), self.lang) 
-                    if isinstance(x, str) else str(x))
+                    if isinstance(x, str) else "")
         return df
-
+q
 @dataclass
 class ResultKeys(HashableClass):
     model:str
