@@ -14,6 +14,7 @@
 import argparse
 import subprocess
 from pathlib import Path
+
 def get_ranges(num_layers: int, interval: int):
     for i in range(0, num_layers):
         if i + interval <= num_layers:

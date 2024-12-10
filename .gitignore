@@ -9,6 +9,8 @@ log/
 job*/
 wandb/
 **/_*
+**/figures
+**/cache
 
 # Notebooks
 **/*.ipynb

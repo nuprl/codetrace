@@ -16,6 +16,7 @@ import torch
 from typing import Optional
 import datasets
 import subprocess
+import shutil
 
 DESCRIPTION = """
 Start steering with a precomputed steering tensor and test set (already preprocessed, deduplicated,
