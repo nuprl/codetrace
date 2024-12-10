@@ -166,8 +166,7 @@ def RQ1(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> in
     # 2. the fim type is a subtype of gold fim_type in the cases where steering success is low
     # simply save type before, type after, subset data, success_data
     data = all_error_dfs.copy()
-    data = data[["change","fim_type","steering_success","mutation","typechecks_before",
-                 "typechecks_after","errors_before","mutated_program"]]
+    data = data[["change","fim_type","steering_success","mutation","typechecks_before","typechecks_after"]]
     data["model"] = model
     data["lang"] = lang
     data["interval"] = interval

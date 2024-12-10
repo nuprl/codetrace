@@ -226,7 +226,7 @@ class SteerResult(HashableClass):
                 lambda x: remove_warnings(remove_filename(x, self.lang), self.lang) 
                     if isinstance(x, str) else "")
         return df
-q
+
 @dataclass
 class ResultKeys(HashableClass):
     model:str
