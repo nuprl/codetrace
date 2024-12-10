@@ -235,4 +235,5 @@ if __name__ == "__main__":
     repeat_test(test_collect_at_token_idx4, args.num_reps)
     repeat_test(test_collect_at_token_idx5, args.num_reps)
     repeat_test(test_interp_patch, args.num_reps)
+    test_prepare_layer_patch()
     print("All tests passed!")

@@ -32,7 +32,7 @@ def request_vllm_generations(
     sampling_params: SamplingParams,
     **kwargs
 ) -> Union[List[RequestOutput],AsyncGenerator[None,RequestOutput]]:
-    return llm.generate(prompts, sampling_params, **kwargs)
+    return llm.generate(prompts, sampling_params=sampling_params, **kwargs)
 
 def request_vllm_chat(
     llm: LLM,
@@ -47,7 +47,7 @@ def request_vllm_chat(
     if not chat_template:
         raise ValueError("Model does not have chat template! Make sure you have the instruct version of the model.")
     
-    return llm.chat(prompts, sampling_params, chat_template=chat_template,
+    return llm.chat(prompts, sampling_params=sampling_params, chat_template=chat_template,
                     continue_final_message=True, add_generation_prompt=False,**kwargs)
 
 def request_vllm_completions(

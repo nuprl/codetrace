@@ -15,6 +15,7 @@ from codetrace.utils import print_color
 import pickle
 from functools import wraps
 from codetrace.analysis.utils import (
+    ANALYSIS_CACHE_DIR,
     ALL_MUTATIONS, 
     ALL_MODELS,
     MUTATIONS_RENAMED,
@@ -357,15 +358,18 @@ class ResultsLoader:
 """
 Loading scripts
 """
+@cache_to_dir(ANALYSIS_CACHE_DIR)
 def _to_success_dataframe(x:SteerResult):
     return x.to_success_dataframe()
 
+@cache_to_dir(ANALYSIS_CACHE_DIR)
 def _missing_results(x: SteerResult):
     return x.missing_results()
 
 def build_success_data(results:List[SteerResult], num_proc:int) ->Tuple[pd.DataFrame,List[str]]:
     
-    with Pool(num_proc) as p, tqdm(total=len(results)) as pbar:
+    with Pool(num_proc) as p, tqdm(total=len(results), disable=True) as pbar:
+        # tqdm only displays send job progress bar, not actual running
         all_dfs = []
         for result in p.imap(_to_success_dataframe, results):
             pbar.update()
@@ -403,16 +407,6 @@ def test_result_loader():
     # print(results)
     for m in ALL_MUTATIONS:
         assert (Path(cache_dir) / f"steering-ts-{m}-27-qwen2p5_coder_7b_base").exists()
-    
-def test_load_data():
-    df, missing = load_success_data("qwen2p5_coder_7b_base", 10, "/mnt/ssd/franlucc/scratch/type-steering-results")
-    print(df)
-    print(missing)
-    assert len(df) > 0
-    df, missing = load_success_data("qwen2p5_coder_7b_base", 10, None)
-    print(df)
-    print(missing)
-    assert len(df) > 0
 
 @cache_to_dir("/tmp/test_caching_codetrace")
 def _save(item):

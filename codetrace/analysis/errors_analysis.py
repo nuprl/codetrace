@@ -17,6 +17,7 @@ Given a model, lang, mut and MAX SUCCESS RATE layer
 import os
 import csv
 from tqdm import tqdm
+import numpy as np
 import argparse
 from typing import Optional,List,Dict,Any,Union
 from codetrace.utils import load_dataset, print_color
@@ -39,7 +40,7 @@ def log_to_csv(data: Union[Dict[str,Any],List[Dict[str,Any]]], fname:str):
     else:
         mode,do_header = "w",True
     
-    with open(results_csv, mode) as fp:
+    with open(results_csv, mode, encoding='utf-8') as fp:
         keys = (data[0] if isinstance(data, list) else data).keys()
         writer = csv.DictWriter(fp, fieldnames=keys)
         if do_header:
@@ -101,6 +102,30 @@ def analyze_steering_effect_on_errors(
 
     # print("SUCC DID NOT SOLVE THESE ERRORS", set(errors_failed).difference(set(errors_solved)))
 
+# def RQ3(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> int:
+#     """
+#     lemma: "Activation steering identifies error subspaces"
+#     corollary: "that's why lang transfer works, subspaces in common between langs"
+
+#     Given a model, lang, mut and MAX SUCCESS RATE layer
+
+#     3. changes present in steer and present in test (pre_steer->post_steer)
+#     do this also for a lang transfer experiment
+#     """
+#     pass
+
+# def RQ2(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> int:
+#     """
+#     lemma: "Activation steering identifies error subspaces"
+#     corollary: "that's why lang transfer works, subspaces in common between langs"
+
+#     Given a model, lang, mut and MAX SUCCESS RATE layer
+
+#     2. the type before is "more general" when success is low
+#     Turn into bubble plot
+#     """
+#     pass
+
 @cache_to_dir(ANALYSIS_CACHE_DIR)
 def cached_to_errors_df(result: SteerResult, split:str)->List[SteerResult]:
     return result.to_errors_dataframe(split, True)
@@ -113,7 +138,6 @@ def RQ1(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> in
     Given a model, lang, mut and MAX SUCCESS RATE layer
 
     1. when num `typechecks before` is high, steering success is low.
-    2. the fim type is a subtype of gold fim_type in the cases where steering success is low
     """
     all_results = []
     edfs = []
@@ -122,7 +146,6 @@ def RQ1(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> in
     for m in tqdm(ALL_MUTATIONS, desc="Processing muts"):
         # load all data
         keys = ResultKeys(model=model, lang=lang, interval=interval, mutation=m)
-        print(keys)
         results = loader.load_data(keys)
 
         # get most performant layer
@@ -130,19 +153,22 @@ def RQ1(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> in
             mut_succ_df,_ = build_success_data(results, num_proc)
         except:
             print_color(f"Failed to collect {m}", "red")
-            steering_success_x.append(-1)
-            typechecks_before_y.append(-1)
+            steering_success_x.append(np.nan)
+            typechecks_before_y.append(np.nan)
             continue
         
         # load best layer data
-        best_layer = mut_succ_df["start_layer"].iloc[mut_succ_df["test_mean_succ"].idxmax()]
+        mut_succ_df = mut_succ_df.reset_index()
+        best_layer = mut_succ_df.iloc[mut_succ_df["test_mean_succ"].idxmax()]["start_layer"]
 
-        results = loader.load_data(ResultKeys(**{**keys.to_dict(), "start_layer":best_layer}))
+        keys = ResultKeys(**{**keys.to_dict(), "start_layer":best_layer})
+        assert keys.start_layer > 0
+        results = loader.load_data(keys)
         all_results += results
         for idx,r in enumerate(results):
             r.set_num_proc(num_proc)
             results[idx] = cached_to_errors_df(r, "test")
-            
+
         edf = pd.concat(results, axis=0)
         edf["mutation"] = m
         edfs.append(edf)
