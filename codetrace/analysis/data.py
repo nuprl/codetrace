@@ -1,21 +1,29 @@
-from functools import partial
-import pandas as pd
-import datasets
-from scipy import stats
-from collections import namedtuple
-from codetrace.fast_utils import batched_apply, make_batches
-from codetrace.utils import print_color
-from typing import Dict,List,Tuple,Optional,TypedDict,Set
-from pathlib import Path
-from tqdm import tqdm
-from dataclasses import dataclass
-from huggingface_hub import hf_hub_download
 import os
 import subprocess
 import itertools as it
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from codetrace.scripts.typecheck_ds import multiproc_typecheck
 import re
+from abc import ABC,abstractmethod
+from typing import Optional,List,Tuple,Dict,Set
+import datasets
+from dataclasses import dataclass
+from pathlib import Path
+import pandas as pd
+from tqdm import tqdm
+from codetrace.utils import print_color
+import pickle
+from functools import wraps
+from codetrace.analysis.utils import (
+    ALL_MUTATIONS, 
+    ALL_MODELS,
+    MUTATIONS_RENAMED,
+    build_success_df,
+    model_n_layer,
+    get_model_name,
+    remove_warnings,
+    remove_filename
+)
 
 HELP="""
 Contains *efficient* loading and data processing script for dealing with results
@@ -27,92 +35,80 @@ values of key (eg. if 'mutations' is not passed, will load all)
 See `test_result_loader` for how to load data.
 """.strip()
 
-MUTATIONS_RENAMED = {
-    "types": "Rename types",
-    "vars": "Rename variables",
-    "delete": "Remove type annotations",
-    "types_vars": "Rename types and variables",
-    "types_delete": "Rename types and remove type annotations",
-    "vars_delete": "Rename variables and remove type annotations",
-    "delete_vars_types": "All edits",
-}
-ALL_MODELS = ["qwen2p5_coder_7b_base","CodeLlama-7b-Instruct-hf","starcoderbase-1b","starcoderbase-7b",
-              "Llama-3.2-3B-Instruct"]
-
-ALL_MUTATIONS = MUTATIONS_RENAMED.keys()
-
 """
-Parsing layers, models, languages
+Ccahing helpers
 """
 
-def remove_filename(text: str, lang_ext: str) -> str:
-    return re.sub(r".*?\.{lang}".format(lang=lang_ext), "", text)
- 
-def remove_warnings(error: str, lang:str) -> str:
-    if lang == "py":
-        error_list = error.split("\n")
-        return "\n".join([e.split("- error:")[-1].strip() for e 
-                          in error_list if "- error:" in e])
-    elif lang == "ts":
-        error_list = re.split(r"(: error TS\d+)",error)
-        return "\n".join([e.replace(": ","") for e in error_list if "error TS" in e])
-    else:
-        raise NotImplementedError(lang)
+def cache_to_dir(cache_dir):
+    """
+    A decorator to cache function results to a specified directory.
     
-def get_model_name(name: str)->Optional[str]:
-    for model in ALL_MODELS:
-        if model in name.lower():
-            return model
-    raise ValueError(f"Name {model} not found")
+    Parameters:
+        cache_dir (str): The directory where cache files are stored.
+    """
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
 
-def full_language_name(lang: str) ->str:
-    if lang == "py":
-        return "Python"
-    elif lang == "ts":
-        return "TypeScript"
-    else:
-        raise ValueError(f"Not found {lang}")
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Create a unique filename based on function name and arguments
+            cache_key = f"{func.__name__}_{hash((args, frozenset(kwargs.items())))}.pkl"
+            cache_path = os.path.join(cache_dir, cache_key)
+            
+            # Check if the result is already cached
+            if os.path.exists(cache_path):
+                print(f"Loading cached result for {func.__name__} from {cache_path}")
+                with open(cache_path, 'rb') as f:
+                    return pickle.load(f)
+            
+            # Compute the result and save it to the cache
+            print(f"Computing result for {func.__name__} and caching to {cache_path}")
+            result = func(*args, **kwargs)
+            with open(cache_path, 'wb') as f:
+                pickle.dump(result, f)
+            return result
+        
+        return wrapper
+    
+    return decorator
 
-def get_ranges(num_layers: int, interval: int):
-    for i in range(0, num_layers):
-        if i + interval <= num_layers:
-            yield "_".join(map(str, range(i, i + interval)))
+class HashableClass(ABC):
+    @property
+    @abstractmethod
+    def _identifying_key(self):
+        pass
 
-def all_subsets(lang:str, model:str, n_layers:int, interval:int):
-    subsets = []
-    ranges = get_ranges(n_layers, interval)
-    for r in ranges:
-        for m in MUTATIONS_RENAMED.keys():
-            subsets.append(f"steering-{lang}-{m}-{r}-{model}")
-    return subsets
-
-def model_n_layer(model: str) -> int:
-    if "qwen" in model.lower():
-        return 28
-    elif "codellama" in model.lower():
-        return 32
-    elif "starcoderbase-1b" in model.lower():
-        return 24
-    elif "starcoderbase-7b" in model.lower():
-        return 42
-    elif "llama" in model.lower():
-        return 28
-    else:
-        raise NotImplementedError(f"Model {model} model_n_layer not implemented!")
+    def __hash__(self):
+        return hash(self._identifying_key)
+    
+    def __eq__(self, other: "HashableClass"):
+        return self._identifying_key == other._identifying_key
 
 """
 Results loading code
 """
 
 @dataclass
-class SteerResult:
+class SteerResult(HashableClass):
     name: str
     test: Optional[datasets.Dataset] = None
     rand: Optional[datasets.Dataset] = None
     steer: Optional[datasets.Dataset] = None
 
+    _num_proc: Optional[int] = None
+    __hash__ = HashableClass.__hash__
+    __eq__ = HashableClass.__eq__
+
+    @property
+    def _identifying_key(self) -> Tuple:
+        return (self.name,bool(self.test),bool(self.rand),bool(self.steer))
+
     def __getitem__(self, key:str):
         return getattr(self,key)
+
+    def set_num_proc(self,num_proc: int):
+        self._num_proc = num_proc
 
     @property
     def subset(self) -> str:
@@ -153,7 +149,7 @@ class SteerResult:
         elif (path / "steer_steering_results").exists():
             steer = datasets.load_from_disk((path / "steer_steering_results").as_posix())
         
-        return cls(path,test,rand,steer)
+        return cls(path,test=test,rand=rand,steer=steer)
 
     def missing_results(self) -> str:
         missing = []
@@ -185,7 +181,8 @@ class SteerResult:
         df["num_layers"] = num_layers
         return df
     
-    def to_errors_dataframe(self, split:str, num_proc:int, disable_tqdm:bool=True) -> pd.DataFrame:
+    def to_errors_dataframe(self, split:str, disable_tqdm:bool=True) -> pd.DataFrame:
+        num_proc = (self._num_proc or cpu_count())
         COLUMNS = ["steering_success","typechecks_before","typechecks_after", 
            "errors_before", "errors_after","fim_type","change","mutated_program"]
         ds = self[split].map(lambda x: 
@@ -231,13 +228,19 @@ class SteerResult:
         return df
 
 @dataclass
-class ResultKeys:
+class ResultKeys(HashableClass):
     model:str
     lang:Optional[str]=None
     start_layer:Optional[int]=None
     mutation:Optional[str]=None
     interval:Optional[int]=None
     prefix:Optional[str]=None
+
+    __hash__ = HashableClass.__hash__
+    __eq__ = HashableClass.__eq__
+    @property
+    def _identifying_key(self) -> Tuple:
+        return (self.model,self.lang,self.start_layer,self.mutation,self.interval,self.prefix)
 
     def __getitem__(self, key:str):
         return getattr(self,key)
@@ -286,14 +289,14 @@ class ResultsLoader:
     auth_token: Optional[str] = None
     cache_dir: Optional[str] = None
     _prefetched: Set[Tuple[str]] = set()
-
+    
     def __init__(self, 
         local: bool, 
         auth_token : Optional[str] = None, 
         cache_dir: Optional[str] = None
     ):
         self.local = local
-        self.auth_token = (auth_token or os.environ["HF_AUTH_TOKEN"])
+        self.auth_token = (local or auth_token or os.environ["HF_AUTH_TOKEN"])
         if not cache_dir:
             cache_dir = "/tmp/codetrace_results_loader"
             if Path(cache_dir).exists():
@@ -346,18 +349,7 @@ class ResultsLoader:
             self.prefetch(keys)
         return [SteerResult.from_local( Path(self.cache_dir) / self.get_subset(*e)) 
                 for e in keys.expand()]
-        
-def build_success_df(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Given a dataset with "steered_predictions" and "fim_type"
-    build a dataset with success stats:
-        ["num_succ", "tot_succ", "mean_succ"]
-    """
-    df["succ"] = df["steered_predictions"] == df["fim_type"]
-    return pd.DataFrame.from_records([
-        {"num_succ":df["succ"].sum(), 
-         "tot_succ":df["succ"].count(),
-         "mean_succ":df["succ"].mean(),}])
+    
 
 """
 Loading scripts
@@ -398,45 +390,10 @@ def load_errors_data(
     results = loader.load_data(ResultKeys(model=model, **keys))
     all_dfs = []
     for r in tqdm(results, desc="Collecting errors with typechecker"):
-        all_dfs.append(r.to_errors_dataframe(split, num_proc))
+        r.set_num_proc(num_proc)
+        all_dfs.append(r.to_errors_dataframe(split))
     return pd.concat(all_dfs, axis=0)
 
-"""
-Metrics
-"""
-@dataclass
-class CondProb:
-    prob_a : float
-    prob_b : float
-    prob_a_and_b : float
-    prob_a_given_b : float
-    num_a : int
-    num_b : int
-    total : int
-    label_a : str
-    label_b : str
-
-    def __repr__(self):
-        label = f"P({self.label_a} | {self.label_b})"
-        probs_str = f"{label} = P({self.prob_a_and_b:.2f}) / P({self.prob_b:.2f}) = {self.prob_a_given_b:.2f}"
-        return f"[{self.total} samples] {probs_str}"
-    
-def conditional_prob(var_a: str, var_b: str, df: pd.DataFrame) -> CondProb:
-    """
-    probability of A|B
-    
-    P(A|B) = P(AnB)/P(B)
-    
-    """
-    prob_a = df[var_a].mean()
-    prob_b = df[var_b].mean()
-    prob_anb = (df[var_a] & df[var_b]).mean()
-    prob_a_given_b = 0 if prob_anb == 0 else prob_anb / prob_b
-    return CondProb(prob_a, prob_b, prob_anb, prob_a_given_b, 
-                    df[var_a].sum(), df[var_b].sum(), len(df), var_a, var_b)
-
-def correlation(df: pd.DataFrame, var_a:str, var_b:str):
-    return stats.pearsonr(df[var_a], df[var_b])
 
 """
 Tests
@@ -460,24 +417,21 @@ def test_load_data():
     print(missing)
     assert len(df) > 0
 
-def test_remove_warnings():
-    error = '''\n:29:9 - information: Analysis of function \"validate\" is skipped\
-\ because it is unannotated\n:75:9 - information: Analysis of function \"serialize\"\
-\ is skipped because it is unannotated\n:103:9 - information: Analysis of function\
-\ \"__len__\" is skipped because it is unannotated\n:106:9 - information: Analysis\
-\ of function \"__setitem__\" is skipped because it is unannotated\n:121:13
-\ - error: Module cannot be used as a type (reportGeneralTypeIssues)\n:133:9 - information:\
-\ Analysis of function \"validate\" is skipped because it is unannotated\n1 error,\
-\ 0 warnings, 5 informations \nWARNING: there is a new pyright version available\
-\ (v1.1.388 -> v1.1.390).\nPlease install the new version or set PYRIGHT_PYTHON_FORCE_VERSION\
-\ to `latest`\n\n\n
-'''
-    output = remove_warnings(error, "py")
-    expected = 'Module cannot be used as a type (reportGeneralTypeIssues)'
-    assert output.strip() == expected.strip()
+@cache_to_dir("/tmp/test_caching_codetrace")
+def _save(item):
+    return item
 
-if __name__ == "__main__":
-    # call all test fns
-    for key, value in globals().items():
-        if callable(value) and key.startswith('test_'):
-            value()
+def test_caching():
+    assert os.environ.get('PYTHONHASHSEED',None)=="42","Keep hash seed consistent for caching"
+    steer_result = SteerResult("beebboop",None,None,True)
+    result_keys = ResultKeys(model="model")
+    steer_result2 = SteerResult("beebboop",None,None,True)
+    result_keys2 = ResultKeys(model="model")
+
+    assert result_keys == result_keys2
+    assert steer_result == steer_result2
+    _save(result_keys)
+    _save(steer_result)
+    _save(steer_result2)
+    _save(result_keys2)
+    assert len([*Path("/tmp/test_caching_codetrace").glob("*.pkl")]) == 2
