@@ -47,9 +47,9 @@ def remove_warnings(error: str, lang:str) -> str:
     
 def get_model_name(name: str)->Optional[str]:
     for model in ALL_MODELS:
-        if model in name.lower():
+        if model.lower() in name.lower():
             return model
-    raise ValueError(f"Name {model} not found")
+    raise ValueError(f"Name {name} not found")
 
 def full_language_name(lang: str) ->str:
     if lang == "py":
