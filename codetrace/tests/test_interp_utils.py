@@ -7,7 +7,8 @@ from codetrace.interp_utils import (
     logit_lens,
     insert_patch,
     LogitResult,
-    TraceResult
+    TraceResult,
+    _prepare_layer_patch
 )
 from codetrace.utils import mask_target_idx, mask_target_tokens, predict, copy_decoder
 from codetrace.batched_utils import batched_get_averages, batched_insert_patch_logit
@@ -23,6 +24,22 @@ model = LanguageModel(args.modelname, device_map="cuda", torch_dtype=torch.bfloa
 """
 tests
 """
+def test_prepare_layer_patch():
+    tensor = torch.Tensor([ # 2 prompts, 3 toks, ndim 1
+        [[1.],[4.],[8.]],
+        [[7.],[2.],[6.]]
+    ])
+    patch = torch.Tensor([ # 2 prompts, 1 toks, ndim 1
+        [[9.]],
+        [[-1.]]
+    ])
+    expected = torch.Tensor([ # 2 prompts, 3 toks, ndim 1
+        [[0.],[0.],[9.]],
+        [[0.],[0.],[-1.]]
+    ])
+    output = _prepare_layer_patch(patch, n_tokens=tensor.shape[1])
+    assert torch.equal(output, expected),output
+
 def test_logit_pipeline():
     prompts = [
         'print(f',
@@ -207,14 +224,15 @@ def repeat_test(func, n, **kwargs):
         print(f"Running {func.__name__} {i+1}/{n}")
         func(**kwargs)
         
-# repeating tests multiple times ensures no precision errors in code
-repeat_test(test_logit_pipeline, args.num_reps)
-repeat_test(test_patch, args.num_reps)
-repeat_test(test_logit_generation_match, args.num_reps)
-repeat_test(test_collect_at_token_idx, args.num_reps)
-repeat_test(test_collect_at_token_idx2, args.num_reps)
-repeat_test(test_collect_at_token_idx3, args.num_reps)
-repeat_test(test_collect_at_token_idx4, args.num_reps)
-repeat_test(test_collect_at_token_idx5, args.num_reps)
-repeat_test(test_interp_patch, args.num_reps)
-print("All tests passed!")
+if __name__ == "__main__":
+    # repeating tests multiple times ensures no precision errors in code
+    repeat_test(test_logit_pipeline, args.num_reps)
+    repeat_test(test_patch, args.num_reps)
+    repeat_test(test_logit_generation_match, args.num_reps)
+    repeat_test(test_collect_at_token_idx, args.num_reps)
+    repeat_test(test_collect_at_token_idx2, args.num_reps)
+    repeat_test(test_collect_at_token_idx3, args.num_reps)
+    repeat_test(test_collect_at_token_idx4, args.num_reps)
+    repeat_test(test_collect_at_token_idx5, args.num_reps)
+    repeat_test(test_interp_patch, args.num_reps)
+    print("All tests passed!")
