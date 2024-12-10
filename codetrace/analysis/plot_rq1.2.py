@@ -17,10 +17,10 @@ scatter_df["mutations"] = scatter_df["mutations"].apply(ast.literal_eval)
 
 # Count occurrences of each type for the same (model, lang, mutation)
 bubble_grouped = bubble_df.groupby(["model", "lang", "mutation", "types"]).size().reset_index(name="count")
-max_indices = (
-    bubble_grouped.groupby(["model", "lang", "mutation"])["count"]
-    .transform(max) == bubble_grouped["count"]
-)
+# max_indices = (
+#     bubble_grouped.groupby(["model", "lang", "mutation"])["count"]
+#     .transform(max) == bubble_grouped["count"]
+# )
 
 bubble_grouped = (
     bubble_grouped.groupby(["model", "lang", "mutation"], group_keys=False)
@@ -28,12 +28,12 @@ bubble_grouped = (
 )
 # bubble_grouped = bubble_grouped.loc[top_3_rows]
 print(bubble_grouped)
-print(bubble_grouped.loc[max_indices])
+# print(bubble_grouped.loc[max_indices])
 
 # Generate a color map for each unique "type"
 unique_types = set(list(bubble_grouped["types"]))
 
-color_map = {t: plt.cm.tab10(i % 10) for i, t in enumerate(unique_types)}
+color_map = {t: plt.cm.Paired(i % 10) for i, t in enumerate(unique_types)}
 
 # Overlay the plots
 plt.figure(figsize=(16, 10))
@@ -45,13 +45,15 @@ for _, row in scatter_df.iterrows():
     for i, mutation in enumerate(row["mutations"]):
         # Ignore negative x or y values
         if x_values[i] >= 0 and y_values[i] >= 0:
-            plt.scatter(x_values[i], y_values[i], color="black", alpha=0.5, marker="x", label=row["model"] if i == 0 else "")
+            print(row["model"], row["lang"], mutation, x_values[i], y_values[i])
+            plt.scatter(x_values[i], y_values[i], color="black", alpha=0.5, marker="x", label=(row["model"],row["lang"]) if i == 0 else "")
             plt.annotate(mutation, (x_values[i], y_values[i]), fontsize=9, xytext=(5, 5), textcoords='offset points')
 
+print(bubble_grouped)
 # Bubble plot for the most common "types"
 for _, row in bubble_grouped.iterrows():
     # Find matching data points in the scatter plot
-    matching_row = scatter_df[scatter_df["model"] == row["model"]]
+    matching_row = scatter_df[(scatter_df["model"] == row["model"]) & (scatter_df["lang"] == row["lang"])]
     if not matching_row.empty:
         x_values = matching_row.iloc[0]["prob_typechecks_before"]
         y_values = matching_row.iloc[0]["prob_steering_success"]
@@ -59,6 +61,7 @@ for _, row in bubble_grouped.iterrows():
             idx = matching_row.iloc[0]["mutations"].index(row["mutation"])
             # Ignore negative x or y values
             if x_values[idx] >= 0 and y_values[idx] >= 0:
+                print(row["model"], row["lang"], row["mutation"], x_values[idx], y_values[idx])
                 # Bubble plot using "count" as the size, scaled down
                 plt.scatter(
                     x_values[idx], y_values[idx],
