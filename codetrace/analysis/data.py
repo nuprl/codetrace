@@ -193,7 +193,7 @@ class SteerResult(HashableClass):
                 "steering_success": x["fim_type"] == x["steered_predictions"]
             }, num_proc=num_proc)
     
-        # remove typechecks cols for safety
+        # remove typechecks cols for safety, do not confuse results!
         ds = ds.remove_columns(["typechecks","errors"])
         
         # typecheck before/after steer
@@ -224,7 +224,7 @@ class SteerResult(HashableClass):
         for label in ["errors_before","errors_after"]:
             df[label] = df[label].apply(
                 lambda x: remove_warnings(remove_filename(x, self.lang), self.lang) 
-                        if isinstance(x, str) else "")
+                    if isinstance(x, str) else str(x))
         return df
 
 @dataclass

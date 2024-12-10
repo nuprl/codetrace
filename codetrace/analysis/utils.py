@@ -31,7 +31,8 @@ Parsing layers, models, languages
 """
 
 def remove_filename(text: str, lang_ext: str) -> str:
-    return re.sub(r".*?\.{lang}".format(lang=lang_ext), "", text)
+    # filename is hash
+    return re.sub(r"\d+?\.{lang}".format(lang=lang_ext), "", text)
  
 def remove_warnings(error: str, lang:str) -> str:
     if lang == "py":

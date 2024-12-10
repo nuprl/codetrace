@@ -18,7 +18,7 @@ import os
 import csv
 from tqdm import tqdm
 import argparse
-from typing import Optional, List
+from typing import Optional,List,Dict,Any,Union
 from codetrace.utils import load_dataset
 import pandas as pd
 from pathlib import Path
@@ -31,6 +31,24 @@ yaml = YAML()
 yaml.default_flow_style = False
 yaml.sort_keys = False
 yaml.default_style = "|"
+
+def log_to_csv(data: Union[Dict[str,Any],List[Dict[str,Any]]], fname:str):
+    results_csv = Path(ANALYSIS_FIGURE_DIR) / fname
+    if results_csv.exists():
+        mode,do_header = "a",False
+    else:
+        mode,do_header = "w",True
+    
+    with open(results_csv, mode) as fp:
+        keys = (data[0] if isinstance(data, list) else data).keys()
+        writer = csv.DictWriter(fp, fieldnames=keys)
+        if do_header:
+            writer.writeheader()
+        
+        if isinstance(data, list):
+            writer.writerows(data)
+        else:
+            writer.writerow(data)
 
 def analyze_steering_effect_on_errors(
     results_dataset: str, 
@@ -95,7 +113,7 @@ def RQ1(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> in
     Given a model, lang, mut and MAX SUCCESS RATE layer
 
     1. when num `typechecks before` is high, steering success is low.
-        + the fim type is a subtype of gold fim_type 
+    2. the fim type is a subtype of gold fim_type in the cases where steering success is low
     """
     df_steer_succ_data,_ = load_success_data(model, num_proc, result_path, lang=lang, interval=interval)
     print(df_steer_succ_data)
@@ -143,21 +161,22 @@ def RQ1(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> in
         "interval":interval
     }
     
-    results_csv = f"{ANALYSIS_FIGURE_DIR}/rq1.csv"
-    if Path(results_csv).exists():
-        mode,do_header = "a",False
-    else:
-        mode,do_header = "w",True
-    
-    with open(results_csv, mode) as fp:
-        writer = csv.DictWriter(fp, fieldnames=list(data.keys()))
-        if do_header:
-            writer.writeheader()
-        writer.writerow(data)
-    
+    log_to_csv(data, "rq1.csv")
+
+    # 2. the fim type is a subtype of gold fim_type in the cases where steering success is low
+    # simply save type before, type after, subset data, success_data
+    data = all_error_dfs.copy()
+    data = data[["change","fim_type","steering_success","mutation","typechecks_before",
+                 "typechecks_after","errors_before","mutated_program"]]
+    data["model"] = model
+    data["lang"] = lang
+    data["interval"] = interval
+    log_to_csv(data.to_dict("records"), "rq1.2.csv")
+
+
 if __name__ == "__main__":
     assert os.environ.get('PYTHONHASHSEED',None)=="42",\
-        "Keep hash seed consistent 42 for reliable caching"
+        "Set PYTHONHASHSEED to 42 for consistent and reliable caching"
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(dest="command")

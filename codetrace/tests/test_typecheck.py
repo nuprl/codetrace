@@ -1,7 +1,7 @@
 import datasets
 import itertools as it
 from codetrace.scripts.typecheck_ds import (
-    run_typechecker, typecheck_py, typecheck_ts, multiproc_typecheck
+    run_typechecker, typecheck_py, typecheck_ts, multiproc_typecheck,found_error, found_error_in_line
 )
 from codetrace.fast_utils import batched_apply, make_batches
 from codetrace.utils import print_color
@@ -23,7 +23,27 @@ def read(file:str) -> str:
     with open(file, "r") as fp:
         return fp.read()
 
+def test_typecheck_py_single():
+    prog1 = read(f"{CWD}/test_programs/test_no_typecheck.py")
+    adir = f"/tmp/{uuid.uuid1()}"
+    os.makedirs(adir)
+    write(prog1, f"{adir}/prog1.py")
+    
+    filemap = run_typechecker(adir, "py", verbose=True, timeout=10, disable_tqdm=False)
+    typecheck_output = typecheck_py(adir)
+    assert "error" in typecheck_output["prog1"], typecheck_output["prog1"]
+    assert filemap["prog1"] != None, filemap["prog1"]
+
+def test_found_error():
+    stderr = '''/tmp/afb8fb50-b6e4-11ef-8fee-79366ddce352/prog2.py
+      /tmp/afb8fb50-b6e4-11ef-8fee-79366ddce352/prog2.py:2:14 - error: "__typ0" is not defined (reportUndefinedVariable)
+      1 error, 0 warnings, 0 informations 
+      '''
+    assert found_error_in_line("py",stderr.split("\n")[1])
+    assert found_error("py",stderr)
+
 def test_typecheck_py():
+    # correct, ignore import
     prog1 = """
 from .soup import ultra_soup
 
@@ -32,10 +52,12 @@ def test(wohoo: int
     print('weeeee')
     return True
 """
+    # incorrect, undefined type error
     prog2 = """
 def test(n : __typ0):
     return n
 """
+    # correct
     prog3 = """
 from typing import TypeAlias
 __typ0 : TypeAlias = "str"
@@ -52,7 +74,7 @@ def test(n : __typ0):
     typecheck_output = typecheck_py(adir)
     assert filemap["prog1"] == None, filemap["prog1"]
     assert "error" in typecheck_output["prog3"] and filemap["prog3"] == None, filemap["prog3"]
-    assert "error" in filemap["prog2"], filemap["prog2"]
+    assert filemap["prog2"] and "error" in filemap["prog2"], typecheck_output["prog3"]
 
 def test_typecheck_ts():
     prog1 = read(f"{CWD}/test_programs/after_type_rename.ts").replace("<FILL>", "string")
@@ -197,8 +219,10 @@ def test_ts_mutate_ds():
 if __name__ == "__main__":
     assert os.path.exists(Path(os.environ["NPM_PACKAGES"])), \
         "Please set 'NPM_PACKAGES' env var to npm package location"
+    test_found_error()
     test_all_subsets()
     test_typecheck_py()
     test_typecheck_ts()
     test_py_mutate_ds()
     test_ts_mutate_ds()
+    test_typecheck_py_single()
