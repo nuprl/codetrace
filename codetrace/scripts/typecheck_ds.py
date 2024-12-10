@@ -29,9 +29,10 @@ def log(path: str, data: Any):
     with open(path, "w") as f:
         f.write(data + "\n")
 
-def found_error(lang:str, line:str) -> bool:
+def found_error_in_line(lang: str, line: str)-> bool:
     if lang == "py":
         return ("- error:" in line \
+            # ignore these errors
             and not '- error: Import "' in line \
             and not "unknown import symbol" in line 
             and not "Position-only parameter not allowed after parameter that is not position-only" in line
@@ -45,6 +46,8 @@ def found_error(lang:str, line:str) -> bool:
     else:
         raise NotImplementedError("Supported languages are py and ts")
 
+def found_error(lang:str, stderr:str) -> bool:
+    return any([found_error_in_line(lang, line) for line in stderr.split("\n")])
 
 def typecheck_py(dir:str, verbose=False, timeout=120, disable_tqdm=True) -> Dict[str,str]:
     files = list(glob.glob(f"{dir}/*.py"))
