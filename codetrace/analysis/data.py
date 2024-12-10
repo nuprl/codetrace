@@ -58,12 +58,12 @@ def cache_to_dir(cache_dir):
             
             # Check if the result is already cached
             if os.path.exists(cache_path):
-                print(f"Loading cached result for {func.__name__} from {cache_path}")
+                # print(f"Loading cached result for {func.__name__} from {cache_path}")
                 with open(cache_path, 'rb') as f:
                     return pickle.load(f)
             
             # Compute the result and save it to the cache
-            print(f"Computing result for {func.__name__} and caching to {cache_path}")
+            # print(f"Computing result for {func.__name__} and caching to {cache_path}")
             result = func(*args, **kwargs)
             with open(cache_path, 'wb') as f:
                 pickle.dump(result, f)
@@ -112,18 +112,18 @@ class SteerResult(HashableClass):
 
     @property
     def subset(self) -> str:
-        return self.name.name if isinstance(self.name, Path) else self.name
+        return self.name
     
     @property
     def lang(self) -> str:
         lang = self.subset.split("-")[1]
-        assert lang in ["py","ts"]
+        assert lang in ["py","ts"], self.subset
         return lang
     
     @property
     def mutations(self) -> str:
         muts = self.subset.split("-")[2]
-        assert muts in ALL_MUTATIONS
+        assert muts in ALL_MUTATIONS, self.subset
         return muts
     
     @property
@@ -149,7 +149,7 @@ class SteerResult(HashableClass):
         elif (path / "steer_steering_results").exists():
             steer = datasets.load_from_disk((path / "steer_steering_results").as_posix())
         
-        return cls(path,test=test,rand=rand,steer=steer)
+        return cls(path.name,test=test,rand=rand,steer=steer)
 
     def missing_results(self) -> str:
         missing = []
@@ -161,9 +161,8 @@ class SteerResult(HashableClass):
         return missing
     
     def to_success_dataframe(self) -> pd.DataFrame:
-        name = self.subset
+        name = self.name
         num_layers = len(self.layers.split("_"))
-
         all_dfs = []
         for split in ["test","rand","steer"]:
             if self[split]:
@@ -171,7 +170,7 @@ class SteerResult(HashableClass):
                 df = build_success_df(df)
                 df.columns = [f"{split}_{c}" for c in df.columns]
                 all_dfs.append(df)
-
+        
         df = pd.concat(all_dfs, axis=1)
         df["lang"] = self.lang
         df["mutations"] = self.mutations
@@ -250,6 +249,10 @@ class ResultKeys(HashableClass):
             return getattr(self, key)
         else:
             return other
+    
+    def to_dict(self):
+        return {"model":self.model, "lang":self.lang, "start_layer":self.start_layer,
+                "mutation":self.mutation, "interval":self.interval, "prefix":self.prefix}
     
     def expand(self) -> List[Tuple]:
         assert not self.interval or self.interval in [1,3,5]
@@ -360,14 +363,8 @@ def _to_success_dataframe(x:SteerResult):
 def _missing_results(x: SteerResult):
     return x.missing_results()
 
-def load_success_data(
-    model:str, 
-    num_proc:int,
-    cache_dir: Optional[Path]=None,
-    **keys,
-) ->Tuple[pd.DataFrame,List[str]]:
-    loader = ResultsLoader(Path(cache_dir).exists(), cache_dir=cache_dir)
-    results = loader.load_data(ResultKeys(model=model, **keys))
+def build_success_data(results:List[SteerResult], num_proc:int) ->Tuple[pd.DataFrame,List[str]]:
+    
     with Pool(num_proc) as p, tqdm(total=len(results)) as pbar:
         all_dfs = []
         for result in p.imap(_to_success_dataframe, results):

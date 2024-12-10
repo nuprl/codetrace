@@ -19,13 +19,13 @@ import csv
 from tqdm import tqdm
 import argparse
 from typing import Optional,List,Dict,Any,Union
-from codetrace.utils import load_dataset
+from codetrace.utils import load_dataset, print_color
 import pandas as pd
 from pathlib import Path
 from ruamel.yaml import YAML
 from codetrace.analysis.utils import conditional_prob, correlation
 from codetrace.analysis.utils import ALL_MUTATIONS, correlation, ANALYSIS_CACHE_DIR, ANALYSIS_FIGURE_DIR
-from codetrace.analysis.data import SteerResult, load_success_data,ResultKeys, ResultsLoader,cache_to_dir
+from codetrace.analysis.data import SteerResult, build_success_data,ResultKeys, ResultsLoader,cache_to_dir
 
 yaml = YAML()
 yaml.default_flow_style = False
@@ -64,7 +64,7 @@ def analyze_steering_effect_on_errors(
         df = pd.DataFrame.from_records(data)
     else:
         ds = load_dataset(results_dataset, split=split, name=subset, trust_remote_code=True)
-        df = SteerResult(name=results_dataset, **{split: ds}).to_errors_dataframe(num_proc=num_proc)
+        df = SteerResult.from_local(name=results_dataset, **{split: ds}).to_errors_dataframe(num_proc=num_proc)
         assert df["typechecks_before"].value_counts()[False] > 0
         print(df["typechecks_before"].value_counts())
         data = df.to_dict(orient="records")
@@ -115,25 +115,34 @@ def RQ1(model:str, result_path:Path, lang:str, interval:int, num_proc:int) -> in
     1. when num `typechecks before` is high, steering success is low.
     2. the fim type is a subtype of gold fim_type in the cases where steering success is low
     """
-    df_steer_succ_data,_ = load_success_data(model, num_proc, result_path, lang=lang, interval=interval)
-    print(df_steer_succ_data)
-
     all_results = []
     edfs = []
     steering_success_x,typechecks_before_y = [],[]
     loader = ResultsLoader(Path(result_path).exists(), cache_dir=result_path)
     for m in tqdm(ALL_MUTATIONS, desc="Processing muts"):
-        # get most performant layer
-        mut_df = df_steer_succ_data[df_steer_succ_data["mutations"] == m].reset_index()
-        best_layer = mut_df["start_layer"].iloc[mut_df["test_mean_succ"].idxmax()]
-        keys = ResultKeys(model=model, lang=lang, interval=interval, mutation=m, start_layer=best_layer)
+        # load all data
+        keys = ResultKeys(model=model, lang=lang, interval=interval, mutation=m)
         print(keys)
-        # load and get errors before/after steering for best layer
         results = loader.load_data(keys)
+
+        # get most performant layer
+        try:
+            mut_succ_df,_ = build_success_data(results, num_proc)
+        except:
+            print_color(f"Failed to collect {m}", "red")
+            steering_success_x.append(-1)
+            typechecks_before_y.append(-1)
+            continue
+        
+        # load best layer data
+        best_layer = mut_succ_df["start_layer"].iloc[mut_succ_df["test_mean_succ"].idxmax()]
+
+        results = loader.load_data(ResultKeys(**{**keys.to_dict(), "start_layer":best_layer}))
         all_results += results
         for idx,r in enumerate(results):
             r.set_num_proc(num_proc)
             results[idx] = cached_to_errors_df(r, "test")
+            
         edf = pd.concat(results, axis=0)
         edf["mutation"] = m
         edfs.append(edf)
