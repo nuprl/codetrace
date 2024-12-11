@@ -77,6 +77,10 @@ async def generate_completions(
     use_tqdm: Optional[bool] = None,
     **kwargs
 ) -> List[Dict[str,Any]]:
+    """
+    Expects a "_prompt" field which will be removed.
+    Produces a "_generated" field.
+    """
     params = SamplingParams(temperature=0, max_tokens=1, n=1)
     completions = []
     
