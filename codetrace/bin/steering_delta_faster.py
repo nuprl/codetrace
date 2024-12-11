@@ -58,7 +58,7 @@ def try_load(output_dir:str):
         test_split = datasets.load_from_disk(f"{output_dir}/test_split")
     if Path(f"{output_dir}/steering_tensor.pt").exists():
         steering_tensor = torch.load(f"{output_dir}/steering_tensor.pt")
-    for layer in steering_tensor.shape[0]:
+    for layer in range(steering_tensor.shape[0]):
         assert steering_tensor[layer].sum().item() != 0, \
             f"Steering tensor layer {layer} should not be empty!"
     return steer_split, test_split, steering_tensor
