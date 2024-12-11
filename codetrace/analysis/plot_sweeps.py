@@ -52,7 +52,7 @@ def plot_steering_results(
         for split in ["test","steer","rand"]:
             # Plot line
             if f"{split}_mean_succ" in subset.columns:
-                plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y=f"{split}_mean_succ", label=test_label)
+                plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y=f"{split}_mean_succ", label=labels[split])
                 max_test = subset[f"{split}_mean_succ"].max()
                 test_color = plot.get_lines()[-1].get_color()  # Extract color from the last line
                 axes[i].hlines(y=max_test, xmin=subset["start_layer"].min(), xmax=subset["start_layer"].max(),
