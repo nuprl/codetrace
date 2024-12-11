@@ -125,22 +125,26 @@ if __name__ == "__main__":
         df_pretty = df_pretty.sort_values(["mutations","layers"])
 
     elif args.command == "lang_transfer":
+        # load original language layer sweeps
         df, missing_test_results = build_success_data(results,args.num_proc)
-        # keep only rand col
+        # keep only rand col, rename test to "steer"
         df_layer_sweep = df[["rand_mean_succ","start_layer","mutations",
-                             "layers","num_layers","mean_succ"]]
-        df_layer_sweep = df_layer_sweep.rename(columns={"mean_succ":"steering_mean_succ"}, errors="raise")
+                             "layers","num_layers","test_mean_succ"]]
+        df_layer_sweep = df_layer_sweep.rename(columns={"test_mean_succ":"steer_mean_succ"}, errors="raise")
         
+        # load lang transfer experiment results
         steering_lang = 'py' if args.lang=='ts' else 'ts'
         keys = ResultKeys(model=args.model, lang=args.lang, prefix=f"lang_transfer_{steering_lang}_")
         results = loader.load_data(keys)
-        
-        df_lang_transfer = df[["mean_succ","start_layer","mutations","layers","num_layers"]]
-        # no steer for precomputed
+        df, missing_test_results = build_success_data(results,args.num_proc)
+        df_lang_transfer = df[["test_mean_succ","start_layer","mutations","layers","num_layers"]]
+
+        # join results
         df = pd.merge(df_lang_transfer,df_layer_sweep, 
                       on=["start_layer", "layers","mutations","num_layers"]).reset_index()
         df_pretty = df.copy()
         df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
+        print(df_pretty.columns)
         print(df_pretty["mutations"].value_counts())
         df_pretty = df_pretty.sort_values(["mutations","layers"])
         label_kwargs = {"steer_label": f"Original {full_language_name(args.lang)}", "test_label": full_language_name(steering_lang)}
