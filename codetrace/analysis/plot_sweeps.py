@@ -10,7 +10,13 @@ import os
 from typing import Optional,Dict,List
 from tqdm import tqdm
 import sys
-from codetrace.analysis.data import load_success_data, MUTATIONS_RENAMED, full_language_name, model_n_layer
+from codetrace.analysis.data import (
+    build_success_data, 
+    MUTATIONS_RENAMED, 
+    ResultsLoader,
+    ResultKeys
+)
+from codetrace.analysis.utils import full_language_name, model_n_layer
 
 # We have several directories named results/steering-LANG-MUTATIONS-LAYERS-MODEL.
 # Within each of these directories, there are files called test_results.json.
@@ -43,7 +49,7 @@ def plot_steering_results(
     for i, mutation in enumerate(mutations):
         subset = df[df["mutations"] == mutation]
 
-        for split in ["test","steering","rand"]:
+        for split in ["test","steer","rand"]:
             # Plot line
             if f"{split}_mean_succ" in subset.columns:
                 plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y=f"{split}_mean_succ", label=test_label)
@@ -86,26 +92,29 @@ if __name__ == "__main__":
     parser.add_argument("--results-dir", type=Path)
     parser.add_argument("--outfile", type=Path)
     parser.add_argument("--interval", type=int, nargs="+", default=[1,3,5])
+    parser.add_argument("--num-proc", type=int, default=40)
 
+    assert os.environ.get('PYTHONHASHSEED',None)=="42",\
+        "Set PYTHONHASHSEED to 42 for consistent and reliable caching"
     args = parser.parse_args()
     label_kwargs = {}
 
+    keys = ResultKeys(args.model,lang=args.lang)
+    loader = ResultsLoader(Path(args.results_dir).exists(), cache_dir=args.results_dir)
+    results = loader.load_data(keys)
+
     if args.command == "mutations":
-        df, missing_test_results = load_success_data(args.model,cache_dir=args.results_dir,lang=args.lang)
+        df, missing_test_results = build_success_data(results, args.num_proc)
         print(missing_test_results)
 
         df_pretty = df.copy()
         df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
         print(df_pretty["mutations"].value_counts())
+        print(df_pretty.columns)
         df_pretty = df_pretty.sort_values(["mutations","layers"])
 
     elif args.command == "precomputed":
-        df, missing_test_results = load_success_data(
-            args.model,
-            interval=args.interval,
-            cache_dir=args.results_dir,
-            lang=args.lang,
-        )
+        df, missing_test_results = build_success_data(results,args.num_proc)
         # no steer for precomputed
         missing_test_results = [m for m in missing_test_results if "/steer" not in m]
         print(missing_test_results)
@@ -116,15 +125,15 @@ if __name__ == "__main__":
         df_pretty = df_pretty.sort_values(["mutations","layers"])
 
     elif args.command == "lang_transfer":
-        df, missing_test_results = load_success_data(args.model,cache_dir=args.results_dir,lang=args.lang)
+        df, missing_test_results = build_success_data(results,args.num_proc)
         # keep only rand col
         df_layer_sweep = df[["rand_mean_succ","start_layer","mutations",
                              "layers","num_layers","mean_succ"]]
         df_layer_sweep = df_layer_sweep.rename(columns={"mean_succ":"steering_mean_succ"}, errors="raise")
         
         steering_lang = 'py' if args.lang=='ts' else 'ts'
-        df, missing_test_results = load_success_data(args.model,cache_dir=args.results_dir,lang=args.lang,
-                                                     prefix=f"lang_transfer_{steering_lang}_")
+        keys = ResultKeys(model=args.model, lang=args.lang, prefix=f"lang_transfer_{steering_lang}_")
+        results = loader.load_data(keys)
         
         df_lang_transfer = df[["mean_succ","start_layer","mutations","layers","num_layers"]]
         # no steer for precomputed

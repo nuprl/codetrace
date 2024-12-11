@@ -152,13 +152,13 @@ class SteerResult(HashableClass):
         
         return cls(path.name,test=test,rand=rand,steer=steer)
 
-    def missing_results(self) -> str:
+    def missing_results(self) -> List[str]:
         missing = []
         for split in ["test","rand","steer"]:
             if not getattr(self,split):
                 missing.append(self.name + f"/{split}")
         if len(missing) == 3:
-            return self.name
+            return [self.name]
         return missing
     
     def to_success_dataframe(self) -> pd.DataFrame:
@@ -291,6 +291,7 @@ class ResultsLoader:
     local : bool
     hf_repo : str = "nuprl-staging/type-steering-results"
     auth_token: Optional[str] = None
+    # This is either local dir or where hub results will be saved to
     cache_dir: Optional[str] = None
     _prefetched: Set[Tuple[str]] = set()
     
@@ -359,11 +360,14 @@ class ResultsLoader:
 Loading scripts
 """
 @cache_to_dir(ANALYSIS_CACHE_DIR)
-def _to_success_dataframe(x:SteerResult):
-    return x.to_success_dataframe()
+def _to_success_dataframe(x:SteerResult) -> Optional[pd.DataFrame]:
+    if any([x[split] != None for split in ["test","steer","rand"]]):
+        return x.to_success_dataframe()
+    else:
+        return None
 
 @cache_to_dir(ANALYSIS_CACHE_DIR)
-def _missing_results(x: SteerResult):
+def _missing_results(x: SteerResult) -> List[str]:
     return x.missing_results()
 
 def build_success_data(results:List[SteerResult], num_proc:int) ->Tuple[pd.DataFrame,List[str]]:
@@ -374,7 +378,8 @@ def build_success_data(results:List[SteerResult], num_proc:int) ->Tuple[pd.DataF
         for result in p.imap(_to_success_dataframe, results):
             pbar.update()
             pbar.refresh()
-            all_dfs.append(result)
+            if result is not None:
+                all_dfs.append(result)
         missing_test_results = p.map(_missing_results, results)
     p.close()
     p.join()
