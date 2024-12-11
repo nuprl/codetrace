@@ -327,7 +327,10 @@ class ResultsLoader:
         Do prefetch
         """
         def all_splits(prefix: str) -> List[str]:
-            return [prefix + f"/{split}-0-of-1.parquet" for split in ["test","rand","steer"]]
+            # NOTE: there may be some files with suffix "{split}-00000-of-00001.parquet""
+            # if so, rename before saving
+            return [prefix + f"/{split}-0-of-1.parquet" for split in ["test","rand","steer"]] + \
+                    [prefix + f"/{split}-00000-of-00001.parquet" for split in ["test","rand","steer"]]
 
         expanded = keys.expand()
         all_files = []
@@ -345,6 +348,9 @@ class ResultsLoader:
         subprocess.run(cmd)
         for r in expanded:
             self._prefetched.add(r)
+        
+        for path in Path(self.cache_dir).glob("*-00000-of-00001.parquet"):
+            path.rename(path.as_posix().replace("00000-of-00001.parquet","0-of-1.parquet"))
     
     def is_prefetched(self, keys: ResultKeys) -> bool:
         return set(keys.expand()).issubset(self._prefetched)
