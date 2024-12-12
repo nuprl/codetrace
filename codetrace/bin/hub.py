@@ -58,13 +58,13 @@ def load_results_dataset(path: Path) -> datasets.DatasetDict:
     cast_errors_to_str = (lambda x: {**x, "errors": "" if not x["errors"] else x["errors"]})
     
     if steer_path.exists():
-        steer_split = datasets.Dataset.load_from_disk(steer_path).map(cast_errors_to_str)
+        steer_split = datasets.Dataset.load_from_disk(steer_path.as_posix()).map(cast_errors_to_str)
         dataset_dict["steer"] = steer_split
     if test_path.exists():
-        test_split = datasets.Dataset.load_from_disk(test_path).map(cast_errors_to_str)
+        test_split = datasets.Dataset.load_from_disk(test_path.as_posix()).map(cast_errors_to_str)
         dataset_dict["test"] = test_split
     if rand_path.exists():
-        rand_split = datasets.Dataset.load_from_disk(rand_path).map(cast_errors_to_str)
+        rand_split = datasets.Dataset.load_from_disk(rand_path.as_posix()).map(cast_errors_to_str)
         dataset_dict["rand"] = rand_split
     
     return datasets.DatasetDict(dataset_dict)
