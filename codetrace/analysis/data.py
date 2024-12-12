@@ -134,23 +134,19 @@ class SteerResult(HashableClass):
     @classmethod
     def from_local(cls, path:Path) -> "SteerResult":
         datasets.disable_progress_bar()
-        test,rand,steer=None,None,None
-        if (path / "test-0-of-1.parquet").exists():
-            test = datasets.Dataset.from_parquet((path / "test-0-of-1.parquet").as_posix())
-        elif (path / "test_steering_results").exists():
-            test = datasets.load_from_disk((path / "test_steering_results").as_posix())
+        steer_result = cls(path.name,test=None,rand=None,steer=None)
+        for split in ["test","rand","steer"]:
+            if (path / f"{split}-0-of-1.parquet").exists():
+                data = datasets.Dataset.from_parquet((path / f"{split}-0-of-1.parquet").as_posix())
+            elif (path / f"{split}-00000-of-00001.parquet").exists():
+                data = datasets.Dataset.from_parquet((path / f"{split}-00000-of-00001.parquet").as_posix())
+            elif (path / f"{split}_steering_results").exists():
+                data = datasets.load_from_disk((path / f"{split}_steering_results").as_posix())
+            else:
+                data = None
+            setattr(steer_result, split, data)
 
-        if (path / "rand-0-of-1.parquet").exists():
-            rand = datasets.Dataset.from_parquet((path / "rand-0-of-1.parquet").as_posix())
-        elif (path / "test_steering_results_rand").exists():
-            rand = datasets.load_from_disk((path / "test_steering_results_rand").as_posix())
-        
-        if (path / "steer-0-of-1.parquet").exists():
-            steer = datasets.Dataset.from_parquet((path / "steer-0-of-1.parquet").as_posix())
-        elif (path / "steer_steering_results").exists():
-            steer = datasets.load_from_disk((path / "steer_steering_results").as_posix())
-        
-        return cls(path.name,test=test,rand=rand,steer=steer)
+        return steer_result
 
     def missing_results(self) -> List[str]:
         missing = []
@@ -160,6 +156,17 @@ class SteerResult(HashableClass):
         if len(missing) == 3:
             return [self.name]
         return missing
+    
+    def to_dataframe(self, split) -> pd.DataFrame:
+        df = self[split].to_pandas()
+        df["lang"] = self.lang
+        df["mutations"] = self.mutations
+        df["layers"] = self.layers
+        df["start_layer"] = int(self.layers.split("_")[0])
+        df["model"] = get_model_name(self.name)
+        df["num_layers"] = len(self.layers.split("_"))
+        df[f"{split}_is_success"] = df["steered_predictions"] == df["fim_type"]
+        return df
     
     def to_success_dataframe(self) -> pd.DataFrame:
         name = self.name
