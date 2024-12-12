@@ -75,15 +75,16 @@ async def generate_completions(
     batch: Dict[str,List[Any]],
     batch_size: Optional[int] = None,
     use_tqdm: Optional[bool] = None,
+    max_tokens: int = 1,
     **kwargs
 ) -> List[Dict[str,Any]]:
     """
     Expects a "_prompt" field which will be removed.
     Produces a "_generated" field.
     """
-    params = SamplingParams(temperature=0, max_tokens=1, n=1)
+    params = SamplingParams(temperature=0, max_tokens=max_tokens, n=1)
     completions = []
-    
+    seen = set()
     for id,prompt in tqdm(
         enumerate(batch.pop("_prompt")), 
         desc="Generating",
@@ -92,12 +93,14 @@ async def generate_completions(
     ):
         generated_promise = request_vllm_completions(llm, prompt, params, request_id=id, **kwargs)
         async for output_promise in generated_promise:
-            id = output_promise.request_id
-            row = {k:batch[k][id] for k in batch.keys()}
-            generated_text = output_promise.outputs[0].text.strip()
-            completions.append({
-                    **row, 
-                    "_generated": generated_text,
-                })
+            _id = output_promise.request_id
+            if not _id in seen and len(output_promise.outputs[0].text.strip()) > 0:
+                row = {k:batch[k][_id] for k in batch.keys()}
+                generated_text = output_promise.outputs[0].text.strip()
+                completions.append({
+                        **row, 
+                        "_generated": generated_text,
+                    })
+                seen.add(_id)
 
     return completions

@@ -7,25 +7,63 @@ import os
 import torch
 import datasets
 from vllm import AsyncLLMEngine
-from codetrace.parsing_utils import get_model_fim, FimObj, FimChat, prepare_fim_prompt
+from codetrace.parsing_utils import get_model_fim, FimObj, FimChat
 from transformers import AutoTokenizer, PreTrainedTokenizer
 from tqdm import tqdm
+import itertools as it
 from codetrace.utils import (
     num_available_devices,
     hex_encode,
     load_dataset
 )
+from codetrace.parsing_utils import LLAMA_CHAT_TEMPLATE, LLAMA_FIM_CHAT
 from codetrace.vllm_utils import (
     generate_completions,
     load_vllm
 )
 
-def prepare_icl_prompt(context_dataset: datasets.Dataset, fim_program:str, model:str) -> str:
+def _add_to_prompt(prompt: Union[str, List[Dict[str,str]]], label:str)->Union[str, List[Dict[str,str]]]:
+    if isinstance(prompt, str):
+        return prompt + label
+    else:
+        agent_dict = prompt[-1]
+        agent_dict["content"] = agent_dict["content"] + label
+        prompt[-1] = agent_dict
+        return prompt
+    
+def _join_prompts(prompts: List[Union[str, List[Dict[str,str]]]]) -> Union[str, List[Dict[str,str]]]:
+    if isinstance(prompts[0], str):
+        return "\n\n".join(prompts)
+    else:
+        return list(it.chain(*prompts))
+
+def _prepare_prompt(
+    tokenizer: PreTrainedTokenizer, 
+    model_fim: Union[FimObj,FimChat], 
+    prompt: Union[str,List[Dict[str,str]]]
+) -> str:
+    if isinstance(model_fim, FimChat):
+        chat_template = LLAMA_CHAT_TEMPLATE \
+                        if model_fim == LLAMA_FIM_CHAT \
+                        else tokenizer.get_chat_template()
+        
+        return tokenizer.apply_chat_template(
+            prompt, 
+            tokenize=False, 
+            add_generation_prompt=False,
+            continue_final_message=True,
+            chat_template=chat_template
+        )
+    else:
+        return prompt
+    
+def prepare_icl_prompt(context_dataset: datasets.Dataset, fim_program:str, model:str, tokenizer:PreTrainedTokenizer) -> str:
+    datasets.disable_progress_bars()
     model_fim = get_model_fim(model)
     fim_program = model_fim.placeholder_to_fim(fim_program)
-    context = context_dataset.shuffle().select(range(2))
-    context = [model_fim.placeholder_to_fim(x["mutated_program"])+x["fim_type"] for x in context]
-    return "\n\n".join(context + [fim_program])
+    context = context_dataset.shuffle().filter(lambda x: len(x["mutated_program"]) < 1000).select(range(2))
+    context = [_add_to_prompt(model_fim.placeholder_to_fim(x["mutated_program"]),x["fim_type"]) for x in context]
+    return _prepare_prompt(tokenizer, model_fim, _join_prompts(context + [fim_program]))
 
 def success_rate(ds: datasets.Dataset) -> str:
     df = ds.to_pandas()
@@ -131,11 +169,53 @@ if __name__ == "__main__":
         ds_prompts = ds["test"]
         ds_icl_context = ds["steer"]
     
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
     ds = ds_prompts.map(
-        lambda x: {**x, "_prompt": prepare_icl_prompt(ds_icl_context, x["mutated_program"], args.model)}
+        lambda x: {**x, "_prompt": prepare_icl_prompt(ds_icl_context, x["mutated_program"], args.model, tokenizer)}
     )
     llm = load_vllm(args.model, args.dtype, num_available_devices(),
                     tokenizer=args.tokenizer, async_inference=True)
     model_fim = get_model_fim(args.model)
-    
+    args.batch_size = min(args.batch_size,len(ds))
     main(llm, ds, Path(args.new_ds_name), args.batch_size,args.model, args.max_size)
+
+
+"""
+Tests
+"""
+
+def test_prompts():
+    import json
+    fim_prompt = """
+def palindrome(s: <FILL>):
+    return s[::-1]==s""".strip()
+
+    label = "str"
+    model_fim = get_model_fim("starcoderbase-1b")
+    chat_model_fim = get_model_fim("codellama-7b-instruct-hf")
+    output_fim = _join_prompts([_add_to_prompt(model_fim.placeholder_to_fim(fim_prompt), label),
+                                model_fim.placeholder_to_fim(fim_prompt)])
+    output_chat = _join_prompts([_add_to_prompt(chat_model_fim.placeholder_to_fim(fim_prompt), label),
+                                 chat_model_fim.placeholder_to_fim(fim_prompt)])
+    expected_fim = """
+<fim_prefix>def palindrome(s: <fim_suffix>):
+    return s[::-1]==s<fim_middle>str
+
+<fim_prefix>def palindrome(s: <fim_suffix>):
+    return s[::-1]==s<fim_middle>""".strip()
+    expected_chat = [
+        {"role": "user", "content": """Continue this program with the correct substitution for <FILL>:
+
+def palindrome(s: <FILL>):
+    return s[::-1]==s"""},
+        {"role": "assistant", "content": '''def palindrome(s: str'''},
+        {"role": "user", "content": """Continue this program with the correct substitution for <FILL>:
+
+def palindrome(s: <FILL>):
+    return s[::-1]==s"""},
+        {"role": "assistant", "content": '''def palindrome(s: '''}
+
+    ]
+    print(json.dumps(output_chat, indent=4), "\n\n", json.dumps(expected_chat, indent=4))
+    assert output_fim == expected_fim
+    assert output_chat == expected_chat
