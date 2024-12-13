@@ -33,7 +33,7 @@ Plotting
 def plot_all_models(
     df: pd.DataFrame, 
     fig_file: Optional[str] = None,
-    interval: int = 5
+    interval: int = 3
 ):
     df = df.reset_index()
     print(df.columns)
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     parser.add_argument("outfile", type=str)
     parser.add_argument("--lang", choices=["py","ts"], default="py")
     parser.add_argument("--num-proc", type=int, default=40)
-
+    parser.add_argument("--interval", choices=[1,3,5], type=int, default=5)
     assert os.environ.get('PYTHONHASHSEED',None)=="42",\
         "Set PYTHONHASHSEED to 42 for consistent and reliable caching"
     args = parser.parse_args()
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     loader = ResultsLoader(Path(args.results_dir).exists(), 
                            cache_dir=args.results_dir)
     for model in tqdm(ALL_MODELS, desc="models"):
-        keys = ResultKeys(model=model,lang=args.lang, interval=5)
+        keys = ResultKeys(model=model,lang=args.lang, interval=args.interval)
         results = loader.load_data(keys)
         all_results += results
     
@@ -122,4 +122,4 @@ if __name__ == "__main__":
     df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
     print(df_pretty)
     print(df_pretty.columns)
-    plot_all_models(df_pretty, args.outfile)
+    plot_all_models(df_pretty, args.outfile, args.interval)
