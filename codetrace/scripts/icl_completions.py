@@ -131,6 +131,10 @@ def main(
         _save(batch_completions, new_ds_path, f"Saving {i} batch")
         if max_n > 0 and num_completed >= max_n:
             break
+    # save final success rate
+    final_succ = success_rate(datasets.Dataset.from_list(batch_completions))
+    with open(new_ds_path / "success.md","w") as fp:
+        fp.write(final_succ)
 
 if __name__ == "__main__":
     assert os.environ.get("VLLM_LOGGING_LEVEL",None) == "ERROR", \

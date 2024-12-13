@@ -108,15 +108,13 @@ if __name__ == "__main__":
     for r in tqdm(all_results, "checking"):
         assert r.test != None, r.name
         rdf = r.to_dataframe("test")
-        rdf = rdf.groupby("mutations").agg(
-            {"test_is_success":"mean",
-             "model":"unique",
-             "start_layer":"unique"}).reset_index()
+        rdf = rdf.groupby(["mutations","lang","model","start_layer"]).agg(
+            {"test_is_success":"mean"}).reset_index()
         processed_results.append(rdf)
 
     df = pd.concat(processed_results, axis=0)
     df = df.rename(columns={"test_is_success":"test_mean_succ"})
-    for key in ["model","start_layer"]:
+    for key in ["start_layer"]:
         df[key] = df[key].apply(lambda x: x[0] if len(x) == 1 else 1/0)
     df_pretty = df.copy()
     df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])

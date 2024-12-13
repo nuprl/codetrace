@@ -111,17 +111,13 @@ if __name__ == "__main__":
     for r in tqdm(results, "checking"):
         assert r.test != None, r.name
         rdf = r.to_dataframe("test")
-        rdf = rdf.groupby(["mutations","num_layers"]).agg(
-            {"test_is_success":"mean",
-             "model":"unique",
-             "start_layer":"unique"}).reset_index()
+        rdf = rdf.groupby(["mutations","start_layer","model","num_layers"]).agg(
+            {"test_is_success":"mean"}).reset_index()
         processed_results.append(rdf)
 
     df = pd.concat(processed_results, axis=0)
     print(df.columns)
     df = df.rename(columns={"test_is_success":"test_mean_succ","num_layers":"interval"})
-    for key in ["model","start_layer"]:
-        df[key] = df[key].apply(lambda x: x[0] if len(x) == 1 else 1/0)
 
     print(df)
     print(df.columns)
