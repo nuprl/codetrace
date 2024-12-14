@@ -54,12 +54,18 @@ def remove_warnings(error: str, lang:str) -> str:
     else:
         raise NotImplementedError(lang)
     
-def get_model_name(name: str)->Optional[str]:
+def parse_model_name(name: str)->Optional[str]:
     assert isinstance(name, str)
     for model in ALL_MODELS:
         if model.lower() in name.lower():
             return model
     raise ValueError(f"Name {name} not found")
+
+def parse_mutation_name(s: str)->Optional[str]:
+    for mut in ALL_MUTATIONS:
+        if mut.lower() in s.lower():
+            return mut
+    raise ValueError(f"Name {mut} not found")
 
 def full_language_name(lang: str) ->str:
     if lang == "py":

@@ -21,7 +21,7 @@ from codetrace.analysis.utils import (
     MUTATIONS_RENAMED,
     build_success_df,
     model_n_layer,
-    get_model_name,
+    parse_model_name,
     remove_warnings,
     remove_filename
 )
@@ -34,6 +34,10 @@ to passed ResultsKeys; if a key is not passed, loads all possible
 values of key (eg. if 'mutations' is not passed, will load all)
 
 See `test_result_loader` for how to load data.
+
+Some of the data processing fns we use for plotting are expensive,
+so SteerResult implements caching intermediate values for fast re-generation
+of plots. Caveat: the python hash seed must always be set to same value (42).
 """.strip()
 
 """
@@ -179,18 +183,21 @@ class SteerResult(HashableClass):
         df["mutations"] = self.mutations
         df["layers"] = self.layers
         df["start_layer"] = int(self.layers.split("_")[0])
-        df["model"] = get_model_name(name)
+        df["model"] = parse_model_name(name)
         df["interval"] = num_layers
         return df
     
     @cache_to_dir(ANALYSIS_CACHE_DIR)
     def to_errors_dataframe(self, split:str, disable_tqdm:bool=True) -> pd.DataFrame:
         num_proc = (self._num_proc or cpu_count())
-        COLUMNS = ["steering_success","typechecks_before","typechecks_after", 
-           "errors_before", "errors_after","fim_type","prediction_before_after_steer","mutated_program"]
+        COLUMNS = [
+            "steering_success","typechecks_before","typechecks_after", 
+           "errors_before", "errors_after","fim_type","prediction_before_steer",
+           "prediction_after_steer","mutated_program"]
         ds = self[split].map(lambda x: 
                 {**x, 
-                "prediction_before_after_steer": (x['mutated_generated_text'],x['steered_predictions']),
+                "prediction_before_steer": x["mutated_generated_text"],
+                "prediction_after_steer": x["steered_predictions"],
                 "_before_steering_prog": x["mutated_program"].replace("<FILL>", x["mutated_generated_text"]),
                 "_after_steering_prog":  x["mutated_program"].replace("<FILL>", x["steered_predictions"]),
                 "steering_success": x["fim_type"] == x["steered_predictions"]
@@ -212,18 +219,20 @@ class SteerResult(HashableClass):
         # merge into one dataset
         df = pd.merge(before_df, after_df, on=["_before_steering_prog","_after_steering_prog"])
         # sanity check
-        for col in ["steering_success","fim_type","mutated_program","prediction_before_after_steer"]:
+        for col in ["steering_success","fim_type","mutated_program",
+                    "prediction_before_steer","prediction_after_steer"]:
             assert list(df[f"{col}_x"]) == list(df[f"{col}_y"])
         
         df = df.rename(columns={
                 "mutation": self.mutations,
                 "steering_success_x":"steering_success", 
                 "mutated_program_x":"mutated_program",
-                "prediction_before_after_steer_x": "prediction_before_after_steer",
+                "prediction_after_steer_x": "prediction_after_steer",
+                "prediction_before_steer_x": "prediction_before_steer",
                 "fim_type_x": "fim_type"
             })
         df = df[COLUMNS]
-        model = get_model_name(self.name)
+        model = parse_model_name(self.name)
         df["lang"] = self.lang
         df["mutations"] = self.mutations
         df["layers"] = self.layers

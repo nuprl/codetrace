@@ -3,36 +3,26 @@ import argparse
 import pandas as pd
 from codetrace.analysis.data import ResultsLoader,ResultKeys
 from tqdm import tqdm
-from codetrace.analysis.utils import ALL_MODELS,ALL_MUTATIONS,MUTATIONS_RENAMED
+from codetrace.analysis.utils import (
+    ALL_MODELS,
+    ALL_MUTATIONS,
+    full_model_name,
+    parse_model_name,
+    parse_mutation_name,
+    full_language_name,
+    MUTATIONS_RENAMED,
+    get_unique_value
+)
 from pathlib import Path
 import os
 from matplotlib import pyplot as plt
 import seaborn as sns
+from codetrace.utils import print_color
 import itertools as it
-
-COLORS=[
-    (0.1216, 0.4667, 0.7059, 1.0),  # Opaque Blue
-    (0.1216, 0.4667, 0.7059, 0.2),  # Transparent Blue
-    (1.0, 0.4980, 0.0549, 1.0),     # Opaque Orange
-    (1.0, 0.4980, 0.0549, 0.2),     # Transparent Orange
-    (0.1725, 0.6275, 0.1725, 1.0),  # Opaque Green
-    (0.1725, 0.6275, 0.1725, 0.2),  # Transparent Green
-    (0.8392, 0.1529, 0.1569, 1.0),  # Opaque Red
-    (0.8392, 0.1529, 0.1569, 0.2),  # Transparent Red
-    (0.5804, 0.4039, 0.7412, 1.0),  # Opaque Purple
-    (0.5804, 0.4039, 0.7412, 0.2),  # Transparent Purple
-    (0.5490, 0.3373, 0.2941, 1.0),  # Opaque Brown
-    (0.5490, 0.3373, 0.2941, 0.2),  # Transparent Brown
-    (0.8902, 0.4667, 0.7608, 1.0),  # Opaque Pink
-    (0.8902, 0.4667, 0.7608, 0.2)   # Transparent Pink
-]
-COLORS.reverse()
+import textwrap
 
 base_palette = sns.hls_palette(7, h=.5)
-COLORS = [
-    sns.desaturate(color,0.2) if i % 2 == 0 else sns.saturate(color)  # Alternate transparent/opaque
-    for i, color in enumerate(it.chain(*zip(base_palette, base_palette[::-1])))
-]
+COLORS = list(it.chain(*zip(base_palette, base_palette)))
 
 def compare_icl(steering_df:pd.DataFrame, icl_df:pd.DataFrame, outfile:str) -> pd.DataFrame:
     icl_df["type"] = "icl"
@@ -43,46 +33,112 @@ def compare_icl(steering_df:pd.DataFrame, icl_df:pd.DataFrame, outfile:str) -> p
     df.to_csv(outfile)
     return df
 
-def plot_icl(df:pd.DataFrame, outfile:str):
-    # Ensure that we only process available languages
-    available_langs = df['lang'].unique()
-
+def plot_icl(df: pd.DataFrame, outfile: str):
+    HATCH="////"
     # Plot configuration
-    fig, axes = plt.subplots(1, len(available_langs), figsize=(15, 6), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6), sharey=True, sharex=True)
+    axes = axes.flatten()
 
-    # If only one subplot, wrap it in a list
-    if len(available_langs) == 1:
-        axes = [axes]
-
+    df["model"] = df["model"].apply(full_model_name)
     df["type_mut"] = df["type"] + df["mutations"]
+    mutations = sorted(get_unique_value(df, "mutations",7))
+    
+    typ_mut_order = list(it.chain(*[["icl"+mut, "steer"+mut] for mut in mutations]))
+    
     # Create bar plots for each available language
-    for ax, lang in zip(axes, available_langs):
-        lang_df = df[df['lang'] == lang]
+    for ax, lang in zip(axes, ["py", "ts"]):
+        lang_df = df[df["lang"] == lang]
         barplot = sns.barplot(
             data=lang_df,
             x="model",
             y="test_mean_succ",
             hue="type_mut",
-            palette=sns.color_palette(COLORS),
+            hue_order=typ_mut_order,
+            palette=COLORS,
             ax=ax,
             errorbar=None,
-            dodge=True
         )
-            
-        ax.get_legend().remove()
-        ax.set_title(f"Performance for {lang.upper()}")
-        ax.set_ylabel("Mean Success Rate")
-        ax.set_xlabel("Model")
-        ax.tick_params(axis='x', rotation=45)
 
+        bars = ax.patches
+        """
+        order of bars is model, mutation, type, lang
+        # eg. 
+        # codellama py delete icl
+        # starcoder py delete icl
+        # codellama py delete steer
+        # starcoder py delete steer
+        # codellama py types icl etc.
+        """
+        for i, bar in enumerate(bars):
+            if ((i // 5) % 2) == 0 and bar.xy != (0,0):
+                bar.set_hatch(HATCH)
+
+        # Modify the legend to reflect hatching
         handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, bbox_to_anchor=(1, 1), title="Type/Mutation")
-    
+        for i,(handle, label) in enumerate(zip(handles, labels)):
+            mut = parse_mutation_name(label)
+            if "icl" in label:
+                handle.set_hatch(HATCH)
+
+        ax.legend(handles, labels)
+        
+        # Set plot details
+        ax.set_title(full_language_name(lang))
+        ax.set_ylabel("Accuracy")
+        # ax.set_xlabel("Model")
+        ax.tick_params(axis="x", rotation=45)
+        ax.get_legend().remove()
+
+    # Add a global legend
+    handles, labels = axes[0].get_legend_handles_labels()
+    new_handles = []
+    new_labels = []
+    for i,(handle, label) in enumerate(zip(handles, labels)):
+        mut = parse_mutation_name(label)
+        if "steer" in label:
+            new_handles.append(handle)
+            new_labels.append(MUTATIONS_RENAMED[mut])
+        
+    new_labels = list(map(lambda x: textwrap.fill(x, width=20),new_labels))
+    fig.legend(new_handles, new_labels, bbox_to_anchor=(1, 0.8), title="Mutations")
+    plt.suptitle("Comparison of Steering to Prompting with ICL Examples")
     plt.tight_layout()
-    # plt.show()
     fig.subplots_adjust(right=0.85)
     plt.savefig(outfile)
 
+def _load(results_dir:str, interval:int, icl_dir:str = "results"):
+    all_results = []
+    loader = ResultsLoader(Path(results_dir).exists(), cache_dir=results_dir)
+    for model in tqdm(ALL_MODELS, desc="Loading models data"):
+        keys = ResultKeys(model=model, interval=interval)
+        results = loader.load_data(keys)
+        all_results += results
+    
+    processed_results = []
+    for r in tqdm(all_results, "Loading Test Split Success"):
+        assert r.test != None, r.name
+        rdf = r.to_success_dataframe("test")
+        processed_results.append(rdf)
+
+    # get max results
+    df = pd.concat(processed_results, axis=0)
+    df = df.groupby(["model","mutations","lang"]).agg({"test_mean_succ":"max"}).reset_index()
+
+    # collect icl df
+    all_icl_dfs = []
+    for model in ALL_MODELS:
+        for muts in ALL_MUTATIONS:
+            for lang in ["py","ts"]:
+                icl_df = datasets.load_from_disk(f"{icl_dir}/icl_{model}-{lang}-{muts}").to_pandas()
+                icl_df["mutations"] = muts
+                icl_df["model"] = model
+                icl_df["lang"] = lang
+                all_icl_dfs.append(icl_df)
+            
+    df_icl = pd.concat(all_icl_dfs, axis=0).reset_index()
+    df_icl = df_icl.groupby(["model","mutations","lang"]).agg({"correct":"mean"}).reset_index()
+    df_icl = df_icl.rename(columns={"correct":"test_mean_succ"})
+    return df, df_icl
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -96,36 +152,6 @@ if __name__ == "__main__":
     
     os.makedirs(args.outdir, exist_ok=True)
 
-    all_results = []
-    loader = ResultsLoader(Path(args.results_dir).exists(), cache_dir=args.results_dir)
-    for model in tqdm(ALL_MODELS, desc="models"):
-        keys = ResultKeys(model=model, interval=args.interval)
-        results = loader.load_data(keys)
-        all_results += results
-    
-    processed_results = []
-    for r in tqdm(all_results, "checking"):
-        assert r.test != None, r.name
-        rdf = r.to_success_dataframe("test")
-        processed_results.append(rdf)
-
-    df = pd.concat(processed_results, axis=0)
-    df = df.groupby(["model","mutations","lang"]).agg({"test_mean_succ":"max"}).reset_index()
-
-    # collect icl df
-    all_icl_dfs = []
-    for model in ALL_MODELS:
-        for muts in ALL_MUTATIONS:
-            for lang in ["py","ts"]:
-                icl_df = datasets.load_from_disk(f"results/icl_{model}-{lang}-{muts}").to_pandas()
-                icl_df["mutations"] = muts
-                icl_df["model"] = model
-                icl_df["lang"] = lang
-                all_icl_dfs.append(icl_df)
-            
-    df_icl = pd.concat(all_icl_dfs, axis=0).reset_index()
-    df_icl = df_icl.groupby(["model","mutations","lang"]).agg({"correct":"mean"}).reset_index()
-    df_icl = df_icl.rename(columns={"correct":"test_mean_succ"})
-
+    df, df_icl = _load(**vars(args))
     df = compare_icl(df, df_icl, f"{args.outdir}/compare_icl-interval_{args.interval}.csv")
     plot_icl(df, f"{args.outdir}/compare_icl-interval_{args.interval}.pdf")

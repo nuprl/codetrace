@@ -3,7 +3,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 import ast
-from codetrace.analysis.utils import ALL_MODELS,ALL_MUTATIONS, get_unique_value, get_model_name
+from codetrace.utils import print_color
+from codetrace.analysis.utils import ALL_MODELS,ALL_MUTATIONS, get_unique_value, parse_model_name
 from codetrace.analysis.data import ResultKeys,ResultsLoader, SteerResult, cache_to_dir,ANALYSIS_CACHE_DIR
 from typing import List,Tuple
 import sys
@@ -19,15 +20,15 @@ def _is_correct_max(results: List[SteerResult]) -> bool:
     """
     triples = []
     for r in results:
-        triples.append((get_model_name(r.name), r.lang, r.mutations))
+        triples.append((parse_model_name(r.name), r.lang, r.mutations))
     if len(triples) == len(set(triples)):
         return True
 
     max_values = defaultdict(set)
     counter = Counter(triples)
     for r in results:
-        if counter[(get_model_name(r.name), r.lang, r.mutations)] > 1:
-            max_values[(get_model_name(r.name), r.lang, r.mutations)].add(
+        if counter[(parse_model_name(r.name), r.lang, r.mutations)] > 1:
+            max_values[(parse_model_name(r.name), r.lang, r.mutations)].add(
                 get_unique_value(
                     r.to_success_dataframe("test"), # cached so not expensive,
                     "test_mean_succ",
@@ -42,10 +43,11 @@ def plot_correlation(df: pd.DataFrame, outfile: str):
     unique_combinations = df[["model", "lang"]].drop_duplicates()
     color_map = {f"{row.model}_{row.lang}": plt.cm.tab10(i) 
                 for i, row in enumerate(unique_combinations.itertuples(index=False))}
-    df["presteering"] = df["change"].apply(lambda x: ast.literal_eval(x)[0])
-    df = df.groupby(["mutation","lang","start_layer"]).agg(
-        {"steering_success":"mean","typechecks_before":"mean", "presteering":"unique"}).reset_index()
-    df = df.groupby(["mutation","lang","typechecks_before","presteering"]).agg(
+    
+    df = df.groupby(["mutations","lang","start_layer"]).agg(
+        {"steering_success":"mean","typechecks_before":"mean", "prediction_before_steer":"unique"}).reset_index()
+    print(df)
+    df = df.groupby(["mutations","lang","typechecks_before","prediction_before_steer"]).agg(
         {"steering_success": "max"}).reset_index()
     # Plotting
     plt.figure(figsize=(12, 8))
@@ -63,7 +65,7 @@ def plot_correlation(df: pd.DataFrame, outfile: str):
         # Annotating mutations
         for i, mutation in enumerate(row["mutations"]):
             plt.annotate(mutation, (x_values[i], y_values[i]), fontsize=9, xytext=(1, 1), textcoords='offset points')
-        for i,presteering in enumerate(row["presteering"]):
+        for i,presteering in enumerate(row["prediction_before_steer"]):
             plt.annotate(presteering, (x_values[i], y_values[i]), fontsize=9, xytext=(1, -1), textcoords='offset points')
 
     plt.xlim(0, 1)
@@ -74,8 +76,8 @@ def plot_correlation(df: pd.DataFrame, outfile: str):
     plt.legend(handles=handles, title="Model_Language", loc="best")
 
     # Customizing the plot
-    plt.xlabel("Probability typechecks_before")
-    plt.ylabel("Probability steering_success")
+    plt.xlabel("Probability Typechecks before Steer")
+    plt.ylabel("Steering Accuracy")
     plt.grid(alpha=0.5)
     plt.savefig(outfile)
     plt.legend()
