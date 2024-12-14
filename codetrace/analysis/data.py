@@ -148,15 +148,17 @@ class SteerResult(HashableClass):
 
         return steer_result
 
-    def missing_results(self) -> List[str]:
+    @cache_to_dir(ANALYSIS_CACHE_DIR)
+    def missing_results(self) -> Tuple[str]:
         missing = []
         for split in ["test","rand","steer"]:
             if not getattr(self,split):
                 missing.append(self.name + f"/{split}")
         if len(missing) == 3:
             return [self.name]
-        return missing
+        return tuple(missing)
     
+    @cache_to_dir(ANALYSIS_CACHE_DIR)
     def to_success_dataframe(self, splits: Optional[Union[str,List[str]]] = None) -> pd.DataFrame:
         name = self.name
         num_layers = len(self.layers.split("_"))
@@ -181,13 +183,14 @@ class SteerResult(HashableClass):
         df["interval"] = num_layers
         return df
     
+    @cache_to_dir(ANALYSIS_CACHE_DIR)
     def to_errors_dataframe(self, split:str, disable_tqdm:bool=True) -> pd.DataFrame:
         num_proc = (self._num_proc or cpu_count())
         COLUMNS = ["steering_success","typechecks_before","typechecks_after", 
-           "errors_before", "errors_after","fim_type","change","mutated_program"]
+           "errors_before", "errors_after","fim_type","prediction_before_after_steer","mutated_program"]
         ds = self[split].map(lambda x: 
                 {**x, 
-                "change": (x['mutated_generated_text'],x['steered_predictions']),
+                "prediction_before_after_steer": (x['mutated_generated_text'],x['steered_predictions']),
                 "_before_steering_prog": x["mutated_program"].replace("<FILL>", x["mutated_generated_text"]),
                 "_after_steering_prog":  x["mutated_program"].replace("<FILL>", x["steered_predictions"]),
                 "steering_success": x["fim_type"] == x["steered_predictions"]
@@ -209,14 +212,14 @@ class SteerResult(HashableClass):
         # merge into one dataset
         df = pd.merge(before_df, after_df, on=["_before_steering_prog","_after_steering_prog"])
         # sanity check
-        for col in ["steering_success","fim_type","mutated_program"]:
+        for col in ["steering_success","fim_type","mutated_program","prediction_before_after_steer"]:
             assert list(df[f"{col}_x"]) == list(df[f"{col}_y"])
         
         df = df.rename(columns={
                 "mutation": self.mutations,
                 "steering_success_x":"steering_success", 
                 "mutated_program_x":"mutated_program",
-                "change_x": "change",
+                "prediction_before_after_steer_x": "prediction_before_after_steer",
                 "fim_type_x": "fim_type"
             })
         df = df[COLUMNS]
@@ -370,6 +373,7 @@ class ResultsLoader:
 
 """
 Loading scripts
+NOTE: We wrap around the SteerResult methods due to imap constraints
 """
 @cache_to_dir(ANALYSIS_CACHE_DIR)
 def _to_success_dataframe(x:SteerResult) -> Optional[pd.DataFrame]:
@@ -411,7 +415,6 @@ def load_errors_data(
         r.set_num_proc(num_proc)
         all_dfs.append(r.to_errors_dataframe(split))
     return pd.concat(all_dfs, axis=0)
-
 
 """
 Tests

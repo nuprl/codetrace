@@ -18,10 +18,7 @@ from codetrace.analysis.data import (
 )
 from codetrace.analysis.utils import full_language_name, model_n_layer
 
-# We have several directories named results/steering-LANG-MUTATIONS-LAYERS-MODEL.
-# Within each of these directories, there are files called test_results.json.
-# Each test_results.json has fields called total and num_succ. Read all of these
-# into a pandas dataframe.
+# Use ResultsLoader to load data from hub, local, any format that we use.
 
 """
 Plotting

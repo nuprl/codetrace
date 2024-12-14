@@ -55,6 +55,7 @@ def remove_warnings(error: str, lang:str) -> str:
         raise NotImplementedError(lang)
     
 def get_model_name(name: str)->Optional[str]:
+    assert isinstance(name, str)
     for model in ALL_MODELS:
         if model.lower() in name.lower():
             return model
