@@ -4,14 +4,25 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import ast
 from codetrace.utils import print_color
-from codetrace.analysis.utils import ALL_MODELS,ALL_MUTATIONS, get_unique_value, parse_model_name
+from codetrace.analysis.utils import (
+    ALL_MODELS,ALL_MUTATIONS, 
+    get_unique_value, 
+    parse_model_name,
+    model_n_layer,
+    parse_model_name,
+    full_language_name,
+    full_model_name
+)
 from codetrace.analysis.data import ResultKeys,ResultsLoader, SteerResult, cache_to_dir,ANALYSIS_CACHE_DIR
 from typing import List,Tuple
 import sys
 import argparse
 from collections import Counter, defaultdict
 from tqdm import tqdm
-from scipy.stats import pearsonr
+import numpy as np
+from scipy.stats import linregress, pearsonr
+from codetrace.analysis.plot_fig_all_models import MODEL_COLORS
+import seaborn as sns
 
 INITIALS = {
     "types": "T",
@@ -48,19 +59,31 @@ def _is_correct_max(results: List[SteerResult]) -> bool:
             )
     return all([len(v)== 1 for v in max_values.values()])
 
+def get_color(model:str, lang:str):
+    if lang == "ts":
+        return sns.saturate(MODEL_COLORS[model])
+    else:
+        return sns.desaturate(MODEL_COLORS[model], 0.5)
 
+def get_label(label:str):
+    model = parse_model_name(label)
+    if "ts" in label:
+        return f"{full_language_name('ts')} {full_model_name(model)}"
+    else:
+        return f"{full_language_name('py')} {full_model_name(model)}"
+    
 def plot_correlation(df: pd.DataFrame, outfile: str, show_most_common:bool):
     # Assign a unique color to each model-language combination
     unique_combinations = df[["model", "lang"]].drop_duplicates()
-    color_map = {f"{row.model}_{row.lang}": plt.cm.tab10(i) 
+    color_map = {f"{row.model}_{row.lang}": get_color(row.model, row.lang)
                 for i, row in enumerate(unique_combinations.itertuples(index=False))}
     
     df = df.groupby(["model","mutations","lang"]).agg(
-        {"steering_success":"mean","typechecks_before":"mean", 
+        {"steering_success":"mean","typechecks_before":"mean", "typechecks_after":"mean",
          "prediction_before_steer":list, "prediction_after_steer":list}).reset_index()
     # print(df)
     # Plotting
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(8, 8))
 
     x_data = []
     y_data = []
@@ -74,33 +97,39 @@ def plot_correlation(df: pd.DataFrame, outfile: str, show_most_common:bool):
         y_data.append(y_values)
         
         # Scatter plot for the current model-language
-        plt.scatter(x_values, y_values, color=color, label=model_lang, alpha=0.7)
+        plt.scatter(x_values, y_values, color=color, label=model_lang, alpha=0.7,linewidths=1)
         
         # Annotating mutations
         mutation = row["mutations"]
-        plt.annotate(INITIALS[mutation], (x_values, y_values), fontsize=9, xytext=(1, 1), textcoords='offset points')
+        plt.annotate(INITIALS[mutation], (x_values, y_values), fontsize=9, color=color,
+                xytext=(1, 1), textcoords='offset points')
         
         if show_most_common:
             for presteering in Counter(row["prediction_before_steer"]).most_common(1):
-                plt.annotate(presteering[0], (x_values, y_values), fontsize=9, xytext=(0, -10), textcoords='offset points', color=color)
-
+                plt.annotate(presteering[0], (x_values, y_values), fontsize=15, xytext=(1, -12), 
+                             textcoords='offset points', color=color)
     
     corr_coefficient, p_value = pearsonr(x_data, y_data)
     print("Correlation", corr_coefficient, p_value)
+    slope, intercept, r_value, p_value, std_err = linregress(x_data, y_data)
+    line = (slope * np.array(x_data)) + intercept
+    # plt.plot(x_data, line, color='black', label=f'Best fit line (r = {corr_coefficient:.2f})', linewidth=0.3)
 
     handles = []
     seen = set()
     for label,color in color_map.items():
         if label not in seen:
             seen.add(label)
-            handles.append(plt.Line2D([0], [0], marker='o', color=color, linestyle='', label=label) )
-    
-    plt.legend(handles=handles, title="Model and Language", loc="best",)
+            handles.append((plt.Line2D([0], [0], marker='o', color=color, linestyle='', label=get_label(label)),
+                            get_label(label)))
+
+    handles = sorted(handles, key=lambda x:x[1])
+    plt.legend(ncols=2, handles=[h[0] for h in handles], loc="lower center")
     plt.xlim(0, 1)
     plt.ylim(0, 1)
     # plt.title()
-    plt.xlabel("Probability Typechecks before Steer")
-    plt.ylabel("Steering Accuracy")
+    plt.xlabel("Percent Typechecks before Steer", fontsize=12)
+    plt.ylabel("Steering Accuracy", fontsize=12)
     plt.grid(alpha=0.5)
     plt.savefig(outfile)
     plt.grid()

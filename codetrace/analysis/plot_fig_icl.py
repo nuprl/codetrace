@@ -20,9 +20,12 @@ import seaborn as sns
 from codetrace.utils import print_color
 import itertools as it
 import textwrap
+from codetrace.analysis.plot_fig_layer_ablations import MUTATION_COLOR
 
-base_palette = sns.hls_palette(7, h=.5)
-COLORS = list(it.chain(*zip(base_palette, base_palette)))
+# base_palette = sns.hls_palette(7, h=.5)
+basecolor = sorted([(k,v) for k,v in MUTATION_COLOR.items()], key=lambda x:x[0])
+basecolor = [x[1] for x in basecolor]
+COLORS = list(it.chain(*zip(basecolor, basecolor)))
 
 def compare_icl(steering_df:pd.DataFrame, icl_df:pd.DataFrame, outfile:str) -> pd.DataFrame:
     icl_df["type"] = "icl"
@@ -36,10 +39,10 @@ def compare_icl(steering_df:pd.DataFrame, icl_df:pd.DataFrame, outfile:str) -> p
 def plot_icl(df: pd.DataFrame, outfile: str):
     HATCH="////"
     # Plot configuration
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6), sharey=True, sharex=True)
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5), sharey=True, sharex=True)
     axes = axes.flatten()
 
-    df["model"] = df["model"].apply(full_model_name)
+    df["model"] = df["model"].apply(lambda x: textwrap.fill(full_model_name(x), width=15))
     df["type_mut"] = df["type"] + df["mutations"]
     mutations = sorted(get_unique_value(df, "mutations",7))
     
@@ -83,10 +86,10 @@ def plot_icl(df: pd.DataFrame, outfile: str):
         ax.legend(handles, labels)
         
         # Set plot details
-        ax.set_title(full_language_name(lang))
-        ax.set_ylabel("Accuracy")
-        # ax.set_xlabel("Model")
-        ax.tick_params(axis="x", rotation=45)
+        ax.set_title(full_language_name(lang), fontsize=15)
+        ax.set_ylabel("Accuracy", fontsize=12)
+        ax.set_xlabel(None)
+        ax.tick_params(axis="x")
         ax.get_legend().remove()
 
     # Add a global legend
@@ -100,8 +103,8 @@ def plot_icl(df: pd.DataFrame, outfile: str):
             new_labels.append(MUTATIONS_RENAMED[mut])
         
     new_labels = list(map(lambda x: textwrap.fill(x, width=20),new_labels))
-    fig.legend(new_handles, new_labels, bbox_to_anchor=(1, 0.8), title="Mutations")
-    plt.suptitle("Comparison of Steering to Prompting with ICL Examples")
+    fig.legend(new_handles, new_labels, bbox_to_anchor=(1, 0.8), fontsize=12)
+    plt.suptitle("Comparison of Steering to Prompting with ICL Examples", fontsize=16)
     plt.tight_layout()
     fig.subplots_adjust(right=0.85)
     plt.savefig(outfile)
