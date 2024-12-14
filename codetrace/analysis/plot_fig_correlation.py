@@ -11,6 +11,17 @@ import sys
 import argparse
 from collections import Counter, defaultdict
 from tqdm import tqdm
+from scipy.stats import pearsonr
+
+INITIALS = {
+    "types": "T",
+    "vars": "V",
+    "delete": "R",
+    "types_vars": "TV",
+    "types_delete": "TR",
+    "vars_delete": "VR",
+    "delete_vars_types": "A",
+}
 
 def _is_correct_max(results: List[SteerResult]) -> bool:
     """
@@ -38,65 +49,70 @@ def _is_correct_max(results: List[SteerResult]) -> bool:
     return all([len(v)== 1 for v in max_values.values()])
 
 
-def plot_correlation(df: pd.DataFrame, outfile: str):
+def plot_correlation(df: pd.DataFrame, outfile: str, show_most_common:bool):
     # Assign a unique color to each model-language combination
     unique_combinations = df[["model", "lang"]].drop_duplicates()
     color_map = {f"{row.model}_{row.lang}": plt.cm.tab10(i) 
                 for i, row in enumerate(unique_combinations.itertuples(index=False))}
     
-    df = df.groupby(["mutations","lang","start_layer"]).agg(
-        {"steering_success":"mean","typechecks_before":"mean", "prediction_before_steer":"unique"}).reset_index()
-    print(df)
-    df = df.groupby(["mutations","lang","typechecks_before","prediction_before_steer"]).agg(
-        {"steering_success": "max"}).reset_index()
+    df = df.groupby(["model","mutations","lang"]).agg(
+        {"steering_success":"mean","typechecks_before":"mean", 
+         "prediction_before_steer":list, "prediction_after_steer":list}).reset_index()
+    # print(df)
     # Plotting
     plt.figure(figsize=(12, 8))
 
+    x_data = []
+    y_data = []
     # Loop through each row of the DataFrame to plot data
     for _, row in df.iterrows():
-        model_lang = f"{row['model']}_{row['lang']}"
+        model_lang = f"{row.model}_{row.lang}"
         color = color_map[model_lang]
         x_values = row["typechecks_before"]
         y_values = row["steering_success"]
+        x_data.append(x_values)
+        y_data.append(y_values)
         
         # Scatter plot for the current model-language
         plt.scatter(x_values, y_values, color=color, label=model_lang, alpha=0.7)
         
         # Annotating mutations
-        for i, mutation in enumerate(row["mutations"]):
-            plt.annotate(mutation, (x_values[i], y_values[i]), fontsize=9, xytext=(1, 1), textcoords='offset points')
-        for i,presteering in enumerate(row["prediction_before_steer"]):
-            plt.annotate(presteering, (x_values[i], y_values[i]), fontsize=9, xytext=(1, -1), textcoords='offset points')
+        mutation = row["mutations"]
+        plt.annotate(INITIALS[mutation], (x_values, y_values), fontsize=9, xytext=(1, 1), textcoords='offset points')
+        
+        if show_most_common:
+            for presteering in Counter(row["prediction_before_steer"]).most_common(1):
+                plt.annotate(presteering[0], (x_values, y_values), fontsize=9, xytext=(0, -10), textcoords='offset points', color=color)
 
+    
+    corr_coefficient, p_value = pearsonr(x_data, y_data)
+    print("Correlation", corr_coefficient, p_value)
+
+    handles = []
+    seen = set()
+    for label,color in color_map.items():
+        if label not in seen:
+            seen.add(label)
+            handles.append(plt.Line2D([0], [0], marker='o', color=color, linestyle='', label=label) )
+    
+    plt.legend(handles=handles, title="Model and Language", loc="best",)
     plt.xlim(0, 1)
     plt.ylim(0, 1)
-
-    handles = [plt.Line2D([0], [0], marker='o', color=color, linestyle='', label=label) 
-            for label, color in color_map.items()]
-    plt.legend(handles=handles, title="Model_Language", loc="best")
-
-    # Customizing the plot
+    # plt.title()
     plt.xlabel("Probability Typechecks before Steer")
     plt.ylabel("Steering Accuracy")
     plt.grid(alpha=0.5)
     plt.savefig(outfile)
-    plt.legend()
     plt.grid()
 
-if __name__=="__main__":
-    assert os.environ.get('PYTHONHASHSEED',None)=="42",\
-        "Set PYTHONHASHSEED to 42 for consistent and reliable caching"
-    parser = argparse.ArgumentParser()
-    parser.add_argument("results_dir")
-    parser.add_argument("outdir")
-    parser.add_argument("--interval", type=int, choices=[1,3,5], required=True)
-    args = parser.parse_args()
-    
+
+
+def _load(results_dir: str, interval:int, **kwargs):
     # load model, lang data
-    loader = ResultsLoader(Path(args.results_dir).exists(), cache_dir=args.results_dir)
+    loader = ResultsLoader(Path(results_dir).exists(), cache_dir=results_dir)
     all_results = []
     for model in ALL_MODELS:
-        data = loader.load_data(ResultKeys(model=model,interval=args.interval))
+        data = loader.load_data(ResultKeys(model=model,interval=interval))
         all_results += data
     
     # find most successful layer for lang,mut,model
@@ -135,6 +151,18 @@ if __name__=="__main__":
         results.append(r.to_errors_dataframe("test"))
     
     results = pd.concat(results, axis=0)
+    return results
+
+if __name__=="__main__":
+    assert os.environ.get('PYTHONHASHSEED',None)=="42",\
+        "Set PYTHONHASHSEED to 42 for consistent and reliable caching"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("results_dir")
+    parser.add_argument("outdir")
+    parser.add_argument("--interval", type=int, choices=[1,3,5], required=True)
+    args = parser.parse_args()
+    results = _load(**vars(args))
     os.makedirs(args.outdir, exist_ok=True)
+    results.to_csv(f"{args.outdir}/correlation-interval_{args.interval}.csv")
     plot_correlation(results, f"{args.outdir}/correlation-interval_{args.interval}.pdf")
 
