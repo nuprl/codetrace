@@ -2,6 +2,7 @@ import pandas as pd
 from scipy import stats
 from pathlib import Path
 from dataclasses import dataclass
+from typing import List,Union
 import re
 import os
 from typing import Optional
@@ -29,6 +30,14 @@ ALL_MUTATIONS = sorted(MUTATIONS_RENAMED.keys())
 """
 Parsing layers, models, languages
 """
+
+def get_unique_value(df: pd.DataFrame, colname: str, n:int) -> Union[str, List[str]]:
+    values = df[colname].unique()
+    assert len(values) == n
+    if n == 1:
+        return values[0]
+    else:
+        return values
 
 def remove_filename(text: str, lang_ext: str) -> str:
     # filename is hash
@@ -59,6 +68,20 @@ def full_language_name(lang: str) ->str:
     else:
         raise ValueError(f"Not found {lang}")
 
+def full_model_name(model: str) -> str:
+    if "qwen" in model.lower():
+        return "Qwen 2.5 Coder 7B"
+    elif "codellama" in model.lower():
+        return "CodeLlama Instruct 7B"
+    elif "starcoderbase-1b" in model.lower():
+        return "StarcoderBase 1B"
+    elif "starcoderbase-7b" in model.lower():
+        return "StarcoderBase 7B"
+    elif "llama" in model.lower():
+        return "Llama 3.2 Instruct 3B"
+    else:
+        raise NotImplementedError(f"Model {model} model_n_layer not implemented!")
+    
 def get_ranges(num_layers: int, interval: int):
     for i in range(0, num_layers):
         if i + interval <= num_layers:

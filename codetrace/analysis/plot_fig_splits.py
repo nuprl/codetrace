@@ -5,18 +5,26 @@ from pathlib import Path
 import argparse
 import os
 from typing import Optional,Dict,List,Tuple
+import textwrap
 from tqdm import tqdm
 import matplotlib.colors as mcolors
 from codetrace.analysis.data import (
-    build_success_data, 
     MUTATIONS_RENAMED, 
     ALL_MODELS,
-    ALL_MUTATIONS,
     ResultsLoader,
     ResultKeys
 )
-from codetrace.analysis.utils import full_language_name, model_n_layer
+from codetrace.analysis.utils import full_language_name, model_n_layer, full_model_name, get_unique_value
 from codetrace.analysis.plot_fig_all_models import MODEL_COLORS
+
+SPLIT_NAME = {
+    "test": "Steering Vector on Held-out Test Split",
+    "steer": "Steering Vector on Steering Split",
+    "rand": "Random Steering Vector on Test Split",
+}
+SPLIT_NAME_WRAPPED = {
+    k: textwrap.fill(label, width=20) for k,label in SPLIT_NAME.items()
+}
 
 def split_colors(model:str, split:str) -> str:
     model_color = MODEL_COLORS[model]
@@ -40,26 +48,25 @@ def split_colors(model:str, split:str) -> str:
     return mcolors.to_hex(adjusted_rgba, keep_alpha=True)
 
 
-def plot_splits(
-    df: pd.DataFrame, 
-    fig_file: Optional[str] = None,
-    interval: int = 5
-):
-    df = df.reset_index()
-    mutations = df["mutations"].unique()
-    mutations = sorted(mutations)
-    num_cols = 4
-    num_rows = 2
-    model = df["model"].unique()[0]
-    lang = df["lang"].unique()[0]
+def plot_splits(df: pd.DataFrame, outdir: Optional[str] = None):
+    # keys
+    mutations = sorted(get_unique_value(df, "mutations",7))
+    model = get_unique_value(df, "model",1)
+    lang = get_unique_value(df, "lang",1)
+    interval = get_unique_value(df, "interval",1)
+
+    # axes
+    num_cols,num_rows = 4,2
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 7), sharex=True, sharey=True)
     axes = axes.flatten()
+
+    # plot
     for i, mutation in enumerate(mutations):
         subset = df[df["mutations"] == mutation]
         
         for split in ["test","rand","steer"]:
             plot = sns.lineplot(ax=axes[i], data=subset, x="start_layer", y=f"{split}_mean_succ", 
-                        label=split,color=split_colors(model,split),linewidth=0.8)
+                        label=SPLIT_NAME_WRAPPED[split], color=split_colors(model,split),linewidth=0.8)
 
         axes[i].set_title(mutation)
         axes[i].set_xlabel("Layer start")
@@ -71,19 +78,20 @@ def plot_splits(
 
     for j in range(i + 1, len(axes)):
         fig.delaxes(axes[j])
-    fig.suptitle(f"{model} {lang} Steering Performace across splits", fontsize=16)
+    fig.suptitle(f"{full_model_name(model)} {full_language_name(lang)} Steering Performace across Splits", 
+                 fontsize=16)
     plt.tight_layout()
-    plt.legend(bbox_to_anchor=(1.9, 0.7), fontsize=12)
+    plt.legend(bbox_to_anchor=(1, 0.7), fontsize=12)
     plt.xlim(0, model_n_layer(model)-interval)
-    if fig_file:
-        plt.savefig(fig_file)
+    if outdir:
+        plt.savefig(f"{outdir}/splits-{model}-{lang}.pdf")
     else:
         plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("results_dir", type=str)
-    parser.add_argument("outfile", type=str)
+    parser.add_argument("outdir", type=str)
     parser.add_argument("--model",required=True, choices=ALL_MODELS)
     parser.add_argument("--lang", choices=["py","ts"], default="py")
     parser.add_argument("--num-proc", type=int, default=40)
@@ -111,4 +119,5 @@ if __name__ == "__main__":
     df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
     print(df_pretty)
     print(df_pretty.columns)
-    plot_splits(df_pretty, args.outfile, args.interval)
+    os.makedirs(args.outdir, exist_ok=True)
+    plot_splits(df_pretty, args.outdir)

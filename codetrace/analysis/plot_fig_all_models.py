@@ -1,24 +1,23 @@
 from matplotlib import pyplot as plt
 import seaborn as sns
 import pandas as pd
-import json
 from pathlib import Path
 import argparse
-import datasets
-import sys
 import os
 from typing import Optional,Dict,List
 from tqdm import tqdm
-import sys
 from codetrace.analysis.data import (
-    build_success_data, 
     MUTATIONS_RENAMED, 
     ALL_MODELS,
-    ALL_MUTATIONS,
     ResultsLoader,
     ResultKeys
 )
-from codetrace.analysis.utils import full_language_name, model_n_layer
+from codetrace.analysis.utils import (
+    full_language_name,
+    full_model_name,
+    model_n_layer,
+    get_unique_value
+)
 
 MODEL_COLORS = {
     "starcoderbase-7b": "purple",
@@ -30,32 +29,32 @@ MODEL_COLORS = {
 """
 Plotting
 """
-def plot_all_models(
-    df: pd.DataFrame, 
-    fig_file: Optional[str] = None,
-    interval: int = 3
-):
-    df = df.reset_index()
-    print(df.columns)
+def plot_all_models(df: pd.DataFrame, outdir: Optional[str] = None):
+    # preprocess
+    interval = get_unique_value(df, "interval", 1)
     df["model_num_layers"] = df["model"].apply(lambda x: model_n_layer(x) - interval)
     df["relative_num_layers"] = df["start_layer"] / df["model_num_layers"]
-    mutations = df["mutations"].unique()
+    mutations = get_unique_value(df, "mutations", 7)
     mutations = sorted(mutations)
-    num_cols = 4
-    num_rows = 2
+    lang = get_unique_value(df, "lang", 1)
 
+    # axes setup
+    num_cols, num_rows = 4, 2
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 7), sharex=True, sharey=True)
     axes = axes.flatten()
+
+    # plot
     for i, mutation in enumerate(mutations):
         subset = df[df["mutations"] == mutation]
         for model in ALL_MODELS:
             model_subset = subset[subset["model"] == model]
-            plot = sns.lineplot(ax=axes[i], data=model_subset, x="relative_num_layers", y=f"test_mean_succ", 
-                                label=model,color=MODEL_COLORS[model],linewidth=0.2)
-            max_test = model_subset[f"test_mean_succ"].max()
-            test_color = MODEL_COLORS[model]  # Extract color from the last line
-            axes[i].hlines(y=max_test, xmin=model_subset["relative_num_layers"].min(), xmax=model_subset["relative_num_layers"].max(),
-                        colors=test_color, linestyles='dashed',linewidth=0.5,
+            sns.lineplot(ax=axes[i], data=model_subset, x="relative_num_layers", y=f"test_mean_succ", 
+                    label=full_model_name(model), color=MODEL_COLORS[model], linewidth=0.2)
+            max_test = model_subset["test_mean_succ"].max()
+            axes[i].hlines(y=max_test, 
+                        xmin=model_subset["relative_num_layers"].min(), 
+                        xmax=model_subset["relative_num_layers"].max(),
+                        colors=MODEL_COLORS[model], linestyles='dashed',linewidth=0.5,
                         linestyle=(0, (5, 10)))
 
         axes[i].set_title(mutation)
@@ -63,32 +62,26 @@ def plot_all_models(
         axes[i].set_ylabel("Accuracy")
         axes[i].set_ylim(0, 1)  # Set y-axis range from 0 to 1
         axes[i].tick_params(axis='x', rotation=45)
-        # axes[i].grid(True, which='major', linestyle='-', linewidth=0.3, color='lightgrey')
-        # axes[i].legend(loc='best')
         axes[i].set_xticks([i/10 for i in range(0,11,5)])
         axes[i].get_legend().remove()
     
-    # empty_ax = axes[-1]
-    # empty_ax.axis('off')  # Turn off the axis
-    # handles, labels = axes[0].get_legend_handles_labels()
-    # empty_ax.legend(handles, labels, loc='center')
     for j in range(i + 1, len(axes)):
         fig.delaxes(axes[j])
 
-    fig.suptitle(f"Model Steering Performace on Test", fontsize=16)
+    fig.suptitle(f"Models performace on {full_language_name(lang)} after steering over {interval} layers", fontsize=16)
 
     plt.tight_layout()
     plt.legend(bbox_to_anchor=(1.9, 0.7), fontsize=12)
     plt.xlim(0, 1)
-    if fig_file:
-        plt.savefig(fig_file)
+    if outdir:
+        plt.savefig(f"{outdir}/all_models-lang_{lang}-interval_{interval}.pdf")
     else:
         plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("results_dir", type=str)
-    parser.add_argument("outfile", type=str)
+    parser.add_argument("outdir", type=str)
     parser.add_argument("--lang", choices=["py","ts"], default="py")
     parser.add_argument("--num-proc", type=int, default=40)
     parser.add_argument("--interval", choices=[1,3,5], type=int, default=5)
@@ -105,19 +98,13 @@ if __name__ == "__main__":
         all_results += results
     
     processed_results = []
-    for r in tqdm(all_results, "checking"):
+    for r in tqdm(all_results, "Loading Test split Success Rate"):
         assert r.test != None, r.name
-        rdf = r.to_dataframe("test")
-        rdf = rdf.groupby(["mutations","lang","model","start_layer"]).agg(
-            {"test_is_success":"mean"}).reset_index()
+        rdf = r.to_success_dataframe("test")
         processed_results.append(rdf)
 
     df = pd.concat(processed_results, axis=0)
-    df = df.rename(columns={"test_is_success":"test_mean_succ"})
-    for key in ["start_layer"]:
-        df[key] = df[key].apply(lambda x: x[0] if len(x) == 1 else 1/0)
     df_pretty = df.copy()
     df_pretty["mutations"] = df_pretty["mutations"].apply(lambda x: MUTATIONS_RENAMED[x])
-    print(df_pretty)
-    print(df_pretty.columns)
-    plot_all_models(df_pretty, args.outfile, args.interval)
+    os.makedirs(args.outdir, exist_ok=True)
+    plot_all_models(df_pretty, args.outdir)

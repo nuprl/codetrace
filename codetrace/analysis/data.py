@@ -5,7 +5,7 @@ from multiprocessing import Pool, cpu_count
 from codetrace.scripts.typecheck_ds import multiproc_typecheck
 import re
 from abc import ABC,abstractmethod
-from typing import Optional,List,Tuple,Dict,Set
+from typing import Optional,List,Tuple,Dict,Set,Union
 import datasets
 from dataclasses import dataclass
 from pathlib import Path
@@ -157,27 +157,20 @@ class SteerResult(HashableClass):
             return [self.name]
         return missing
     
-    def to_dataframe(self, split) -> pd.DataFrame:
-        df = self[split].to_pandas()
-        df["lang"] = self.lang
-        df["mutations"] = self.mutations
-        df["layers"] = self.layers
-        df["start_layer"] = int(self.layers.split("_")[0])
-        df["model"] = get_model_name(self.name)
-        df["num_layers"] = len(self.layers.split("_"))
-        df[f"{split}_is_success"] = df["steered_predictions"] == df["fim_type"]
-        return df
-    
-    def to_success_dataframe(self) -> pd.DataFrame:
+    def to_success_dataframe(self, splits: Optional[Union[str,List[str]]] = None) -> pd.DataFrame:
         name = self.name
         num_layers = len(self.layers.split("_"))
         all_dfs = []
-        for split in ["test","rand","steer"]:
-            if self[split]:
-                df = self[split].to_pandas()
-                df = build_success_df(df)
-                df.columns = [f"{split}_{c}" for c in df.columns]
-                all_dfs.append(df)
+        if not splits:
+            splits = ["test","steer","rand"]
+        elif isinstance(splits, str):
+            splits = [splits]
+            
+        for split in splits:
+            df = self[split].to_pandas()
+            df = build_success_df(df)
+            df.columns = [f"{split}_{c}" for c in df.columns]
+            all_dfs.append(df)
         
         df = pd.concat(all_dfs, axis=1)
         df["lang"] = self.lang
@@ -185,7 +178,7 @@ class SteerResult(HashableClass):
         df["layers"] = self.layers
         df["start_layer"] = int(self.layers.split("_")[0])
         df["model"] = get_model_name(name)
-        df["num_layers"] = num_layers
+        df["interval"] = num_layers
         return df
     
     def to_errors_dataframe(self, split:str, disable_tqdm:bool=True) -> pd.DataFrame:
@@ -233,7 +226,7 @@ class SteerResult(HashableClass):
         df["layers"] = self.layers
         df["start_layer"] = int(self.layers.split("_")[0])
         df["model"] = model
-        df["num_layers"] = model_n_layer(model)
+        df["interval"] = len(self.layers.split("_"))
         for label in ["errors_before","errors_after"]:
             df[label] = df[label].apply(
                 lambda x: remove_warnings(remove_filename(x, self.lang), self.lang) 
