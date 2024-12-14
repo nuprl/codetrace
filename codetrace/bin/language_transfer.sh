@@ -9,7 +9,7 @@ INTERVAL=$5
 # with all layers and precomputed test split; if not this will error
 ALL_MUTATIONS=("vars" "types" "delete" "delete,vars,types" "vars,delete" "types,delete" "types,vars")
 
-for MUTATIONS in $"${ALL_MUTATIONS[@]}"; do
+for MUTATIONS in "${ALL_MUTATIONS[@]}"; do
     MUTATIONSUNDERSCORED=$(echo $MUTATIONS | sed 's/,/_/g')
     echo "sbatch codetrace/bin/custom_steering_sweep.py \
 --model $MODEL \
