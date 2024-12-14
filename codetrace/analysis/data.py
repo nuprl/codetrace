@@ -227,7 +227,13 @@ class SteerResult(HashableClass):
                 "fim_type_x": "fim_type"
             })
         df = df[COLUMNS]
-        
+        model = get_model_name(self.name)
+        df["lang"] = self.lang
+        df["mutations"] = self.mutations
+        df["layers"] = self.layers
+        df["start_layer"] = int(self.layers.split("_")[0])
+        df["model"] = model
+        df["num_layers"] = model_n_layer(model)
         for label in ["errors_before","errors_after"]:
             df[label] = df[label].apply(
                 lambda x: remove_warnings(remove_filename(x, self.lang), self.lang) 

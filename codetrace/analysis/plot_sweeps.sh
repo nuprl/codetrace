@@ -1,7 +1,7 @@
 #!/bin/bash
 
-LANG=("py" "ts")
-MODELS=("Llama-3.2-3B-Instruct" "CodeLlama-7b-Instruct-hf" "qwen2p5_coder_7b_base" "starcoderbase-1b" "starcoderbase-7b")
+LANG=( "ts" "py" )
+MODELS=("starcoderbase-7b" "Llama-3.2-3B-Instruct" "CodeLlama-7b-Instruct-hf" "qwen2p5_coder_7b_base" "starcoderbase-1b" )
 RESULTS=$1
 OUTDIR=$2
 export PYTHONHASHSEED="42"
