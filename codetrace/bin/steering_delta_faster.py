@@ -58,9 +58,10 @@ def try_load(output_dir:str):
         test_split = datasets.load_from_disk(f"{output_dir}/test_split")
     if Path(f"{output_dir}/steering_tensor.pt").exists():
         steering_tensor = torch.load(f"{output_dir}/steering_tensor.pt")
-    for layer in range(steering_tensor.shape[0]):
-        assert steering_tensor[layer].sum().item() != 0, \
-            f"Steering tensor layer {layer} should not be empty!"
+    if steering_tensor != None:
+        for layer in range(steering_tensor.shape[0]):
+            assert steering_tensor[layer].sum().item() != 0, \
+                f"Steering tensor layer {layer} should not be empty!"
     return steer_split, test_split, steering_tensor
 
 """
@@ -98,6 +99,8 @@ def main_with_args(model: str, mutations: str, lang: str, num_layers: int, inter
             "--test-name", "test_split",
             "--tensor-name", "steering_tensor.pt",
             "-n", "3000",
+            # "-b1","2",
+            # "-b2","2",
             "--test-size", "100",
             "--collect-all-layers",
             "--run-steering-splits", *RUN_SPLITS,
@@ -120,6 +123,7 @@ def main():
     parser.add_argument("--num-layers", type=int, required=True)
     parser.add_argument("--interval", type=int, required=True)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--local", type=Path, default=None)
     args = parser.parse_args()
     main_with_args(**vars(args))
 
