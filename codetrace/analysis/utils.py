@@ -62,7 +62,7 @@ def parse_model_name(name: str)->Optional[str]:
     raise ValueError(f"Name {name} not found")
 
 def parse_mutation_name(s: str)->Optional[str]:
-    for mut in ALL_MUTATIONS:
+    for mut in sorted(ALL_MUTATIONS, key=lambda x: len(x), reverse=True):
         if mut.lower() in s.lower():
             return mut
     raise ValueError(f"Name {mut} not found")

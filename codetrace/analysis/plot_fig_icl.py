@@ -96,17 +96,19 @@ def plot_icl(df: pd.DataFrame, outfile: str):
     handles, labels = axes[0].get_legend_handles_labels()
     new_handles = []
     new_labels = []
+    seen = set()
     for i,(handle, label) in enumerate(zip(handles, labels)):
         mut = parse_mutation_name(label)
-        if "steer" in label:
+        if mut not in seen and "steer" in label:
             new_handles.append(handle)
             new_labels.append(MUTATIONS_RENAMED[mut])
+            seen.add(mut)
         
     new_labels = list(map(lambda x: textwrap.fill(x, width=20),new_labels))
     fig.legend(new_handles, new_labels, bbox_to_anchor=(1, 0.8), fontsize=12)
     plt.suptitle("Comparison of Steering to Prompting with ICL Examples", fontsize=16)
     plt.tight_layout()
-    fig.subplots_adjust(right=0.85)
+    fig.subplots_adjust(right=0.83)
     plt.savefig(outfile)
 
 def _load(results_dir:str, interval:int, icl_dir:str = "results"):

@@ -16,15 +16,26 @@ from codetrace.analysis.data import (
 from codetrace.analysis.utils import full_language_name, model_n_layer, get_unique_value, full_model_name
 import itertools as it
 
+basecolor = sns.hls_palette(7, l=0.7, h=0.1)
 MUTATION_COLOR = {
-    "delete":"plum",
-    "types": "darkgreen",
-    "vars": "brown",
-    "vars_delete": "blue",
-    "types_delete": "red",
-    "types_vars": "grey",
-    "delete_vars_types": "cadetblue"
+    "delete": basecolor[0],
+    "types": basecolor[1],
+    "vars": basecolor[2],
+    "vars_delete": basecolor[3],
+    "types_delete": basecolor[4],
+    "types_vars": basecolor[5],
+    "delete_vars_types": basecolor[6]
 }
+# MUTATION_COLOR = {
+#     "delete": "mediumorchid",
+#     "types": "darkgreen",
+#     "vars": "coral",
+#     "vars_delete": "deepskyblue",
+#     "types_delete": "maroon",
+#     "types_vars": "goldenrod",
+#     "delete_vars_types": "royalblue"
+# }
+
 """
 Plotting
 """
@@ -90,7 +101,7 @@ def plot_all_layers(df: pd.DataFrame, outdir: Optional[str] = None):
     else:
         plt.show()
 
-def _load(results_dir:str, model:str, lang:str):
+def _load(results_dir:str, model:str, lang:str, **kwargs):
     # load results
     loader = ResultsLoader(Path(results_dir).exists(), cache_dir=results_dir)
     keys = ResultKeys(model=model,lang=lang)

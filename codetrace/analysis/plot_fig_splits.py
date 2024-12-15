@@ -90,11 +90,11 @@ def plot_splits(df: pd.DataFrame, outdir: Optional[str] = None):
     plt.legend(bbox_to_anchor=(1.1, 0.8), fontsize=12)
     plt.xlim(0, model_n_layer(model)-interval)
     if outdir:
-        plt.savefig(f"{outdir}/splits-{model}-{lang}.pdf")
+        plt.savefig(f"{outdir}/splits-{model}-{lang}-{interval}.pdf")
     else:
         plt.show()
 
-def _load(results_dir: str, model:str, lang:str, interval:int):
+def _load(results_dir: str, model:str, lang:str, interval:int, **kwargs):
     loader = ResultsLoader(Path(results_dir).exists(), cache_dir=results_dir)
     keys = ResultKeys(model=model,lang=lang, interval=interval)
     results = loader.load_data(keys)

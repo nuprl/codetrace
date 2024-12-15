@@ -70,7 +70,7 @@ def plot_lang_transfer(df: pd.DataFrame, outdir: Optional[str] = None):
     else:
         plt.show()
 
-def _load(results_dir:str, model:str, test_lang:str, interval:int):
+def _load(results_dir:str, model:str, test_lang:str, interval:int, **kwargs):
     # load original and lang_transfer results
     lang=test_lang
     loader = ResultsLoader(Path(results_dir).exists(), cache_dir=results_dir)
