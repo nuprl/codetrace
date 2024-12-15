@@ -86,7 +86,7 @@ def plot_all_models(df: pd.DataFrame, outdir: Optional[str] = None):
     else:
         plt.show()
 
-def _load(results_dir:str,lang:str,interval:int):
+def _load(results_dir:str,lang:str,interval:int,**kwargs):
     all_results = []
     loader = ResultsLoader(Path(results_dir).exists(), cache_dir=results_dir)
     for model in tqdm(ALL_MODELS, desc="models"):
