@@ -75,11 +75,11 @@ def plot_splits(df: pd.DataFrame, outdir: Optional[str] = None):
                 color=split_colors(model,split))
 
         axes[i].set_title(MUTATIONS_RENAMED[mutation], fontsize=12)
-        axes[i].set_xlabel("Layer start", fontsize=12)
+        axes[i].set_xlabel("Start Layer", fontsize=12)
         axes[i].set_ylabel("Accuracy", fontsize=12)
         axes[i].set_ylim(0, 1)
         axes[i].tick_params(axis='x', rotation=45)
-        axes[i].set_xticks(range(0, model_n_layer(model)-interval, 2))
+        axes[i].set_xticks(range(1, model_n_layer(model)-interval+1, 2))
         axes[i].get_legend().remove()
 
     for j in range(i + 1, len(axes)):
@@ -87,7 +87,7 @@ def plot_splits(df: pd.DataFrame, outdir: Optional[str] = None):
     fig.suptitle(f"{full_model_name(model)} {full_language_name(lang)} Steering Performance across Splits", 
                  fontsize=16)
     plt.tight_layout()
-    plt.legend(bbox_to_anchor=(1.1, 0.8), fontsize=12)
+    plt.legend(bbox_to_anchor=(2, 0.8), fontsize=12)
     plt.xlim(0, model_n_layer(model)-interval)
     if outdir:
         plt.savefig(f"{outdir}/splits-{model}-{lang}-{interval}.pdf")

@@ -52,8 +52,8 @@ def plot_lang_transfer(df: pd.DataFrame, outdir: Optional[str] = None):
         axes[i].set_xlabel("Start Layer", fontsize=12)
         axes[i].set_ylabel("Accuracy", fontsize=15)
         axes[i].set_ylim(0, 1)
-        axes[i].tick_params(axis='x')
-        axes[i].set_xticks(range(0, model_n_layer(model)-interval+1, 2))
+        axes[i].tick_params(axis='x', labelsize=8, rotation=45)
+        axes[i].set_xticks(range(1, model_n_layer(model)-interval+1, 2))
         axes[i].get_legend().remove()
 
     for j in range(i + 1, len(axes)):
@@ -64,15 +64,16 @@ def plot_lang_transfer(df: pd.DataFrame, outdir: Optional[str] = None):
     fig.suptitle(f"{_model} Steering Performance on {_lang}", fontsize=16)
     plt.tight_layout()
     plt.legend(bbox_to_anchor=(1.9, 0.7), fontsize=12)
-    plt.xlim(0, model_n_layer(model)-interval+1)
+    plt.xlim(0, model_n_layer(model)-interval)
+    
     if outdir:
         plt.savefig(f"{outdir}/lang_transfer-{model}-{tensor_lang}_onto_{lang}-interval_{interval}.pdf")
     else:
         plt.show()
 
-def _load(results_dir:str, model:str, test_lang:str, interval:int, **kwargs):
+# lang is the test lang here
+def _load(results_dir:str, model:str, lang:str, interval:int, **kwargs):
     # load original and lang_transfer results
-    lang=test_lang
     loader = ResultsLoader(Path(results_dir).exists(), cache_dir=results_dir)
     original_lang_keys = ResultKeys(model=model,lang=lang, interval=interval)
     steer_tensor_lang = "py" if lang == "ts" else "ts"

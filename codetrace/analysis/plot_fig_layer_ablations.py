@@ -82,9 +82,9 @@ def plot_all_layers(df: pd.DataFrame, outdir: Optional[str] = None):
         axes[i].set_ylim(0, 1)  # Set y-axis range from 0 to 1
         axes[i].get_legend().remove()
 
-        axes[i].tick_params(axis='x', rotation=45)
-        axes[i].set_xlim(0, model_n_layer(model)+1-interval)
-        axes[i].set_xticks(range(0, model_n_layer(model)+1-interval, 2))
+        axes[i].tick_params(axis='x', rotation=45, labelsize=9)
+        axes[i].set_xlim(0, model_n_layer(model)-interval)
+        axes[i].set_xticks(range(1, model_n_layer(model)-interval+1, 2))
 
     for j in range(i + 1, len(axes)):
         fig.delaxes(axes[j])

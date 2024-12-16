@@ -10,18 +10,18 @@ ALL_INTERVALS=(1 3 5)
 
 # Splits: all models, langs, intervals
 
-# for model in "${ALL_MODELS[@]}"; do
-#     for lang in "${ALL_LANGS[@]}"; do
-#         for interval in "${ALL_INTERVALS[@]}"; do
-#             python -m codetrace.analysis.plot_fig_splits \
-#                 $RESULTS_DIR \
-#                 $OUTDIR \
-#                 --model $model \
-#                 --lang $lang \
-#                 --interval $interval
-#         done
-#     done
-# done
+for model in "${ALL_MODELS[@]}"; do
+    for lang in "${ALL_LANGS[@]}"; do
+        for interval in "${ALL_INTERVALS[@]}"; do
+            python -m codetrace.analysis.plot_fig_splits \
+                $RESULTS_DIR \
+                $OUTDIR \
+                --model $model \
+                --lang $lang \
+                --interval $interval
+        done
+    done
+done
 
 
 # All models: all langs, intervals
