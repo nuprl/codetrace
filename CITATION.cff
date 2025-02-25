@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: If you use this software, please cite both the article from preferred-citation and the software itself.
+authors:
+  - family-names: Lucchetti
+    given-names: Francesca
+  - family-names: Guha
+    given-names: Arjun
+title: Understanding How CodeLLMs (Mis) Predict Types with Activation Steering
+version: 1.0.0
+date-released: '2024-02-25'
+preferred-citation:
+  authors:
+    - family-names: Lucchetti
+      given-names: Francesca
+    - family-names: Guha
+      given-names: Arjun
+  title: Understanding How CodeLLMs (Mis) Predict Types with Activation Steering
+  type: article-journal
+  year: '2024'
+  conference: {}
+  publisher: {}
