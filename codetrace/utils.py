@@ -1,230 +1,200 @@
-import glob
-from pathlib import Path
-from typing import List, Dict, Tuple, Optional, Union
-import numpy as np
-import os
-import json
-from tree_sitter import Language, Parser
-import tree_sitter
-import tempfile
-import re
+import pandas as pd
+import datasets
 import torch
 from collections import namedtuple
-import builtins
+from copy import deepcopy
+from transformers import AutoModelForCausalLM
+from typing import List,Union,Callable, Dict, Any, TypeVar, Set, Generator
+from tqdm import tqdm
+import os
+from pathlib import Path
+import torch
+import functools
+from hashlib import sha256
+from multiprocessing import cpu_count
+import einops
+from torchtyping import TensorType
 
-parent = Path(__file__).parent
-REPO_ROOT = Path(__file__).parent.parent
-Language.build_library(
-    f"{REPO_ROOT}/build/my-languages.so",
-    [f"{REPO_ROOT}/tree-sitter-typescript/typescript",f"{REPO_ROOT}/tree-sitter-python"],
-)
-TS_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "typescript")
-TS_PARSER = Parser()
-TS_PARSER.set_language(TS_LANGUAGE)
+# Activation Tensors
+HiddenStateStack = TypeVar(TensorType[float,"num_layer","num_prompt","num_tokens","hdim"])
+HiddenStateStack_1tok = TypeVar(TensorType[float,"num_layer","num_prompt","hdim"])
 
-PY_LANGUAGE = Language(f"{REPO_ROOT}/build/my-languages.so", "python")
-PY_PARSER = Parser()
-PY_PARSER.set_language(PY_LANGUAGE)
+HiddenState = TypeVar(TensorType[float, "num_prompt","num_tokens","hdim"])
+HiddenState_1tok = TypeVar(TensorType[float, "num_prompt","hdim"])
 
-lang_to_parser = {"typescript" : TS_PARSER, "python" : PY_PARSER, "py" : PY_PARSER, "ts" : TS_PARSER}
-lang_to_builder = {"typescript" : TS_LANGUAGE, "python" : PY_LANGUAGE, "py" : PY_LANGUAGE, "ts" : TS_LANGUAGE}
+InputTensor = TypeVar(TensorType[float, "n_prompt","num_tokens"])
+InputMaskTensor = TypeVar(TensorType[bool, "n_prompt","num_tokens"])
 
-class FimObj:
-    def __init__(self,
-                 fim_prefix : str,
-                 fim_suffix : str,
-                 fim_token : str,
-                 fim_placeholder : str):
-        self.prefix = fim_prefix
-        self.suffix = fim_suffix
-        self.token = fim_token
-        self.placeholder = fim_placeholder
-        
-    def __str__(self):
-        return f"FimObj(prefix={self.prefix}, suffix={self.suffix}, token={self.token}, placeholder={self.placeholder})"
-    
-    def to_list(self):
-        return [self.prefix, self.suffix, self.token, self.placeholder]
-    
-fim_placeholder = "<FILL>"      
-STARCODER_FIM = FimObj("<fim_prefix>", "<fim_suffix>","<fim_middle>", fim_placeholder)
+MaskTensorStack = TypeVar(TensorType[bool,"num_layer","num_prompt","num_tokens","hdim"])
+MaskTensor = TypeVar(TensorType[bool,"num_prompt","num_tokens","hdim"])
 
+# Logit tensors
+LogitsStack = TypeVar(TensorType[float,"num_layer","num_prompt","num_tokens","vocab_size"])
+Logits = TypeVar(TensorType[float,"num_prompt","num_tokens","vocab_size"])
 
-def placeholder_to_std_fmt(prompt : str, fim : FimObj) -> str:
+# Prediction Tensors
+IndicesTensor = TypeVar(TensorType[int, "num_layer","num_prompt","num_tokens","top_k"])
+ProbabilitiesTensor = TypeVar(TensorType[float, "num_layer","num_prompt","num_tokens","top_k"])
+
+def hex_encode(s: str) -> str:
+    return sha256(bytes(s, "utf-8")).hexdigest()
+
+def apply_reduction(
+    tensor: torch.Tensor, 
+    reduction: Union[str, Callable[[torch.Tensor,int], torch.Tensor]], 
+    dim: int,
+    **kwargs
+) -> torch.Tensor:
     """
-    Take a prompt in fill format and convert it to standard format
-    
-    >>> "def func(n : <FILL>)"
-    "<prefix>def func(n : <suffix>)<fim_token>"
+    Applies a reduction function at given dim. Reduction fn is so called
+    because it reduces the size or number of dimensions of tensor.
+    Resulting tensor will always be smaller.
     """
-    parts = prompt.split(fim.placeholder)
-    if len(parts) != 2:
-        raise ValueError(f"Prompt does not contain a single placeholder: {parts}")
-    prompt = fim.prefix + parts[0] + fim.suffix + parts[1] + fim.token
-    return prompt
-
-def std_to_placeholder_fmt(prompt : str, fim : FimObj) -> str:
-    """
-    Take a prompt in standard format and convert it to fill format
-    
-    >>> "<prefix>def func(n : <suffix>)<fim_token>"
-    "def func(n : <FILL>)"
-    
-    """
-    return prompt.replace(fim.prefix, "").replace(fim.suffix, fim.placeholder).replace(fim.token,"")
-
-def unfim(text : str, fim : FimObj) -> str:
-    """
-    Remove fim special tokens and unscramble
-    """
-    prefix = text.split(fim.prefix)[-1].split(fim.suffix)[0]
-    suffix = text.split(fim.suffix)[-1].split(fim.token)[0]
-    middle = text.split(fim.token)[-1]
-    return prefix+middle+suffix
-
-def get_captures(prompt : Union[str,tree_sitter.Tree, bytes], 
-                 query: str, 
-                 ignore_parents : List[str] = [],
-                 language : str = "typescript") -> List[tree_sitter.Node]:
-    """
-    Get captures for a prompt given a query
-    Ignores any captures whose parents match some pattern in ignore_parents
-    """
-    parser = lang_to_parser[language]
-    lang = lang_to_builder[language]
-    if isinstance(prompt, str):
-        tree = parser.parse(bytes( prompt, "utf8"))
-    elif isinstance(prompt, tree_sitter.Tree):
-        tree = prompt
-    elif isinstance(prompt, bytes):
-        tree = parser.parse(prompt)
+    if isinstance(reduction, str):
+        if reduction == "max":
+            return tensor.amax(dim=dim,**kwargs)
+        elif reduction == "sum":
+            return tensor.sum(dim=dim,**kwargs)
+        else:
+            raise NotImplementedError("Reduction not implemented")
     else:
-        raise ValueError("Prompt must be str, bytes, or tree-sitter.Tree")
-    
-    query = lang.query(query)
-    captures = query.captures(tree.root_node)
-    
-    def matches_any(s : str, patterns : List[str]) -> bool:
-        for p in patterns:
-            if re.match(p, s):
-                return True
-        return False
-    
-    if len(ignore_parents) > 0:
-        captures = [c for c in captures if not matches_any(c[0].parent.type,ignore_parents)]
-    return captures
+        return reduction(tensor,dim=dim, **kwargs)
 
-def get_builtins_regex(language : str) -> str:
-    """
-    Returns the builtins for a language as a regex pattern
-    """
-    if language in ["python", "py"]:
-        parent_dir = Path(__file__).parent
-        builtins = dir(builtins)
-        return "^(" + "|".join(builtins) + ")$"
-    elif language in ["typescript", "ts"]:
-        raise NotImplementedError("Typescript builtins not implemented")
-    
-
-def remove_comments(program : str, 
-                    comment_query : str = """((comment) @comment)""",
-                    language : str = "typescript") -> str:
-    if language not in ["typescript", "ts"]:
-        raise NotImplementedError("Only typescript supported")
-    lang = lang_to_builder[language]
-    parser = lang_to_parser[language]
-    comment_query = lang.query(comment_query)
-    tree = parser.parse(bytes(program, "utf8"))
-    captures = comment_query.captures(tree.root_node)
-    # sort by start byte descending
-    captures.sort(key=lambda x: x[0].start_byte, reverse=True)
-    program = tree.text
-    for c in captures:
-        program = replace_between_bytes(program, c[0].start_byte, c[0].end_byte, "")
-    return program.decode("utf-8").strip()
-
-def replace_between_bytes(text : Union[str,bytes],
-                           start_byte : int, 
-                           end_byte : int,
-                           replacement : Union[str,bytes] = "") -> bytes:
-    '''
-    Replace tree-sitter interval (start_point, end_point) from a string.
-    Inclusive of start_point and end_point
-    '''
-    if isinstance(replacement, str):
-        byte_replacement = replacement.encode("utf-8")
+def get_lm_hdim(model) -> int:
+    if hasattr(model, "transformer") or hasattr(model, "model"):
+        return model.lm_head.in_features
     else:
-        byte_replacement = replacement
-    
-    if isinstance(text, str):
-        byte_string = text.encode("utf-8")
+        raise NotImplementedError("Model type not supported")
+
+def get_lm_layers(model):
+    if hasattr(model, "transformer"):
+        return model.transformer.h
+    elif hasattr(model, "model"):
+        return model.model.layers
     else:
-        byte_string = text
-        
-    modified_byte_string = (
-        byte_string[:start_byte] + byte_replacement + byte_string[end_byte:]
-    )
-    return modified_byte_string
+        raise NotImplementedError("Model type not supported")
+    
+def get_lm_final_norm(model):
+    if hasattr(model, "transformer"):
+        return model.transformer.ln_f
+    elif hasattr(model, "model"):
+        return model.model.norm
+    else:
+        raise NotImplementedError("Model type not supported")
 
-def find_between_bytes(
-    byte_string : bytes,
-    start_byte : int, 
-    end_byte : int,
-    target : str) -> int:
-    '''
-    Find the first occurence of target between start_byte and end_byte
-    '''
-    target = bytes(target, "utf-8")
-    for i in range(start_byte, end_byte):
-        if byte_string[i:i+len(target)] == target:
-            return i
-    return -1
+def get_lm_head(model):
+    if hasattr(model, "transformer") or hasattr(model, "model"):
+        return model.lm_head
+    else:
+        raise NotImplementedError("Model type not supported")
 
-def top_k_top_p_filtering(
+def num_available_devices():
+    device_list = list(os.environ["CUDA_VISIBLE_DEVICES"])
+    return len([i for i in device_list if i != ","])
+
+def load_dataset(ds: str, split:str=None, **hub_kwargs) -> datasets.Dataset:
+    if ds.endswith(".csv"):
+        ds = datasets.Dataset.from_csv(ds)
+    elif ds.endswith(".parquet"):
+        ds = datasets.Dataset.from_parquet(ds)
+    elif os.path.exists(ds):
+        ds = datasets.load_from_disk(ds)
+    else:
+        ds = datasets.load_dataset(ds, **hub_kwargs)
+    return ds[split] if split else ds
+
+def save_dataset(ds: datasets.Dataset, path:Union[str,Path], **hub_kwargs):
+    if isinstance(path, Path):
+        ds.save_to_disk(path.as_posix())
+    else:
+        ds.push_to_hub(path, **hub_kwargs)
+
+def lm_decode(model, x : torch.Tensor, do_norm: bool) -> torch.Tensor:
+    if do_norm:
+        x = get_lm_final_norm(model)(x)
+    return get_lm_head(model)(x)
+
+def masked_fill(src: torch.Tensor, mask: torch.BoolTensor, patch: torch.Tensor) -> torch.Tensor:
+    """
+    Replaces SRC tensor with PATCH values at MASK locations. Must have same sizes.
+
+    >>> masked_fill( [1,2,3], [1,0,0], [4,5,6])
+    [4,2,3]
+    """
+    if not (src.shape == mask.shape and mask.shape == patch.shape):
+        raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}, patch {patch.shape}")
+    
+    return torch.mul(src, ~mask) + torch.mul(mask, patch)
+
+def masked_add(src: torch.Tensor, mask: torch.BoolTensor, patch: torch.Tensor) -> torch.Tensor:
+    """
+    Adds SRC tensor with PATCH values at MASK locations. Must have same sizes.
+    >>> masked_add( [1,2,3], [1,0,0], [4,6,7])
+    [5,2,3]
+    """
+    if not (src.shape == mask.shape and mask.shape == patch.shape):
+        raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}, patch {patch.shape}")
+    
+    return src + torch.mul(mask, patch)
+
+def masked_get(src: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
+    """
+    Zeros out SRC values at MASK locations. Must have same sizes.
+    >>> masked_get( [1,2,3], [0,1,0])
+    [0,2,0]
+    """
+    if not (src.shape == mask.shape):
+        raise ValueError(f"Found different shapes: src {src.shape}, mask {mask.shape}")
+    return torch.mul(src, mask)
+
+def mask_target_tokens(input_ids: torch.Tensor, token_ids: List[int], **kwargs) -> torch.BoolTensor:
+    """
+    Returns a mask tensor over INPUT_IDS s.t. where MASK == 1 then the corresponding
+    value in INPUT_IDS is in TOKEN_IDS list
+    >>> mask_target_tokens( [1,2,3], [3, 1])
+    [1,0,1]
+    """
+    token_ids = torch.Tensor(token_ids)
+    if token_ids.ndim == 0:
+        # if 1 token id, check which members in input_ids are equal
+        target = input_ids == token_ids.item()
+    else:
+        mask = functools.reduce(lambda a,b: a|b, [input_ids == i for i in token_ids])
+        target = mask > 0
+    
+    device = kwargs.pop("device", None)
+    if device:
+        target = target.to(device)
+    return target
+
+def mask_target_idx(input_ids: torch.Tensor, indices: List[int], dim:int=1) -> torch.BoolTensor:
+    """
+    Returns a mask tensor over INPUT_IDS s.t. where MASK == 1 then the corresponding
+    index in INPUT_IDS is in INDICES list (along a certain DIM)
+    >>> mask_target_tokens( [1,2,3], [2,1], 0)
+    [0,1,1]
+    """
+    indices = torch.Tensor(indices).to(dtype=torch.int64)
+    mask = torch.zeros_like(input_ids).index_fill(dim, indices, 1)
+    return mask > 0
+
+def topk_filtering(
     logits: torch.Tensor,
     top_k: int,
-    top_p: float,
     do_log_probs: bool
 ) -> torch.Tensor:
     """
-    # adapted from transformers hf library https://huggingface.co/transformers/v3.2.0/_modules/transformers/generation_utils.html
     Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
     """
-    if top_k > 0:
-        if do_log_probs:
-            topk_indices = logits.log_softmax(dim=-1).topk(top_k, dim=-1).indices
-        else:
-            topk_indices = logits.softmax(dim=-1).topk(top_k, dim=-1).indices
-        # keep only indices that are in the top_k
-        logits = torch.gather(logits, -1, topk_indices)
-        sorted_indices = topk_indices
+    assert top_k > 0
+    if do_log_probs:
+        logits = logits.log_softmax(dim=-1)
+    else:
+        logits = logits.softmax(dim=-1)
 
-    if top_p < 1.0:
-        raise NotImplementedError("Top p filtering has bug in sorted_indices, use top_k only for now--top_p not needed for greedy")
-        # sorted_logits, sorted_indices = torch.sort(logits, descending=True)
-        # print(sorted_indices)
-        # if do_log_probs:
-        #     cumulative_probs = torch.cumsum(sorted_logits.log_softmax(dim=-1), dim=-1)
-        #     top_p = torch.tensor(top_p).log()
-        # else:
-        #     cumulative_probs = torch.cumsum(sorted_logits.softmax(dim=-1), dim=-1)
+    return logits.topk(top_k, dim=-1)
 
-        # # Remove tokens with cumulative probability above the threshold
-        # sorted_indices_to_keep = torch.where(cumulative_probs <= top_p, sorted_indices, 0)
-        # # 0 will be placed at indexes that are above the threshold and to denote index=0
-        # # we always keep at least 1 token, so 0 will always be in indexes to keep
-        # sorted_indices_to_keep = torch.unique(sorted_indices_to_keep, dim=-1)
-
-        # logits = torch.gather(sorted_logits, -1, sorted_indices_to_keep)
-        # print(sorted_indices_to_keep, sorted_indices)
-        # sorted_indices = torch.gather(sorted_indices, -1, sorted_indices_to_keep)
-    # wrap in named tuple
-    
-    TopkTuple = namedtuple('TopkTuple', ['indices','values'])
-    logit_tuple = TopkTuple(indices=sorted_indices, values=logits)
-    return logit_tuple
-
-def get_next_tokens(model, tokenizer, prompts):
+def predict(model, tokenizer, prompts: Union[List[str],str])->List[str]:
     inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(model.device)
     model.eval()
     with torch.no_grad():
@@ -233,6 +203,69 @@ def get_next_tokens(model, tokenizer, prompts):
     last_token_id_logits = outputs.logits[:, -1, :]
     last_token_id_dists = torch.softmax(last_token_id_logits, dim=1)
     last_token_ids = torch.argmax(last_token_id_dists, dim=1)
-    last_token_ids = last_token_ids.to("cpu").tolist()
+    last_token_ids = last_token_ids.to("cpu")
     last_tokens = [ tokenizer.decode(token) for token in last_token_ids ]
     return last_tokens
+
+def copy_decoder(modelname:str, dtype:torch.dtype) -> torch.nn.Module:
+    """
+    Make a copy of the model's decoder on cpu
+    """
+    model = AutoModelForCausalLM.from_pretrained(modelname).to("cpu", dtype=dtype)
+    decoder = deepcopy(model.lm_head)
+    norm = deepcopy(model.transformer.ln_f)
+    del model
+    decoder = torch.nn.Sequential(norm, decoder).to("cpu")
+    return decoder
+
+def keep_columns(ds: datasets.Dataset, cols:List[str]) -> datasets.Dataset:
+    columns = [c for c in ds.column_names if c not in cols]
+    return ds.remove_columns(columns)
+
+def dedup_ds_by_key(ds: datasets.Dataset, key:str) -> datasets.Dataset:
+    """
+    Dedup ds by key. Picks the first occurence of key.
+    """
+    seen = set()
+    new_ds = []
+    for x in ds:
+        if not x[key] in seen:
+            new_ds.append(x)
+            seen.add(x[key])
+    return datasets.Dataset.from_pandas(pd.DataFrame(new_ds))
+
+def pos_indexing(x: int, n: int) -> int:
+    """
+    Given a possibly negative index X over range N,
+    turn to a positive index
+    """
+    return x if x >= 0 else n + x
+
+def reset_index_dim0(x: torch.Tensor, index_labels: List[int], n: int)->  torch.Tensor:
+    """
+    Given a tensor X and list of INDEX_LABELS (0 < i < n) for dim 0, if dim 0
+    of the tensor does not match the range of N, then re-index tensor
+    such that INDEX_LABELS are now indices into the tensor. Fill rest with zeros.
+
+    >>> reset_index_dim0([0.1, 0.2, 0.3],  [3, 7, 1], 9)
+    [0, 0.3, 0, 0.1, 0, 0, 0, 0.2, 0]
+    """
+    if n == x.shape[0]:
+        return x
+    
+    new_shape = list(x.shape)
+    new_shape[0] = n
+    new_tensor = torch.zeros(new_shape, dtype=x.dtype, device=x.device)
+    new_tensor[index_labels] = x
+    
+    return new_tensor
+
+def print_color(message:str, color:str):
+    reset = '\033[0m'
+    if color == "red":
+        color = '\033[91m'
+    elif color == "green":
+        color = '\033[92m'
+    elif color == "yellow":
+        color = '\033[93m'
+    print(f"{color}{message}{reset}")

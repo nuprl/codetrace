@@ -1,11 +1,29 @@
-from tree_sitter import Node
-from typing import Generator, Set, List, Tuple
-from dataclasses import dataclass
-from .utils import PY_LANGUAGE, PY_PARSER
-from more_itertools import interleave_longest
+import tree_sitter
+from codetrace.parsing_utils import (
+    get_captures, is_in_capture_range, PY_PARSER, replace_between_bytes
+)
+from codetrace.base_mutator import AbstractMutator, Mutation, TreeSitterLocation, MutationFn
+import random
+from typing import List, Tuple, Callable, Optional
 import random
 import typing
 import builtins
+from collections import namedtuple
+from collections import defaultdict
+"""
+https://github.com/nvim-treesitter/nvim-treesitter/blob/master/queries/python/highlights.scm
+Random mutation code.
+
+Some considerations.
+
+1. renaming to an arbitrary name (especially length)
+
+the trick to being able to rename to any name is to accumulate
+all the changes and apply them finally from end to start
+
+2. each mutation method should produce different types of names to prevent overlap
+and also for semantics
+"""
 
 # There are ~114 types of non-terminals listed in the Python tree-sitter
 # grammar:
@@ -22,345 +40,274 @@ import builtins
 #
 # Moreover, code can dynamically modify the set of names in any scope. But,
 # it should be safe to ignore these cases for most code.
-NONVAR_STATEMENTS = [
+IMPORT_STATEMENTS = [
     "import_statement",
     "import_from_statement",
     "import_prefix",
     "future_import_statement",
     "wildcard_import",
-    "relative_import",
-    # "class_definition",
-    # "class_pattern",
+    "relative_import"
 ]
+IMPORT_STATEMENT_QUERY = """
+((import_statement) @import_statement)
+((import_from_statement) @import_statement)
+((import_prefix) @import_statement)
+((future_import_statement) @import_statement)
+((wildcard_import) @import_statement)
+((relative_import) @import_statement)
+"""
 
-# There are several other contexts where variables can appear. But, we are being
-# safely lazy. It should be enough to check that we are in one the contexts
-# below and not in the NONVAR_STATEMENTS contexts.
-VAR_CONTEXTS = [
-    "parameters",
-    "module",  # Top-level variable I believe
-    "function_definition",
-]
+# # There are several other contexts where variables can appear. But, we are being
+# # safely lazy. It should be enough to check that we are in one the contexts
+# # below and not in the NONVAR_STATEMENTS contexts.
+# VAR_CONTEXTS = [
+#     "parameters",
+#     "module",  # Top-level variable I believe
+#     "function_definition",
+# ]
 
-TYPED_IDENTIFIERS = PY_LANGUAGE.query("""(typed_parameter) @param""")
+# TYPED_IDENTIFIERS = PY_LANGUAGE.query("""(typed_parameter) @param""")
 
-IDENTIFIERS = PY_LANGUAGE.query("""(identifier) @id""")
 
+CLASS_NAMES = """(class_definition name: (identifier) @id)"""
+
+####
+
+PY_IDENTIFIER_QUERY = """((identifier) @id)""" # this also captures types
+PY_TYPE_IDENTIFIER_QUERY = """[
+  (typed_parameter type:
+      (type (identifier) @id))
+]"""
 # This query finds the parameters of function definitions. It does not do
 # lambdas.
-FUNCTION_PARAMS = PY_LANGUAGE.query(
-    """
+FUNCTION_PARAMS = """
     [
         (function_definition parameters: 
             (parameters [ (identifier) @id (typed_parameter (identifier) @id) ]))
 
     ]
 """
-)
+FUNCTION_NAME = """(function_definition name: ((identifier) @id))"""
+PY_VARIABLE_DECLARATION_QUERY = FUNCTION_PARAMS + FUNCTION_NAME
 
-CLASS_NAMES = PY_LANGUAGE.query("""(class_definition name: (identifier) @id)""")
+PY_ATTRIBUTE_IDENTIFIER_QUERY = """(attribute attribute: (identifier) @id)"""
 
+#NOTE: the following captures include colon and identifier (if present)
+# eg. cap(n : int) = n : int, cap(-> n) = -> n
+# needs postprocessing
+PY_TYPE_ANNOTATIONS_QUERY = """((typed_parameter) @annotation)"""
 
-@dataclass
-class Edit:
-    """
-    A convenience class that represents an edit to a buffer. Without this,
-    we would be producing integer triples with no indication of what each
-    number means.
-    """
+RETURN_TYPES = """ (function_definition return_type: (type (_) @id))"""
 
-    start_byte: int
-    old_end_byte: int
-    new_end_byte: int
-
-
-@dataclass
-class EditableNode:
-    """
-    TreeSitter's nodes are immutable, so this is a workaround. We also
-    don't care about tracking nodes' line and column numbers. So this further
-    simplifies the representation to only track their byte position.
-    """
-
-    start_byte: int
-    end_byte: int
-    # We have code that looks at the enclosing context. However, note that that
-    # the positions in the context may get stale, since they are TreeSitter
-    # nodes and not EditableNodes.
-    parent: Node
-    type: str
-
-    def __repr__(self):
-        return f"EditableNode({self.start_byte}, {self.end_byte}, ...)"
-
-    @staticmethod
-    def from_node(node: Node):
-        return EditableNode(node.start_byte, node.end_byte, node.parent, node.type)
-
-    def adjust(self, edit: Edit):
-        if self.start_byte < edit.start_byte:
-            # This node is before the edit, so no need to do anything.
-            return
-        byte_delta = edit.new_end_byte - edit.old_end_byte
-        self.start_byte += byte_delta
-        self.end_byte += byte_delta
-
-    def contains_byte(self, byte: int) -> bool:
-        """Test if the given byte is within the range of this node."""
-        return self.start_byte <= byte < self.end_byte
+DummyTreeSitterNode = namedtuple("DummyTreeSitterNode", [
+                                        "start_byte", "end_byte", 
+                                        "start_point", "end_point", 
+                                        "text", "type"])
 
 
-def edit_nodes(edits: List[Edit], other_nodes: List[EditableNode]):
-    for edit in edits:
-        for node in other_nodes:
-            node.adjust(edit)
+class PyMutator(AbstractMutator):
 
+    def needs_alias(self, typ: tree_sitter.Node, **kwargs) -> bool:
+        # if type is a builtin or typing, needs alias
+        # if a type is in imports, needs alias
+        import_statements : bytes = kwargs.pop("import_statements")
+        return any([typ.text==bytes(t,"utf-8") for t in dir(builtins)+dir(typing)]) \
+            or typ.text in import_statements
+    
+    def format_type_alias(self, type_capture: tree_sitter.Node, aliased_name: bytes, **kwargs) -> bytes:
+        prefix = None
+        if self.needs_alias(type_capture, **kwargs):
+            # make new type alias
+            prefix = aliased_name + b' : TypeAlias = "' + type_capture.text + b'"'
+        return prefix
 
-def is_var_context(node: Node):
-    """
-    In a well-designed grammar, it would be obvious whether a name is a variable
-    reference or not. Instead, we look at the enclosing context to make a
-    determination.
-    """
-    while node.parent:
-        if node.type in VAR_CONTEXTS:
-            return True
-        if node.type in NONVAR_STATEMENTS:
-            return False
-        node = node.parent
-    return True
+    def add_aliases_to_program(self, program: bytes, aliases: List[bytes], **test_kwargs) -> bytes:
+        aliases = list(set(aliases))
+        if test_kwargs.pop("sort",None):
+            aliases.sort()
+        import_typ_alias = b"from typing import TypeAlias\n"
+        return import_typ_alias + b"\n".join(aliases) + b"\n" + program
 
+    def shift_capture_from_char(
+        self,
+        node_capture: tree_sitter.Node,
+        target_char: bytes, # ":"
+        shift_amt : int
+    ) -> DummyTreeSitterNode:
+        """
+        Postprocess the node by applying a shift to the node from the target character. 
+        For examples:
+            Captured annotations contain var id and type id, for example:
+                n : int
+            We want to extract only:
+                : int
+            Thus, need to shift node location + text
+        """
+        text = node_capture.text
+        # find the index of the colon
+        index = text.index(target_char)
+        # count num bytes to shift
+        shift = index + shift_amt
+        # shift the node
+        new_start_byte = node_capture.start_byte + shift
+        new_start_point = (node_capture.start_point[0], node_capture.start_point[1] + shift)
+        new_text = text[shift:]
+        
+        # edit node
+        new_node = DummyTreeSitterNode(new_start_byte, node_capture.end_byte, new_start_point, 
+                                       node_capture.end_point, new_text, node_capture.type)
+        node_capture = new_node
+        assert node_capture.text == new_text, f"Text mismatch: {node_capture.text} != {new_text}"
+        return node_capture
+    
+    def extract_type_from_annotation(self,node_capture: tree_sitter.Node) -> tree_sitter.Node:
+        return node_capture.child_by_field_name("type")
 
-def remove_type_annotion(
-    buffer: bytes, typed_parameter: EditableNode
-) -> Tuple[bytes, List[Edit]]:
-    assert typed_parameter.type == "typed_parameter"
-    text = buffer[typed_parameter.start_byte : typed_parameter.end_byte].decode("utf-8")
-    # The before_colon_text may include the comma
-    before_colon_text = text.split(":", maxsplit=1)[0]
-    var = before_colon_text.encode("utf-8")
-    new_buffer = (
-        buffer[: typed_parameter.start_byte] + var + buffer[typed_parameter.end_byte :]
-    )
-    edit = Edit(
-        start_byte=typed_parameter.start_byte,
-        old_end_byte=typed_parameter.end_byte,
-        new_end_byte=typed_parameter.start_byte + len(var),
-    )
-    return new_buffer, [edit]
+    def postprocess_return_type(
+        self,
+        node_capture: tree_sitter.Node,
+        byte_program : bytes
+    ) -> DummyTreeSitterNode:
+        """
+        Return types in tree sitter don't include the ->, so we need to add it back
+        """
+        # find the first index of '->' starting from the end
+        index = byte_program[:node_capture.start_byte].rfind(b"->")
+        
+        new_start_byte = index
+        shift = index - node_capture.start_byte
+        new_start_point = (node_capture.start_point[0], node_capture.start_point[1] + shift)
+        new_text = byte_program[index:node_capture.end_byte]
+        
+        # edit node
+        new_node = DummyTreeSitterNode(new_start_byte, node_capture.end_byte, new_start_point, 
+                    node_capture.end_point, new_text, node_capture.type)
+        node_capture = new_node
+        assert node_capture.text == new_text, f"Text mismatch: {node_capture.text} != {new_text}"
+        return node_capture
 
+    def random_mutate(
+        self,
+        program: str,
+        fim_type: str,
+        mutations: List[str],
+        debug_seed : int = None
+    ) -> Optional[str]:
+        """
+        Apply random combination of mutations to the program.
+        Can provide a random seed DEBUG_SEED for debugging.
+        NOTE: if debug_seed is -1, this is a special case where we do not select a random subset but
+        and run the full set instead (DEGUB only)
+        """
+        if debug_seed is not None:
+            random.seed(debug_seed)
+            
+        # to prevent tree-sitter error:
+        program = self.replace_placeholder(program)
+        
+        # -----------------------
+        # get SELECT captures for target nodes that we can mutate
+        program_bytes = bytes(program, "utf-8")
+        tree = PY_PARSER.parse(program_bytes)
 
-def rename_var(
-    buffer: bytes, root: Node, old_var: bytes, new_var: bytes
-) -> Tuple[bytes, List[Edit]]:
-    assert root.type == "module"
-    all_vars = [
-        EditableNode.from_node(node) for (node, _) in IDENTIFIERS.captures(root)
-    ]
-    edits = []
-    for ix in range(len(all_vars)):
-        node = all_vars[ix]
-        this_var = buffer[node.start_byte : node.end_byte]
-        if this_var != old_var:
-            continue
-        if not is_var_context(node):
-            continue
-        buffer = buffer[: node.start_byte] + new_var + buffer[node.end_byte :]
-        this_edit = Edit(
-            start_byte=node.start_byte,
-            old_end_byte=node.end_byte,
-            new_end_byte=node.start_byte + len(new_var),
+        var_rename_captures = get_captures(tree, PY_VARIABLE_DECLARATION_QUERY, "py", "id")
+        return_types_captures = get_captures(tree, RETURN_TYPES, "py", "id")
+        class_names = get_captures(tree, CLASS_NAMES, "py", "id")
+        type_annotations_captures = get_captures(tree, PY_TYPE_ANNOTATIONS_QUERY, "py", "annotation")
+        
+        type_rename_captures = [self.extract_type_from_annotation(x) for x in type_annotations_captures] \
+                        + class_names + return_types_captures
+        remove_annotations_captures = [self.shift_capture_from_char(x, b":", 0) for x in type_annotations_captures] 
+        remove_annotations_captures +=  [self.postprocess_return_type(x, program_bytes) for x in return_types_captures]
+        
+        def select_random_subset(x):
+            if debug_seed == -1 or len(x) == 0:
+                return x
+            n = random.randint(1, len(x))
+            return random.sample(x, n)
+        
+        #  random subset of captures
+        var_rename = select_random_subset(var_rename_captures)
+        type_rename = select_random_subset(type_rename_captures)
+        remove_annotations = select_random_subset(remove_annotations_captures)
+
+        # -----------------------
+        # find ALL ADDITIONAL locations that contain targets
+        
+        var_rename_all, type_rename_all, remove_annotations_all = self.find_all_other_locations_of_captures(
+            program,
+            fim_type,
+            var_rename,
+            type_rename,
+            remove_annotations
         )
-        edits.append(this_edit)
-        edit_nodes([this_edit], all_vars[ix + 1 :])
-    return buffer, edits
-
-
-def _get_bound_vars(buffer: bytes, root_node: Node) -> Set[bytes]:
-    """
-    Returns the names of the variables bound by function definitions in a file.
-
-    NOTE: We make the assumption that the names bound by functions are not
-    also imported or defined at the top-level. If that is the case, renaming
-    may not be semantics-preserving.
-    """
-    captured_nodes = FUNCTION_PARAMS.captures(root_node)
-    captured_nodes.extend(CLASS_NAMES.captures(root_node))
-    results = []
-    for node, _ in captured_nodes:
-        (start, end) = node.byte_range
-        results.append(buffer[start:end])
-    return set(results)
-
-
-def random_mutations(code: str, fixed_type_location: int, apply_all_mutations: bool) -> Generator[Tuple[int, str], None, None]:
-    """
-    Generate a sequence of random mutations to a Python program. Each successive
-    mutation is to the previous mutation. The fixed_type_location is a byte offset
-    to a type annotation that is *not* mutated.
-    """
-    buffer = code.encode("utf-8")
-    tree = PY_PARSER.parse(buffer)
-    root = tree.root_node
-
-    all_vars = list(_get_bound_vars(buffer, root))
-
-    adjusted_type_location = fixed_type_location
-
-    all_type_annotations = [
-        EditableNode.from_node(item[0]) for item in TYPED_IDENTIFIERS.captures(root)
-    ]
-
-    all_type_annotations = [
-        node
-        for node in all_type_annotations
-        if not node.contains_byte(fixed_type_location)
-    ]
-
-    random.shuffle(all_vars)
-    random.shuffle(all_type_annotations)
-
-    next_var_index = 0
-    max_mutations = len(all_vars) + len(all_type_annotations)
-    for counter in range(max_mutations):
-        index = random.randint(0, max_mutations - counter - 1)
-        if index < len(all_vars):
-            (buffer, edits) = rename_var(
-                buffer,
-                root,
-                all_vars.pop(),
-                f"__tmp{next_var_index}".encode("utf-8"),
-            )
-            next_var_index += 1
-        else:
-            (buffer, edits) = remove_type_annotion(buffer, all_type_annotations.pop())
-        # Adjust locations
-        edit_nodes(edits, all_type_annotations)
-        for edit in edits:
-            if edit.start_byte < adjusted_type_location:
-                adjusted_type_location += edit.new_end_byte - edit.old_end_byte
-        if not apply_all_mutations:
-            yield (adjusted_type_location, buffer.decode("utf-8"))
         
-    if apply_all_mutations:
-        yield (adjusted_type_location, buffer.decode("utf-8"))
+        # -----------------------
+        import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
+        import_statements_txt = b"\n".join([x.text for x in import_statements])
 
-def _needs_alias(typ: str):
-    # if type is a builtin, needs alias
-    return any([typ==str(t) for t in dir(builtins)+dir(typing)])
-    
-def random_mutations_subset(
-    code: str,
-    fixed_type_location: int,
-    target: str = "",
-    target_mutations: List[str] = [],
-    debug = False
-) -> Generator[Tuple[int, bytes, bytes], None, None]:
-    """
-    Generate a sequence of random mutations to a Python program. Each successive
-    mutation is to the previous mutation. The fixed_type_location is a byte offset
-    to a type annotation that is *not* mutated.
-    """
-    buffer = code.encode("utf-8")
-    tree = PY_PARSER.parse(buffer)
-    root = tree.root_node
-    target = target.encode("utf-8")
-    
-    all_vars = [v for v in list(_get_bound_vars(buffer, root)) if v != target]
+        # Apply random combinations of mutations
+        new_program, all_mutations = self.mutate_captures(
+            program,
+            [getattr(self, m) for m in mutations],
+            var_rename_all,
+            type_rename_all,
+            remove_annotations_all,
+            import_statements=import_statements_txt
+        )
+        
+        if debug_seed == -1:
+            return new_program, all_mutations
+        
+        return new_program
 
-    adjusted_type_location = fixed_type_location
+    def find_all_other_locations_of_captures(
+        self,
+        program:str,
+        fim_type:str,
+        var_rename_captures: List[tree_sitter.Node],
+        type_rename_captures: List[tree_sitter.Node],
+        remove_annotations_captures: List[tree_sitter.Node]
+    ) -> Tuple[List[tree_sitter.Node]]:
+        assert self.tree_sitter_placeholder in program
+        var_rename_targets = set([x.text for x in var_rename_captures])
+        type_rename_targets = set([x.text for x in type_rename_captures])
 
-    all_type_annotations = [
-        EditableNode.from_node(item[0]) for item in TYPED_IDENTIFIERS.captures(root)
-    ]
+        # do not rename or delete these types
+        types_blacklist = [bytes(fim_type,"utf-8"), bytes(self.tree_sitter_placeholder,"utf-8")]
+        import_statements = get_captures(program, IMPORT_STATEMENT_QUERY, "py", "import_statement")
+        all_id_captures = get_captures(program, PY_IDENTIFIER_QUERY, "py", "id")
+        all_attribute_ids = get_captures(program, PY_ATTRIBUTE_IDENTIFIER_QUERY, "py", "id")
+        attribute_names = set([x.text for x in all_attribute_ids])
+        import_statement_names = b"\n".join([x.text for x in import_statements])
+        var_rename_full_captures = [
+            x for x in all_id_captures 
+            # rename all ids that match target
+            if x.text in var_rename_targets
+            # don't rename attributes
+            and not x.text in attribute_names #TODO: do we want to rename attributes?
+            # don't rename built-ins because no alias supported for vars
+            and not x.text.decode("utf-8") in dir(builtins)+dir(typing)
+            # don't rename anything in import statements because no alias supported for vars
+            and not x.text in import_statement_names
+        ]
+        type_rename_full_captures = [
+            x for x in all_id_captures
+            # rename all that match target
+            if x.text in type_rename_targets
+            # don't rename attributes
+            and not x.text in attribute_names #TODO: do we want to rename attributes?
+            # don't rename forbidden types
+            and x.text not in types_blacklist
+            # don't rename if in range of import statements 
+            # NOTE: we can rename text in import statements because of alias support, 
+            # but not the actual imports
+            and not is_in_capture_range(x, import_statements)
+        ]
 
-    all_type_annotations = [
-        node
-        for node in all_type_annotations
-        if not node.contains_byte(fixed_type_location)
-    ]
-    
-    all_annotated_types = [t[0].text.split(b":")[-1].strip() for t in TYPED_IDENTIFIERS.captures(root)]
-    all_types = [t[0].text.strip() for t in IDENTIFIERS.captures(root) 
-                 if t[0].text.strip() in all_annotated_types and t[0].text.strip() != target]
-    all_types = list(set(all_types))
-    
-    
-    def _select_random_subset(muts):
-        if len(muts) == 0:
-            return []
-        n = random.randint(1, len(muts))
-        return random.sample(muts, n)
-    
-    if "rename_vars" in target_mutations:
-        all_vars = _select_random_subset(all_vars)
-    else:
-        all_vars = []
-        
-    if "rename_types" in target_mutations:
-        all_types = _select_random_subset(all_types)
-    else:
-        all_types = []
-        
-    if "remove_type_annotations" in target_mutations:
-        all_type_annotations = _select_random_subset(all_type_annotations)
-    else:
-        all_type_annotations = []
-    
-    if debug:
-        print([all_vars, all_types, all_type_annotations])
-        
-    next_var_index = 0
-    next_typ_index = 0
-    type_aliases = []
-    # select random subset
-    max_mutations = len(all_vars) + len(all_types) + len(all_type_annotations)
-    remaining_mutations = target_mutations
-        
-    for counter in range(max_mutations):
-        # pick a random mutation out of the ones that are left
-        if len(all_vars) == 0:
-            remaining_mutations = [m for m in remaining_mutations if m != "rename_vars"]
-        if len(all_types) == 0:
-            remaining_mutations = [m for m in remaining_mutations if m != "rename_types"]
-        if len(all_type_annotations) == 0:
-            remaining_mutations = [m for m in remaining_mutations if m != "remove_type_annotations"]
-        
-        # pick a random mutation out of the ones that are left
-        mut = random.choice(remaining_mutations)
-        # index = random.randint(0, max_mutations - counter - 1)
-        if mut == "rename_vars":
-            (buffer, edits) = rename_var(
-                buffer,
-                root,
-                all_vars.pop(),
-                f"__tmp{next_var_index}".encode("utf-8"),
-            )
-            next_var_index += 1
-        elif mut == "rename_types":
-            this_typ = all_types.pop()
-            (buffer, edits) = rename_var(
-                buffer,
-                root,
-                this_typ,
-                f"__typ{next_typ_index}".encode("utf-8"),
-            )
-
-            if _needs_alias(this_typ.decode("utf-8").strip()):
-                type_aliases.append(f"__typ{next_typ_index} = ".encode("utf-8") + this_typ)
-            next_typ_index += 1
-        elif mut == "remove_type_annotations":
-            (buffer, edits) = remove_type_annotion(buffer, all_type_annotations.pop())
-        
-        # Adjust locations
-        edit_nodes(edits, all_type_annotations)
-        if len(type_aliases) > 0:
-            byte_type_aliases = (b"\n".join(type_aliases) + b"\n\n")
-        else:
-            byte_type_aliases = b""
-
-        for edit in edits:
-            if edit.start_byte < adjusted_type_location:
-                adjusted_type_location += edit.new_end_byte - edit.old_end_byte
-        yield (adjusted_type_location, byte_type_aliases, buffer)
-        
+        remove_annotations_captures = [
+            x for x in remove_annotations_captures  
+                if (x.text.replace(b":",b"").replace(b"->",b"").strip() != 
+                    bytes(self.tree_sitter_placeholder, "utf-8"))
+        ]
+        return var_rename_full_captures, type_rename_full_captures, remove_annotations_captures

@@ -1,6 +1,6 @@
 # Installation
 
-TS install for boa - not needed ATM
+TS install for boa
 ```
 // install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
@@ -24,12 +24,12 @@ In jupyer `kernel.json` add env var, then restart vscode.
 "env": {"PYTHONPATH": "/path/to/your/package:$PYTHONPATH"}`
 ```
 
-# Overview
-
-Main interp and util code is in `codetrace/` toplevel. Experiments are organized in subdirectories. The REPL in each experiment subdirectory is `<exp_subdir>/main.ipynb`. Random notebooks in `notebooks/`. Note that only experiment subdir with `__init__.py` are up to date, all others deprecated.
-
 # TODO
 
-large steering experiments
-- finalize py typeinf steering [X]
-- finalize ts typeinf steering []
+- finish unittests
+
+- Steering test split typecheck [MAKE IT ALWAYS SAME FOR SAME CANDIDATES]
+- add limit 3000 to mutations [CLI ARG], 100 TYPECHECKED
+
+- Run chat codellama on delta
+- upload completion for SC1 and SC7

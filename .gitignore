@@ -1,39 +1,33 @@
-.ipynb_*/
-logs/
-py_data/
-results/
-data/
+# Logs and results
 **/*.csv
-result_csvs/
-logs/
-log/
-exp_results/
 **/*.out
 **/*.err
-exp_data*/
-temp.png
-__pycache__/
-build/
-**/main*.ipynb
-models/
-completions/
-node_modules/
-ts-benchmark-dataset/
-package-lock.json
-package.json
+**/*.png
+**/*.pdf
+logs/
 log/
-generations/
-images/
+job*/
 wandb/
-models/
-masks/
-data/
-results/
+**/_*
+**/figures
+**/cache
+
+# Notebooks
+**/*.ipynb
+
+# Cache, builds, checkpoints
+__pycache__/
 .pytest_cache/
+build/
+.ipynb_*/
 dist/
 codetrace.egg-info/
-codetrace/type_inf_exp/datasets
-logs/
-job*/
-figures/
-**/*.pdf
+
+# heavy files
+models/
+completions/
+
+# npm packages
+node_modules/
+package-lock.json
+package.json
